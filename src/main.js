@@ -44,6 +44,10 @@ import {
 applyStaticTranslations();
 
 const MAX_FEED_ITEMS = 8;
+const FEED_SOURCE_LIMIT = MAX_FEED_ITEMS * 4;
+const FEED_RENDER_INTERVAL_MS = 2_000;
+const FEED_AUTO_RESUME_MS = 2_500;
+const FEED_SCROLL_RESUME_MS = 6_000;
 const MAX_LIVE_RENDERED = 250;
 const MAX_LIVE_STORED = 3000;
 const MAX_ROUTE_HOP_KM = 230;
@@ -104,6 +108,9 @@ const THEME_KEY = "meshcoreTheme";
 document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
 
 const elements = {
+  activityNew: document.querySelector("#activity-new"),
+  activityPanel: document.querySelector("#activity-panel"),
+  activityPause: document.querySelector("#activity-pause"),
   animationToggle: document.querySelector("#animation-toggle"),
   baseLayerButtons: [...document.querySelectorAll("#base-layer-buttons button")],
   buildStamp: document.querySelector("#build-stamp"),
@@ -272,7 +279,7 @@ function applyInitialFilters() {
 applyInitialFilters();
 const routeStore = new RouteStore({
   retentionMs: ROUTE_RETENTION_MS,
-  feedLimit: MAX_FEED_ITEMS,
+  feedLimit: FEED_SOURCE_LIMIT,
   capacity: MAX_LIVE_STORED,
 });
 const routeVersions = new RouteVersionState();
@@ -1659,21 +1666,79 @@ function renderRoute(route, { archive = false } = {}) {
   return { endpoint, group, line: lines[0], lines, versionId: route.versionId };
 }
 
-function renderFeed(routes, emptyText = t("feed.empty")) {
-  if (!routes.length) {
+const feedState = {
+  autoPaused: false,
+  focused: false,
+  hovered: false,
+  lastRenderAt: 0,
+  lastRenderedVersions: new Set(),
+  lastSignature: "",
+  latestEmptyText: t("feed.empty"),
+  latestRoutes: [],
+  manualPaused: false,
+  pendingVersions: new Set(),
+  renderTimer: null,
+  resumeTimer: null,
+};
+
+function setFeedBadge() {
+  const count = feedState.pendingVersions.size;
+  elements.activityNew.hidden = count === 0;
+  elements.activityNew.textContent = count === 0 ? "" : (count > 99 ? "99+" : tCount("activity.newItems", count));
+}
+
+function setFeedPauseButton() {
+  const paused = feedState.manualPaused;
+  elements.activityPause.textContent = paused ? t("activity.resume") : t("activity.pause");
+  elements.activityPause.title = paused ? t("activity.resume") : t("activity.pause");
+  elements.activityPause.setAttribute("aria-pressed", String(paused));
+  elements.activityPause.classList.toggle("active", paused);
+}
+
+function updateFeedPending() {
+  for (const route of feedState.latestRoutes) {
+    const version = route.versionId || route.id;
+    if (version && !feedState.lastRenderedVersions.has(version)) feedState.pendingVersions.add(version);
+  }
+  setFeedBadge();
+}
+
+function groupFeedRoutes(routes) {
+  const groups = new Map();
+  for (const route of routes) {
+    const key = `${route.typeLabel}|${route.from}|${route.to}`;
+    const existing = groups.get(key);
+    if (existing) {
+      existing.count += 1;
+      if (route.timestamp > existing.route.timestamp) existing.route = route;
+    } else {
+      groups.set(key, { route, count: 1 });
+    }
+  }
+  return [...groups.values()]
+    .sort((a, b) => b.route.timestamp - a.route.timestamp)
+    .slice(0, MAX_FEED_ITEMS);
+}
+
+function renderFeedNow(groups, emptyText) {
+  if (!groups.length) {
     const empty = document.createElement("li");
     empty.className = "feed-empty";
     empty.textContent = emptyText;
     elements.feed.replaceChildren(empty);
     return;
   }
-  elements.feed.replaceChildren(...routes.map((route) => {
+  elements.feed.replaceChildren(...groups.map(({ route, count }) => {
     const item = document.createElement("li");
     item.dataset.hashBytes = String(route.hashBytes);
     item.dataset.packetType = String(route.packetType);
     item.style.setProperty("--route-color", route.color);
     item.innerHTML = `
-      <div><b>${escapeHtml(route.typeLabel)}</b><time>${formatTime(route.timestamp)}</time></div>
+      <div>
+        <b>${escapeHtml(route.typeLabel)}</b>
+        ${count > 1 ? `<span class="feed-count">×${count}</span>` : ""}
+        <time>${formatTime(route.timestamp)}</time>
+      </div>
       <p>${escapeHtml(route.from)} <span>→</span> ${escapeHtml(route.to)}</p>
       <small>${route.scope?.trim() ? `${escapeHtml(route.scope.trim())} · ` : ""}${formatHops(Math.max(1, route.points.length - 1))} · ${route.hashBytes}B · ${formatObservers(route.observerCount)}</small>
     `;
@@ -1692,6 +1757,115 @@ function renderFeed(routes, emptyText = t("feed.empty")) {
     return item;
   }));
 }
+
+function flushFeed(force = false) {
+  if (feedState.renderTimer != null) {
+    clearTimeout(feedState.renderTimer);
+    feedState.renderTimer = null;
+  }
+  if (!force && (feedState.manualPaused || feedState.autoPaused)) {
+    updateFeedPending();
+    return;
+  }
+  if (elements.activityPanel.hidden) return;
+  const groups = groupFeedRoutes(feedState.latestRoutes);
+  const signature = `${feedState.latestEmptyText}|${groups.map(({ route, count }) => `${route.versionId || route.id}:${count}`).join("|")}`;
+  feedState.lastRenderAt = Date.now();
+  feedState.lastRenderedVersions = new Set(feedState.latestRoutes.map((route) => route.versionId || route.id));
+  feedState.pendingVersions.clear();
+  setFeedBadge();
+  if (signature === feedState.lastSignature) return;
+  feedState.lastSignature = signature;
+  renderFeedNow(groups, feedState.latestEmptyText);
+}
+
+function updateFeed(routes, emptyText = t("feed.empty"), { immediate = false } = {}) {
+  feedState.latestRoutes = routes;
+  feedState.latestEmptyText = emptyText;
+  if (elements.activityPanel.hidden) return;
+  if (feedState.manualPaused || feedState.autoPaused) {
+    updateFeedPending();
+    return;
+  }
+  if (immediate) {
+    flushFeed(true);
+    return;
+  }
+  const elapsed = Date.now() - feedState.lastRenderAt;
+  if (elapsed >= FEED_RENDER_INTERVAL_MS) {
+    flushFeed();
+    return;
+  }
+  if (feedState.renderTimer != null) return;
+  feedState.renderTimer = setTimeout(() => {
+    feedState.renderTimer = null;
+    flushFeed();
+  }, FEED_RENDER_INTERVAL_MS - elapsed);
+}
+
+function pauseFeedForInteraction() {
+  clearTimeout(feedState.resumeTimer);
+  feedState.resumeTimer = null;
+  feedState.autoPaused = true;
+  updateFeedPending();
+}
+
+function resumeFeedAfterInteraction(delay = FEED_AUTO_RESUME_MS) {
+  clearTimeout(feedState.resumeTimer);
+  feedState.resumeTimer = setTimeout(() => {
+    feedState.resumeTimer = null;
+    if (feedState.manualPaused || feedState.hovered || feedState.focused) return;
+    feedState.autoPaused = false;
+    flushFeed(true);
+  }, delay);
+}
+
+elements.activityPause.addEventListener("click", () => {
+  feedState.manualPaused = !feedState.manualPaused;
+  clearTimeout(feedState.resumeTimer);
+  feedState.resumeTimer = null;
+  setFeedPauseButton();
+  if (feedState.manualPaused) {
+    updateFeedPending();
+    return;
+  }
+  feedState.autoPaused = false;
+  flushFeed(true);
+});
+
+elements.activityNew.addEventListener("click", () => {
+  feedState.autoPaused = false;
+  flushFeed(true);
+});
+
+elements.activityPanel.addEventListener("pointerenter", () => {
+  feedState.hovered = true;
+  pauseFeedForInteraction();
+});
+
+elements.activityPanel.addEventListener("pointerleave", () => {
+  feedState.hovered = false;
+  resumeFeedAfterInteraction();
+});
+
+elements.activityPanel.addEventListener("focusin", () => {
+  feedState.focused = true;
+  pauseFeedForInteraction();
+});
+
+elements.activityPanel.addEventListener("focusout", (event) => {
+  if (elements.activityPanel.contains(event.relatedTarget)) return;
+  feedState.focused = false;
+  resumeFeedAfterInteraction();
+});
+
+elements.feed.addEventListener("scroll", () => {
+  if (feedState.manualPaused) return;
+  pauseFeedForInteraction();
+  resumeFeedAfterInteraction(FEED_SCROLL_RESUME_MS);
+}, { passive: true });
+
+setFeedPauseButton();
 
 function updateMapStatus() {
   const show = state.routeWindowMs === 0 && state.liveRouteCount === 0;
@@ -1799,7 +1973,7 @@ function renderArchive() {
   updateArchiveLayers(routes.filter((route) => routeVisibleIn(viewport, route)).slice(0, ARCHIVE_MAX_ROUTES));
   updateRouteCount();
   rebuildNeighborIndex();
-  renderFeed(routes.slice(0, MAX_FEED_ITEMS));
+  updateFeed(routes.slice(0, FEED_SOURCE_LIMIT));
   updatePerfGauges();
 }
 
@@ -1819,7 +1993,7 @@ async function setRouteWindow(windowMs) {
   clearSelectedRoute();
   if (!state.routeWindowMs) {
     clearArchivePresentation();
-    renderFeed([]);
+    updateFeed([], t("feed.empty"), { immediate: true });
     syncRoutePresentation();
     return;
   }
@@ -1827,7 +2001,7 @@ async function setRouteWindow(windowMs) {
   clearLivePresentation();
   clearArchivePresentation();
   updateRouteCount();
-  renderFeed([], t("feed.loadingHistory"));
+  updateFeed([], t("feed.loadingHistory"), { immediate: true });
   try {
     await loadArchiveWindow(state.routeWindowMs);
   } catch (error) {
@@ -1878,7 +2052,7 @@ function syncRoutePresentationCore(now = nowMs()) {
   }
   const previousLastRoutes = state.lastRouteByNodeKey;
   state.lastRouteByNodeKey = routeStore.lastRoutesByNode(state);
-  renderFeed(routeStore.visibleFeed(state, now));
+  updateFeed(routeStore.visibleFeed(state, now));
   updateRouteCount();
   updateRouteAnimation();
   for (const entry of state.nodeMarkers) {
@@ -2452,6 +2626,10 @@ activityToggle.addEventListener("click", () => {
   activityPanel.hidden = !show;
   activityToggle.textContent = show ? t("activity.hide") : t("activity.show");
   activityToggle.setAttribute("aria-pressed", String(show));
+  if (show) {
+    feedState.autoPaused = false;
+    flushFeed(true);
+  }
 });
 
 const STATS_ROLES = new Set(["repeater", "room", "sensor"]);

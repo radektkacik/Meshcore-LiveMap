@@ -140,8 +140,14 @@
           </div>
         </section>
 
-        <section class="activity-panel" aria-label="Poslední trasy" hidden>
-          <header><span><i></i> Živá aktivita</span><small>poslední trasy</small></header>
+        <section class="activity-panel" id="activity-panel" aria-label="Poslední trasy" hidden>
+          <header>
+            <span><i></i> Živá aktivita</span>
+            <div class="activity-head-actions">
+              <button id="activity-new" class="activity-new" type="button" hidden></button>
+              <button id="activity-pause" class="activity-pause" type="button" aria-pressed="false"></button>
+            </div>
+          </header>
           <ol id="route-feed" class="route-feed">
             <li class="feed-empty">Čekám na paket s trasou…</li>
           </ol>

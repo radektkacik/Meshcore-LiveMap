@@ -152,6 +152,14 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
   backdrop-filter: blur(14px);
 }
 .activity-panel header { height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 13px; border-bottom: 1px solid var(--line); }
+.activity-head-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.activity-pause, .activity-new { padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; color: #49665b; background: #fff; font: 9px "DM Mono", monospace; cursor: pointer; white-space: nowrap; }
+.activity-pause:hover { color: var(--green); border-color: rgba(7, 142, 98, 0.4); }
+.activity-pause.active { color: #fff; background: var(--green); border-color: var(--green); }
+.activity-new { color: #fff; background: var(--green); border-color: var(--green); }
+.activity-new:hover { background: #0a7c57; }
+.route-feed .feed-count { margin-left: 4px; padding: 1px 4px; border-radius: 4px; color: #667b70; background: #edf3ee; font: 9px "DM Mono", monospace; }
+.route-feed li > div time { margin-left: auto; }
 .activity-panel header span { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; }
 .activity-panel header i { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 7px rgba(7, 142, 98, 0.6); animation: live-pulse 1.6s ease-in-out infinite; }
 .activity-panel header small { color: var(--muted); font: 10px "DM Mono", monospace; text-transform: uppercase; }
@@ -457,6 +465,10 @@ html[data-theme="dark"] .viewer-line strong { color: #eef4f6; }
 html[data-theme="dark"] .route-feed p { color: #cfd9dd; }
 html[data-theme="dark"] .route-feed time,
 html[data-theme="dark"] .route-feed small { color: #8fa0a8; }
+html[data-theme="dark"] .activity-pause { color: #cfd9dd; background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .activity-pause.active { color: #fff; background: var(--green); border-color: var(--green); }
+html[data-theme="dark"] .activity-new { color: #fff; background: var(--green); border-color: var(--green); }
+html[data-theme="dark"] .route-feed .feed-count { color: #a9b8bf; background: #26323a; }
 html[data-theme="dark"] .leaflet-control-zoom a { color: #cfd9dd !important; background: rgba(18, 24, 30, 0.95) !important; border-color: var(--line) !important; }
 html[data-theme="dark"] .leaflet-control-attribution { color: #9fb0b8 !important; background: rgba(18, 24, 30, 0.82) !important; }
 html[data-theme="dark"] .node-tooltip,
