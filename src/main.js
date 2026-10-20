@@ -289,8 +289,10 @@ const map = L.map("map", {
 
 L.control.zoom({ position: "bottomleft" }).addTo(map);
 
-const initialLat = Number(INITIAL_PARAMS.get("lat"));
-const initialLon = Number(INITIAL_PARAMS.get("lon"));
+const initialLatValue = INITIAL_PARAMS.get("lat");
+const initialLonValue = INITIAL_PARAMS.get("lon");
+const initialLat = initialLatValue == null ? NaN : Number(initialLatValue);
+const initialLon = initialLonValue == null ? NaN : Number(initialLonValue);
 if (Number.isFinite(initialLat) && Number.isFinite(initialLon)
   && initialLat >= -90 && initialLat <= 90 && initialLon >= -180 && initialLon <= 180) {
   const initialViewZoom = INITIAL_PARAMS.has("z") && Number.isFinite(INITIAL_ZOOM)
