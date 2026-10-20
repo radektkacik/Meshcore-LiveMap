@@ -856,7 +856,6 @@ function nodePopupContent(node, active) {
     ? node.public_key.slice(0, hashSize * 2).toUpperCase()
     : null;
   const basicDetails = renderNodeDetails(t("node.basicDetails"), [
-    [t("node.role"), roleLabel(node.role)],
     [t("node.lastActivity"), formatNodeDate(lastActivity)],
     [t("node.lastAdvert"), formatNodeDate(node.last_seen || node.last_heard)],
     [t("node.lastRelay"), formatNodeDate(node.last_relayed)],
@@ -912,7 +911,7 @@ function nodePopupContent(node, active) {
 
   return `
     <header>
-      <div><small>${t("node.meshcoreNode")}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
+      <div><small>${escapeHtml(roleLabel(node.role))}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
     ${basicDetails}
