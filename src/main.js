@@ -915,15 +915,15 @@ function nodePopupContent(node, active) {
       <div><small>${t("node.meshcoreNode")}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
-    ${node.public_key ? `<div class="node-history" data-node-key="${escapeHtml(node.public_key.toUpperCase())}">
-      <div class="node-history-head"><span>${t("node.historyTitle")}</span><small>${t("node.historyLoading")}</small></div>
-      <div class="node-history-chart"></div>
-    </div>` : ""}
     ${basicDetails}
     ${trafficDetails}
     ${networkDetails}
     ${nodeLastRoute(node)}
     ${nodeNeighbors(node)}
+    ${node.public_key ? `<div class="node-history" data-node-key="${escapeHtml(node.public_key.toUpperCase())}">
+      <div class="node-history-head"><span>${t("node.historyTitle")}</span><small>${t("node.historyLoading")}</small></div>
+      <div class="node-history-chart"></div>
+    </div>` : ""}
     ${node.public_key ? `<div class="node-public-key"><div><span>${t("node.publicKey")}</span><button class="node-key-copy" type="button">${t("common.copy")}</button></div><code>${escapeHtml(node.public_key)}</code></div>` : ""}
     ${node.public_key ? `
       <div class="node-popup-actions">
