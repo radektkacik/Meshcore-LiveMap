@@ -54,6 +54,7 @@
 | 2026-10-20 12:07 | `20261020T120753Z.tar.gz` | `20261020-1207-c1ab98f` | Prod: stejné očištěné závislosti – `ip-address` 10.7.4, `source-map-js` 1.2.2, bez Vue/Pinia/router; `npm audit --omit=dev` 0 zranitelností | `package.json`, `package-lock.json` |
 | 2026-10-20 13:18 | `20261020T131805Z.tar.gz` (stage APP_DIR) | `20261020-1318-d3a5663` | Beta: `mqtt` 5.15.2 → 5.16.1 (oprava reconnectu a streamu); MQTT connected/subscribed, `npm audit --omit=dev` 0 zranitelností | `package.json`, `package-lock.json` |
 | 2026-10-20 13:18 | `20261020T131846Z.tar.gz` | `20261020-1318-d3a5663` | Prod: stejný `mqtt` 5.16.1; MQTT connected/subscribed, `npm audit --omit=dev` 0 zranitelností, bez změny aplikačního kódu | `package.json`, `package-lock.json` |
+| 2026-10-20 13:57 | `20261020T135719Z.tar.gz` (stage APP_DIR) | `20261020-1357-357b614` | Beta: stack uzlů na stejném místě, sdílené odkazy s filtry, detail trasy, tmavá mapa, relativní časy a badge dat z cache | `index.html`, `src/i18n.js`, `src/main.js`, `src/style.css` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
