@@ -64,6 +64,7 @@
 | 2026-10-20 17:46 | `20261020T174611Z.tar.gz` (stage APP_DIR) | `20261020-1746-8be87f9` | Beta: Vite 8.3.4, security headers (CSP, HSTS, nosniff, frame deny, permissions policy), `/api/node-history` + 7denní sparkline v detailu uzlu, mobilní bottom sheet pro uzel a trasu | `package.json`, `package-lock.json`, `server.mjs`, `node-metrics.mjs`, `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `test/*`, `README.md` |
 | 2026-10-20 17:51 | `20261020T175140Z.tar.gz` (stage APP_DIR) | `20261020-1751-58201d9` | Beta: graf historie užitečnosti přesunut do spodní části detailu uzlu, před veřejný klíč a akce | `src/main.js` |
 | 2026-10-20 17:53 | `20261020T175348Z.tar.gz` (stage APP_DIR) | `20261020-1753-fac8015` | Beta fix: Aktivita se na malých displejích nezobrazovala kvůli `display:none`; nyní je to spodní panel přes šířku s max. výškou 46dvh | `src/style.css` |
+| 2026-10-20 19:00 | `20261020T190053Z.tar.gz` | `20261020-1900-33c6c67` | Prod: nasazení otestované beta dávky – Vite 8.3.4, security headers, historie uzlu, mobilní bottom sheet, Aktivity s pauzou/seskupením, tmavá mapa, sdílené odkazy, stack uzlů a detail trasy | `package.json`, `package-lock.json`, `server.mjs`, `node-metrics.mjs`, `index.html`, `src/*`, `src/style.css`, `test/*`, `README.md`, `deploy/rollback-vps.sh` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -93,6 +94,20 @@ chown -R meshcore-map:meshcore-map /opt/meshcore-live-map/server.mjs \
   /opt/meshcore-live-map/*.mjs /opt/meshcore-live-map/dist /opt/meshcore-live-map/node_modules
 systemctl start meshcore-live-map
 curl -fsS http://127.0.0.1:4173/ >/dev/null && systemctl is-active meshcore-live-map
+```
+
+Pro rychlý rollback je na VPS `/root/rollback-meshcore.sh`. Obnoví aplikaci
+z odpovídající zálohy a `data/` nechá být:
+
+```bash
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
+```
+
+Aktuální produkční release `20261020T190053Z` má v záloze předchozí verzi;
+návrat na ni se provede stejným ID:
+
+```bash
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261020T190053Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`.
