@@ -65,6 +65,7 @@
 | 2026-10-20 17:51 | `20261020T175140Z.tar.gz` (stage APP_DIR) | `20261020-1751-58201d9` | Beta: graf historie užitečnosti přesunut do spodní části detailu uzlu, před veřejný klíč a akce | `src/main.js` |
 | 2026-10-20 17:53 | `20261020T175348Z.tar.gz` (stage APP_DIR) | `20261020-1753-fac8015` | Beta fix: Aktivita se na malých displejích nezobrazovala kvůli `display:none`; nyní je to spodní panel přes šířku s max. výškou 46dvh | `src/style.css` |
 | 2026-10-20 19:00 | `20261020T190053Z.tar.gz` | `20261020-1900-33c6c67` | Prod: nasazení otestované beta dávky – Vite 8.3.4, security headers, historie uzlu, mobilní bottom sheet, Aktivity s pauzou/seskupením, tmavá mapa, sdílené odkazy, stack uzlů a detail trasy | `package.json`, `package-lock.json`, `server.mjs`, `node-metrics.mjs`, `index.html`, `src/*`, `src/style.css`, `test/*`, `README.md`, `deploy/rollback-vps.sh` |
+| 2026-10-20 19:25 | `20261020T192528Z.tar.gz` (stage APP_DIR) | `20261020-1925-37f9346` | Beta: zkrácené relativní časy v detailu uzlu – `teď`, `12 min`, `3 h`, `2 d` | `src/i18n.js` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
