@@ -52,6 +52,8 @@
 | 2026-10-19 20:24 | `20261019T202436Z.tar.gz` | `20261019-2024` | Prod: runtime i18n CZ/EN – přepínač jazyka dostupný i v produkci (mimo beta flag), výchozí čeština, volba v localStorage/`?lang=` | `src/i18n.js`, `src/main.js`, `src/style.css`, `test/i18n.test.mjs` |
 | 2026-10-20 11:32 | `20261020T113224Z.tar.gz` (stage APP_DIR) | `20261020-1132-1dadee5` | Beta: nasazení očištěného lockfile – odebrány nepoužívané Vue/Pinia/router, `ip-address` 10.7.4 a `source-map-js` 1.2.2; `npm audit --omit=dev` 0 zranitelností, bez změny aplikačního kódu | `package.json`, `package-lock.json` |
 | 2026-10-20 12:07 | `20261020T120753Z.tar.gz` | `20261020-1207-c1ab98f` | Prod: stejné očištěné závislosti – `ip-address` 10.7.4, `source-map-js` 1.2.2, bez Vue/Pinia/router; `npm audit --omit=dev` 0 zranitelností | `package.json`, `package-lock.json` |
+| 2026-10-20 13:18 | `20261020T131805Z.tar.gz` (stage APP_DIR) | `20261020-1318-d3a5663` | Beta: `mqtt` 5.15.2 → 5.16.1 (oprava reconnectu a streamu); MQTT connected/subscribed, `npm audit --omit=dev` 0 zranitelností | `package.json`, `package-lock.json` |
+| 2026-10-20 13:18 | `20261020T131846Z.tar.gz` | `20261020-1318-d3a5663` | Prod: stejný `mqtt` 5.16.1; MQTT connected/subscribed, `npm audit --omit=dev` 0 zranitelností, bez změny aplikačního kódu | `package.json`, `package-lock.json` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
