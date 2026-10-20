@@ -9,6 +9,7 @@ const cs = {
   "common.yes": "Ano",
   "common.no": "Ne",
   "common.today": "Dnes",
+  "common.justNow": "právě teď",
   "common.copy": "Kopírovat",
   "common.copied": "Zkopírováno",
   "common.copyFailed": "Nelze kopírovat",
@@ -23,6 +24,9 @@ const cs = {
   "units.observers": { one: "{count} observer", few: "{count} observeři", other: "{count} observerů" },
   "units.neighbors": { one: "{count} soused", few: "{count} sousedé", other: "{count} sousedů" },
   "units.links": { one: "{count} spojení", few: "{count} spojení", other: "{count} spojení" },
+  "units.minutesAgo": { one: "před {count} minutou", few: "před {count} minutami", other: "před {count} minutami" },
+  "units.hoursAgo": { one: "před {count} hodinou", few: "před {count} hodinami", other: "před {count} hodinami" },
+  "units.daysAgo": { one: "před {count} dnem", few: "před {count} dny", other: "před {count} dny" },
   "feed.empty": "Čekám na paket s trasou…",
   "feed.loadingHistory": "Načítám historii…",
   "map.waiting": "Čekám na živá data…",
@@ -30,6 +34,11 @@ const cs = {
   "connection.mqttOnline": "MQTT online",
   "connection.mqttOffline": "MQTT nedostupné",
   "connection.nodesFailed": "Uzly nelze načíst",
+  "data.stale": "z cache",
+  "data.staleTitle": "CoreScope je nedostupný, zobrazují se poslední úspěšná data.",
+  "node.copyLink": "Kopírovat odkaz",
+  "node.linkCopied": "Odkaz zkopírován",
+  "node.stackTitle": "Uzly na tomto místě",
   "node.basicDetails": "Základní údaje",
   "node.trafficDetails": "Provoz",
   "node.networkDetails": "Síťové hodnocení",
@@ -139,6 +148,13 @@ const cs = {
   "lang.switchToCzech": "Přepnout do češtiny",
   "lang.production": "produkce ↗",
   "lang.productionTitle": "Přejít na produkční verzi",
+  "route.detail": "Detail trasy",
+  "route.showOnMap": "Zobrazit na mapě",
+  "route.distanceTotal": "Celkem {distance} km",
+  "route.steps": "Průběh trasy",
+  "route.snr": "SNR",
+  "route.unresolved": "nerozřešeno",
+  "route.clickHint": "Kliknutím zobrazíte detail trasy.",
 };
 
 const en = {
@@ -148,6 +164,7 @@ const en = {
   "common.yes": "Yes",
   "common.no": "No",
   "common.today": "Today",
+  "common.justNow": "just now",
   "common.copy": "Copy",
   "common.copied": "Copied",
   "common.copyFailed": "Unable to copy",
@@ -162,6 +179,9 @@ const en = {
   "units.observers": { one: "{count} observer", other: "{count} observers" },
   "units.neighbors": { one: "{count} neighbour", other: "{count} neighbours" },
   "units.links": { one: "{count} link", other: "{count} links" },
+  "units.minutesAgo": { one: "{count} minute ago", other: "{count} minutes ago" },
+  "units.hoursAgo": { one: "{count} hour ago", other: "{count} hours ago" },
+  "units.daysAgo": { one: "{count} day ago", other: "{count} days ago" },
   "feed.empty": "Waiting for a route packet…",
   "feed.loadingHistory": "Loading history…",
   "map.waiting": "Waiting for live data…",
@@ -169,6 +189,11 @@ const en = {
   "connection.mqttOnline": "MQTT online",
   "connection.mqttOffline": "MQTT unavailable",
   "connection.nodesFailed": "Unable to load nodes",
+  "data.stale": "cached",
+  "data.staleTitle": "CoreScope is unavailable; showing the last successful data.",
+  "node.copyLink": "Copy link",
+  "node.linkCopied": "Link copied",
+  "node.stackTitle": "Nodes at this location",
   "node.basicDetails": "Basic details",
   "node.trafficDetails": "Traffic",
   "node.networkDetails": "Network rating",
@@ -278,6 +303,13 @@ const en = {
   "lang.switchToCzech": "Switch to Czech",
   "lang.production": "production ↗",
   "lang.productionTitle": "Go to the production version",
+  "route.detail": "Route detail",
+  "route.showOnMap": "Show on map",
+  "route.distanceTotal": "Total {distance} km",
+  "route.steps": "Route steps",
+  "route.snr": "SNR",
+  "route.unresolved": "unresolved",
+  "route.clickHint": "Click to view route details.",
 };
 
 export const TRANSLATIONS = { cs, en };
@@ -302,6 +334,7 @@ export const STATIC_EN = {
   "Podklad mapy": "Base map",
   "Základní": "Standard",
   "Satelitní": "Satellite",
+  "Tmavá": "Dark",
   "Časové okno": "Time window",
   "Časové okno tras": "Route time window",
   "Velikost hashe": "Hash size",
@@ -436,6 +469,13 @@ export function formatPercent(value) {
   return new Intl.NumberFormat(localeTag(), {
     style: "percent",
     maximumFractionDigits: 0,
+  }).format(Number(value) || 0);
+}
+
+export function formatDecimal(value, digits = 1) {
+  return new Intl.NumberFormat(localeTag(), {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
   }).format(Number(value) || 0);
 }
 

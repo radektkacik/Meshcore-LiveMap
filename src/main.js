@@ -29,6 +29,8 @@ import { buildNeighborIndex, RouteStore, RouteVersionState, routeTimestamp } fro
 import {
   applyStaticTranslations,
   formatDate,
+  formatDateTime,
+  formatDecimal,
   formatNumber,
   formatPercent,
   formatTime,
@@ -92,6 +94,12 @@ function appPath(path) {
   return `${APP_BASE}${path}`;
 }
 
+const INITIAL_PARAMS = new URLSearchParams(location.search);
+const ALL_NODE_ROLES = ["repeater", "companion", "room", "sensor", "unknown"];
+const ALL_HASH_SIZES = [1, 2, 3];
+const INITIAL_NODE_KEY = INITIAL_PARAMS.get("node")?.trim().toUpperCase() || null;
+const INITIAL_ZOOM = Number(INITIAL_PARAMS.get("z"));
+
 const THEME_KEY = "meshcoreTheme";
 document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
 
@@ -102,6 +110,7 @@ const elements = {
   betaBadge: document.querySelector("#beta-badge"),
   connectionDot: document.querySelector("#connection-dot"),
   connectionLabel: document.querySelector("#connection-label"),
+  dataStale: document.querySelector("#data-stale"),
   feed: document.querySelector("#route-feed"),
   feedbackCancel: document.querySelector("#feedback-cancel"),
   feedbackCategory: document.querySelector("#feedback-category"),
@@ -190,7 +199,7 @@ const state = {
   animationEnabled: elements.animationToggle.checked,
   animationMode: new URLSearchParams(location.search).get("anim") === "svg" ? "svg" : "canvas",
   allowedHashBytes: new Set([2, 3]),
-  allowedRoles: new Set(["repeater", "companion", "room", "sensor", "unknown"]),
+  allowedRoles: new Set(ALL_NODE_ROLES),
   archiveRendered: new Map(),
   archiveRoutes: new Map(),
   lastPacketAt: 0,
@@ -233,8 +242,34 @@ const state = {
   statsCount: 10,
   statsMetric: "relay",
   statsWindow: "24h",
+  initialNodeApplied: false,
   windowRequestId: 0,
 };
+
+function applyInitialFilters() {
+  const rolesParam = INITIAL_PARAMS.get("roles");
+  if (rolesParam !== null) {
+    const roles = rolesParam.split(",").map((role) => role.trim()).filter((role) => ALL_NODE_ROLES.includes(role));
+    if (roles.length) {
+      state.allowedRoles = new Set(roles);
+      for (const input of elements.roleToggles) {
+        input.checked = roles.includes(input.id.replace("role-toggle-", ""));
+      }
+    }
+  }
+  const sizesParam = INITIAL_PARAMS.get("sizes");
+  if (sizesParam !== null) {
+    const sizes = sizesParam.split(",").map(Number).filter((size) => ALL_HASH_SIZES.includes(size));
+    if (sizes.length) {
+      state.allowedHashBytes = new Set(sizes);
+      for (const input of elements.sizeToggles) {
+        input.checked = sizes.includes(Number(input.id.replace("size-toggle-", "")));
+      }
+    }
+  }
+}
+
+applyInitialFilters();
 const routeStore = new RouteStore({
   retentionMs: ROUTE_RETENTION_MS,
   feedLimit: MAX_FEED_ITEMS,
@@ -254,6 +289,16 @@ const map = L.map("map", {
 
 L.control.zoom({ position: "bottomleft" }).addTo(map);
 
+const initialLat = Number(INITIAL_PARAMS.get("lat"));
+const initialLon = Number(INITIAL_PARAMS.get("lon"));
+if (Number.isFinite(initialLat) && Number.isFinite(initialLon)
+  && initialLat >= -90 && initialLat <= 90 && initialLon >= -180 && initialLon <= 180) {
+  const initialViewZoom = INITIAL_PARAMS.has("z") && Number.isFinite(INITIAL_ZOOM)
+    ? Math.max(6, Math.min(14, INITIAL_ZOOM))
+    : map.getZoom();
+  map.setView([initialLat, initialLon], initialViewZoom);
+}
+
 const rasterBaseLayers = {
   osm: L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "&copy; OpenStreetMap contributors",
@@ -269,10 +314,18 @@ const rasterBaseLayers = {
     className: "satellite-layer",
     maxZoom: 19,
   }),
+  dark: L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png", {
+    attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
+    subdomains: "abcd",
+    maxZoom: 20,
+  }),
 };
 const BASE_LAYER_KEY = "meshcoreBaseLayer";
-const BASE_KEYS = ["osm", "topo", "sat"];
-let activeBaseLayerKey = BASE_KEYS.includes(localStorage.getItem(BASE_LAYER_KEY)) ? localStorage.getItem(BASE_LAYER_KEY) : "osm";
+const BASE_KEYS = ["osm", "topo", "sat", "dark"];
+const storedBaseLayer = localStorage.getItem(BASE_LAYER_KEY);
+let activeBaseLayerKey = BASE_KEYS.includes(storedBaseLayer)
+  ? storedBaseLayer
+  : (document.documentElement.dataset.theme === "dark" ? "dark" : "osm");
 let currentBaseLayer = null;
 
 function showBaseLayer(key) {
@@ -355,12 +408,40 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+async function copyText(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {}
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    return document.execCommand("copy");
+  } catch {
+    return false;
+  } finally {
+    textarea.remove();
+  }
+}
+
 function formatNodeDate(value) {
   if (!value) return t("common.unknown");
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return t("common.unknown");
-  const now = new Date();
+  const diff = nowMs() - date.getTime();
+  if (diff >= 0 && diff < 60_000) return t("common.justNow");
+  if (diff >= 0 && diff < 60 * 60_000) return tCount("units.minutesAgo", Math.floor(diff / 60_000));
+  if (diff >= 0 && diff < 24 * 60 * 60_000) return tCount("units.hoursAgo", Math.floor(diff / (60 * 60_000)));
+  if (diff >= 0 && diff < 7 * 24 * 60 * 60_000) return tCount("units.daysAgo", Math.floor(diff / (24 * 60 * 60_000)));
   const time = formatTime(date);
+  const now = new Date();
   const isToday = date.getFullYear() === now.getFullYear()
     && date.getMonth() === now.getMonth()
     && date.getDate() === now.getDate();
@@ -488,6 +569,75 @@ function showRouteOnMap(route) {
   state.selectedRouteTimeout = setTimeout(clearSelectedRoute, SELECTED_ROUTE_MS);
 }
 
+function routeDetailHtml(route) {
+  const points = route.points || [];
+  let totalMeters = 0;
+  const rows = points.map((point, index) => {
+    const previous = points[index - 1];
+    let distance = "—";
+    if (previous && point.breakBefore) {
+      distance = t("route.unresolved");
+    } else if (previous) {
+      const meters = map.distance([previous.lat, previous.lon], [point.lat, point.lon]);
+      totalMeters += meters;
+      distance = `${formatDecimal(meters / 1000, 1)} km`;
+    }
+    return `<li><i>${index + 1}</i><span>${escapeHtml(point.name || t("common.unknownShort"))}</span><small>${escapeHtml(distance)}</small></li>`;
+  }).join("");
+  const snr = route.snrValues?.length
+    ? `${t("route.snr")} ${route.snrValues.map((value) => formatDecimal(value, 1)).join(" / ")} dB`
+    : null;
+  const meta = [
+    formatHops(Math.max(1, points.length - 1)),
+    formatObservers(route.observerCount),
+    `${route.hashBytes}B`,
+    route.scope?.trim(),
+    snr,
+  ].filter(Boolean).map((value) => escapeHtml(value)).join(" · ");
+  return `
+    <section class="route-popup-card">
+      <header>
+        <div><small>${t("route.detail")}</small><h3>${escapeHtml(route.typeLabel)} · ${route.hashBytes}B</h3></div>
+        <time>${escapeHtml(formatDateTime(route.timestamp))}</time>
+      </header>
+      <div class="route-popup-summary">
+        <p><strong>${escapeHtml(route.from)}</strong> <span>→</span> <strong>${escapeHtml(route.to)}</strong></p>
+        <small>${meta}</small>
+        <small>${t("route.distanceTotal", { distance: formatDecimal(totalMeters / 1000, 1) })}</small>
+      </div>
+      <h4>${t("route.steps")}</h4>
+      <ol class="route-hop-list">${rows}</ol>
+      <div class="route-popup-actions">
+        <button class="route-show-on-map" type="button">${t("route.showOnMap")}</button>
+      </div>
+    </section>
+  `;
+}
+
+function openRouteDetail(route, latlng = null) {
+  if (!route?.points?.length) return;
+  const content = document.createElement("div");
+  content.className = "route-popup-content";
+  content.innerHTML = routeDetailHtml(route);
+  const anchor = latlng || (route.bounds?.isValid() ? route.bounds.getCenter() : L.latLng(route.points[0].lat, route.points[0].lon));
+  const popup = L.popup({
+    className: "route-popup",
+    maxWidth: 420,
+    minWidth: 300,
+    autoPan: true,
+  }).setLatLng(anchor).setContent(content).openOn(map);
+  L.DomEvent.disableClickPropagation(content);
+  L.DomEvent.disableScrollPropagation(content);
+  content.querySelector(".route-show-on-map")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setTimeout(() => {
+      popup.close();
+      showRouteOnMap(route);
+    }, 0);
+  });
+}
+
 map.on("click", clearSelectedRoute);
 map.on("click", (event) => {
   if (state.losMode) void handleLosClick(event.latlng);
@@ -522,6 +672,7 @@ function setupNodePopup(popup, node) {
   const qrButton = root.querySelector(".node-qr-toggle");
   const routeButton = root.querySelector(".node-route-show");
   const copyButton = root.querySelector(".node-key-copy");
+  const linkButton = root.querySelector(".node-link-copy");
 
   qrButton?.addEventListener("click", async (event) => {
     event.preventDefault();
@@ -551,13 +702,26 @@ function setupNodePopup(popup, node) {
   copyButton?.addEventListener("click", async (event) => {
     event.preventDefault();
     event.stopPropagation();
-    try {
-      await navigator.clipboard.writeText(node.public_key);
+    const copied = await copyText(node.public_key);
+    if (copied) {
       copyButton.textContent = t("common.copied");
       setTimeout(() => { copyButton.textContent = t("common.copy"); }, 1_500);
-    } catch (error) {
-      console.error("Veřejný klíč se nepodařilo zkopírovat", error);
+    } else {
+      console.error("Veřejný klíč se nepodařilo zkopírovat");
       copyButton.textContent = t("common.copyFailed");
+    }
+  });
+
+  linkButton?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const copied = await copyText(shareUrlForNode(node));
+    if (copied) {
+      linkButton.textContent = t("node.linkCopied");
+      setTimeout(() => { linkButton.textContent = t("node.copyLink"); }, 1_500);
+    } else {
+      console.error("Odkaz se nepodařilo zkopírovat");
+      linkButton.textContent = t("common.copyFailed");
     }
   });
 }
@@ -693,9 +857,10 @@ function nodePopupContent(node, active) {
     ${nodeLastRoute(node)}
     ${nodeNeighbors(node)}
     ${node.public_key ? `<div class="node-public-key"><div><span>${t("node.publicKey")}</span><button class="node-key-copy" type="button">${t("common.copy")}</button></div><code>${escapeHtml(node.public_key)}</code></div>` : ""}
-    ${/^[0-9a-f]{64}$/i.test(node.public_key || "") ? `
+    ${node.public_key ? `
       <div class="node-popup-actions">
-        <button class="node-qr-toggle" type="button">${t("node.showQr")}</button>
+        <button class="node-link-copy" type="button">${t("node.copyLink")}</button>
+        ${/^[0-9a-f]{64}$/i.test(node.public_key) ? `<button class="node-qr-toggle" type="button">${t("node.showQr")}</button>` : ""}
       </div>
     ` : ""}
   `;
@@ -705,13 +870,17 @@ function nodePopup(node, active) {
   return `<section class="node-popup-card">${nodePopupContent(node, active)}</section>`;
 }
 
-async function getJson(path) {
+async function getJsonWithResponse(path) {
   const response = await fetch(appPath(path), {
     cache: "no-store",
     signal: AbortSignal.timeout(API_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
-  return response.json();
+  return { data: await response.json(), response };
+}
+
+async function getJson(path) {
+  return (await getJsonWithResponse(path)).data;
 }
 
 async function postJson(path, body) {
@@ -734,6 +903,12 @@ function setConnection(connected, label) {
   elements.connectionDot.classList.toggle("online", connected);
   elements.connectionLabel.textContent = label;
   if (connected) elements.lastUpdate.textContent = formatTime(Date.now());
+}
+
+function setDataFreshness(stale) {
+  elements.dataStale.hidden = !stale;
+  elements.dataStale.textContent = stale ? t("data.stale") : "";
+  elements.dataStale.title = stale ? t("data.staleTitle") : "";
 }
 
 function nodeTooltip(node) {
@@ -788,6 +963,52 @@ function applyNodeStacking(marker, node) {
   else marker.bringToBack();
 }
 
+const NODE_STACK_PX = 10;
+const NODE_ROLE_RANK = { repeater: 0, companion: 1, room: 2, sensor: 3, unknown: 4 };
+
+function nodeStackEntries(entry) {
+  const origin = map.latLngToContainerPoint(entry.marker.getLatLng());
+  return state.nodeMarkers
+    .filter((candidate) => candidate.shown && nodeLayer.hasLayer(candidate.marker))
+    .filter((candidate) => origin.distanceTo(map.latLngToContainerPoint(candidate.marker.getLatLng())) <= NODE_STACK_PX)
+    .sort((a, b) => (NODE_ROLE_RANK[a.node.role] ?? 9) - (NODE_ROLE_RANK[b.node.role] ?? 9)
+      || String(a.node.name || "").localeCompare(String(b.node.name || ""), getLocale()));
+}
+
+function openNodeStack(entries, latlng) {
+  const container = document.createElement("div");
+  container.className = "node-stack";
+  const heading = document.createElement("div");
+  heading.className = "node-stack-title";
+  heading.textContent = `${t("node.stackTitle")} · ${entries.length}`;
+  const list = document.createElement("div");
+  list.className = "node-stack-list";
+  for (const entry of entries) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.innerHTML = `
+      <span>${escapeHtml(entry.node.name || t("common.unknownNode"))}</span>
+      <small>${escapeHtml(roleLabel(entry.node.role))} · ${entry.active ? t("common.active") : t("common.inactive")}</small>
+    `;
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setTimeout(() => {
+        map.closePopup();
+        entry.marker.openPopup();
+      }, 0);
+    });
+    list.appendChild(button);
+  }
+  container.append(heading, list);
+  L.DomEvent.disableClickPropagation(container);
+  L.DomEvent.disableScrollPropagation(container);
+  L.popup({ className: "node-stack-popup", maxWidth: 320, minWidth: 240, autoPan: true })
+    .setLatLng(latlng)
+    .setContent(container)
+    .openOn(map);
+}
+
 function addNodeMarker(node) {
   const entry = { active: isNodeActive(node, nowMs(), NODE_ACTIVE_MS), marker: null, node, shown: false, stackRole: node.role || "unknown", styleKey: null, tier: null };
   const marker = L.circleMarker([node.lat, node.lon], {
@@ -811,11 +1032,17 @@ function addNodeMarker(node) {
       setupNodePopup(event.popup, entry.node);
     })
     .on("click", (event) => {
-      if (!state.losMode) return;
       L.DomEvent.stopPropagation(event);
-      marker.closePopup();
-      void handleLosClick(marker.getLatLng(), node);
+      if (state.losMode) {
+        marker.closePopup();
+        void handleLosClick(marker.getLatLng(), node);
+        return;
+      }
+      const stack = nodeStackEntries(entry);
+      if (stack.length > 1) openNodeStack(stack, marker.getLatLng());
+      else marker.openPopup();
     });
+  marker.off("click", marker._openPopup, marker);
   const allowed = isNodeRoleAllowed(node, state.allowedRoles);
   if (allowed) {
     marker.addTo(nodeLayer);
@@ -836,6 +1063,64 @@ function revealNodeMarker(entry) {
     applyNodeStacking(entry.marker, entry.node);
     entry.shown = true;
   }
+}
+
+function findNodeEntry(key) {
+  const query = String(key || "").toUpperCase();
+  if (!query) return null;
+  const exact = state.nodeMarkerByKey.get(query);
+  if (exact) return exact;
+  if (query.length < 6) return null;
+  const matches = [...state.nodeMarkerByKey.entries()].filter(([candidate]) => candidate.startsWith(query));
+  return matches.length === 1 ? matches[0][1] : null;
+}
+
+function applyInitialNode() {
+  if (!INITIAL_NODE_KEY || state.initialNodeApplied) return;
+  const entry = findNodeEntry(INITIAL_NODE_KEY);
+  if (!entry) return;
+  state.initialNodeApplied = true;
+  const role = entry.node.role || "unknown";
+  if (!state.allowedRoles.has(role)) {
+    state.allowedRoles.add(role);
+    const input = elements.roleToggles.find((candidate) => candidate.id === `role-toggle-${role}`);
+    if (input) input.checked = true;
+  }
+  revealNodeMarker(entry);
+  const zoom = INITIAL_PARAMS.has("z") && Number.isFinite(INITIAL_ZOOM)
+    ? Math.max(6, Math.min(14, INITIAL_ZOOM))
+    : 11;
+  map.setView(entry.marker.getLatLng(), zoom);
+  entry.marker.openPopup();
+}
+
+function routeWindowParam(windowMs) {
+  if (windowMs === 300000) return "5m";
+  if (windowMs === 3600000) return "1h";
+  if (windowMs === 86400000) return "24h";
+  return null;
+}
+
+function parseRouteWindowParam(value) {
+  const aliases = { live: 0, "5m": 300000, "1h": 3600000, "24h": 86400000 };
+  if (typeof value === "string" && Object.hasOwn(aliases, value)) return aliases[value];
+  const number = Number(value);
+  return [0, 300000, 3600000, 86400000].includes(number) ? number : null;
+}
+
+function shareUrlForNode(node) {
+  const url = new URL(location.href);
+  url.searchParams.set("node", String(node.public_key || "").toUpperCase());
+  url.searchParams.set("lat", map.getCenter().lat.toFixed(5));
+  url.searchParams.set("lon", map.getCenter().lng.toFixed(5));
+  url.searchParams.set("z", String(map.getZoom()));
+  url.searchParams.set("roles", [...state.allowedRoles].join(","));
+  url.searchParams.set("sizes", [...state.allowedHashBytes].sort((a, b) => a - b).join(","));
+  url.searchParams.set("lang", getLocale());
+  const windowValue = routeWindowParam(state.routeWindowMs);
+  if (windowValue) url.searchParams.set("window", windowValue);
+  else url.searchParams.delete("window");
+  return url.toString();
 }
 
 function nodeStyleKey(node, tier) {
@@ -957,8 +1242,10 @@ async function loadNodes() {
   if (nodeRefreshActive) return null;
   nodeRefreshActive = true;
   try {
-    const data = await getJson("/api/nodes?limit=2000");
+    const { data, response } = await getJsonWithResponse("/api/nodes?limit=2000");
+    setDataFreshness(response.headers.get("X-Data-Stale") === "1");
     syncNodes(data.nodes || []);
+    applyInitialNode();
     if (!state.routeHistoryLoaded) void loadRouteHistory();
     return true;
   } catch (error) {
@@ -1235,7 +1522,7 @@ function routeRecord(packet, points, hashBytes, id, versionId, createdAt, timest
       publicKey,
       breakBefore: Boolean(breakBefore),
     })),
-    scope: packet.scope_name || null,
+    scope: String(packet.scope_name || "").trim() || null,
     snrValues: packetSnrValues(packet),
     timestamp,
     to: points.at(-1).name || t("common.unknownShort"),
@@ -1345,11 +1632,19 @@ function renderRoute(route, { archive = false } = {}) {
   }).addTo(group);
 
   const snrText = snrValues.length ? ` · SNR ${snrValues.map((value) => value.toFixed(1)).join(" / ")} dB` : "";
-  const scopeText = route.scope ? ` · ${escapeHtml(route.scope)}` : "";
+  const scopeText = route.scope?.trim() ? ` · ${escapeHtml(route.scope.trim())}` : "";
   lines[0].bindTooltip(`${escapeHtml(route.typeLabel)} · ${formatHops(route.points.length - 1)} · ${route.hashBytes}B${scopeText}${snrText}`, {
     sticky: true,
     className: "route-tooltip",
   });
+
+  const openDetail = (event) => {
+    if (state.losMode) return;
+    L.DomEvent.stopPropagation(event);
+    openRouteDetail(route, event.latlng);
+  };
+  for (const line of lines) line.on("click", openDetail);
+  endpoint.on("click", openDetail);
 
   return { endpoint, group, line: lines[0], lines, versionId: route.versionId };
 }
@@ -1370,8 +1665,20 @@ function renderFeed(routes, emptyText = t("feed.empty")) {
     item.innerHTML = `
       <div><b>${escapeHtml(route.typeLabel)}</b><time>${formatTime(route.timestamp)}</time></div>
       <p>${escapeHtml(route.from)} <span>→</span> ${escapeHtml(route.to)}</p>
-      <small>${route.scope ? `${escapeHtml(route.scope)} · ` : ""}${formatHops(Math.max(1, route.points.length - 1))} · ${route.hashBytes}B · ${formatObservers(route.observerCount)}</small>
+      <small>${route.scope?.trim() ? `${escapeHtml(route.scope.trim())} · ` : ""}${formatHops(Math.max(1, route.points.length - 1))} · ${route.hashBytes}B · ${formatObservers(route.observerCount)}</small>
     `;
+    item.tabIndex = 0;
+    item.setAttribute("role", "button");
+    item.title = t("route.clickHint");
+    const openDetail = (event) => {
+      event?.preventDefault();
+      event?.stopPropagation();
+      openRouteDetail(route, route.bounds?.isValid() ? route.bounds.getCenter() : null);
+    };
+    item.addEventListener("click", openDetail);
+    item.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") openDetail(event);
+    });
     return item;
   }));
 }
@@ -1749,6 +2056,8 @@ function applyTheme(theme) {
   const next = theme === "dark" ? "dark" : "light";
   document.documentElement.dataset.theme = next;
   localStorage.setItem(THEME_KEY, next);
+  if (next === "dark" && activeBaseLayerKey === "osm") setBaseLayer("dark");
+  if (next === "light" && activeBaseLayerKey === "dark") setBaseLayer("osm");
 }
 
 elements.themeToggle.addEventListener("click", () => {
@@ -2386,6 +2695,9 @@ elements.feedbackForm.addEventListener("submit", async (event) => {
   }
 });
 document.addEventListener("visibilitychange", updateRouteAnimation);
+
+const initialWindow = parseRouteWindowParam(INITIAL_PARAMS.get("window"));
+if (initialWindow != null && initialWindow !== 0) void setRouteWindow(initialWindow);
 
 async function start() {
   console.info(`Route animation mode: ${state.animationMode}`);
