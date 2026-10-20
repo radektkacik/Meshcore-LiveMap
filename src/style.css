@@ -441,7 +441,7 @@ html[data-theme="dark"] .route-show-on-map { color: #5fd0a5; background: rgba(7,
 }
 
 @media (max-width: 430px) {
-  .activity-panel { display: none; }
+  .activity-panel { right: 9px; bottom: 9px; left: 9px; width: auto; max-height: 46dvh; z-index: 620; }
   .metrics strong { font-size: 11px; }
 }
 
