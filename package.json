@@ -1,0 +1,29 @@
+{
+  "name": "meshcore-cz-live-map",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "node --env-file-if-exists=.env server.mjs",
+    "test": "node --test",
+    "test:reference": "RUN_REFERENCE_TESTS=1 node --test test/reference-map.test.mjs"
+  },
+  "dependencies": {
+    "@michaelhart/meshcore-decoder": "^0.3.0",
+    "better-sqlite3": "^11.10.0",
+    "leaflet": "^1.9.4",
+    "mqtt": "^5.15.2",
+    "pinia": "^4.0.3",
+    "qrcode": "^1.5.4",
+    "vue": "^3.5.42",
+    "vue-router": "^5.3.1"
+  },
+  "devDependencies": {
+    "vite": "^7.1.3"
+  }
+}

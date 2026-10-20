@@ -1,0 +1,1023 @@
+import { createHash } from "node:crypto";
+import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
+import { dirname, extname, join, normalize } from "node:path";
+import mqtt from "mqtt";
+import { MeshCorePacketDecoder } from "@michaelhart/meshcore-decoder";
+import { decodedPacketHashBytes, decodedPacketPath, TimeBoundRingBuffer } from "./backend-utils.mjs";
+import { createNodeMetricsStore } from "./node-metrics.mjs";
+import { createPacketStore } from "./packet-store.mjs";
+import { createVisitStatsStore } from "./visit-stats.mjs";
+import { createFeedbackStore } from "./feedback.mjs";
+
+const port = Number(process.env.PORT || 4173);
+const host = process.env.HOST || "0.0.0.0";
+const dist = join(process.cwd(), "dist");
+const upstream = process.env.CORESCOPE_URL || "https://analyzer.meshcore.cz";
+const requestBase = "http://localhost";
+const upstreamTimeoutMs = Math.max(1, Number(process.env.UPSTREAM_TIMEOUT_MS || 15_000));
+const metricsCollectionMs = 15 * 60 * 1000;
+const metricsStore = createNodeMetricsStore(
+  process.env.SCORE_DB_PATH || join(process.cwd(), "data", "node-metrics.sqlite"),
+);
+const packetStore = createPacketStore(
+  process.env.PACKET_DB_PATH || join(process.cwd(), "data", "packets.sqlite"),
+  {
+    retentionMs: Math.max(1, Number(process.env.PACKET_RETENTION_MS || 7 * 24 * 60 * 60 * 1000)),
+    maxRows: Math.max(1, Number(process.env.PACKET_MAX_ROWS || 500_000)),
+  },
+);
+const packetCollectionMs = Math.max(30_000, Number(process.env.PACKET_COLLECT_MS || 5 * 60 * 1000));
+const visitStore = createVisitStatsStore(
+  process.env.VISITS_DB_PATH || join(process.cwd(), "data", "visits.sqlite"),
+);
+const feedbackStore = createFeedbackStore(
+  process.env.FEEDBACK_DB_PATH || join(process.cwd(), "data", "feedback.sqlite"),
+);
+const feedbackToken = process.env.FEEDBACK_TOKEN || "";
+const elevationUpstream = process.env.ELEVATION_UPSTREAM || "https://api.open-meteo.com/v1/elevation";
+const elevationFallbackUrl = process.env.ELEVATION_FALLBACK_URL || "https://api.open-elevation.com/api/v1/lookup";
+const elevationCacheLimit = Math.max(1, Number(process.env.ELEVATION_CACHE_LIMIT || 50_000));
+const elevationMaxPoints = Math.max(1, Number(process.env.ELEVATION_MAX_POINTS || 200));
+const elevationTimeoutMs = Math.max(1_000, Number(process.env.ELEVATION_TIMEOUT_MS || 10_000));
+const elevationBatchSize = 100;
+const elevationCache = new Map();
+let elevationQueue = Promise.resolve();
+const nodesCachePath = process.env.NODES_CACHE_PATH || join(process.cwd(), "data", "nodes-cache.json");
+const nodesCacheTtlMs = Math.max(60_000, Number(process.env.NODES_CACHE_TTL_MS || 7 * 24 * 60 * 60 * 1000));
+const nodesCacheWriteMs = Math.max(0, Number(process.env.NODES_CACHE_WRITE_MS || 5 * 60 * 1000));
+const resolveCacheTtlMs = Math.max(60_000, Number(process.env.RESOLVE_CACHE_TTL_MS || 6 * 60 * 60 * 1000));
+const resolveCacheLimit = Math.max(1, Number(process.env.RESOLVE_CACHE_LIMIT || 500));
+let nodesCache = null;
+let nodesCacheWrittenAt = 0;
+const resolveCache = new Map();
+const allowedApiPaths = [
+  "/api/nodes",
+  "/api/packets",
+  "/api/resolve-hops",
+  "/api/stats",
+];
+const packetStreams = new Set();
+const packetBufferMs = 120_000;
+const maxPacketBufferEntries = Math.max(1, Number(process.env.MAX_PACKET_BUFFER_ENTRIES || 5_000));
+const recentPackets = new TimeBoundRingBuffer({
+  capacity: maxPacketBufferEntries,
+  maxAgeMs: packetBufferMs,
+});
+const maxPacketStreams = Math.max(1, Number(process.env.MAX_PACKET_STREAMS || 100));
+const maxStreamBufferBytes = Math.max(1024, Number(process.env.MAX_STREAM_BUFFER_BYTES || 256 * 1024));
+let mqttConnected = false;
+const contentTypes = {
+  ".css": "text/css; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
+  ".svg": "image/svg+xml",
+  ".woff2": "font/woff2",
+};
+
+try {
+  const cached = JSON.parse(readFileSync(nodesCachePath, "utf8"));
+  if (cached && typeof cached.body === "string") nodesCache = cached;
+} catch {
+  nodesCache = null;
+}
+
+function nodesCacheFresh() {
+  return Boolean(nodesCache) && Date.now() - Number(nodesCache.at || 0) <= nodesCacheTtlMs;
+}
+
+function storeNodesCache(data) {
+  const now = Date.now();
+  nodesCache = { at: now, body: JSON.stringify(data) };
+  if (now - nodesCacheWrittenAt < nodesCacheWriteMs) return;
+  nodesCacheWrittenAt = now;
+  try {
+    mkdirSync(dirname(nodesCachePath), { recursive: true });
+    writeFileSync(nodesCachePath, JSON.stringify(nodesCache));
+  } catch (error) {
+    console.error(`Nodes cache write failed: ${error.message}`);
+  }
+}
+
+function buildNodesPayload(data) {
+  const payload = { ...data };
+  payload.nodes = metricsStore.decorateNodes(Array.isArray(payload.nodes) ? payload.nodes : []);
+  payload.scoreHistory = { collectionMinutes: 15, historyDays: 30, windowDays: 7 };
+  return payload;
+}
+
+function sendJson(response, status, payload, headers = {}) {
+  response.writeHead(status, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    ...headers,
+  });
+  response.end(JSON.stringify(payload));
+}
+
+function resolveCacheGet(key) {
+  const entry = resolveCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.at > resolveCacheTtlMs) {
+    resolveCache.delete(key);
+    return null;
+  }
+  return entry;
+}
+
+function resolveCacheSet(key, body, contentType) {
+  resolveCache.delete(key);
+  resolveCache.set(key, { at: Date.now(), body, contentType });
+  while (resolveCache.size > resolveCacheLimit) {
+    resolveCache.delete(resolveCache.keys().next().value);
+  }
+}
+
+function sendFile(response, filePath) {
+  response.writeHead(200, {
+    "Content-Type": contentTypes[extname(filePath)] || "application/octet-stream",
+    "Cache-Control": extname(filePath) === ".html" ? "no-cache" : "public, max-age=31536000, immutable",
+  });
+  const stream = createReadStream(filePath);
+  stream.on("error", () => {
+    if (!response.writableEnded) response.destroy();
+  });
+  stream.pipe(response);
+}
+
+function parseMqttPacket(topic, message) {
+  const source = JSON.parse(message.toString("utf8"));
+  if (source.type !== "PACKET" || !source.raw) return null;
+  const topicParts = topic.split("/");
+
+  let decoded;
+  try {
+    decoded = MeshCorePacketDecoder.decode(source.raw);
+  } catch {
+    return null;
+  }
+
+  const payloadType = decoded.payloadType ?? 0;
+  const routeType = decoded.routeType ?? 0;
+  const payloadDecoded = decoded?.payload?.decoded ?? decoded?.payload ?? {};
+  const appData = payloadDecoded?.appData ?? payloadDecoded?.appdata ?? {};
+  const path = decodedPacketPath(decoded).map((hop) => String(hop).toUpperCase());
+  const advertData = payloadType === 4 ? {
+    pubKey: (payloadDecoded.publicKey || payloadDecoded.publickey || "").toLowerCase(),
+    lat: appData.location?.latitude ?? appData.location?.lat ?? null,
+    lon: appData.location?.longitude ?? appData.location?.lon ?? null,
+    name: appData.name || null,
+    type: "ADVERT",
+  } : {};
+  const senderPubkey = advertData.pubKey
+    || decoded?.payload?.senderPubkey
+    || payloadDecoded?.senderPubkey
+    || payloadDecoded?.sender
+    || null;
+
+  return {
+    decoded_json: JSON.stringify(advertData),
+    first_seen: new Date().toISOString(),
+    hash: String(source.hash || decoded.messageHash || "").toLowerCase(),
+    latest: new Date().toISOString(),
+    observer_count: 1,
+    observer_iata: topicParts[1] || "",
+    observer_id: topicParts[2] || "",
+    observer_name: source.origin || "",
+    origin_id: senderPubkey || "",
+    path_hash_bytes: decodedPacketHashBytes(decoded),
+    path_json: JSON.stringify(path),
+    payload_type: payloadType,
+    raw_hex: source.raw,
+    route_type: routeType,
+    rssi: Number(source.RSSI),
+    snr: Number(source.SNR),
+  };
+}
+
+const feedbackRate = new Map();
+const feedbackRateLimit = Math.max(1, Number(process.env.FEEDBACK_RATE_LIMIT || 15));
+const feedbackDailyLimit = Math.max(10, Number(process.env.FEEDBACK_DAILY_LIMIT || 300));
+const feedbackMaxRows = Math.max(100, Number(process.env.FEEDBACK_MAX_ROWS || 5000));
+const feedbackCooldownMs = Math.max(0, Number(process.env.FEEDBACK_COOLDOWN_MS || 30_000));
+
+function checkFeedback(ip, now = Date.now()) {
+  const windowStart = now - 60 * 60 * 1000;
+  const stamps = (feedbackRate.get(ip) || []).filter((stamp) => stamp > windowStart);
+  const last = stamps[stamps.length - 1];
+  if (last != null && now - last < feedbackCooldownMs) {
+    feedbackRate.set(ip, stamps);
+    return {
+      ok: false,
+      retryAfter: Math.max(1, Math.ceil((feedbackCooldownMs - (now - last)) / 1000)),
+      message: "Mezi zprávami je krátká pauza, zkuste to prosím za chvíli.",
+    };
+  }
+  if (stamps.length >= feedbackRateLimit) {
+    feedbackRate.set(ip, stamps);
+    return {
+      ok: false,
+      retryAfter: Math.max(1, Math.ceil((stamps[0] + 60 * 60 * 1000 - now) / 1000)),
+      message: "Příliš mnoho zpráv za hodinu, zkuste to později.",
+    };
+  }
+  stamps.push(now);
+  feedbackRate.set(ip, stamps);
+  if (feedbackRate.size > 5000) {
+    for (const [key, value] of feedbackRate) {
+      if (!value.some((stamp) => stamp > windowStart)) feedbackRate.delete(key);
+    }
+  }
+  return { ok: true };
+}
+
+function startOfUtcDay(now) {
+  return Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth(), new Date(now).getUTCDate());
+}
+
+function readBody(request, limit = 16_384) {
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const chunks = [];
+    request.on("data", (chunk) => {
+      size += chunk.length;
+      if (size > limit) {
+        reject(new Error("Payload too large"));
+        request.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    request.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+    request.on("error", reject);
+  });
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function renderFeedbackPage(entries, token) {
+  const rows = entries.map((entry) => {
+    const flags = [
+      entry.is_public ? "veřejné" : "soukromé",
+      entry.hidden ? "skryté" : null,
+    ].filter(Boolean).join(" · ");
+    const action = token
+      ? `<a class="mod" href="/api/feedback/moderate?token=${encodeURIComponent(token)}&id=${entry.id}&hidden=${entry.hidden ? 0 : 1}">${entry.hidden ? "Zobrazit" : "Skrýt"}</a>`
+      : "";
+    return `
+    <li${entry.hidden ? ' class="is-hidden"' : ""}>
+      <div class="meta">#${entry.id} · ${escapeHtml(new Date(entry.created_at).toLocaleString("cs-CZ"))} · ${escapeHtml(entry.category || "other")} · ${escapeHtml(flags)}</div>
+      ${entry.name ? `<div class="name">${escapeHtml(entry.name)}</div>` : ""}
+      <p>${escapeHtml(entry.message)}</p>
+      ${entry.contact ? `<div class="contact">Kontakt: ${escapeHtml(entry.contact)}</div>` : ""}
+      ${action}
+    </li>`;
+  }).join("");
+  return `<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zpětná vazba</title>
+<style>
+body { margin:0; padding:24px; background:#e9e8e1; color:#182820; font:14px/1.5 Manrope, system-ui, sans-serif; }
+h1 { font-size:18px; margin:0 0 4px; }
+.count { color:#667b70; font-size:12px; margin-bottom:16px; }
+ul { list-style:none; margin:0; padding:0; }
+li { background:#fff; border:1px solid rgba(30,65,49,.16); border-radius:10px; padding:12px 14px; margin-bottom:10px; }
+.meta { color:#667b70; font:11px "DM Mono", monospace; margin-bottom:6px; }
+.name { font-weight:700; margin-bottom:3px; }
+p { margin:0 0 6px; white-space:pre-wrap; }
+.contact { color:#49665b; font-size:12px; }
+.is-hidden { opacity:.55; }
+.mod { display:inline-block; margin-top:6px; font-size:12px; color:#078e62; }
+.empty { color:#667b70; }
+</style>
+</head>
+<body>
+<h1>Zpětná vazba</h1>
+<div class="count">${entries.length} zpráv (nejnovější první)</div>
+${entries.length ? `<ul>${rows}</ul>` : '<p class="empty">Zatím žádné zprávy.</p>'}
+</body>
+</html>`;
+}
+
+function clientIp(request) {
+  const peer = request.socket?.remoteAddress || "";
+  const trustedPeer = peer === "127.0.0.1"
+    || peer === "::1"
+    || peer === "::ffff:127.0.0.1"
+    || process.env.TRUST_PROXY === "1";
+  const forwarded = request.headers["x-forwarded-for"];
+  if (trustedPeer && typeof forwarded === "string" && forwarded) {
+    const last = forwarded.split(",").at(-1).trim();
+    if (last) return last;
+  }
+  return peer || "unknown";
+}
+
+function rawPathHashBytes(rawHex, routeType) {
+  const raw = String(rawHex || "").replace(/\s/g, "");
+  const type = Number.isInteger(Number(routeType))
+    ? Number(routeType)
+    : (Number.parseInt(raw.slice(0, 2), 16) & 0x03);
+  const offset = type === 0 || type === 3 ? 5 : 1;
+  const pathByte = Number.parseInt(raw.slice(offset * 2, offset * 2 + 2), 16);
+  if (!Number.isFinite(pathByte)) return null;
+  const size = (pathByte >> 6) + 1;
+  return size >= 1 && size <= 3 ? size : null;
+}
+
+function toStoreRow(packet, now) {
+  const hash = String(packet.hash || "");
+  const observerId = String(packet.observer_id || "");
+  if (!hash || !observerId) return null;
+  const resolved = Array.isArray(packet.resolved_path) ? packet.resolved_path : [];
+  if (!resolved.some(Boolean)) return null;
+  const observedAt = Date.parse(packet.timestamp || packet.first_seen || "");
+  return {
+    decoded_json: packet.decoded_json || "",
+    hash,
+    observer_id: observerId,
+    observer_iata: packet.observer_iata || "",
+    observer_name: packet.observer_name || "",
+    observed_at: Number.isFinite(observedAt) ? observedAt : now,
+    path_hash_bytes: rawPathHashBytes(packet.raw_hex, packet.route_type),
+    path_json: typeof packet.path_json === "string" ? packet.path_json : JSON.stringify(packet.path_json || []),
+    payload_type: Number(packet.payload_type) || 0,
+    raw_hex: packet.raw_hex || "",
+    resolved_path: JSON.stringify(resolved),
+    route_type: Number(packet.route_type) || 0,
+    rssi: Number.isFinite(Number(packet.rssi)) ? Number(packet.rssi) : null,
+    scope_name: packet.scope_name || null,
+    snr: Number.isFinite(Number(packet.snr)) ? Number(packet.snr) : null,
+  };
+}
+
+function historyRowToPacket(row) {
+  const iso = new Date(row.observed_at).toISOString();
+  return {
+    decoded_json: row.decoded_json,
+    first_seen: iso,
+    hash: row.hash,
+    latest: iso,
+    observer_iata: row.observer_iata,
+    observer_id: row.observer_id,
+    observer_name: row.observer_name,
+    path_hash_bytes: row.path_hash_bytes,
+    path_json: row.path_json,
+    payload_type: row.payload_type,
+    resolved_path: row.resolved_path,
+    route_type: row.route_type,
+    rssi: row.rssi,
+    scope_name: row.scope_name,
+    snr: row.snr,
+    timestamp: iso,
+  };
+}
+
+function closePacketStream(client) {
+  packetStreams.delete(client);
+  client.response.off("drain", client.onDrain);
+  if (!client.response.writableEnded) client.response.end();
+}
+
+function dropPacketStream(client) {
+  packetStreams.delete(client);
+  client.response.off("drain", client.onDrain);
+  client.response.destroy();
+}
+
+function writePacketStream(client, payload) {
+  const { response } = client;
+  const payloadBytes = Buffer.byteLength(payload);
+  if (
+    response.destroyed
+    || response.writableEnded
+    || client.blocked
+    || response.writableLength + payloadBytes > maxStreamBufferBytes
+  ) {
+    dropPacketStream(client);
+    return false;
+  }
+
+  if (!response.write(payload)) {
+    client.blocked = true;
+    response.once("drain", client.onDrain);
+    return false;
+  }
+  return true;
+}
+
+function sendStreamEvent(client, event, data) {
+  return writePacketStream(client, `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+}
+
+function broadcast(event, data) {
+  const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const client of packetStreams) writePacketStream(client, payload);
+}
+
+function statusPayload() {
+  return { connected: mqttConnected, time: Date.now(), viewers: packetStreams.size };
+}
+
+function broadcastStatus() {
+  broadcast("status", statusPayload());
+}
+
+const mqttUrl = process.env.MQTT_URL;
+if (mqttUrl && process.env.MQTT_USERNAME && process.env.MQTT_PASSWORD) {
+  const MQTT_RECONNECT_MS = Math.max(1_000, Number(process.env.MQTT_RECONNECT_MS || 5_000));
+  const MQTT_RECONNECT_MAX_MS = Math.max(MQTT_RECONNECT_MS, Number(process.env.MQTT_RECONNECT_MAX_MS || 300_000));
+  let mqttBackoff = MQTT_RECONNECT_MS;
+  const mqttClient = mqtt.connect(mqttUrl, {
+    clean: true,
+    clientId: `meshcore-map-${Math.random().toString(16).slice(2)}`,
+    connectTimeout: 10_000,
+    password: process.env.MQTT_PASSWORD,
+    protocolVersion: 4,
+    reconnectPeriod: MQTT_RECONNECT_MS,
+    username: process.env.MQTT_USERNAME,
+  });
+  mqttClient.on("connect", () => {
+    console.log("MQTT connected");
+    mqttBackoff = MQTT_RECONNECT_MS;
+    mqttClient.options.reconnectPeriod = MQTT_RECONNECT_MS;
+    mqttConnected = true;
+    const topic = process.env.MQTT_TOPIC || "meshcore/+/+/packets";
+    mqttClient.subscribe(topic, { qos: 0 }, (error) => {
+      if (error) console.error(`MQTT subscribe failed: ${error.message}`);
+      else console.log(`MQTT subscribed to ${topic}`);
+    });
+    broadcastStatus();
+  });
+  mqttClient.on("close", () => {
+    mqttConnected = false;
+    mqttClient.options.reconnectPeriod = mqttBackoff;
+    mqttBackoff = Math.min(mqttBackoff * 2, MQTT_RECONNECT_MAX_MS);
+    broadcastStatus();
+  });
+  let lastMqttErrorLog = 0;
+  let lastMqttErrorMessage = "";
+  mqttClient.on("error", (error) => {
+    const now = Date.now();
+    if (error.message !== lastMqttErrorMessage || now - lastMqttErrorLog > 5 * 60 * 1000) {
+      console.error(`MQTT error: ${error.message}`);
+      lastMqttErrorMessage = error.message;
+      lastMqttErrorLog = now;
+    }
+  });
+  mqttClient.on("message", (topic, message) => {
+    try {
+      const packet = parseMqttPacket(topic, message);
+      if (packet?.hash) {
+        recentPackets.add(packet);
+        broadcast("packet", packet);
+      }
+    } catch (error) {
+      console.error(`Invalid MQTT packet on ${topic}: ${error.message}`);
+    }
+  });
+} else {
+  console.warn("MQTT is disabled: configure MQTT_URL, MQTT_USERNAME and MQTT_PASSWORD");
+}
+
+setInterval(() => {
+  for (const client of packetStreams) writePacketStream(client, ": keepalive\n\n");
+}, 20_000).unref();
+
+// Pravidelný status: klienti si obnoví čas (kvůli posunu hodin) i počet diváků.
+setInterval(broadcastStatus, 60_000).unref();
+
+let metricsCollectionActive = false;
+async function collectNodeMetrics() {
+  if (metricsCollectionActive) return;
+  metricsCollectionActive = true;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), upstreamTimeoutMs);
+  timeout.unref();
+  try {
+    const response = await fetch(`${upstream}/api/nodes?limit=2000`, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`CoreScope returned HTTP ${response.status}`);
+    const data = await response.json();
+    storeNodesCache(data);
+    const recorded = metricsStore.recordNodes(Array.isArray(data.nodes) ? data.nodes : []);
+    console.log(`Node metrics updated: ${recorded} hourly samples`);
+  } catch (error) {
+    console.error(`Node metrics update failed: ${error.message}`);
+  } finally {
+    clearTimeout(timeout);
+    metricsCollectionActive = false;
+  }
+}
+
+void collectNodeMetrics();
+setInterval(collectNodeMetrics, metricsCollectionMs).unref();
+
+function mergeStoreRows(resolvedPackets, scopedPackets, now) {
+  const rows = new Map();
+  for (const packet of resolvedPackets) {
+    const row = toStoreRow(packet, now);
+    if (row) rows.set(`${row.hash}:${row.observer_id}`, row);
+  }
+  for (const packet of scopedPackets) {
+    const scope = packet.scope_name;
+    if (!scope) continue;
+    const key = `${String(packet.hash || "")}:${String(packet.observer_id || "")}`;
+    const existing = rows.get(key);
+    if (existing) {
+      existing.scope_name = scope;
+      continue;
+    }
+    const row = toStoreRow(packet, now);
+    if (row) {
+      row.scope_name = scope;
+      rows.set(key, row);
+    }
+  }
+  return [...rows.values()];
+}
+
+let packetCollectionActive = false;
+async function collectPackets() {
+  if (packetCollectionActive) return;
+  packetCollectionActive = true;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), upstreamTimeoutMs);
+  timeout.unref();
+  try {
+    const headers = { Accept: "application/json" };
+    const scopeSince = new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString();
+    const [resolvedResponse, scopedResponse] = await Promise.all([
+      fetch(`${upstream}/api/packets?limit=2000`, { headers, signal: controller.signal }),
+      fetch(`${upstream}/api/packets?limit=4000&since=${encodeURIComponent(scopeSince)}`, { headers, signal: controller.signal }),
+    ]);
+    if (!resolvedResponse.ok) throw new Error(`CoreScope returned HTTP ${resolvedResponse.status}`);
+    const resolvedData = await resolvedResponse.json();
+    const scopedData = scopedResponse.ok ? await scopedResponse.json() : { packets: [] };
+    const now = Date.now();
+    const rows = mergeStoreRows(
+      Array.isArray(resolvedData.packets) ? resolvedData.packets : [],
+      Array.isArray(scopedData.packets) ? scopedData.packets : [],
+      now,
+    );
+    const stored = packetStore.record(rows);
+    packetStore.prune(now);
+    console.log(`Packet routes updated: ${stored} stored, ${packetStore.count()} total`);
+  } catch (error) {
+    console.error(`Packet route update failed: ${error.message}`);
+  } finally {
+    clearTimeout(timeout);
+    packetCollectionActive = false;
+  }
+}
+
+void collectPackets();
+setInterval(collectPackets, packetCollectionMs).unref();
+
+visitStore.prune();
+setInterval(() => visitStore.prune(), 24 * 60 * 60 * 1000).unref();
+
+function elevationKey(lat, lon) {
+  return `${Number(lat).toFixed(4)},${Number(lon).toFixed(4)}`;
+}
+
+function elevationCacheGet(key) {
+  if (!elevationCache.has(key)) return undefined;
+  const value = elevationCache.get(key);
+  elevationCache.delete(key);
+  elevationCache.set(key, value);
+  return value;
+}
+
+function elevationCacheSet(key, value) {
+  if (elevationCache.has(key)) elevationCache.delete(key);
+  elevationCache.set(key, value);
+  while (elevationCache.size > elevationCacheLimit) {
+    elevationCache.delete(elevationCache.keys().next().value);
+  }
+}
+
+async function fetchOpenMeteoElevations(chunk, signal) {
+  const params = new URLSearchParams({
+    latitude: chunk.map((point) => Number(point.lat).toFixed(5)).join(","),
+    longitude: chunk.map((point) => Number(point.lon).toFixed(5)).join(","),
+  });
+  const response = await fetch(`${elevationUpstream}?${params}`, {
+    headers: { Accept: "application/json" },
+    signal,
+  });
+  if (!response.ok) throw new Error(`Open-Meteo HTTP ${response.status}`);
+  const data = await response.json();
+  if (!Array.isArray(data.elevation)) throw new Error("Open-Meteo invalid response");
+  return data.elevation;
+}
+
+async function fetchOpenElevationElevations(chunk, signal) {
+  const response = await fetch(elevationFallbackUrl, {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({
+      locations: chunk.map((point) => ({ latitude: Number(point.lat), longitude: Number(point.lon) })),
+    }),
+    signal,
+  });
+  if (!response.ok) throw new Error(`Open-Elevation HTTP ${response.status}`);
+  const data = await response.json();
+  if (!Array.isArray(data.results)) throw new Error("Open-Elevation invalid response");
+  return data.results.map((row) => (row?.elevation == null ? null : row.elevation));
+}
+
+async function fetchElevationChunk(chunk, signal) {
+  try {
+    return await fetchOpenMeteoElevations(chunk, signal);
+  } catch (error) {
+    if (error?.name === "AbortError") throw error;
+    return fetchOpenElevationElevations(chunk, signal);
+  }
+}
+
+async function resolveElevations(points, signal) {
+  const elevations = new Array(points.length);
+  const missing = [];
+  points.forEach((point, index) => {
+    const cached = elevationCacheGet(elevationKey(point.lat, point.lon));
+    if (Number.isFinite(cached)) elevations[index] = cached;
+    else missing.push(index);
+  });
+  for (let offset = 0; offset < missing.length; offset += elevationBatchSize) {
+    const indices = missing.slice(offset, offset + elevationBatchSize);
+    const chunk = indices.map((index) => points[index]);
+    const values = await fetchElevationChunk(chunk, signal);
+    indices.forEach((index, slot) => {
+      const value = values[slot] == null ? NaN : Number(values[slot]);
+      if (Number.isFinite(value)) {
+        elevations[index] = value;
+        elevationCacheSet(elevationKey(points[index].lat, points[index].lon), value);
+      } else {
+        elevations[index] = null;
+      }
+    });
+  }
+  return elevations;
+}
+
+function queueElevation(task) {
+  const run = elevationQueue.then(task, task);
+  elevationQueue = run.catch(() => {});
+  return run;
+}
+
+async function handleRequest(request, response) {
+  let url;
+  let decodedPathname;
+  try {
+    url = new URL(request.url || "", requestBase);
+    decodedPathname = decodeURIComponent(url.pathname);
+    decodeURIComponent(url.search);
+  } catch {
+    response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+    response.end("Malformed request URL");
+    return;
+  }
+
+  if (url.pathname === "/events/packets") {
+    if (packetStreams.size >= maxPacketStreams) {
+      response.writeHead(503, {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Retry-After": "10",
+      });
+      response.end("Too many event stream clients");
+      return;
+    }
+    response.writeHead(200, {
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "X-Accel-Buffering": "no",
+    });
+    const client = {
+      blocked: false,
+      onDrain: null,
+      response,
+    };
+    client.onDrain = () => {
+      client.blocked = false;
+    };
+    packetStreams.add(client);
+    visitStore.recordVisit(clientIp(request));
+    visitStore.updatePeak(packetStreams.size);
+    broadcastStatus();
+    for (const packet of recentPackets.values()) {
+      if (!sendStreamEvent(client, "packet", packet)) break;
+    }
+    response.once("close", () => {
+      packetStreams.delete(client);
+      visitStore.updatePeak(packetStreams.size);
+      broadcastStatus();
+    });
+    return;
+  }
+
+  if (url.pathname === "/api/visit-stats") {
+    const days = Math.min(Math.max(1, Number(url.searchParams.get("days")) || 14), 365);
+    response.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+    });
+    response.end(JSON.stringify(visitStore.report(Date.now(), days)));
+    return;
+  }
+
+  if (url.pathname === "/api/feedback/public") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      return;
+    }
+    const entries = feedbackStore.listPublic(50);
+    response.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+    response.end(JSON.stringify({ count: entries.length, entries }));
+    return;
+  }
+
+  if (url.pathname === "/api/feedback"
+    || url.pathname === "/api/feedback/view"
+    || url.pathname === "/api/feedback/moderate") {
+    const isView = url.pathname.endsWith("/view");
+    const isModerate = url.pathname.endsWith("/moderate");
+    if (request.method === "POST" && url.pathname === "/api/feedback") {
+      const ip = clientIp(request);
+      const rate = checkFeedback(ip);
+      if (!rate.ok) {
+        response.writeHead(429, {
+          "Content-Type": "application/json; charset=utf-8",
+          "Retry-After": String(rate.retryAfter),
+        });
+        response.end(JSON.stringify({ error: rate.message }));
+        return;
+      }
+      let payload;
+      try {
+        payload = JSON.parse(await readBody(request));
+      } catch {
+        response.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        response.end(JSON.stringify({ error: "Neplatný požadavek." }));
+        return;
+      }
+      const message = String(payload?.message || "").trim();
+      if (message.length < 5 || message.length > 2000) {
+        response.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+        response.end(JSON.stringify({ error: "Zpráva musí mít 5 až 2000 znaků." }));
+        return;
+      }
+      const now = Date.now();
+      if (feedbackStore.countSince(startOfUtcDay(now)) >= feedbackDailyLimit) {
+        response.writeHead(429, { "Content-Type": "application/json; charset=utf-8", "Retry-After": "3600" });
+        response.end(JSON.stringify({ error: "Denní limit zpráv vyčerpán." }));
+        return;
+      }
+      const category = ["bug", "idea", "other"].includes(payload?.category) ? payload.category : "other";
+      const contact = String(payload?.contact || "").trim().slice(0, 200);
+      const name = String(payload?.name || "").trim().slice(0, 60);
+      const isPublic = payload?.isPublic === true;
+      const userAgent = String(request.headers["user-agent"] || "").slice(0, 300);
+      const ipHash = createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16);
+      const id = feedbackStore.record({ category, message, contact, name, isPublic, ipHash, userAgent }, now);
+      feedbackStore.pruneTo(feedbackMaxRows);
+      response.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+      response.end(JSON.stringify({ ok: true, id }));
+      return;
+    }
+    if (!feedbackToken || url.searchParams.get("token") !== feedbackToken) {
+      response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not found");
+      return;
+    }
+    if (isModerate) {
+      const id = Number(url.searchParams.get("id"));
+      const hidden = url.searchParams.get("hidden") !== "0";
+      if (Number.isFinite(id)) feedbackStore.setHidden(id, hidden);
+      response.writeHead(303, { Location: `/api/feedback/view?token=${encodeURIComponent(feedbackToken)}` });
+      response.end();
+      return;
+    }
+    const entries = feedbackStore.list(200);
+    if (isView) {
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+      response.end(renderFeedbackPage(entries, feedbackToken));
+    } else {
+      response.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+      response.end(JSON.stringify({ count: entries.length, entries }));
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/history") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      return;
+    }
+    const sinceParam = url.searchParams.has("since") ? Number(url.searchParams.get("since")) : NaN;
+    const limitParam = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : NaN;
+    const since = Number.isFinite(sinceParam) ? sinceParam : Date.now() - 24 * 60 * 60 * 1000;
+    const limit = Number.isFinite(limitParam) ? Math.min(Math.max(1, limitParam), 20_000) : 4_000;
+    const packets = packetStore.querySince(since, limit).map(historyRowToPacket);
+    response.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+    });
+    response.end(JSON.stringify({ count: packets.length, packets, since }));
+    return;
+  }
+
+  if (url.pathname === "/api/elevation") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      return;
+    }
+    const lats = (url.searchParams.get("latitude") || "").split(",").filter((value) => value.trim() !== "");
+    const lons = (url.searchParams.get("longitude") || "").split(",").filter((value) => value.trim() !== "");
+    if (!lats.length || lats.length !== lons.length || lats.length > elevationMaxPoints) {
+      response.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+      response.end(JSON.stringify({ error: "Neplatný seznam souřadnic." }));
+      return;
+    }
+    const points = lats.map((lat, index) => ({ lat: Number(lat), lon: Number(lons[index]) }));
+    if (points.some((point) => !Number.isFinite(point.lat) || !Number.isFinite(point.lon))) {
+      response.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+      response.end(JSON.stringify({ error: "Neplatný seznam souřadnic." }));
+      return;
+    }
+    const controller = new AbortController();
+    let clientDisconnected = false;
+    const disconnect = () => {
+      if (!response.writableEnded) {
+        clientDisconnected = true;
+        controller.abort();
+      }
+    };
+    response.once("close", disconnect);
+    const timeout = setTimeout(() => controller.abort(), elevationTimeoutMs);
+    timeout.unref();
+    try {
+      const elevations = await queueElevation(() => resolveElevations(points, controller.signal));
+      if (clientDisconnected || response.destroyed) return;
+      response.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+      response.end(JSON.stringify({ elevation: elevations }));
+    } catch {
+      if (clientDisconnected || response.destroyed) return;
+      response.writeHead(502, { "Content-Type": "application/json; charset=utf-8" });
+      response.end(JSON.stringify({ error: "Výšky se nepodařilo načíst." }));
+    } finally {
+      clearTimeout(timeout);
+      response.off("close", disconnect);
+    }
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/")) {
+    const allowed = allowedApiPaths.some((path) => url.pathname === path);
+    if (!allowed) {
+      response.writeHead(404).end("Unknown API endpoint");
+      return;
+    }
+
+    const controller = new AbortController();
+    let clientDisconnected = false;
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, upstreamTimeoutMs);
+    timeout.unref();
+    const disconnect = () => {
+      if (!response.writableEnded) {
+        clientDisconnected = true;
+        controller.abort();
+      }
+    };
+    response.once("close", disconnect);
+
+    const isNodes = url.pathname === "/api/nodes";
+    const isResolve = url.pathname === "/api/resolve-hops";
+    const cacheKey = `${url.pathname}${url.search}`;
+    try {
+      const upstreamResponse = await fetch(`${upstream}${url.pathname}${url.search}`, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+      if (isNodes && upstreamResponse.ok) {
+        const data = await upstreamResponse.json();
+        storeNodesCache(data);
+        sendJson(response, upstreamResponse.status, buildNodesPayload(data));
+        return;
+      }
+      const body = Buffer.from(await upstreamResponse.arrayBuffer());
+      if (upstreamResponse.ok && isResolve) {
+        resolveCacheSet(cacheKey, body, upstreamResponse.headers.get("content-type"));
+      }
+      if (!upstreamResponse.ok && isNodes && nodesCacheFresh()) {
+        sendJson(response, 200, buildNodesPayload(JSON.parse(nodesCache.body)), { "X-Data-Stale": "1" });
+        return;
+      }
+      if (!upstreamResponse.ok && isResolve) {
+        const cached = resolveCacheGet(cacheKey);
+        if (cached) {
+          response.writeHead(200, {
+            "Content-Type": cached.contentType || "application/json; charset=utf-8",
+            "Cache-Control": "no-store",
+            "X-Data-Stale": "1",
+          });
+          response.end(cached.body);
+          return;
+        }
+      }
+      response.writeHead(upstreamResponse.status, {
+        "Content-Type": upstreamResponse.headers.get("content-type") || "application/json",
+        "Cache-Control": "no-store",
+      });
+      response.end(body);
+    } catch {
+      if (clientDisconnected || response.destroyed) return;
+      if (isNodes && nodesCacheFresh()) {
+        sendJson(response, 200, buildNodesPayload(JSON.parse(nodesCache.body)), { "X-Data-Stale": "1" });
+        return;
+      }
+      if (isResolve) {
+        const cached = resolveCacheGet(cacheKey);
+        if (cached) {
+          response.writeHead(200, {
+            "Content-Type": cached.contentType || "application/json; charset=utf-8",
+            "Cache-Control": "no-store",
+            "X-Data-Stale": "1",
+          });
+          response.end(cached.body);
+          return;
+        }
+      }
+      response.writeHead(timedOut ? 504 : 502, { "Content-Type": "application/json" });
+      response.end(JSON.stringify({
+        error: timedOut ? "Analyzer API timed out" : "Analyzer API is unavailable",
+      }));
+    } finally {
+      clearTimeout(timeout);
+      response.off("close", disconnect);
+    }
+    return;
+  }
+
+  const relativePath = normalize(decodedPathname).replace(/^(\.\.(\/|\\|$))+/, "");
+  let filePath = join(dist, relativePath === "/" ? "index.html" : relativePath);
+  if (!filePath.startsWith(dist)) {
+    response.writeHead(403).end("Forbidden");
+    return;
+  }
+  if (!existsSync(filePath) || statSync(filePath).isDirectory()) filePath = join(dist, "index.html");
+  if (!existsSync(filePath)) {
+    response.writeHead(503).end("Run npm run build first");
+    return;
+  }
+  sendFile(response, filePath);
+}
+
+const server = createServer((request, response) => {
+  void handleRequest(request, response).catch((error) => {
+    console.error(`Request failed: ${error?.stack || error}`);
+    if (response.destroyed || response.writableEnded) return;
+    if (response.headersSent) {
+      response.end();
+      return;
+    }
+    response.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
+    response.end("Internal Server Error");
+  });
+});
+
+server.listen(port, host, () => {
+  console.log(`MeshCore CZ map listening on http://${host}:${port}`);
+});
+
+function shutdown() {
+  for (const client of packetStreams) closePacketStream(client);
+  metricsStore.close();
+  packetStore.close();
+  visitStore.close();
+  feedbackStore.close();
+  server.close();
+  process.exit(0);
+}
+
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);

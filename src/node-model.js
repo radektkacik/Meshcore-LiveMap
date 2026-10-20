@@ -1,0 +1,98 @@
+export function validCoords(lat, lon) {
+  return Number.isFinite(lat) && Number.isFinite(lon) && !(lat === 0 && lon === 0);
+}
+
+export function nodeMetric(node, field) {
+  const longTerm = node[`long_term_${field}`];
+  return longTerm == null ? node[field] : longTerm;
+}
+
+export function nodeLastActivity(node) {
+  const timestamps = [node.last_seen, node.last_heard, node.last_relayed]
+    .map((value) => Date.parse(value || 0))
+    .filter(Number.isFinite);
+  return timestamps.length ? Math.max(...timestamps) : 0;
+}
+
+export function isNodeActive(node, now, activeMs) {
+  return now - nodeLastActivity(node) < activeMs;
+}
+
+export function activeUsefulnessScore(node, now, activeMs) {
+  if (!validCoords(node.lat, node.lon) || !isNodeActive(node, now, activeMs)) return null;
+  const metric = nodeMetric(node, "usefulness_score");
+  if (metric == null) return null;
+  const score = Number(metric);
+  return Number.isFinite(score) ? score : null;
+}
+
+export function parseNodeQuery(raw) {
+  const text = String(raw || "").trim();
+  const token = text.replace(/\s+/g, "");
+  return {
+    query: text.toLocaleLowerCase("cs-CZ"),
+    hexQuery: /^[0-9a-fA-F]{2,}$/.test(token) ? token.toUpperCase() : "",
+  };
+}
+
+export function nodeMatchesQuery(node, query, hexQuery) {
+  const name = String(node.name || "").toLocaleLowerCase("cs-CZ");
+  if (query && name.includes(query)) return true;
+  const hex = String(hexQuery || "").toUpperCase();
+  if (hex.length < 2) return false;
+  const key = String(node.public_key || "").toUpperCase();
+  return key.startsWith(hex);
+}
+
+export function isNodeRoleAllowed(node, allowedRoles) {
+  if (!allowedRoles) return true;
+  return allowedRoles.has(node.role || "unknown");
+}
+
+export function resolveStatsField(metric, window) {
+  if (metric === "relay") {
+    if (window === "1h") return "relay_count_1h";
+    if (window === "24h") return "relay_count_24h";
+    return null;
+  }
+  if (metric === "unscoped") return window === "24h" ? "unscoped_relay_count_24h" : null;
+  if (metric === "advert") return "advert_count";
+  return window === "7d" ? `long_term_${metric}_score` : `${metric}_score`;
+}
+
+export function rankNodesByMetric(nodes, field, count, roles) {
+  return nodes
+    .filter((node) => !roles || roles.has(node.role))
+    .map((node) => ({ node, value: node[field] }))
+    .filter(({ value }) => value != null && Number.isFinite(Number(value)))
+    .map(({ node, value }) => ({ node, value: Number(value) }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, count);
+}
+
+export function rankNodeMetric(nodes, node, field, roles) {
+  const value = Number(nodeMetric(node, field));
+  if (!Number.isFinite(value)) return null;
+  let rank = 1;
+  let total = 0;
+  for (const candidate of nodes) {
+    if (roles && !roles.has(candidate.role || "unknown")) continue;
+    const candidateValue = Number(nodeMetric(candidate, field));
+    if (!Number.isFinite(candidateValue)) continue;
+    total += 1;
+    if (candidateValue > value) rank += 1;
+  }
+  return total ? { rank, total } : null;
+}
+
+export function rankNodeTiers(nodes, now, activeMs) {
+  const ranked = nodes
+    .map((node, index) => ({ index, node, score: activeUsefulnessScore(node, now, activeMs) }))
+    .filter(({ score }) => score != null)
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+
+  return new Map(ranked.map(({ node }, index) => [
+    node,
+    index < 25 ? "top25" : index < 100 ? "top100" : null,
+  ]));
+}

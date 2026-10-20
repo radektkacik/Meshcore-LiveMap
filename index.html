@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f5f3ed" />
+    <meta name="description" content="Živá mapa paketových tras české sítě MeshCore" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>MeshCore CZ · živý provoz</title>
+  </head>
+  <body>
+    <div id="app">
+      <main class="map-shell" aria-label="Mapa živých tras">
+        <div id="map"></div>
+        <div class="map-vignette"></div>
+
+        <div class="map-status" id="map-status" hidden></div>
+
+        <section id="hud" class="hud" aria-label="Ovládání mapy">
+          <header class="hud-header">
+            <button id="hud-toggle" class="logo-button" type="button" aria-label="Skrýt nebo zobrazit panel">
+              <img class="brand-logo" src="meshcore.svg" alt="" aria-hidden="true" />
+              <svg class="brand-flag" viewBox="0 0 36 24" aria-hidden="true">
+                <rect width="36" height="12" fill="#ffffff" />
+                <rect y="12" width="36" height="12" fill="#d7141a" />
+                <path d="M0 0 L18 12 L0 24 Z" fill="#11457e" />
+              </svg>
+            </button>
+            <div class="hud-title">
+              <div><strong>MeshCore CZ</strong> <span id="beta-badge" class="beta-badge" hidden>BETA</span></div>
+              <small>live mapa</small>
+            </div>
+            <button id="theme-toggle" class="external-link theme-toggle" type="button" aria-label="Přepnout světlé a tmavé téma" title="Přepnout světlé a tmavé téma">
+              <svg class="theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+              <svg class="theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="currentColor" /></svg>
+            </button>
+            <a class="external-link" href="https://meshcore.cz/" target="_blank" rel="noreferrer" aria-label="Otevřít MeshCore.cz" title="Otevřít MeshCore.cz">↗</a>
+          </header>
+
+          <div class="hud-body">
+            <div class="status-line">
+              <span id="connection-dot" class="connection-dot"></span>
+              <span id="connection-label">Připojuji API</span>
+              <time id="last-update">--:--:--</time>
+            </div>
+
+            <div class="metrics">
+              <article><span>Trasy</span><strong id="route-count">0</strong></article>
+              <article><span>Paketů/h</span><strong id="packet-rate">—</strong></article>
+            </div>
+
+            <div class="node-search">
+              <input id="node-search" type="search" autocomplete="off" placeholder="Hledat uzel podle názvu nebo prefixu…" />
+              <ol id="search-results" class="search-results" hidden></ol>
+            </div>
+
+            <div class="map-actions">
+              <button id="activity-toggle" type="button" aria-pressed="false">Aktivita</button>
+              <button id="stats-toggle" type="button" aria-pressed="false">Statistiky</button>
+              <button id="los-toggle" type="button" aria-pressed="false" title="Změřit přímou viditelnost mezi dvěma body">LOS</button>
+              <button id="feedback-toggle" type="button" class="wide">Kniha návštěv</button>
+            </div>
+
+            <div class="filter-block">
+              <span class="filter-title">Podklad mapy</span>
+              <div class="filter-chips" id="base-layer-buttons" role="group" aria-label="Podklad mapy">
+                <button type="button" data-layer="osm">Základní</button>
+                <button type="button" data-layer="topo">OpenTopoMap</button>
+                <button type="button" data-layer="sat">Satelitní</button>
+              </div>
+            </div>
+
+            <div class="filter-block">
+              <span class="filter-title">Časové okno</span>
+              <div class="filter-chips" id="window-buttons" role="group" aria-label="Časové okno tras">
+                <button type="button" data-window-ms="0" class="active">Live</button>
+                <button type="button" data-window-ms="300000">5 min</button>
+                <button type="button" data-window-ms="3600000">1 h</button>
+                <button type="button" data-window-ms="86400000">24 h</button>
+              </div>
+            </div>
+
+            <fieldset class="filter-block">
+              <legend class="filter-title">Velikost hashe</legend>
+              <div class="filter-chips">
+                <label><input id="size-toggle-1" type="checkbox" /> 1B</label>
+                <label><input id="size-toggle-2" type="checkbox" checked /> 2B</label>
+                <label><input id="size-toggle-3" type="checkbox" checked /> 3B</label>
+              </div>
+            </fieldset>
+
+            <fieldset class="filter-block">
+              <legend class="filter-title">Role uzlu</legend>
+              <div class="filter-chips">
+                <label><input id="role-toggle-repeater" type="checkbox" checked /> Repeater</label>
+                <label><input id="role-toggle-companion" type="checkbox" checked /> Companion</label>
+                <label><input id="role-toggle-room" type="checkbox" checked /> Room</label>
+                <label><input id="role-toggle-sensor" type="checkbox" checked /> Sensor</label>
+                <label><input id="role-toggle-unknown" type="checkbox" checked /> Ostatní</label>
+              </div>
+            </fieldset>
+
+            <label class="packet-filter">
+              <input id="other-types-toggle" type="checkbox" />
+              <span><strong>Zobrazit ostatní typy</strong><small>REQ, RESPONSE, ACK, DATA a CONTROL</small></span>
+            </label>
+
+            <label class="packet-filter">
+              <input id="animation-toggle" type="checkbox" checked />
+              <span><strong>Animovat trasy</strong></span>
+            </label>
+
+            <label class="packet-filter">
+              <input id="node-labels-toggle" type="checkbox" />
+              <span><strong>Zobrazit názvy uzlů</strong></span>
+            </label>
+
+            <div class="legend" aria-label="Legenda">
+              <span><i class="node top25"></i> Top 25 Užitečnost</span>
+              <span><i class="node top100"></i> Top 100 Užitečnost</span>
+              <span><i class="node repeater"></i> Repeater</span>
+              <span><i class="node companion"></i> Companion</span>
+              <span><i class="line advert"></i> Advert</span>
+              <span><i class="line message"></i> Zpráva</span>
+              <span><i class="line trace"></i> TRACE (barvy podle SNR)</span>
+            </div>
+
+            <div class="viewer-line" title="Kolik lidí má právě otevřenou mapu">
+              <span class="viewer-dot" aria-hidden="true"></span>
+              <strong id="viewer-count">—</strong>
+              <span>právě prohlíží mapu</span>
+            </div>
+
+            <div class="los-hint" id="los-hint" hidden></div>
+
+            <p class="source-note">Data: CoreScope / MeshCore CZ (živý MQTT feed), archiv z vlastní databáze. Soukromý obsah zpráv zůstává šifrovaný. Podklady: OpenStreetMap, OpenTopoMap, Esri. Výšky: Open-Meteo. Ikona: selfh.st (CC BY 4.0).</p>
+
+            <small class="build-stamp" id="build-stamp">—</small>
+          </div>
+        </section>
+
+        <section class="activity-panel" aria-label="Poslední trasy" hidden>
+          <header><span><i></i> Živá aktivita</span><small>poslední trasy</small></header>
+          <ol id="route-feed" class="route-feed">
+            <li class="feed-empty">Čekám na paket s trasou…</li>
+          </ol>
+        </section>
+
+        <section class="stats-panel" id="stats-panel" aria-label="Statistiky sítě" hidden>
+          <header>
+            <span><i></i> Statistiky</span>
+            <button id="stats-close" type="button" aria-label="Zavřít statistiky">×</button>
+          </header>
+          <details class="stats-help">
+            <summary><span class="stats-help-icon" aria-hidden="true">i</span> Vysvětlení metrik</summary>
+            <div class="stats-help-panel">
+              <p>Hodnoty pocházejí z uzlů a dlouhodobých hodinových vzorků (sběr po 15 minutách).</p>
+              <dl>
+                <div><dt>Přenos</dt><dd>Počet výskytů uzlu jako relay hop za zvolené období.</dd></div>
+                <div><dt>Přenos bez scope</dt><dd>Část relay provozu tvořená flood pakety bez scope za 24 h. Vyšší hodnota může znamenat nevhodné nastavení flood.max.unscoped.</dd></div>
+                <div><dt>Advertů</dt><dd>Počet zachycených oznámení, kterými uzel zveřejňuje svoji identitu.</dd></div>
+                <div><dt>Podíl provozu</dt><dd>Část neadvertového provozu, ve kterém se uzel objevil jako relay hop.</dd></div>
+                <div><dt>Užitečnost</dt><dd>Složené skóre: 30 % bridge + 25 % pokrytí + 25 % kritičnost + 20 % podíl provozu.</dd></div>
+                <div><dt>Pokrytí</dt><dd>Jak dobře je uzel přes kvalitní cesty dosažitelný ze zbytku sítě.</dd></div>
+                <div><dt>Bridge</dt><dd>Jak často uzel leží na nejvýhodnějších cestách mezi ostatními uzly.</dd></div>
+                <div><dt>Kritičnost</dt><dd>Nakolik by odstranění uzlu rozdělilo síť.</dd></div>
+              </dl>
+              <p>Období: 1 h a 24 h ukazují aktuální hodnotu, 7 dní dlouhodobý průměr. Přenos bez scope je dostupný jen za 24 h.</p>
+            </div>
+          </details>
+          <div class="stats-controls">
+            <div class="stats-fields">
+              <label for="stats-metric">Metrika
+                <select id="stats-metric">
+                  <option value="relay">Přenos</option>
+                  <option value="unscoped">Přenos bez scope</option>
+                  <option value="advert">Advertů</option>
+                  <option value="traffic_share">Podíl provozu</option>
+                  <option value="usefulness">Užitečnost</option>
+                  <option value="coverage">Pokrytí</option>
+                  <option value="bridge">Bridge</option>
+                  <option value="redundancy">Kritičnost</option>
+                </select>
+              </label>
+              <label for="stats-window">Období
+                <select id="stats-window">
+                  <option value="1h">1 h</option>
+                  <option value="24h" selected>24 h</option>
+                  <option value="7d">7 dní</option>
+                </select>
+              </label>
+            </div>
+            <div class="stats-counts" id="stats-counts" role="group" aria-label="Počet uzlů">
+              <button type="button" data-count="10" class="active">10</button>
+              <button type="button" data-count="25">25</button>
+              <button type="button" data-count="50">50</button>
+            </div>
+          </div>
+          <ol class="stats-list" id="stats-list"></ol>
+          <div class="stats-visits" id="stats-visits" hidden></div>
+        </section>
+      </main>
+
+      <dialog id="node-qr-dialog" class="qr-dialog" aria-labelledby="node-qr-title">
+        <button id="node-qr-close" class="qr-dialog-close" type="button" aria-label="Zavřít QR kontakt">×</button>
+        <header>
+          <h2 id="node-qr-title">MeshCore kontakt</h2>
+          <code id="node-qr-key"></code>
+        </header>
+        <div class="qr-dialog-code">
+          <canvas id="node-qr-canvas" aria-label="QR kód MeshCore kontaktu"></canvas>
+        </div>
+        <p>Naskenujte v mobilní aplikaci MeshCore</p>
+      </dialog>
+
+      <dialog id="los-dialog" class="los-dialog" aria-labelledby="los-title">
+        <button id="los-close" class="los-close" type="button" aria-label="Zavřít měření">×</button>
+        <header>
+          <h2 id="los-title">Přímá viditelnost</h2>
+          <p id="los-summary"></p>
+          <button id="los-recompute" class="los-recompute" type="button">Přepočítat</button>
+        </header>
+        <div class="los-controls">
+          <label>Frekvence (MHz)
+            <input id="los-frequency" type="number" min="100" max="6000" step="0.001" value="869.525" />
+          </label>
+          <label>Anténa A (m)
+            <input id="los-antenna-a" type="number" min="1" max="200" step="1" value="10" />
+          </label>
+          <label>Anténa B (m)
+            <input id="los-antenna-b" type="number" min="1" max="200" step="1" value="10" />
+          </label>
+        </div>
+        <div id="los-chart" class="los-chart"></div>
+        <p id="los-hover" class="los-hover"></p>
+        <p class="los-note">Barvy úseků: zelená = volná, oranžová = zásah do Fresnelovy zóny, červená = terén blokuje paprsek. V profilu je plná Fresnelova zóna (F1) světle modrá, doporučených 60 % výrazněji. Výšky: Open-Meteo (Copernicus DEM, ~90 m).</p>
+      </dialog>
+
+      <dialog id="feedback-dialog" class="feedback-dialog" aria-labelledby="feedback-title">
+        <button id="feedback-close" class="feedback-close" type="button" aria-label="Zavřít knihu návštěv">×</button>
+        <header>
+          <h2 id="feedback-title">Kniha návštěv</h2>
+          <p>Zanechte vzkaz, nahlášení chyby nebo návrh. Můžete ho zveřejnit, nebo poslat jen správci.</p>
+        </header>
+        <form id="feedback-form">
+          <label>Jméno (nepovinné, zobrazí se u veřejného vzkazu)
+            <input id="feedback-name" type="text" maxlength="60" placeholder="Např. Petr" />
+          </label>
+          <label>Typ
+            <select id="feedback-category">
+              <option value="other">Vzkaz</option>
+              <option value="bug">Chyba</option>
+              <option value="idea">Návrh na vylepšení</option>
+            </select>
+          </label>
+          <label>Zpráva
+            <textarea id="feedback-message" rows="4" maxlength="2000" required placeholder="Napište vzkaz…"></textarea>
+          </label>
+          <label>Kontakt (nepovinné, nikdy se nezobrazí veřejně)
+            <input id="feedback-contact" type="text" maxlength="200" placeholder="E-mail nebo jiný kontakt" />
+          </label>
+          <label class="feedback-check">
+            <input id="feedback-public" type="checkbox" checked />
+            <span>Zveřejnit v knize návštěv (uvidí ji všichni)</span>
+          </label>
+          <p id="feedback-status" class="feedback-status" role="status"></p>
+          <div class="feedback-actions">
+            <button type="button" id="feedback-cancel">Zavřít</button>
+            <button type="submit" id="feedback-send">Odeslat</button>
+          </div>
+        </form>
+        <section class="feedback-public">
+          <h3>Veřejné vzkazy</h3>
+          <ul id="feedback-list" class="feedback-list"></ul>
+        </section>
+      </dialog>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
