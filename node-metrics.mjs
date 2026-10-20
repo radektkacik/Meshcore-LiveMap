@@ -83,6 +83,13 @@ export function createNodeMetricsStore(dbPath, { historyDays = 30, windowDays = 
     GROUP BY public_key
   `);
   const readRollups = db.prepare("SELECT * FROM node_score_rollups");
+  const readSamples = db.prepare(`
+    SELECT sampled_at, usefulness_score, coverage_score, traffic_share_score,
+      bridge_score, redundancy_score
+    FROM node_score_samples
+    WHERE public_key = ? AND sampled_at >= ?
+    ORDER BY sampled_at
+  `);
 
   const recordNodes = db.transaction((nodes, now) => {
     const sampledAt = Math.floor(now / HOUR_MS) * HOUR_MS;
@@ -115,9 +122,23 @@ export function createNodeMetricsStore(dbPath, { historyDays = 30, windowDays = 
     });
   }
 
+  function history(publicKey, days = 7, now = Date.now()) {
+    const key = String(publicKey || "").toLowerCase();
+    if (!key) return [];
+    return readSamples.all(key, now - Math.max(1, days) * DAY_MS).map((row) => ({
+      sampledAt: new Date(row.sampled_at).toISOString(),
+      usefulness: row.usefulness_score,
+      coverage: row.coverage_score,
+      trafficShare: row.traffic_share_score,
+      bridge: row.bridge_score,
+      redundancy: row.redundancy_score,
+    }));
+  }
+
   return {
     close: () => db.close(),
     decorateNodes,
+    history,
     recordNodes: (nodes, now = Date.now()) => recordNodes(nodes, now),
   };
 }

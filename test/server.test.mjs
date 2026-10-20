@@ -84,6 +84,12 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
   let firstStream;
   try {
     await waitForServer(appPort, child);
+    const secured = await fetch(`http://127.0.0.1:${appPort}/api/stats`);
+    assert.equal(secured.headers.get("x-content-type-options"), "nosniff");
+    assert.equal(secured.headers.get("x-frame-options"), "DENY");
+    assert.match(secured.headers.get("content-security-policy") || "", /default-src 'self'/);
+    assert.match(secured.headers.get("permissions-policy") || "", /geolocation=\(\)/);
+    assert.equal(secured.headers.get("referrer-policy"), "strict-origin-when-cross-origin");
     assert.equal((await rawRequest(appPort, "/%")).status, 400);
     const nodesFresh = await fetch(`http://127.0.0.1:${appPort}/api/nodes?limit=2000`);
     assert.equal(nodesFresh.status, 200);
@@ -103,6 +109,10 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(defaultHistory.status, 200);
     const defaultHistoryBody = await defaultHistory.json();
     assert.ok(defaultHistoryBody.since > Date.now() - 2 * 24 * 60 * 60 * 1000);
+    assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/node-history?key=short`)).status, 400);
+    const nodeHistory = await fetch(`http://127.0.0.1:${appPort}/api/node-history?key=${"a".repeat(64)}&days=7`);
+    assert.equal(nodeHistory.status, 200);
+    assert.ok(Array.isArray((await nodeHistory.json()).samples));
     const visitsResponse = await fetch(`http://127.0.0.1:${appPort}/api/visit-stats?days=7`);
     assert.equal(visitsResponse.status, 200);
     const visitsBody = await visitsResponse.json();

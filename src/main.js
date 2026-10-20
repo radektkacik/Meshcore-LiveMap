@@ -48,6 +48,7 @@ const FEED_SOURCE_LIMIT = MAX_FEED_ITEMS * 4;
 const FEED_RENDER_INTERVAL_MS = 2_000;
 const FEED_AUTO_RESUME_MS = 2_500;
 const FEED_SCROLL_RESUME_MS = 6_000;
+const NODE_HISTORY_TTL_MS = 5 * 60 * 1000;
 const MAX_LIVE_RENDERED = 250;
 const MAX_LIVE_STORED = 3000;
 const MAX_ROUTE_HOP_KM = 230;
@@ -101,6 +102,8 @@ function appPath(path) {
 const INITIAL_PARAMS = new URLSearchParams(location.search);
 const ALL_NODE_ROLES = ["repeater", "companion", "room", "sensor", "unknown"];
 const ALL_HASH_SIZES = [1, 2, 3];
+const mobileSheetQuery = window.matchMedia("(max-width: 700px)");
+const FORCE_MOBILE_SHEET = INITIAL_PARAMS.get("sheet") === "1";
 const INITIAL_NODE_KEY = INITIAL_PARAMS.get("node")?.trim().toUpperCase() || null;
 const INITIAL_ZOOM = Number(INITIAL_PARAMS.get("z"));
 
@@ -144,6 +147,9 @@ const elements = {
   losHover: document.querySelector("#los-hover"),
   losSummary: document.querySelector("#los-summary"),
   losToggle: document.querySelector("#los-toggle"),
+  mobileSheet: document.querySelector("#mobile-sheet"),
+  mobileSheetClose: document.querySelector("#mobile-sheet-close"),
+  mobileSheetContent: document.querySelector("#mobile-sheet-content"),
   nodeLabelsToggle: document.querySelector("#node-labels-toggle"),
   otherTypesToggle: document.querySelector("#other-types-toggle"),
   packetRate: document.querySelector("#packet-rate"),
@@ -227,6 +233,7 @@ const state = {
   losSamples: null,
   neighborByNode: new Map(),
   nodeByKey: new Map(),
+  nodeHistoryCache: new Map(),
   nodeMarkerByKey: new Map(),
   nodeMarkers: [],
   observerByKey: new Map(),
@@ -631,8 +638,46 @@ function routeDetailHtml(route) {
   `;
 }
 
+function closeMobileSheet() {
+  if (elements.mobileSheet.open) elements.mobileSheet.close();
+  elements.mobileSheetContent.replaceChildren();
+}
+
+function showMobileSheet(html) {
+  map.closePopup();
+  elements.mobileSheetContent.innerHTML = html;
+  if (!elements.mobileSheet.open) elements.mobileSheet.showModal();
+}
+
+function openNodeEntry(entry) {
+  if (!isMobileSheet()) {
+    entry.marker.openPopup();
+    return;
+  }
+  showMobileSheet(nodePopup(entry.node, isNodeActive(entry.node, nowMs(), NODE_ACTIVE_MS)));
+  setupNodePopup({ getElement: () => elements.mobileSheetContent }, entry.node);
+}
+
+function openRouteSheet(route) {
+  showMobileSheet(routeDetailHtml(route));
+  elements.mobileSheetContent.querySelector(".route-show-on-map")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeMobileSheet();
+    showRouteOnMap(route);
+  });
+}
+
+function isMobileSheet() {
+  return FORCE_MOBILE_SHEET || mobileSheetQuery.matches;
+}
+
 function openRouteDetail(route, latlng = null) {
   if (!route?.points?.length) return;
+  if (isMobileSheet()) {
+    openRouteSheet(route);
+    return;
+  }
   const content = document.createElement("div");
   content.className = "route-popup-content";
   content.innerHTML = routeDetailHtml(route);
@@ -679,7 +724,7 @@ function bindNodeNeighborButton(button) {
     if (!entry) return;
     revealNodeMarker(entry);
     map.flyTo(entry.marker.getLatLng(), 11, { duration: 0.7 });
-    entry.marker.openPopup();
+    openNodeEntry(entry);
   });
 }
 
@@ -741,6 +786,8 @@ function setupNodePopup(popup, node) {
       linkButton.textContent = t("common.copyFailed");
     }
   });
+
+  void loadNodeHistory(root, node);
 }
 
 function nodeLastRoute(node) {
@@ -868,6 +915,10 @@ function nodePopupContent(node, active) {
       <div><small>${t("node.meshcoreNode")}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
+    ${node.public_key ? `<div class="node-history" data-node-key="${escapeHtml(node.public_key.toUpperCase())}">
+      <div class="node-history-head"><span>${t("node.historyTitle")}</span><small>${t("node.historyLoading")}</small></div>
+      <div class="node-history-chart"></div>
+    </div>` : ""}
     ${basicDetails}
     ${trafficDetails}
     ${networkDetails}
@@ -885,6 +936,67 @@ function nodePopupContent(node, active) {
 
 function nodePopup(node, active) {
   return `<section class="node-popup-card">${nodePopupContent(node, active)}</section>`;
+}
+
+function renderNodeHistory(root, samples) {
+  const chart = root.querySelector(".node-history-chart");
+  const summary = root.querySelector(".node-history-head small");
+  if (!chart) return;
+  const points = samples.map((sample) => ({
+    time: Date.parse(sample.sampledAt),
+    value: Number(sample.usefulness),
+  })).filter((point) => Number.isFinite(point.time) && Number.isFinite(point.value));
+  if (points.length < 2) {
+    chart.textContent = t("node.historyEmpty");
+    if (summary) summary.textContent = "";
+    return;
+  }
+  const width = 300;
+  const height = 64;
+  const pad = 5;
+  const firstTime = points[0].time;
+  const timeSpan = Math.max(1, points.at(-1).time - firstTime);
+  const x = (time) => pad + (width - 2 * pad) * ((time - firstTime) / timeSpan);
+  const y = (value) => height - pad - (height - 2 * pad) * Math.min(1, Math.max(0, value));
+  const line = points.map((point) => `${x(point.time).toFixed(1)},${y(point.value).toFixed(1)}`).join(" ");
+  const area = `${pad},${height - pad} ${line} ${width - pad},${height - pad}`;
+  const last = points.at(-1);
+  const min = Math.min(...points.map((point) => point.value));
+  const max = Math.max(...points.map((point) => point.value));
+  chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(t("node.historyTitle"))}">
+    <polygon points="${area}" class="node-history-area"></polygon>
+    <polyline points="${line}" class="node-history-line"></polyline>
+    <circle cx="${x(last.time).toFixed(1)}" cy="${y(last.value).toFixed(1)}" r="3" class="node-history-dot"></circle>
+  </svg>`;
+  if (summary) {
+    summary.textContent = t("node.historyRange", {
+      min: formatPercent(min),
+      max: formatPercent(max),
+      count: points.length,
+    });
+  }
+}
+
+async function loadNodeHistory(root, node) {
+  const key = String(node.public_key || "").toUpperCase();
+  if (!key || !root.querySelector(".node-history")) return;
+  const cached = state.nodeHistoryCache.get(key);
+  if (cached && Date.now() - cached.at < NODE_HISTORY_TTL_MS) {
+    renderNodeHistory(root, cached.samples);
+    return;
+  }
+  try {
+    const data = await getJson(`/api/node-history?key=${encodeURIComponent(key)}&days=7`);
+    state.nodeHistoryCache.set(key, { at: Date.now(), samples: data.samples || [] });
+    if (root.isConnected) renderNodeHistory(root, data.samples || []);
+  } catch (error) {
+    console.error("Historii uzlu se nepodařilo načíst", error);
+    if (!root.isConnected) return;
+    const chart = root.querySelector(".node-history-chart");
+    if (chart) chart.textContent = t("node.historyUnavailable");
+    const summary = root.querySelector(".node-history-head small");
+    if (summary) summary.textContent = "";
+  }
 }
 
 async function getJsonWithResponse(path) {
@@ -1012,7 +1124,7 @@ function openNodeStack(entries, latlng) {
       event.stopPropagation();
       setTimeout(() => {
         map.closePopup();
-        entry.marker.openPopup();
+        openNodeEntry(entry);
       }, 0);
     });
     list.appendChild(button);
@@ -1057,7 +1169,7 @@ function addNodeMarker(node) {
       }
       const stack = nodeStackEntries(entry);
       if (stack.length > 1) openNodeStack(stack, marker.getLatLng());
-      else marker.openPopup();
+      else openNodeEntry(entry);
     });
   marker.off("click", marker._openPopup, marker);
   const allowed = isNodeRoleAllowed(node, state.allowedRoles);
@@ -1108,7 +1220,7 @@ function applyInitialNode() {
     ? Math.max(6, Math.min(14, INITIAL_ZOOM))
     : 11;
   map.setView(entry.marker.getLatLng(), zoom);
-  entry.marker.openPopup();
+  openNodeEntry(entry);
 }
 
 function routeWindowParam(windowMs) {
@@ -2682,7 +2794,7 @@ function renderStats() {
       if (!entry) return;
       revealNodeMarker(entry);
       map.flyTo(entry.marker.getLatLng(), 11, { duration: 0.7 });
-      entry.marker.openPopup();
+      openNodeEntry(entry);
     });
     item.appendChild(button);
     return item;
@@ -2780,7 +2892,8 @@ nodeSearch.addEventListener("input", () => {
       const entry = state.nodeMarkerByKey.get(node.public_key?.toUpperCase());
       if (entry) revealNodeMarker(entry);
       map.flyTo(marker.getLatLng(), 11, { duration: 0.7 });
-      marker.openPopup();
+      if (entry) openNodeEntry(entry);
+      else marker.openPopup();
       nodeSearch.value = node.name || "";
       searchResults.hidden = true;
     });
@@ -2792,6 +2905,15 @@ nodeSearch.addEventListener("input", () => {
 
 document.addEventListener("click", (event) => {
   if (!event.target.closest(".node-search")) searchResults.hidden = true;
+});
+
+elements.mobileSheetClose.addEventListener("click", closeMobileSheet);
+elements.mobileSheet.addEventListener("click", (event) => {
+  if (event.target === elements.mobileSheet) closeMobileSheet();
+});
+elements.mobileSheet.addEventListener("close", () => elements.mobileSheetContent.replaceChildren());
+mobileSheetQuery.addEventListener("change", (event) => {
+  if (!event.matches) closeMobileSheet();
 });
 
 elements.qrClose.addEventListener("click", () => elements.qrDialog.close());

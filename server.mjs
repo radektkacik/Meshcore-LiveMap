@@ -77,6 +77,32 @@ const contentTypes = {
   ".woff2": "font/woff2",
 };
 
+const securityHeaders = {
+  "Content-Security-Policy": [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "connect-src 'self'",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.opentopomap.org https://server.arcgisonline.com",
+    "manifest-src 'self'",
+    "object-src 'none'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "worker-src 'self' blob:",
+    "upgrade-insecure-requests",
+  ].join("; "),
+  "Cross-Origin-Opener-Policy": "same-origin",
+  "Permissions-Policy": "geolocation=(), camera=(), microphone=()",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "X-Content-Type-Options": "nosniff",
+  "X-DNS-Prefetch-Control": "off",
+  "X-Frame-Options": "DENY",
+  "X-Permitted-Cross-Domain-Policies": "none",
+};
+
 try {
   const cached = JSON.parse(readFileSync(nodesCachePath, "utf8"));
   if (cached && typeof cached.body === "string") nodesCache = cached;
@@ -682,6 +708,7 @@ function queueElevation(task) {
 }
 
 async function handleRequest(request, response) {
+  for (const [name, value] of Object.entries(securityHeaders)) response.setHeader(name, value);
   let url;
   let decodedPathname;
   try {
@@ -839,6 +866,22 @@ async function handleRequest(request, response) {
       "Cache-Control": "no-store",
     });
     response.end(JSON.stringify({ count: packets.length, packets, since }));
+    return;
+  }
+
+  if (url.pathname === "/api/node-history") {
+    if (request.method !== "GET") {
+      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      return;
+    }
+    const key = String(url.searchParams.get("key") || "").toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(key)) {
+      sendJson(response, 400, { error: "Neplatný klíč uzlu." });
+      return;
+    }
+    const requestedDays = Number(url.searchParams.get("days") || 7);
+    const days = Number.isFinite(requestedDays) ? Math.min(30, Math.max(1, requestedDays)) : 7;
+    sendJson(response, 200, { key, days, samples: metricsStore.history(key, days) });
     return;
   }
 

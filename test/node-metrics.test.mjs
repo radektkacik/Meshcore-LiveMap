@@ -21,6 +21,10 @@ test("stores hourly samples and decorates nodes with a seven-day average", () =>
     assert.ok(Math.abs(decorated.long_term_usefulness_score - 0.6) < 1e-10);
     assert.equal(decorated.long_term_coverage_score, 0.4);
     assert.match(decorated.long_term_first_sample, /^2026-09-01T10:00:00/);
+    const history = store.history("AABB", 7, start + 2 * 60 * 60 * 1000);
+    assert.equal(history.length, 2);
+    assert.equal(history[0].usefulness, 0.8);
+    assert.match(history[0].sampledAt, /^2026-09-01T10:00:00/);
   } finally {
     store.close();
     rmSync(directory, { recursive: true, force: true });

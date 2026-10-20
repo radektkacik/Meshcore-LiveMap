@@ -91,6 +91,8 @@ přihlašovací údaje zůstávají pouze na serveru.
 - `/api/visit-stats?days=<n>` vrací interní statistiku návštěv mapy (návštěvy,
   unikátní návštěvníci přes denní hash IP a maximální souběžný počet diváků).
   Ukládá se do `data/visits.sqlite`; raw IP se neukládá.
+- `/api/node-history?key=<public_key>&days=7` vrací hodinové vzorky metrik
+  vybraného uzlu z `data/node-metrics.sqlite` pro mini graf v detailu uzlu.
 - `/api/history?since=<ms>&limit=<n>` vrací uložené trasy z vlastní databáze.
   Na něm stojí archivní okna 5 min / 1 h / 24 h a sousedská analýza, takže
   fungují i pro starší data a po restartu.
