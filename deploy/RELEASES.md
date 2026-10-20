@@ -66,6 +66,8 @@
 | 2026-10-20 17:53 | `20261020T175348Z.tar.gz` (stage APP_DIR) | `20261020-1753-fac8015` | Beta fix: Aktivita se na malých displejích nezobrazovala kvůli `display:none`; nyní je to spodní panel přes šířku s max. výškou 46dvh | `src/style.css` |
 | 2026-10-20 19:00 | `20261020T190053Z.tar.gz` | `20261020-1900-33c6c67` | Prod: nasazení otestované beta dávky – Vite 8.3.4, security headers, historie uzlu, mobilní bottom sheet, Aktivity s pauzou/seskupením, tmavá mapa, sdílené odkazy, stack uzlů a detail trasy | `package.json`, `package-lock.json`, `server.mjs`, `node-metrics.mjs`, `index.html`, `src/*`, `src/style.css`, `test/*`, `README.md`, `deploy/rollback-vps.sh` |
 | 2026-10-20 19:25 | `20261020T192528Z.tar.gz` (stage APP_DIR) | `20261020-1925-37f9346` | Beta: zkrácené relativní časy v detailu uzlu – `teď`, `12 min`, `3 h`, `2 d` | `src/i18n.js` |
+| 2026-10-20 19:38 | `20261020T193817Z.tar.gz` | `20261020-1938-93d9e8d` | Prod: zkrácené relativní časy v detailu uzlu | `src/i18n.js` |
+| 2026-10-20 19:40 | `20261020T194028Z.tar.gz` (stage APP_DIR) | `20261020-1940-2ed24be` | Beta: role uzlu (repeater/room/…) přímo v hlavičce detailu; řádek „Role“ odstraněn | `src/main.js`, `src/i18n.js` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -104,11 +106,11 @@ z odpovídající zálohy a `data/` nechá být:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261020T190053Z` má v záloze předchozí verzi;
+Aktuální produkční release `20261020T193817Z` má v záloze předchozí verzi;
 návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261020T190053Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261020T193817Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`.
