@@ -62,6 +62,7 @@
 | 2026-10-20 15:29 | `20261020T152959Z.tar.gz` (stage APP_DIR) | `20261020-1530-f389dce` | Beta: odebráno duplicitní tlačítko „Tmavá“ z podkladu mapy; tmavou mapu řídí horní přepínač tématu (OSM + filtr), OpenTopoMap/Satelitní zůstávají samostatné | `index.html`, `src/i18n.js`, `src/main.js` |
 | 2026-10-20 16:03 | `20261020T160302Z.tar.gz` (stage APP_DIR) | `20261020-1603-0ee63f6` | Beta: Aktivity – dávkové překreslování max. 1×/2 s, auto-pauza při hoveru/fokusu/scrollu, tlačítko pauzy, badge „N nových“ a seskupení stejných tras (`typ + from → to`) s počtem ×N | `index.html`, `src/i18n.js`, `src/main.js`, `src/style.css` |
 | 2026-10-20 17:46 | `20261020T174611Z.tar.gz` (stage APP_DIR) | `20261020-1746-8be87f9` | Beta: Vite 8.3.4, security headers (CSP, HSTS, nosniff, frame deny, permissions policy), `/api/node-history` + 7denní sparkline v detailu uzlu, mobilní bottom sheet pro uzel a trasu | `package.json`, `package-lock.json`, `server.mjs`, `node-metrics.mjs`, `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `test/*`, `README.md` |
+| 2026-10-20 17:51 | `20261020T175140Z.tar.gz` (stage APP_DIR) | `20261020-1751-58201d9` | Beta: graf historie užitečnosti přesunut do spodní části detailu uzlu, před veřejný klíč a akce | `src/main.js` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
