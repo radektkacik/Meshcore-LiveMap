@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@michaelhart/meshcore-decoder": "^0.3.0",
-    "better-sqlite3": "^11.10.0",
+    "better-sqlite3": "^13.0.3",
     "leaflet": "^1.9.4",
     "mqtt": "^5.15.2",
     "pinia": "^4.0.3",
