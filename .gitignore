@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.*
+!.env.example
+dist/
+.vite/
+data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.log
+coverage/
+.DS_Store
+.opencode/
+cntb
+cntb.pub

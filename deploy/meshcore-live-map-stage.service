@@ -1,0 +1,24 @@
+[Unit]
+Description=MeshCore CZ live map (staging)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=meshcore-map
+Group=meshcore-map
+WorkingDirectory=/opt/meshcore-live-map-stage
+EnvironmentFile=/opt/meshcore-live-map-stage/.env
+Environment=HOST=127.0.0.1
+Environment=PORT=4174
+ExecStart=/usr/bin/node /opt/meshcore-live-map-stage/server.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

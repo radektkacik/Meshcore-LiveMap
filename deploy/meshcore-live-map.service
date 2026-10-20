@@ -1,0 +1,24 @@
+[Unit]
+Description=MeshCore CZ live map
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=meshcore-map
+Group=meshcore-map
+WorkingDirectory=/opt/meshcore-live-map
+EnvironmentFile=/opt/meshcore-live-map/.env
+Environment=HOST=127.0.0.1
+Environment=PORT=4173
+ExecStart=/usr/bin/node /opt/meshcore-live-map/server.mjs
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target
