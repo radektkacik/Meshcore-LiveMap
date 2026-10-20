@@ -58,6 +58,7 @@
 | 2026-10-20 14:02 | `20261020T140236Z.tar.gz` (stage APP_DIR) | `20261020-1402-a089705` | Beta fix: výchozí střed mapy zpět na ČR, pokud URL neobsahuje `lat`/`lon` (chybějící parametry se dřív převedly na 0,0) | `src/main.js` |
 | 2026-10-20 14:57 | `20261020T145738Z.tar.gz` (stage APP_DIR) | `20261020-1457-b49d8de` | Beta fix: tmavý podklad změněn z Carto (vyžaduje API key) na Esri World Dark Gray Base bez klíče; dlaždice se načítají, bez hlášky „API KEY REQUIRED“ | `src/main.js` |
 | 2026-10-20 15:12 | `20261020T151232Z.tar.gz` (stage APP_DIR) | `20261020-1512-152f7e7` | Beta: tmavý podklad z OSM dlaždic + CSS filtr na `leaflet-layer` (bez API klíče, skutečně tmavý); ověřeno načtení dlaždic a filtr | `src/main.js`, `src/style.css` |
+| 2026-10-20 15:21 | `20261020T152155Z.tar.gz` (stage APP_DIR) | `20261020-1521-c2eff41` | Beta fix: tmavý filtr aplikován přímo na OSM dlaždice (`leaflet-layer.dark-basemap .leaflet-tile`), ne na kontejner; bez API klíče | `src/style.css` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
