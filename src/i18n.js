@@ -334,7 +334,6 @@ export const STATIC_EN = {
   "Podklad mapy": "Base map",
   "Základní": "Standard",
   "Satelitní": "Satellite",
-  "Tmavá": "Dark",
   "Časové okno": "Time window",
   "Časové okno tras": "Route time window",
   "Velikost hashe": "Hash size",

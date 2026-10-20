@@ -326,26 +326,34 @@ const BASE_LAYER_KEY = "meshcoreBaseLayer";
 const BASE_KEYS = ["osm", "topo", "sat", "dark"];
 const storedBaseLayer = localStorage.getItem(BASE_LAYER_KEY);
 let activeBaseLayerKey = BASE_KEYS.includes(storedBaseLayer)
-  ? storedBaseLayer
+  ? (storedBaseLayer === "dark" && document.documentElement.dataset.theme !== "dark" ? "osm" : storedBaseLayer)
   : (document.documentElement.dataset.theme === "dark" ? "dark" : "osm");
 let currentBaseLayer = null;
+let currentBaseLayerKey = null;
 
 function showBaseLayer(key) {
+  const resolvedKey = key === "osm" && document.documentElement.dataset.theme === "dark" ? "dark" : key;
+  if (currentBaseLayer && currentBaseLayerKey === resolvedKey) {
+    activeBaseLayerKey = key;
+    return;
+  }
   if (currentBaseLayer) {
     map.removeLayer(currentBaseLayer);
     currentBaseLayer = null;
   }
-  currentBaseLayer = rasterBaseLayers[key];
+  currentBaseLayer = rasterBaseLayers[resolvedKey];
   currentBaseLayer.addTo(map);
+  currentBaseLayerKey = resolvedKey;
   activeBaseLayerKey = key;
 }
 
 function setBaseLayer(key) {
-  if (!BASE_KEYS.includes(key) || (key === activeBaseLayerKey && currentBaseLayer)) return;
+  if (!BASE_KEYS.includes(key)) return;
   showBaseLayer(key);
   localStorage.setItem(BASE_LAYER_KEY, key);
+  const buttonKey = key === "dark" ? "osm" : key;
   for (const button of elements.baseLayerButtons) {
-    button.classList.toggle("active", button.dataset.layer === key);
+    button.classList.toggle("active", button.dataset.layer === buttonKey);
   }
 }
 
@@ -2058,8 +2066,8 @@ function applyTheme(theme) {
   const next = theme === "dark" ? "dark" : "light";
   document.documentElement.dataset.theme = next;
   localStorage.setItem(THEME_KEY, next);
-  if (next === "dark" && activeBaseLayerKey === "osm") setBaseLayer("dark");
-  if (next === "light" && activeBaseLayerKey === "dark") setBaseLayer("osm");
+  if (activeBaseLayerKey === "osm") setBaseLayer("osm");
+  else if (next === "light" && activeBaseLayerKey === "dark") setBaseLayer("osm");
 }
 
 elements.themeToggle.addEventListener("click", () => {
