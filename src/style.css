@@ -81,8 +81,7 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .status-line { height: 39px; display: flex; align-items: center; gap: 7px; color: var(--muted); font: 11px "DM Mono", monospace; }
 .status-line time { margin-left: auto; color: #50665c; }
 .data-stale { padding: 2px 5px; border-radius: 4px; color: #8a5a00; background: rgba(216, 116, 18, 0.14); font: 700 9px "DM Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; }
-.leaflet-layer.dark-basemap,
-.leaflet-tile.dark-basemap { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9); }
+.leaflet-layer.dark-basemap .leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9); }
 .connection-dot { width: 6px; height: 6px; border-radius: 50%; background: #d64a55; box-shadow: 0 0 7px rgba(214, 74, 85, 0.5); }
 .connection-dot.online { background: var(--green); box-shadow: 0 0 7px rgba(7, 142, 98, 0.5); }
 
