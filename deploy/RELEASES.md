@@ -90,6 +90,7 @@
 | 2026-10-21 13:30 | `20261021T133054Z.tar.gz` (stage APP_DIR) | `20261021-1330-97b7ef4` | Beta: simulace pokrytí terénu, DEM dlaždice přes `/api/terrain`; worker chybně volal `/api/terrain` bez base `/map/` | `src/coverage.js`, `src/coverage-worker.js`, `src/main.js`, `src/style.css`, `src/i18n.js`, `index.html`, `server.mjs`, `test/*`, `README.md`, `.env.example` |
 | 2026-10-21 13:32 | `20261021T133249Z.tar.gz` (stage APP_DIR) | `20261021-1332-f3eae48` | Beta fix: worker používá `import.meta.env.BASE_URL`, pokrytí na `/map/` funguje; ověřeno překryvem a souhrnem | `src/coverage-worker.js` |
 | 2026-10-21 14:07 | `20261021T140741Z.tar.gz` (stage APP_DIR) | `20261021-1407-753a1c6` | Beta: pokrytí jemnější (300 vzorků/paprsek), rádius do 100 km, default 50 km, silnější barvy; ověřeno 50 km i 100 km | `src/coverage.js`, `src/main.js`, `src/i18n.js`, `index.html`, `README.md` |
+| 2026-10-21 14:15 | `20261021T141507Z.tar.gz` (stage APP_DIR) | `20261021-1415-2c1fcca` | Beta: výchozí rádius pokrytí 100 km (81 dlaždic), ověřeno | `index.html`, `src/main.js` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
