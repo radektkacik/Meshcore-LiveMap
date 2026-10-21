@@ -10,6 +10,7 @@ import {
   parsePath,
 } from "./route-utils.js";
 import { analyzePath, interpolatePath, nearestOnPath, profilePointAt } from "./los.js";
+import { CLEAR, PARTIAL } from "./coverage.js";
 import { createElevationService, ElevationError } from "./elevation.js";
 import { createPerfMonitor } from "./perf.js";
 import {
@@ -161,6 +162,16 @@ const elements = {
   losSummary: document.querySelector("#los-summary"),
   losToggle: document.querySelector("#los-toggle"),
   losTxPower: document.querySelector("#los-tx-power"),
+  coverageAntenna: document.querySelector("#coverage-antenna"),
+  coverageClose: document.querySelector("#coverage-close"),
+  coverageDialog: document.querySelector("#coverage-dialog"),
+  coverageFrequency: document.querySelector("#coverage-frequency"),
+  coverageHint: document.querySelector("#coverage-hint"),
+  coverageRadius: document.querySelector("#coverage-radius"),
+  coverageRecompute: document.querySelector("#coverage-recompute"),
+  coverageStatus: document.querySelector("#coverage-status"),
+  coverageSummary: document.querySelector("#coverage-summary"),
+  coverageToggle: document.querySelector("#coverage-toggle"),
   mobileSheet: document.querySelector("#mobile-sheet"),
   mobileSheetClose: document.querySelector("#mobile-sheet-close"),
   mobileSheetContent: document.querySelector("#mobile-sheet-content"),
@@ -246,6 +257,13 @@ const state = {
   losProfile: null,
   losRecomputeButton: document.querySelector("#los-recompute"),
   losSamples: null,
+  coverageCenter: null,
+  coverageComputeId: 0,
+  coverageImageUrl: null,
+  coverageMarker: null,
+  coverageMode: false,
+  coverageOverlay: null,
+  coverageWorker: null,
   neighborByNode: new Map(),
   nodeByKey: new Map(),
   nodeHistoryCache: new Map(),
@@ -717,7 +735,8 @@ function openRouteDetail(route, latlng = null) {
 
 map.on("click", clearSelectedRoute);
 map.on("click", (event) => {
-  if (state.losMode) void handleLosClick(event.latlng);
+  if (state.coverageMode) void handleCoverageClick(event.latlng);
+  else if (state.losMode) void handleLosClick(event.latlng);
 });
 map.on("mousemove", handleLosHover);
 map.on("mouseout", clearLosCursor);
@@ -1209,6 +1228,11 @@ function addNodeMarker(node) {
     })
     .on("click", (event) => {
       L.DomEvent.stopPropagation(event);
+      if (state.coverageMode) {
+        marker.closePopup();
+        void handleCoverageClick(marker.getLatLng());
+        return;
+      }
       if (state.losMode) {
         marker.closePopup();
         void handleLosClick(marker.getLatLng(), node);
@@ -2940,7 +2964,230 @@ async function handleLosClick(latlng, node = null) {
   setLosEndpoint(1, latlng, node);
 }
 
+let coverageTimer = null;
+
+function coverageSettings() {
+  const antenna = Math.min(300, Math.max(1, Number(elements.coverageAntenna.value) || 10));
+  const radius = Math.min(50, Math.max(3, Number(elements.coverageRadius.value) || 20));
+  const frequency = Math.min(6000, Math.max(100, Number(elements.coverageFrequency.value) || 868));
+  return { antenna, radius, frequency };
+}
+
+function cancelCoverageCompute() {
+  state.coverageComputeId += 1;
+  if (state.coverageWorker) {
+    state.coverageWorker.terminate();
+    state.coverageWorker = null;
+  }
+}
+
+function clearCoverageOverlay() {
+  if (state.coverageOverlay) {
+    map.removeLayer(state.coverageOverlay);
+    state.coverageOverlay = null;
+  }
+  if (state.coverageImageUrl) {
+    URL.revokeObjectURL(state.coverageImageUrl);
+    state.coverageImageUrl = null;
+  }
+}
+
+function clearCoverageMarker() {
+  if (state.coverageMarker) {
+    map.removeLayer(state.coverageMarker);
+    state.coverageMarker = null;
+  }
+}
+
+function setCoverageStatus(text) {
+  elements.coverageStatus.textContent = text || "";
+}
+
+function setCoverageMode(on) {
+  const next = Boolean(on);
+  if (next && state.losMode) setLosMode(false);
+  state.coverageMode = next;
+  elements.coverageToggle.classList.toggle("active", next);
+  elements.coverageToggle.setAttribute("aria-pressed", String(next));
+  elements.coverageHint.hidden = !next;
+  elements.coverageHint.textContent = next ? t("coverage.hint") : "";
+  map.getContainer().style.cursor = next || state.losMode ? "crosshair" : "";
+  if (!next) {
+    clearTimeout(coverageTimer);
+    cancelCoverageCompute();
+    clearCoverageOverlay();
+    clearCoverageMarker();
+    state.coverageCenter = null;
+    setCoverageStatus("");
+    elements.coverageSummary.textContent = "";
+    if (elements.coverageDialog.open) elements.coverageDialog.close();
+  }
+}
+
+function mercatorY(latDeg) {
+  const rad = (latDeg * Math.PI) / 180;
+  return Math.log(Math.tan(Math.PI / 4 + rad / 2));
+}
+
+function renderCoverage(result) {
+  const center = result.center;
+  const radiusKm = result.radiusKm;
+  if (!Number.isFinite(result.centerGroundM)) {
+    clearCoverageOverlay();
+    elements.coverageSummary.textContent = "";
+    setCoverageStatus(t("coverage.noTerrain"));
+    return;
+  }
+  const size = 560;
+  const latDelta = radiusKm / 111.32;
+  const lonDelta = radiusKm / (111.32 * Math.max(0.05, Math.cos((center.lat * Math.PI) / 180)));
+  const north = center.lat + latDelta;
+  const south = center.lat - latDelta;
+  const west = center.lon - lonDelta;
+  const east = center.lon + lonDelta;
+  const mercNorth = mercatorY(north);
+  const mercSouth = mercatorY(south);
+  const cosLat = Math.cos((center.lat * Math.PI) / 180);
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext("2d");
+  const image = context.createImageData(size, size);
+  const pixels = image.data;
+  const maxDistanceM = radiusKm * 1000;
+
+  for (let py = 0; py < size; py += 1) {
+    const merc = mercNorth + ((mercSouth - mercNorth) * py) / (size - 1);
+    const lat = ((2 * Math.atan(Math.exp(merc)) - Math.PI / 2) * 180) / Math.PI;
+    const northM = (lat - center.lat) * 110540;
+    for (let px = 0; px < size; px += 1) {
+      const lon = west + ((east - west) * px) / (size - 1);
+      const eastM = (lon - center.lon) * 111320 * cosLat;
+      const distanceM = Math.hypot(northM, eastM);
+      const offset = (py * size + px) * 4;
+      if (distanceM > maxDistanceM) continue;
+      const azimuth = ((Math.atan2(eastM, northM) * 180) / Math.PI + 360) % 360;
+      const ray = Math.min(result.rays - 1, Math.floor((azimuth / 360) * result.rays));
+      const sample = Math.min(result.samples - 1, Math.max(0, Math.floor(distanceM / result.stepM) - 1));
+      const status = result.statuses[ray * result.samples + sample];
+      if (status === CLEAR) {
+        pixels[offset] = 46;
+        pixels[offset + 1] = 160;
+        pixels[offset + 2] = 67;
+        pixels[offset + 3] = 110;
+      } else if (status === PARTIAL) {
+        pixels[offset] = 224;
+        pixels[offset + 1] = 145;
+        pixels[offset + 2] = 30;
+        pixels[offset + 3] = 135;
+      } else if (status === 3) {
+        pixels[offset] = 120;
+        pixels[offset + 1] = 130;
+        pixels[offset + 2] = 126;
+        pixels[offset + 3] = 45;
+      }
+    }
+  }
+
+  context.putImageData(image, 0, 0);
+  clearCoverageOverlay();
+  state.coverageOverlay = L.imageOverlay(canvas.toDataURL("image/png"), [[south, west], [north, east]], {
+    opacity: 1,
+    interactive: false,
+    className: "coverage-overlay",
+  }).addTo(map);
+  const area = result.visibleAreaKm2 + result.partialAreaKm2;
+  elements.coverageSummary.textContent = t("coverage.summary", {
+    ground: Number.isFinite(result.centerGroundM) ? formatNumber(Math.round(result.centerGroundM)) : "—",
+    distance: formatDecimal(result.maxDistanceKm, 1),
+    area: formatNumber(Math.round(area)),
+  });
+  setCoverageStatus(t("coverage.done", { tiles: result.tiles }));
+}
+
+async function computeCoverage() {
+  if (!state.coverageCenter) return;
+  if (typeof Worker === "undefined" || typeof OffscreenCanvas === "undefined") {
+    setCoverageStatus(t("coverage.unsupported"));
+    return;
+  }
+  const settings = coverageSettings();
+  elements.coverageAntenna.value = String(settings.antenna);
+  elements.coverageRadius.value = String(settings.radius);
+  elements.coverageFrequency.value = String(settings.frequency);
+  clearCoverageOverlay();
+  setCoverageStatus(t("coverage.loading", { loaded: 0, total: "?" }));
+  elements.coverageSummary.textContent = "";
+  cancelCoverageCompute();
+  const computeId = state.coverageComputeId;
+  const worker = new Worker(new URL("./coverage-worker.js", import.meta.url), { type: "module" });
+  state.coverageWorker = worker;
+  worker.onmessage = (event) => {
+    if (computeId !== state.coverageComputeId) return;
+    const data = event.data || {};
+    if (data.type === "progress") {
+      setCoverageStatus(t("coverage.loading", { loaded: data.loaded, total: data.total }));
+      return;
+    }
+    if (data.type === "compute") {
+      setCoverageStatus(t("coverage.computing"));
+      return;
+    }
+    if (data.type === "error") {
+      setCoverageStatus(t("coverage.failed"));
+      worker.terminate();
+      if (state.coverageWorker === worker) state.coverageWorker = null;
+      return;
+    }
+    if (data.type === "done") {
+      renderCoverage({ ...data, center: state.coverageCenter, radiusKm: settings.radius });
+      worker.terminate();
+      if (state.coverageWorker === worker) state.coverageWorker = null;
+    }
+  };
+  worker.onerror = () => {
+    if (computeId !== state.coverageComputeId) return;
+    setCoverageStatus(t("coverage.failed"));
+    worker.terminate();
+    if (state.coverageWorker === worker) state.coverageWorker = null;
+  };
+  worker.postMessage({
+    center: state.coverageCenter,
+    radiusKm: settings.radius,
+    antennaM: settings.antenna,
+    frequencyMHz: settings.frequency,
+    azimuthSteps: 720,
+    samplesPerRay: 200,
+  });
+}
+
+function handleCoverageClick(latlng) {
+  state.coverageCenter = { lat: latlng.lat, lon: latlng.lng };
+  if (!state.coverageMarker) {
+    state.coverageMarker = L.circleMarker([latlng.lat, latlng.lng], {
+      radius: 7,
+      color: "#1f6fb2",
+      weight: 3,
+      fillColor: "#ffffff",
+      fillOpacity: 1,
+      interactive: false,
+      pane: "markerPane",
+    }).addTo(map);
+  } else {
+    state.coverageMarker.setLatLng([latlng.lat, latlng.lng]);
+  }
+  if (!elements.coverageDialog.open) elements.coverageDialog.show();
+  void computeCoverage();
+}
+
+const scheduleCoverage = () => {
+  if (!state.coverageCenter) return;
+  clearTimeout(coverageTimer);
+  coverageTimer = setTimeout(() => void computeCoverage(), 350);
+};
+
 function setLosMode(on) {
+  if (on && state.coverageMode) setCoverageMode(false);
   state.losMode = Boolean(on);
   elements.losToggle.classList.toggle("active", state.losMode);
   elements.losToggle.setAttribute("aria-pressed", String(state.losMode));
@@ -2964,6 +3211,21 @@ function setLosMode(on) {
 }
 
 elements.losToggle.addEventListener("click", () => setLosMode(!state.losMode));
+elements.coverageToggle.addEventListener("click", () => {
+  if (state.coverageMode) setCoverageMode(false);
+  else {
+    setCoverageMode(true);
+    setCoverageStatus(t("coverage.hint"));
+  }
+});
+elements.coverageClose.addEventListener("click", () => elements.coverageDialog.close());
+elements.coverageDialog.addEventListener("close", () => {
+  if (state.coverageMode) setCoverageMode(false);
+});
+elements.coverageRecompute.addEventListener("click", () => void computeCoverage());
+for (const input of [elements.coverageAntenna, elements.coverageRadius, elements.coverageFrequency]) {
+  input.addEventListener("input", scheduleCoverage);
+}
 state.losRecomputeButton.addEventListener("click", () => void computeLos());
 elements.losClose.addEventListener("click", () => elements.losDialog.close());
 elements.losDialog.addEventListener("close", clearLosCursor);
@@ -2997,7 +3259,9 @@ document.addEventListener("click", (event) => {
 updateLosActions();
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
-  if (elements.losDialog.open) elements.losDialog.close();
+  if (elements.coverageDialog.open) elements.coverageDialog.close();
+  else if (state.coverageMode) setCoverageMode(false);
+  else if (elements.losDialog.open) elements.losDialog.close();
   else if (state.losMode) setLosMode(false);
 });
 

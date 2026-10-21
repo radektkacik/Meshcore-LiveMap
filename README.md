@@ -162,6 +162,21 @@ aktivní během posledních 24 hodin. Server načítá metriky každých 15 minu
 ukládá nejvýše jeden aktualizovaný vzorek za hodinu a historii drží 30 dní v
 `data/node-metrics.sqlite`.
 
+## Pokrytí terénu
+
+Tlačítko **Pokrytí** zapne režim, ve kterém kliknutí do mapy nebo na uzel spočítá
+terénní viditelnost z daného bodu. Volitelná je výška antény, rádius a frekvence
+(pro částečný zásah Fresnelovy zóny). Výsledek se zobrazí jako překryv nad mapou:
+
+- zelená – přímá viditelnost,
+- oranžová – viditelnost s částečným zásahem Fresnelovy zóny,
+- bez barvy – terén blokuje.
+
+Výpočet běží ve Web Workeru a používá výškové dlaždice Mapzen Terrarium
+(cca 45 m/px), které server proxyuje a kešuje na `/api/terrain/{z}/{x}/{y}.png`.
+Jde o terénní model: budovy, les, difrakce a rádiové ztráty se nezapočítávají.
+Pro 20 km okolí se načítá řádově jednotky MB dlaždic, výsledek je orientační.
+
 ## Testy
 
 ```bash
@@ -180,8 +195,9 @@ Copyright (c) 2026 MeshCore.cz.
 Licence se vztahuje na zdrojový kód tohoto repozitáře. Závislosti
 (`leaflet`, `better-sqlite3`, `mqtt`, `qrcode`, `@michaelhart/meshcore-decoder`)
 mají vlastní licence. Data z CoreScope, MQTT feed, dlaždice OpenStreetMap,
-OpenTopoMap a Esri a služba Open-Meteo se řídí podmínkami svých poskytovatelů;
-MIT licence je nepřebírá. Ikona selfh.st je použita pod CC BY 4.0.
+OpenTopoMap, Esri a Mapzen Terrarium a služba Open-Meteo se řídí podmínkami
+svých poskytovatelů; MIT licence je nepřebírá. Ikona selfh.st je použita pod
+CC BY 4.0.
 
 Odkaz na licenci je i v GUI v poznámce pod legendou (`LICENSE.txt`).
 

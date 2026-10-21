@@ -371,6 +371,26 @@ html[data-theme="dark"] .route-hop-list li { border-color: rgba(255, 255, 255, 0
 html[data-theme="dark"] .node-link-copy { color: #8ec5f0; background: rgba(40, 127, 201, 0.14); border-color: rgba(40, 127, 201, 0.4); }
 html[data-theme="dark"] .route-show-on-map { color: #5fd0a5; background: rgba(7, 142, 98, 0.16); border-color: rgba(7, 142, 98, 0.4); }
 .los-dialog { width: min(660px, calc(100vw - 32px)); padding: 18px; border: 1px solid rgba(30, 65, 49, 0.2); border-radius: 15px; color: #263b33; background: #fffef9; box-shadow: 0 24px 70px rgba(20, 42, 32, 0.3); }
+.coverage-dialog { width: min(390px, calc(100vw - 32px)); padding: 18px; border: 1px solid rgba(30, 65, 49, 0.2); border-radius: 15px; color: #263b33; background: #fffef9; box-shadow: 0 24px 70px rgba(20, 42, 32, 0.3); }
+.coverage-dialog[open] { position: fixed; right: 16px; bottom: 16px; z-index: 700; max-height: calc(100dvh - 32px); overflow-y: auto; }
+.coverage-dialog header { padding: 0 32px 8px 0; }
+.coverage-dialog h2 { margin: 0 0 4px; font-size: 16px; }
+.coverage-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+.coverage-controls label { display: grid; gap: 3px; color: #667b70; font-size: 10px; }
+.coverage-controls label:last-child { grid-column: 1 / -1; }
+.coverage-controls input { width: 100%; padding: 6px 7px; border: 1px solid #cfd9d2; border-radius: 6px; color: #17271f; background: #fff; font: 12px "DM Mono", monospace; }
+.coverage-status { margin: 8px 0 0; min-height: 16px; color: #5b6f65; font: 10px/1.4 "DM Mono", monospace; }
+.coverage-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 8px; color: #52685d; font-size: 10px; }
+.coverage-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.coverage-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.coverage-legend i.clear { background: rgba(46, 160, 67, 0.65); }
+.coverage-legend i.partial { background: rgba(224, 145, 30, 0.7); }
+.coverage-legend i.blocked { background: rgba(120, 130, 126, 0.4); }
+.coverage-note { margin: 8px 0 10px; color: #7a8c83; font-size: 10px; line-height: 1.45; }
+.coverage-dialog .los-recompute { position: static; width: 100%; }
+@media (max-width: 600px) {
+  .coverage-dialog[open] { right: 12px; bottom: 12px; left: 12px; width: auto; }
+}
 .los-dialog[open] { position: fixed; right: 16px; bottom: 16px; left: auto; top: auto; z-index: 700; max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; }
 .los-close { position: absolute; top: 9px; right: 9px; width: 29px; height: 29px; padding: 0; border: 0; border-radius: 8px; color: #fff; background: #899990; font-size: 20px; line-height: 29px; cursor: pointer; }
 .los-dialog header { padding: 0 32px 10px 0; }
@@ -568,6 +588,9 @@ html[data-theme="dark"] .feedback-list .fb-name { color: #e6ecef; }
 html[data-theme="dark"] .map-actions > button.active { color: #fff; background: var(--green); border-color: var(--green); }
 html[data-theme="dark"] .los-hint { color: #8ec5f0; border-color: rgba(40, 127, 201, 0.5); background: rgba(40, 127, 201, 0.12); }
 html[data-theme="dark"] .los-dialog { color: #e6ecef; background: #161d24; border-color: var(--line); }
+html[data-theme="dark"] .coverage-dialog { color: #e6ecef; background: #161d24; border-color: var(--line); }
+html[data-theme="dark"] .coverage-controls input { color: #e6ecef; background: #0f151a; border-color: #2f3d46; }
+html[data-theme="dark"] .coverage-status, html[data-theme="dark"] .coverage-legend, html[data-theme="dark"] .coverage-note { color: #9fb0b8; }
 html[data-theme="dark"] .los-chart { background: #0f1418; border-color: var(--line); }
 html[data-theme="dark"] .los-hover { color: #cfd9dd; }
 html[data-theme="dark"] .los-controls input,

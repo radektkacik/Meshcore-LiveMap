@@ -42,8 +42,13 @@ async function waitForServer(port, child) {
 
 test("HTTP server handles malformed URLs, upstream timeout and SSE limits", async () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-server-"));
+  const tinyPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lK3z1wAAAABJRU5ErkJggg==", "base64");
   let nodesFail = false;
   const upstream = createServer((req, res) => {
+    if (req.url?.startsWith("/terrarium/")) {
+      res.writeHead(200, { "Content-Type": "image/png" }).end(tinyPng);
+      return;
+    }
     if (req.url?.startsWith("/api/nodes")) {
       if (nodesFail) {
         res.writeHead(502, { "Content-Type": "application/json" }).end('{"error":"down"}');
@@ -76,6 +81,7 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       PORT: String(appPort),
       SCORE_DB_PATH: join(directory, "metrics.sqlite"),
       VISITS_DB_PATH: join(directory, "visits.sqlite"),
+      TERRAIN_UPSTREAM: `http://127.0.0.1:${upstreamPort}/terrarium`,
       UPSTREAM_TIMEOUT_MS: "100",
     },
     stdio: "ignore",
@@ -91,6 +97,13 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.match(secured.headers.get("permissions-policy") || "", /geolocation=\(\)/);
     assert.equal(secured.headers.get("referrer-policy"), "strict-origin-when-cross-origin");
     assert.equal((await rawRequest(appPort, "/%")).status, 400);
+    const terrainTile = await fetch(`http://127.0.0.1:${appPort}/api/terrain/11/1/1.png`);
+    assert.equal(terrainTile.status, 200);
+    assert.equal(terrainTile.headers.get("content-type"), "image/png");
+    assert.match(terrainTile.headers.get("cache-control") || "", /immutable/);
+    assert.ok((await terrainTile.arrayBuffer()).byteLength > 0);
+    assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/terrain/11/9999/1.png`)).status, 400);
+    assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/terrain/20/1/1.png`)).status, 400);
     const nodesFresh = await fetch(`http://127.0.0.1:${appPort}/api/nodes?limit=2000`);
     assert.equal(nodesFresh.status, 200);
     nodesFail = true;

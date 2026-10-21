@@ -59,6 +59,7 @@
               <button id="activity-toggle" type="button" aria-pressed="false">Aktivita</button>
               <button id="stats-toggle" type="button" aria-pressed="false">Statistiky</button>
               <button id="los-toggle" type="button" aria-pressed="false" title="Změřit přímou viditelnost mezi dvěma body">LOS</button>
+              <button id="coverage-toggle" type="button" aria-pressed="false" title="Simulovat pokrytí terénu z jednoho bodu">Pokrytí</button>
               <button id="feedback-toggle" type="button" class="wide">Kniha návštěv</button>
             </div>
 
@@ -133,8 +134,9 @@
             </div>
 
             <div class="los-hint" id="los-hint" hidden></div>
+            <div class="los-hint" id="coverage-hint" hidden></div>
 
-            <p class="source-note">Data: CoreScope / MeshCore CZ (živý MQTT feed), archiv z vlastní databáze. Soukromý obsah zpráv zůstává šifrovaný. Podklady: OpenStreetMap, OpenTopoMap, Esri. Výšky: Open-Meteo. Ikona: selfh.st (CC BY 4.0).</p>
+            <p class="source-note">Data: CoreScope / MeshCore CZ (živý MQTT feed), archiv z vlastní databáze. Soukromý obsah zpráv zůstává šifrovaný. Podklady: OpenStreetMap, OpenTopoMap, Esri. Výšky: Open-Meteo, Mapzen Terrarium (AWS). Ikona: selfh.st (CC BY 4.0).</p>
             <p class="source-note license-note"><span>Kód: licence MIT</span> · © 2026 MeshCore.cz · <a href="LICENSE.txt" target="_blank" rel="noreferrer">LICENSE</a></p>
 
             <small class="build-stamp" id="build-stamp">—</small>
@@ -225,6 +227,33 @@
           <canvas id="node-qr-canvas" aria-label="QR kód MeshCore kontaktu"></canvas>
         </div>
         <p>Naskenujte v mobilní aplikaci MeshCore</p>
+      </dialog>
+
+      <dialog id="coverage-dialog" class="coverage-dialog" aria-labelledby="coverage-title">
+        <button id="coverage-close" class="los-close" type="button" aria-label="Zavřít pokrytí">×</button>
+        <header>
+          <h2 id="coverage-title">Pokrytí terénu</h2>
+          <p id="coverage-summary"></p>
+        </header>
+        <div class="coverage-controls">
+          <label>Výška antény (m)
+            <input id="coverage-antenna" type="number" min="1" max="300" step="1" value="10" />
+          </label>
+          <label>Rádius (km)
+            <input id="coverage-radius" type="number" min="3" max="50" step="1" value="20" />
+          </label>
+          <label>Frekvence (MHz)
+            <input id="coverage-frequency" type="number" min="100" max="6000" step="0.001" value="868" />
+          </label>
+        </div>
+        <p id="coverage-status" class="coverage-status"></p>
+        <div class="coverage-legend">
+          <span><i class="clear"></i> přímá viditelnost</span>
+          <span><i class="partial"></i> částečná Fresnelova zóna</span>
+          <span><i class="blocked"></i> blokováno terénem</span>
+        </div>
+        <p class="coverage-note">Terénní model (Mapzen Terrarium, ~45 m). Budovy, les a difrakce nejsou zahrnuty.</p>
+        <button id="coverage-recompute" class="los-recompute" type="button">Přepočítat</button>
       </dialog>
 
       <dialog id="los-dialog" class="los-dialog" aria-labelledby="los-title">

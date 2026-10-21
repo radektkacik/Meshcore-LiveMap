@@ -43,6 +43,16 @@ const elevationTimeoutMs = Math.max(1_000, Number(process.env.ELEVATION_TIMEOUT_
 const elevationBatchSize = 100;
 const elevationCache = new Map();
 let elevationQueue = Promise.resolve();
+const terrainUpstream = process.env.TERRAIN_UPSTREAM
+  || "https://s3.amazonaws.com/elevation-tiles-prod/terrarium";
+const terrainCacheLimit = Math.max(1, Number(process.env.TERRAIN_CACHE_LIMIT || 300));
+const terrainCacheTtlMs = Math.max(60_000, Number(process.env.TERRAIN_CACHE_TTL_MS || 7 * 24 * 60 * 60 * 1000));
+const terrainTimeoutMs = Math.max(1_000, Number(process.env.TERRAIN_TIMEOUT_MS || 10_000));
+const terrainRateLimit = Math.max(1, Number(process.env.TERRAIN_RATE_LIMIT || 600));
+const terrainRateWindowMs = Math.max(60_000, Number(process.env.TERRAIN_RATE_WINDOW_MS || 10 * 60 * 1000));
+const terrainCache = new Map();
+const terrainInFlight = new Map();
+const terrainRate = new Map();
 const nodesCachePath = process.env.NODES_CACHE_PATH || join(process.cwd(), "data", "nodes-cache.json");
 const nodesCacheTtlMs = Math.max(60_000, Number(process.env.NODES_CACHE_TTL_MS || 7 * 24 * 60 * 60 * 1000));
 const nodesCacheWriteMs = Math.max(0, Number(process.env.NODES_CACHE_WRITE_MS || 5 * 60 * 1000));
@@ -708,6 +718,85 @@ function queueElevation(task) {
   return run;
 }
 
+function terrainCacheGet(key) {
+  const entry = terrainCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.at > terrainCacheTtlMs) {
+    terrainCache.delete(key);
+    return null;
+  }
+  terrainCache.delete(key);
+  terrainCache.set(key, entry);
+  return entry;
+}
+
+function terrainCacheSet(key, body, contentType) {
+  terrainCache.delete(key);
+  terrainCache.set(key, { body, contentType, at: Date.now() });
+  while (terrainCache.size > terrainCacheLimit) {
+    terrainCache.delete(terrainCache.keys().next().value);
+  }
+}
+
+function checkTerrainRate(ip) {
+  const now = Date.now();
+  const windowStart = now - terrainRateWindowMs;
+  const stamps = (terrainRate.get(ip) || []).filter((stamp) => stamp > windowStart);
+  if (stamps.length >= terrainRateLimit) {
+    const retryAfter = Math.max(1, Math.ceil((stamps[0] + terrainRateWindowMs - now) / 1000));
+    terrainRate.set(ip, stamps);
+    return { ok: false, retryAfter };
+  }
+  stamps.push(now);
+  terrainRate.set(ip, stamps);
+  if (terrainRate.size > 5000) {
+    for (const [key, value] of terrainRate) {
+      if (!value.some((stamp) => stamp > windowStart)) terrainRate.delete(key);
+    }
+  }
+  return { ok: true, retryAfter: 0 };
+}
+
+async function fetchTerrainTile(zoom, x, y) {
+  const key = `${zoom}/${x}/${y}`;
+  const cached = terrainCacheGet(key);
+  if (cached) return cached;
+  if (terrainInFlight.has(key)) return terrainInFlight.get(key);
+  const task = (async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), terrainTimeoutMs);
+    timeout.unref();
+    try {
+      const response = await fetch(`${terrainUpstream}/${zoom}/${x}/${y}.png`, {
+        signal: controller.signal,
+        headers: { "User-Agent": "meshcore-live-map/1.0" },
+      });
+      if (!response.ok) {
+        const error = new Error(`Terrain upstream HTTP ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+      const body = Buffer.from(await response.arrayBuffer());
+      if (!body.length || body.length > 512 * 1024) {
+        const error = new Error("Invalid terrain tile");
+        error.status = 502;
+        throw error;
+      }
+      const contentType = response.headers.get("content-type") || "image/png";
+      terrainCacheSet(key, body, contentType);
+      return { body, contentType };
+    } finally {
+      clearTimeout(timeout);
+    }
+  })();
+  terrainInFlight.set(key, task);
+  try {
+    return await task;
+  } finally {
+    terrainInFlight.delete(key);
+  }
+}
+
 async function handleRequest(request, response) {
   for (const [name, value] of Object.entries(securityHeaders)) response.setHeader(name, value);
   let url;
@@ -883,6 +972,47 @@ async function handleRequest(request, response) {
     const requestedDays = Number(url.searchParams.get("days") || 7);
     const days = Number.isFinite(requestedDays) ? Math.min(30, Math.max(1, requestedDays)) : 7;
     sendJson(response, 200, { key, days, samples: metricsStore.history(key, days) });
+    return;
+  }
+
+  const terrainMatch = /^\/api\/terrain\/(\d{1,2})\/(\d+)\/(\d+)\.png$/.exec(url.pathname);
+  if (terrainMatch) {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      return;
+    }
+    const zoom = Number(terrainMatch[1]);
+    const x = Number(terrainMatch[2]);
+    const y = Number(terrainMatch[3]);
+    const maxIndex = zoom >= 0 && zoom <= 14 ? 2 ** zoom - 1 : -1;
+    if (maxIndex < 0 || x > maxIndex || y > maxIndex) {
+      response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Invalid tile");
+      return;
+    }
+    const cached = terrainCacheGet(`${zoom}/${x}/${y}`);
+    if (!cached) {
+      const rate = checkTerrainRate(clientIp(request));
+      if (!rate.ok) {
+        response.writeHead(429, {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Retry-After": String(rate.retryAfter),
+        }).end("Too Many Requests");
+        return;
+      }
+    }
+    try {
+      const tile = await fetchTerrainTile(zoom, x, y);
+      response.writeHead(200, {
+        "Content-Type": tile.contentType,
+        "Content-Length": tile.body.length,
+        "Cache-Control": "public, max-age=604800, immutable",
+      });
+      response.end(request.method === "HEAD" ? undefined : tile.body);
+    } catch (error) {
+      const status = error?.status === 404 ? 404 : 502;
+      response.writeHead(status, { "Content-Type": "text/plain; charset=utf-8" });
+      response.end(status === 404 ? "Tile not found" : "Terrain unavailable");
+    }
     return;
   }
 
