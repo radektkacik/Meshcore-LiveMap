@@ -175,7 +175,7 @@ chování při neplatném URL, timeoutu CoreScope a překročení SSE limitu.
 ## Licence
 
 Kód projektu je dostupný pod licencí MIT – viz [`LICENSE`](LICENSE).
-Copyright (c) 2026 Radek Tkačík.
+Copyright (c) 2026 MeshCore.cz.
 
 Licence se vztahuje na zdrojový kód tohoto repozitáře. Závislosti
 (`leaflet`, `better-sqlite3`, `mqtt`, `qrcode`, `@michaelhart/meshcore-decoder`)
