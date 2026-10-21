@@ -73,6 +73,7 @@
 | 2026-10-21 07:17 | `20261021T071702Z.tar.gz` (stage APP_DIR) | `20261021-0717-c310d3b` | Beta: z LOS odstraněn export CSV a presety antén; zůstává hledání repeaterů, ruční výšky antén a sdílený odkaz | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-21 07:44 | `20261021T074453Z.tar.gz` (stage APP_DIR) | `20261021-0744-90ad5cd` | Beta: LOS link budget – výkon, zisky a ztráty antén, citlivost, požadovaná rezerva; FSPL, Rx, marže a stavová rezerva; údaje i ve sdíleném odkazu | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-21 07:50 | `20261021T075056Z.tar.gz` | `20261021-0750-bd698de` | Prod: LOS – hledání repeaterů A/B, sdílený odkaz a link budget; bez exportu CSV a presetů | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
+| 2026-10-21 08:25 | `20261021T082517Z.tar.gz` (stage APP_DIR) | `20261021-0825-e5f5fcd` | Beta: graf historie užitečnosti – hover tooltip s přesným časem a hodnotou, bez změny surových dat | `src/main.js`, `src/i18n.js`, `src/style.css` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
