@@ -538,6 +538,15 @@ export function formatDateTime(value) {
   return new Date(value).toLocaleString(localeTag());
 }
 
+export function formatDateTimeShort(value) {
+  return new Intl.DateTimeFormat(localeTag(), {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
 export function roleLabel(role) {
   const key = `role.${role || "unknown"}`;
   const dictionary = messagesFor(locale);

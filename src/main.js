@@ -30,6 +30,7 @@ import {
   applyStaticTranslations,
   formatDate,
   formatDateTime,
+  formatDateTimeShort,
   formatDecimal,
   formatNumber,
   formatPercent,
@@ -981,6 +982,39 @@ function renderNodeHistory(root, samples) {
     <polyline points="${line}" class="node-history-line"></polyline>
     <circle cx="${x(last.time).toFixed(1)}" cy="${y(last.value).toFixed(1)}" r="3" class="node-history-dot"></circle>
   </svg>`;
+  const cursor = document.createElement("div");
+  cursor.className = "node-history-cursor";
+  cursor.hidden = true;
+  const tip = document.createElement("div");
+  tip.className = "node-history-tip";
+  tip.hidden = true;
+  chart.append(cursor, tip);
+  const showPoint = (clientX) => {
+    const rect = chart.getBoundingClientRect();
+    if (!rect.width) return;
+    const chartX = Math.max(pad, Math.min(width - pad, ((clientX - rect.left) / rect.width) * width));
+    let nearest = points[0];
+    let best = Infinity;
+    for (const point of points) {
+      const distance = Math.abs(x(point.time) - chartX);
+      if (distance < best) {
+        best = distance;
+        nearest = point;
+      }
+    }
+    const left = (x(nearest.time) / width) * rect.width;
+    cursor.style.left = `${(x(nearest.time) / width) * 100}%`;
+    cursor.hidden = false;
+    tip.textContent = `${formatDateTimeShort(nearest.time)} · ${formatPercent(nearest.value)}`;
+    tip.style.left = `${Math.max(42, Math.min(rect.width - 42, left))}px`;
+    tip.hidden = false;
+  };
+  chart.onpointermove = (event) => showPoint(event.clientX);
+  chart.onpointerdown = (event) => showPoint(event.clientX);
+  chart.onpointerleave = () => {
+    cursor.hidden = true;
+    tip.hidden = true;
+  };
   if (summary) {
     summary.textContent = t("node.historyRange", {
       min: formatPercent(min),
