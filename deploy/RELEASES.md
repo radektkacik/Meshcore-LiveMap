@@ -71,6 +71,7 @@
 | 2026-10-20 19:42 | `20261020T194235Z.tar.gz` | `20261020-1942-9450351` | Prod: role uzlu přímo v hlavičce detailu, řádek „Role“ odstraněn | `src/main.js`, `src/i18n.js` |
 | 2026-10-21 07:02 | `20261021T070243Z.tar.gz` (stage APP_DIR) | `20261021-0702-6db35a9` | Beta: LOS – hledání repeaterů pro body A/B, presety antén, export profilu do CSV a sdílený odkaz na měření včetně antén/frekvence | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-21 07:17 | `20261021T071702Z.tar.gz` (stage APP_DIR) | `20261021-0717-c310d3b` | Beta: z LOS odstraněn export CSV a presety antén; zůstává hledání repeaterů, ruční výšky antén a sdílený odkaz | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
+| 2026-10-21 07:44 | `20261021T074453Z.tar.gz` (stage APP_DIR) | `20261021-0744-90ad5cd` | Beta: LOS link budget – výkon, zisky a ztráty antén, citlivost, požadovaná rezerva; FSPL, Rx, marže a stavová rezerva; údaje i ve sdíleném odkazu | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
