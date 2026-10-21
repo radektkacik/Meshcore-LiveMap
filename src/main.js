@@ -142,9 +142,16 @@ const elements = {
   losChart: document.querySelector("#los-chart"),
   losClose: document.querySelector("#los-close"),
   losDialog: document.querySelector("#los-dialog"),
+  losExport: document.querySelector("#los-export"),
   losFrequency: document.querySelector("#los-frequency"),
   losHint: document.querySelector("#los-hint"),
   losHover: document.querySelector("#los-hover"),
+  losNodeA: document.querySelector("#los-node-a"),
+  losNodeB: document.querySelector("#los-node-b"),
+  losPreset: document.querySelector("#los-preset"),
+  losResultsA: document.querySelector("#los-results-a"),
+  losResultsB: document.querySelector("#los-results-b"),
+  losShare: document.querySelector("#los-share"),
   losSummary: document.querySelector("#los-summary"),
   losToggle: document.querySelector("#los-toggle"),
   mobileSheet: document.querySelector("#mobile-sheet"),
@@ -227,6 +234,7 @@ const state = {
   losFraction: 0.6,
   losMarkers: [],
   losMode: false,
+  losNodeKeys: [null, null],
   losPoints: [],
   losProfile: null,
   losRecomputeButton: document.querySelector("#los-recompute"),
@@ -2364,6 +2372,14 @@ elements.themeToggle.addEventListener("click", () => {
 });
 
 const LOS_SAMPLE_COUNT = 100;
+const LOS_PRESETS = {
+  portable: [2, 2],
+  mobile: [5, 5],
+  repeater: [20, 20],
+  tower: [30, 30],
+};
+const LOS_NODE_INPUTS = [elements.losNodeA, elements.losNodeB];
+const LOS_NODE_RESULTS = [elements.losResultsA, elements.losResultsB];
 
 function losOptions() {
   const frequencyMhz = Number(elements.losFrequency.value) || 869.525;
@@ -2389,12 +2405,30 @@ function clearLosDrawing() {
   state.losCursorMarker = null;
 }
 
+function updateLosActions() {
+  elements.losShare.disabled = !(state.losMarkers[0] && state.losMarkers[1]);
+  elements.losExport.disabled = !state.losProfile;
+}
+
+function hideLosResults(index) {
+  if (index == null) {
+    for (const results of LOS_NODE_RESULTS) results.hidden = true;
+    return;
+  }
+  LOS_NODE_RESULTS[index].hidden = true;
+}
+
 function clearLosMarkers() {
   losMarkerLayer.clearLayers();
   state.losMarkers = [];
+  state.losNodeKeys = [null, null];
+  for (const input of LOS_NODE_INPUTS) input.value = "";
+  hideLosResults();
+  updateLosActions();
 }
 
 function createLosMarker(latlng, label, index, node = null) {
+  if (state.losMarkers[index]) losMarkerLayer.removeLayer(state.losMarkers[index]);
   const marker = L.marker(latlng, {
     draggable: true,
     keyboard: false,
@@ -2414,6 +2448,8 @@ function createLosMarker(latlng, label, index, node = null) {
   marker.on("dragstart", () => {
     container.classList.add("los-dragging");
     marker.unbindTooltip();
+    state.losNodeKeys[index] = null;
+    LOS_NODE_INPUTS[index].value = "";
   });
   marker.on("dragend", () => {
     void computeLos();
@@ -2422,6 +2458,194 @@ function createLosMarker(latlng, label, index, node = null) {
   });
   marker.addTo(losMarkerLayer);
   state.losMarkers[index] = marker;
+  state.losNodeKeys[index] = node?.public_key?.toUpperCase() || null;
+  LOS_NODE_INPUTS[index].value = node ? (node.name || t("common.unknownNode")) : "";
+  updateLosActions();
+}
+
+function losRepeaterMatches(value) {
+  const { query, hexQuery } = parseNodeQuery(value);
+  if ((!query || query.length < 2) && hexQuery.length < 2) return [];
+  return state.nodeMarkers
+    .filter((entry) => (entry.node.role || "unknown") === "repeater")
+    .filter((entry) => nodeMatchesQuery(entry.node, query, hexQuery))
+    .sort((a, b) => Number(isNodeActive(b.node, nowMs(), NODE_ACTIVE_MS))
+      - Number(isNodeActive(a.node, nowMs(), NODE_ACTIVE_MS))
+      || String(a.node.name || "").localeCompare(String(b.node.name || ""), getLocale()))
+    .slice(0, 8);
+}
+
+function renderLosResults(index, entries) {
+  const results = LOS_NODE_RESULTS[index];
+  results.replaceChildren();
+  if (!entries.length) {
+    const empty = document.createElement("div");
+    empty.className = "los-picker-empty";
+    empty.textContent = t("los.noResults");
+    results.appendChild(empty);
+  } else {
+    for (const entry of entries) {
+      const button = document.createElement("button");
+      button.type = "button";
+      const active = isNodeActive(entry.node, nowMs(), NODE_ACTIVE_MS);
+      button.innerHTML = `<strong>${escapeHtml(entry.node.name || t("common.unknownNode"))}</strong><small>${escapeHtml(roleLabel(entry.node.role))} · ${active ? t("common.active") : t("common.inactive")}</small>`;
+      button.addEventListener("click", () => {
+        LOS_NODE_INPUTS[index].value = entry.node.name || t("common.unknownNode");
+        hideLosResults(index);
+        setLosEndpoint(index, entry.marker.getLatLng(), entry.node);
+      });
+      results.appendChild(button);
+    }
+  }
+  results.hidden = false;
+}
+
+function updateLosResults(index) {
+  const value = LOS_NODE_INPUTS[index].value.trim();
+  const { query, hexQuery } = parseNodeQuery(value);
+  if ((query.length < 2) && (hexQuery.length < 2)) {
+    hideLosResults(index);
+    return;
+  }
+  renderLosResults(index, losRepeaterMatches(value));
+}
+
+function bindLosPicker(index) {
+  const input = LOS_NODE_INPUTS[index];
+  input.addEventListener("input", () => updateLosResults(index));
+  input.addEventListener("focus", () => updateLosResults(index));
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      hideLosResults(index);
+      input.blur();
+      return;
+    }
+    if (event.key !== "Enter") return;
+    const first = LOS_NODE_RESULTS[index].querySelector("button");
+    if (!first) return;
+    event.preventDefault();
+    first.click();
+  });
+}
+
+function setLosEndpoint(index, latlng, node = null) {
+  if (state.losAbortController) state.losAbortController.abort();
+  state.losProfile = null;
+  state.losSamples = null;
+  state.losEndpoints = null;
+  clearLosDrawing();
+  clearLosCursor();
+  createLosMarker(latlng, index === 0 ? "A" : "B", index, node);
+  if (state.losMarkers[0] && state.losMarkers[1]) {
+    void computeLos();
+  } else if (index === 0) {
+    setLosStatus(node
+      ? t("los.pointA", {
+        name: node.name || t("common.unknownNode"),
+        role: roleLabel(node.role),
+      })
+      : t("los.pointBHint"));
+  } else {
+    setLosStatus(t("los.firstHint"));
+  }
+}
+
+function exportLosCsv() {
+  const { losProfile, losEndpoints } = state;
+  if (!losProfile || !losEndpoints) return;
+  const [a, b] = losEndpoints;
+  const lines = [
+    ["#", "LOS MeshCore CZ"],
+    ["#", "A", a.lat.toFixed(6), a.lon.toFixed(6)],
+    ["#", "B", b.lat.toFixed(6), b.lon.toFixed(6)],
+    ["#", "frequency_mhz", elements.losFrequency.value],
+    ["#", "antenna_a_m", elements.losAntennaA.value],
+    ["#", "antenna_b_m", elements.losAntennaB.value],
+    ["index", "distance_km", "lat", "lon", "terrain_m", "line_m", "fresnel_m", "clearance_m", "effective_terrain_m"],
+    ...losProfile.map((point, index) => [
+      index,
+      point.distanceKm.toFixed(3),
+      point.lat.toFixed(6),
+      point.lon.toFixed(6),
+      point.terrainM.toFixed(1),
+      point.lineM.toFixed(1),
+      point.fresnelM.toFixed(1),
+      point.clearanceM.toFixed(1),
+      point.effectiveTerrainM.toFixed(1),
+    ]),
+  ];
+  const csv = `\uFEFF${lines.map((line) => line.join(";")).join("\r\n")}`;
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "");
+  link.href = url;
+  link.download = `los-${stamp}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1_000);
+}
+
+function losShareUrl() {
+  const a = state.losMarkers[0]?.getLatLng();
+  const b = state.losMarkers[1]?.getLatLng();
+  if (!a || !b) return null;
+  const url = new URL(location.href);
+  url.searchParams.delete("node");
+  url.searchParams.delete("sheet");
+  url.searchParams.set("los", [a.lat, a.lng, b.lat, b.lng].map((value) => value.toFixed(6)).join(","));
+  url.searchParams.set("losF", elements.losFrequency.value || "869.525");
+  url.searchParams.set("losA", elements.losAntennaA.value || "10");
+  url.searchParams.set("losB", elements.losAntennaB.value || "10");
+  if (state.losNodeKeys[0]) url.searchParams.set("losNodeA", state.losNodeKeys[0]);
+  else url.searchParams.delete("losNodeA");
+  if (state.losNodeKeys[1]) url.searchParams.set("losNodeB", state.losNodeKeys[1]);
+  else url.searchParams.delete("losNodeB");
+  url.searchParams.set("lang", getLocale());
+  return url.toString();
+}
+
+async function shareLosLink() {
+  const url = losShareUrl();
+  if (!url) return;
+  const copied = await copyText(url);
+  setLosStatus(copied ? t("los.linkCopied") : t("common.copyFailed"));
+}
+
+function parseLosLink() {
+  const raw = INITIAL_PARAMS.get("los");
+  if (!raw) return null;
+  const values = raw.split(",").map(Number);
+  if (values.length !== 4 || values.some((value) => !Number.isFinite(value))) return null;
+  const [latA, lonA, latB, lonB] = values;
+  if (Math.abs(latA) > 90 || Math.abs(latB) > 90 || Math.abs(lonA) > 180 || Math.abs(lonB) > 180) return null;
+  const frequency = Number(INITIAL_PARAMS.get("losF"));
+  const antennaA = Number(INITIAL_PARAMS.get("losA"));
+  const antennaB = Number(INITIAL_PARAMS.get("losB"));
+  return {
+    points: [{ lat: latA, lon: lonA }, { lat: latB, lon: lonB }],
+    frequency: Number.isFinite(frequency) ? frequency : null,
+    antennaA: Number.isFinite(antennaA) ? antennaA : null,
+    antennaB: Number.isFinite(antennaB) ? antennaB : null,
+    nodeKeys: [INITIAL_PARAMS.get("losNodeA"), INITIAL_PARAMS.get("losNodeB")],
+  };
+}
+
+function initSharedLos(link) {
+  setLosMode(true);
+  if (link.frequency != null) elements.losFrequency.value = String(link.frequency);
+  if (link.antennaA != null) elements.losAntennaA.value = String(link.antennaA);
+  if (link.antennaB != null) elements.losAntennaB.value = String(link.antennaB);
+  elements.losPreset.value = "custom";
+  const entries = link.nodeKeys.map((key) => (key ? findNodeEntry(key) : null));
+  const latlngs = link.points.map((point, index) => (
+    entries[index] ? entries[index].marker.getLatLng() : L.latLng(point.lat, point.lon)
+  ));
+  setLosEndpoint(0, latlngs[0], entries[0]?.node || null);
+  setLosEndpoint(1, latlngs[1], entries[1]?.node || null);
+  const bounds = L.latLngBounds(latlngs);
+  if (bounds.isValid()) map.fitBounds(bounds, { maxZoom: 12, padding: [40, 40] });
 }
 
 const elevationService = createElevationService({ endpoint: appPath("/api/elevation") });
@@ -2588,6 +2812,7 @@ function renderLosResult(a, b, result) {
   });
   elements.losChart.innerHTML = renderLosChart(result);
   if (!elements.losDialog.open) elements.losDialog.show();
+  updateLosActions();
 }
 
 async function computeLos() {
@@ -2641,18 +2866,10 @@ async function handleLosClick(latlng, node = null) {
     if (elements.losDialog.open) elements.losDialog.close();
   }
   if (!state.losMarkers[0]) {
-    clearLosDrawing();
-    createLosMarker(latlng, "A", 0, node);
-    setLosStatus(node
-      ? t("los.pointA", {
-        name: node.name || t("common.unknownNode"),
-        role: roleLabel(node.role),
-      })
-      : t("los.pointBHint"));
+    setLosEndpoint(0, latlng, node);
     return;
   }
-  createLosMarker(latlng, "B", 1, node);
-  await computeLos();
+  setLosEndpoint(1, latlng, node);
 }
 
 function setLosMode(on) {
@@ -2669,7 +2886,13 @@ function setLosMode(on) {
   clearLosDrawing();
   clearLosMarkers();
   if (elements.losDialog.open) elements.losDialog.close();
-  if (state.losMode) setLosStatus(t("los.firstHint"));
+  if (state.losMode) {
+    elements.losSummary.textContent = "";
+    elements.losChart.replaceChildren();
+    elements.losHover.textContent = "";
+    setLosStatus(t("los.firstHint"));
+    elements.losDialog.show();
+  }
 }
 
 elements.losToggle.addEventListener("click", () => setLosMode(!state.losMode));
@@ -2678,9 +2901,29 @@ elements.losClose.addEventListener("click", () => elements.losDialog.close());
 elements.losDialog.addEventListener("close", clearLosCursor);
 elements.losChart.addEventListener("mousemove", handleLosChartHover);
 elements.losChart.addEventListener("mouseleave", clearLosCursor);
-for (const input of [elements.losFrequency, elements.losAntennaA, elements.losAntennaB]) {
-  input.addEventListener("input", recomputeLos);
+elements.losShare.addEventListener("click", () => void shareLosLink());
+elements.losExport.addEventListener("click", exportLosCsv);
+elements.losPreset.addEventListener("change", () => {
+  const preset = LOS_PRESETS[elements.losPreset.value];
+  if (!preset) return;
+  elements.losAntennaA.value = String(preset[0]);
+  elements.losAntennaB.value = String(preset[1]);
+  recomputeLos();
+});
+elements.losFrequency.addEventListener("input", recomputeLos);
+for (const input of [elements.losAntennaA, elements.losAntennaB]) {
+  input.addEventListener("input", () => {
+    elements.losPreset.value = "custom";
+    recomputeLos();
+  });
 }
+bindLosPicker(0);
+bindLosPicker(1);
+document.addEventListener("click", (event) => {
+  if (event.target.closest(".los-picker")) return;
+  hideLosResults();
+});
+updateLosActions();
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   if (elements.losDialog.open) elements.losDialog.close();
@@ -3007,6 +3250,7 @@ document.addEventListener("visibilitychange", updateRouteAnimation);
 
 const initialWindow = parseRouteWindowParam(INITIAL_PARAMS.get("window"));
 if (initialWindow != null && initialWindow !== 0) void setRouteWindow(initialWindow);
+const initialLosLink = parseLosLink();
 
 async function start() {
   console.info(`Route animation mode: ${state.animationMode}`);
@@ -3028,6 +3272,7 @@ async function start() {
   const nodesLoaded = await nodesPromise;
   await releasePendingPackets();
   if (!nodesLoaded) setConnection(false, t("connection.nodesFailed"));
+  if (initialLosLink) initSharedLos(initialLosLink);
 }
 
 start();

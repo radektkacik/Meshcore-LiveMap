@@ -231,7 +231,11 @@
         <header>
           <h2 id="los-title">Přímá viditelnost</h2>
           <p id="los-summary"></p>
-          <button id="los-recompute" class="los-recompute" type="button">Přepočítat</button>
+          <div class="los-actions">
+            <button id="los-share" class="los-recompute" type="button">Sdílet</button>
+            <button id="los-export" class="los-recompute" type="button">Export CSV</button>
+            <button id="los-recompute" class="los-recompute" type="button">Přepočítat</button>
+          </div>
         </header>
         <div class="los-controls">
           <label>Frekvence (MHz)
@@ -243,6 +247,27 @@
           <label>Anténa B (m)
             <input id="los-antenna-b" type="number" min="1" max="200" step="1" value="10" />
           </label>
+          <label>Preset
+            <select id="los-preset">
+              <option value="custom">Vlastní</option>
+              <option value="portable">Přenosné 2 m</option>
+              <option value="mobile">Mobil 5 m</option>
+              <option value="repeater">Repeater 20 m</option>
+              <option value="tower">Věž 30 m</option>
+            </select>
+          </label>
+        </div>
+        <div class="los-pickers">
+          <div class="los-picker">
+            <label for="los-node-a">Bod A – repeater</label>
+            <input id="los-node-a" type="search" autocomplete="off" placeholder="Hledat repeater…" />
+            <div id="los-results-a" class="los-picker-results" hidden></div>
+          </div>
+          <div class="los-picker">
+            <label for="los-node-b">Bod B – repeater</label>
+            <input id="los-node-b" type="search" autocomplete="off" placeholder="Hledat repeater…" />
+            <div id="los-results-b" class="los-picker-results" hidden></div>
+          </div>
         </div>
         <div id="los-chart" class="los-chart"></div>
         <p id="los-hover" class="los-hover"></p>

@@ -372,9 +372,22 @@ html[data-theme="dark"] .route-show-on-map { color: #5fd0a5; background: rgba(7,
 .los-dialog header p { margin: 0; color: var(--muted); font: 11px "DM Mono", monospace; }
 .los-chart { margin-top: 8px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 .los-chart svg { display: block; width: 100%; height: 170px; }
+.los-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.los-actions .los-recompute { margin: 0; }
+.los-recompute:disabled { opacity: 0.45; cursor: not-allowed; }
 .los-controls { display: flex; gap: 10px; margin-top: 10px; }
 .los-controls label { display: flex; flex: 1 1 0; flex-direction: column; gap: 4px; min-width: 0; color: var(--muted); font: 10px "DM Mono", monospace; }
-.los-controls input { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; color: #263b31; background: #fff; font: 12px Manrope, sans-serif; }
+.los-controls input, .los-controls select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; color: #263b31; background: #fff; font: 12px Manrope, sans-serif; }
+.los-pickers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.los-picker { position: relative; display: flex; flex-direction: column; gap: 4px; min-width: 0; color: var(--muted); font: 10px "DM Mono", monospace; }
+.los-picker input { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; color: #263b31; background: #fff; font: 12px Manrope, sans-serif; }
+.los-picker-results { position: absolute; z-index: 8; top: calc(100% + 2px); right: 0; left: 0; max-height: 220px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; background: #fffef9; box-shadow: 0 10px 26px rgba(20, 42, 32, 0.18); }
+.los-picker-results button { display: flex; flex-direction: column; gap: 1px; width: 100%; padding: 7px 8px; border: 0; border-bottom: 1px solid rgba(30, 65, 49, 0.08); background: transparent; text-align: left; cursor: pointer; }
+.los-picker-results button:last-child { border-bottom: 0; }
+.los-picker-results button:hover { background: #edf5f0; }
+.los-picker-results strong { overflow: hidden; color: #263b33; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.los-picker-results small { color: var(--muted); font: 9px "DM Mono", monospace; }
+.los-picker-empty { padding: 8px; color: var(--muted); font-size: 10px; }
 .los-hover { min-height: 16px; margin: 8px 0 0; color: #40574c; font: 11px/1.4 "DM Mono", monospace; }
 .los-note { margin: 10px 0 0; color: #7a8c83; font-size: 10px; line-height: 1.45; }
 .los-point { width: 22px !important; height: 22px !important; border: 2px solid #fff; border-radius: 50%; color: #fff; background: #287fc9; box-shadow: 0 2px 6px rgba(20, 42, 32, 0.35); font: 600 10px/18px "DM Mono", monospace; text-align: center; }
@@ -438,6 +451,8 @@ html[data-theme="dark"] .route-show-on-map { color: #5fd0a5; background: rgba(7,
   .stats-panel { top: 9px; right: 9px; width: min(300px, calc(100vw - 18px)); max-height: calc(100dvh - 18px); }
   .route-feed { max-height: 140px; }
   .leaflet-control-zoom { display: none; }
+  .los-controls { flex-wrap: wrap; }
+  .los-pickers { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 430px) {
@@ -538,7 +553,13 @@ html[data-theme="dark"] .los-hint { color: #8ec5f0; border-color: rgba(40, 127, 
 html[data-theme="dark"] .los-dialog { color: #e6ecef; background: #161d24; border-color: var(--line); }
 html[data-theme="dark"] .los-chart { background: #0f1418; border-color: var(--line); }
 html[data-theme="dark"] .los-hover { color: #cfd9dd; }
-html[data-theme="dark"] .los-controls input { color: #e6ecef; background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .los-controls input,
+html[data-theme="dark"] .los-controls select,
+html[data-theme="dark"] .los-picker input { color: #e6ecef; background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .los-picker-results { background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .los-picker-results button { border-color: rgba(255, 255, 255, 0.08); }
+html[data-theme="dark"] .los-picker-results button:hover { background: #26323a; }
+html[data-theme="dark"] .los-picker-results strong { color: #e6ecef; }
 html[data-theme="dark"] .los-note { color: #8fa0a8; }
 
 /* Větší písmo v celém UI */
