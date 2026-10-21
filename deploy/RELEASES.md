@@ -87,6 +87,8 @@
 | 2026-10-21 11:35 | `20261021T113527Z.tar.gz` | `20261021-1135-9d9e2ed` | Prod: stejná licence MIT a odkaz `LICENSE` v GUI; `/LICENSE.txt` vrací 200 s `text/plain` | `LICENSE`, `public/LICENSE.txt`, `index.html`, `src/style.css`, `src/i18n.js`, `server.mjs`, `package.json`, `README.md` |
 | 2026-10-21 11:44 | `20261021T114417Z.tar.gz` (stage APP_DIR) | `20261021-1144-dda222e` | Beta: držitel licence změněn z osobního jména na `MeshCore.cz` (LICENSE, GUI i README) | `LICENSE`, `public/LICENSE.txt`, `index.html`, `README.md` |
 | 2026-10-21 11:44 | `20261021T114431Z.tar.gz` | `20261021-1144-dda222e` | Prod: stejná změna držitele licence na `MeshCore.cz`; `/LICENSE.txt` i GUI ověřeny | `LICENSE`, `public/LICENSE.txt`, `index.html`, `README.md` |
+| 2026-10-21 13:30 | `20261021T133054Z.tar.gz` (stage APP_DIR) | `20261021-1330-97b7ef4` | Beta: simulace pokrytí terénu, DEM dlaždice přes `/api/terrain`; worker chybně volal `/api/terrain` bez base `/map/` | `src/coverage.js`, `src/coverage-worker.js`, `src/main.js`, `src/style.css`, `src/i18n.js`, `index.html`, `server.mjs`, `test/*`, `README.md`, `.env.example` |
+| 2026-10-21 13:32 | `20261021T133249Z.tar.gz` (stage APP_DIR) | `20261021-1332-f3eae48` | Beta fix: worker používá `import.meta.env.BASE_URL`, pokrytí na `/map/` funguje; ověřeno překryvem a souhrnem | `src/coverage-worker.js` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
