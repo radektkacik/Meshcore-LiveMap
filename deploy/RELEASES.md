@@ -146,3 +146,12 @@ ssh -i ./cntb root@<VPS_HOST> \
 
 Po každém nasazení doplnit řádek: datum UTC, `RELEASE_ID` (shodný s názvem zálohy), build stamp, stručný popis a dotčené soubory.
 Nová top-level `*.mjs` je nutné přidat do `deploy/update-vps.sh`, `deploy/update-vps-staging.sh` a `deploy/apply-release.sh`, jinak deploy selže.
+
+## Přepsání historie
+
+Dne 2026-10-21 byla přepsána historie repozitáře, aby veřejná historie neobsahovala
+osobní jméno autora. Všech 51 commitů a 5 anotovaných tagů bylo znovu vytvořeno
+s identitou `MeshCore.cz <noreply@meshcore.cz>`; dependabot commity zůstaly beze změny.
+Změnily se všechny SHA, takže build stampy v tabulce výše odkazují na původní,
+už neexistující commity. Tagy odpovídají novým commitům.
+
