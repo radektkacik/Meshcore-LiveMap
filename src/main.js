@@ -2968,7 +2968,7 @@ let coverageTimer = null;
 
 function coverageSettings() {
   const antenna = Math.min(300, Math.max(1, Number(elements.coverageAntenna.value) || 10));
-  const radius = Math.min(50, Math.max(3, Number(elements.coverageRadius.value) || 20));
+  const radius = Math.min(100, Math.max(3, Number(elements.coverageRadius.value) || 50));
   const frequency = Math.min(6000, Math.max(100, Number(elements.coverageFrequency.value) || 868));
   return { antenna, radius, frequency };
 }
@@ -3074,12 +3074,12 @@ function renderCoverage(result) {
         pixels[offset] = 46;
         pixels[offset + 1] = 160;
         pixels[offset + 2] = 67;
-        pixels[offset + 3] = 110;
+        pixels[offset + 3] = 140;
       } else if (status === PARTIAL) {
         pixels[offset] = 224;
         pixels[offset + 1] = 145;
         pixels[offset + 2] = 30;
-        pixels[offset + 3] = 135;
+        pixels[offset + 3] = 150;
       } else if (status === 3) {
         pixels[offset] = 120;
         pixels[offset + 1] = 130;
@@ -3157,7 +3157,7 @@ async function computeCoverage() {
     antennaM: settings.antenna,
     frequencyMHz: settings.frequency,
     azimuthSteps: 720,
-    samplesPerRay: 200,
+    samplesPerRay: 300,
   });
 }
 

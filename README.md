@@ -173,7 +173,7 @@ terénní viditelnost z daného bodu. Volitelná je výška antény, rádius a f
 - bez barvy – terén blokuje.
 
 Výpočet běží ve Web Workeru a používá výškové dlaždice Mapzen Terrarium
-(cca 45 m/px), které server proxyuje a kešuje na `/api/terrain/{z}/{x}/{y}.png`.
+(45–90 m/px), které server proxyuje a kešuje na `/api/terrain/{z}/{x}/{y}.png`.
 Jde o terénní model: budovy, les, difrakce a rádiové ztráty se nezapočítávají.
 Pro 20 km okolí se načítá řádově jednotky MB dlaždic, výsledek je orientační.
 

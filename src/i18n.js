@@ -445,7 +445,7 @@ export const STATIC_EN = {
   "přímá viditelnost": "clear line of sight",
   "částečná Fresnelova zóna": "partial Fresnel zone",
   "blokováno terénem": "blocked by terrain",
-  "Terénní model (Mapzen Terrarium, ~45 m). Budovy, les a difrakce nejsou zahrnuty.": "Terrain model (Mapzen Terrarium, ~45 m). Buildings, vegetation and diffraction are not included.",
+  "Terénní model (Mapzen Terrarium, ~45–90 m). Budovy, les a difrakce nejsou zahrnuty.": "Terrain model (Mapzen Terrarium, ~45–90 m). Buildings, vegetation and diffraction are not included.",
   "Simulovat pokrytí terénu z jednoho bodu": "Simulate terrain coverage from a point",
   "Přímá viditelnost": "Line of sight",
   "Přepočítat": "Recalculate",

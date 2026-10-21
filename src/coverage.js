@@ -39,8 +39,8 @@ export function destinationPoint(center, bearingDeg, distanceM) {
 }
 
 export function chooseTerrainZoom(radiusKm) {
-  if (radiusKm <= 8) return 12;
-  if (radiusKm <= 25) return 11;
+  if (radiusKm <= 10) return 12;
+  if (radiusKm <= 30) return 11;
   return 10;
 }
 
