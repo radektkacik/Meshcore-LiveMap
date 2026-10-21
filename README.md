@@ -171,3 +171,17 @@ npm test
 Testy pokrývají SQLite agregaci, parsování path hashů, nedestruktivní filtrování
 tras, deduplikaci souběžných paketů, ranking uzlů, MQTT replay buffer a HTTP
 chování při neplatném URL, timeoutu CoreScope a překročení SSE limitu.
+
+## Licence
+
+Kód projektu je dostupný pod licencí MIT – viz [`LICENSE`](LICENSE).
+Copyright (c) 2026 Radek Tkačík.
+
+Licence se vztahuje na zdrojový kód tohoto repozitáře. Závislosti
+(`leaflet`, `better-sqlite3`, `mqtt`, `qrcode`, `@michaelhart/meshcore-decoder`)
+mají vlastní licence. Data z CoreScope, MQTT feed, dlaždice OpenStreetMap,
+OpenTopoMap a Esri a služba Open-Meteo se řídí podmínkami svých poskytovatelů;
+MIT licence je nepřebírá. Ikona selfh.st je použita pod CC BY 4.0.
+
+Odkaz na licenci je i v GUI v poznámce pod legendou (`LICENSE.txt`).
+

@@ -387,6 +387,7 @@ export const STATIC_EN = {
   "Kolik lidí má právě otevřenou mapu": "How many people have the map open right now",
   "právě prohlíží mapu": "viewing the map now",
   "Data: CoreScope / MeshCore CZ (živý MQTT feed), archiv z vlastní databáze. Soukromý obsah zpráv zůstává šifrovaný. Podklady: OpenStreetMap, OpenTopoMap, Esri. Výšky: Open-Meteo. Ikona: selfh.st (CC BY 4.0).": "Data: CoreScope / MeshCore CZ (live MQTT feed), archive from our own database. Private message content remains encrypted. Basemaps: OpenStreetMap, OpenTopoMap, Esri. Elevations: Open-Meteo. Icon: selfh.st (CC BY 4.0).",
+  "Kód: licence MIT": "Code: MIT license",
   "Poslední trasy": "Latest routes",
   "Živá aktivita": "Live activity",
   "poslední trasy": "latest routes",

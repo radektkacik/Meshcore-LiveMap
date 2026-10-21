@@ -136,6 +136,8 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .legend i.path { background: #d87412; }
 .legend i.trace { background: linear-gradient(90deg, #d1374d, #e3911c, #2bbf88); }
 .source-note { margin: 10px 0 0; color: #7a8c83; font-size: 10px; line-height: 1.45; }
+.license-note { margin-top: 4px; }
+.license-note a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
 .activity-panel {
   position: absolute;
