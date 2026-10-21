@@ -72,6 +72,7 @@
 | 2026-10-21 07:02 | `20261021T070243Z.tar.gz` (stage APP_DIR) | `20261021-0702-6db35a9` | Beta: LOS – hledání repeaterů pro body A/B, presety antén, export profilu do CSV a sdílený odkaz na měření včetně antén/frekvence | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-21 07:17 | `20261021T071702Z.tar.gz` (stage APP_DIR) | `20261021-0717-c310d3b` | Beta: z LOS odstraněn export CSV a presety antén; zůstává hledání repeaterů, ruční výšky antén a sdílený odkaz | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-21 07:44 | `20261021T074453Z.tar.gz` (stage APP_DIR) | `20261021-0744-90ad5cd` | Beta: LOS link budget – výkon, zisky a ztráty antén, citlivost, požadovaná rezerva; FSPL, Rx, marže a stavová rezerva; údaje i ve sdíleném odkazu | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
+| 2026-10-21 07:50 | `20261021T075056Z.tar.gz` | `20261021-0750-bd698de` | Prod: LOS – hledání repeaterů A/B, sdílený odkaz a link budget; bez exportu CSV a presetů | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -110,11 +111,11 @@ z odpovídající zálohy a `data/` nechá být:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261020T194235Z` má v záloze předchozí verzi;
+Aktuální produkční release `20261021T075056Z` má v záloze předchozí verzi;
 návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261020T194235Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261021T075056Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`.
