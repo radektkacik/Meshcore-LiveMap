@@ -74,6 +74,7 @@
 | 2026-10-21 07:44 | `20261021T074453Z.tar.gz` (stage APP_DIR) | `20261021-0744-90ad5cd` | Beta: LOS link budget – výkon, zisky a ztráty antén, citlivost, požadovaná rezerva; FSPL, Rx, marže a stavová rezerva; údaje i ve sdíleném odkazu | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-21 07:50 | `20261021T075056Z.tar.gz` | `20261021-0750-bd698de` | Prod: LOS – hledání repeaterů A/B, sdílený odkaz a link budget; bez exportu CSV a presetů | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-21 08:25 | `20261021T082517Z.tar.gz` (stage APP_DIR) | `20261021-0825-e5f5fcd` | Beta: graf historie užitečnosti – hover tooltip s přesným časem a hodnotou, bez změny surových dat | `src/main.js`, `src/i18n.js`, `src/style.css` |
+| 2026-10-21 08:26 | `20261021T082652Z.tar.gz` | `20261021-0826-4e522e1` | Prod: stejný hover tooltip v historii užitečnosti | `src/main.js`, `src/i18n.js`, `src/style.css` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -112,11 +113,11 @@ z odpovídající zálohy a `data/` nechá být:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261021T075056Z` má v záloze předchozí verzi;
+Aktuální produkční release `20261021T082652Z` má v záloze předchozí verzi;
 návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261021T075056Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261021T082652Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`.
