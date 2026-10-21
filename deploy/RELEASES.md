@@ -83,6 +83,8 @@
 | 2026-10-21 08:26 | `20261021T082652Z.tar.gz` | `20261021-0826-4e522e1` | Prod: stejný hover tooltip v historii užitečnosti | `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-21 10:18 | `20261021T101855Z.tar.gz` (stage APP_DIR) | `20261021-1018-4c574c6` | Beta: zálohy bez `node_modules` – rollback při shodném lockfile ponechá závislosti, jinak `npm ci`; deploy automaticky aktualizuje `/root/rollback-meshcore.sh` | `deploy/apply-release.sh`, `deploy/rollback-vps.sh`, `deploy/update-vps.sh`, `deploy/update-vps-staging.sh`, `README.md`, `deploy/RELEASES.md` |
 | 2026-10-21 10:19 | `20261021T101925Z.tar.gz` | `20261021-1019-4c574c6` | Prod: stejná změna zálohování; první záloha 87 MB místo ~104 MB (bez `node_modules`), služba i HTTP 200 ověřeny | `deploy/apply-release.sh`, `deploy/rollback-vps.sh`, `deploy/update-vps.sh`, `deploy/update-vps-staging.sh`, `README.md`, `deploy/RELEASES.md` |
+| 2026-10-21 11:35 | `20261021T113501Z.tar.gz` (stage APP_DIR) | `20261021-1135-9d9e2ed` | Beta: licence MIT (`LICENSE`, `public/LICENSE.txt`, pole v `package.json`) a odkaz na licenci v poznámce pod legendou; MIME `text/plain` pro `.txt` | `LICENSE`, `public/LICENSE.txt`, `index.html`, `src/style.css`, `src/i18n.js`, `server.mjs`, `package.json`, `README.md` |
+| 2026-10-21 11:35 | `20261021T113527Z.tar.gz` | `20261021-1135-9d9e2ed` | Prod: stejná licence MIT a odkaz `LICENSE` v GUI; `/LICENSE.txt` vrací 200 s `text/plain` | `LICENSE`, `public/LICENSE.txt`, `index.html`, `src/style.css`, `src/i18n.js`, `server.mjs`, `package.json`, `README.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -123,11 +125,11 @@ stávající `node_modules`; jinak závislosti doinstaluje:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261021T101925Z` má v záloze předchozí verzi
-(build `20261021-0826-4e522e1`); návrat na ni se provede stejným ID:
+Aktuální produkční release `20261021T113527Z` má v záloze předchozí verzi
+(build `20261021-1019-4c574c6`); návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261021T101925Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261021T113527Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`;
