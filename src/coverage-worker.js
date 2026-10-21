@@ -8,13 +8,14 @@ import {
 
 const TILE_SIZE = 256;
 const MAX_PARALLEL = 6;
+const TERRAIN_BASE = `${import.meta.env.BASE_URL || "/"}api/terrain`;
 
 function tileKey(x, y) {
   return `${x},${y}`;
 }
 
 async function loadTile(zoom, x, y, signal) {
-  const response = await fetch(`/api/terrain/${zoom}/${x}/${y}.png`, { signal });
+  const response = await fetch(`${TERRAIN_BASE}/${zoom}/${x}/${y}.png`, { signal });
   if (!response.ok) return null;
   const blob = await response.blob();
   const bitmap = await createImageBitmap(blob);
