@@ -11,7 +11,7 @@
     "dev": "vite",
     "build": "vite build",
     "start": "node --env-file-if-exists=.env server.mjs",
-    "test": "node --test",
+    "test": "node --test --test-concurrency=1",
     "test:reference": "RUN_REFERENCE_TESTS=1 node --test test/reference-map.test.mjs"
   },
   "dependencies": {

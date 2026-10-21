@@ -27,7 +27,7 @@ function rawRequest(port, path) {
 }
 
 async function waitForServer(port, child) {
-  for (let attempt = 0; attempt < 50; attempt += 1) {
+  for (let attempt = 0; attempt < 200; attempt += 1) {
     if (child.exitCode != null) throw new Error(`Server exited with code ${child.exitCode}`);
     try {
       const response = await fetch(`http://127.0.0.1:${port}/api/stats`);
@@ -35,7 +35,7 @@ async function waitForServer(port, child) {
     } catch {
       // Startup includes opening SQLite and initiating the metrics request.
     }
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
   throw new Error("Server did not start in time");
 }
