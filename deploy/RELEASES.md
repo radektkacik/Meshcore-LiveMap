@@ -85,6 +85,8 @@
 | 2026-10-21 10:19 | `20261021T101925Z.tar.gz` | `20261021-1019-4c574c6` | Prod: stejná změna zálohování; první záloha 87 MB místo ~104 MB (bez `node_modules`), služba i HTTP 200 ověřeny | `deploy/apply-release.sh`, `deploy/rollback-vps.sh`, `deploy/update-vps.sh`, `deploy/update-vps-staging.sh`, `README.md`, `deploy/RELEASES.md` |
 | 2026-10-21 11:35 | `20261021T113501Z.tar.gz` (stage APP_DIR) | `20261021-1135-9d9e2ed` | Beta: licence MIT (`LICENSE`, `public/LICENSE.txt`, pole v `package.json`) a odkaz na licenci v poznámce pod legendou; MIME `text/plain` pro `.txt` | `LICENSE`, `public/LICENSE.txt`, `index.html`, `src/style.css`, `src/i18n.js`, `server.mjs`, `package.json`, `README.md` |
 | 2026-10-21 11:35 | `20261021T113527Z.tar.gz` | `20261021-1135-9d9e2ed` | Prod: stejná licence MIT a odkaz `LICENSE` v GUI; `/LICENSE.txt` vrací 200 s `text/plain` | `LICENSE`, `public/LICENSE.txt`, `index.html`, `src/style.css`, `src/i18n.js`, `server.mjs`, `package.json`, `README.md` |
+| 2026-10-21 11:44 | `20261021T114417Z.tar.gz` (stage APP_DIR) | `20261021-1144-dda222e` | Beta: držitel licence změněn z osobního jména na `MeshCore.cz` (LICENSE, GUI i README) | `LICENSE`, `public/LICENSE.txt`, `index.html`, `README.md` |
+| 2026-10-21 11:44 | `20261021T114431Z.tar.gz` | `20261021-1144-dda222e` | Prod: stejná změna držitele licence na `MeshCore.cz`; `/LICENSE.txt` i GUI ověřeny | `LICENSE`, `public/LICENSE.txt`, `index.html`, `README.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -125,11 +127,11 @@ stávající `node_modules`; jinak závislosti doinstaluje:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261021T113527Z` má v záloze předchozí verzi
-(build `20261021-1019-4c574c6`); návrat na ni se provede stejným ID:
+Aktuální produkční release `20261021T114431Z` má v záloze předchozí verzi
+(build `20261021-1135-9d9e2ed`); návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261021T113527Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261021T114431Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`;
