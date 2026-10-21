@@ -91,6 +91,7 @@
 | 2026-10-21 13:32 | `20261021T133249Z.tar.gz` (stage APP_DIR) | `20261021-1332-f3eae48` | Beta fix: worker používá `import.meta.env.BASE_URL`, pokrytí na `/map/` funguje; ověřeno překryvem a souhrnem | `src/coverage-worker.js` |
 | 2026-10-21 14:07 | `20261021T140741Z.tar.gz` (stage APP_DIR) | `20261021-1407-753a1c6` | Beta: pokrytí jemnější (300 vzorků/paprsek), rádius do 100 km, default 50 km, silnější barvy; ověřeno 50 km i 100 km | `src/coverage.js`, `src/main.js`, `src/i18n.js`, `index.html`, `README.md` |
 | 2026-10-21 14:15 | `20261021T141507Z.tar.gz` (stage APP_DIR) | `20261021-1415-2c1fcca` | Beta: výchozí rádius pokrytí 100 km (81 dlaždic), ověřeno | `index.html`, `src/main.js` |
+| 2026-10-21 14:24 | `20261021T142402Z.tar.gz` | `20261021-1424-cf44121` | Prod: nasazení simulace pokrytí terénu (100 km default, 300 vzorků/paprsek); ověřeno překryvem, `/api/terrain` 200 a bez chyb v konzoli | `src/coverage.js`, `src/coverage-worker.js`, `src/main.js`, `src/style.css`, `src/i18n.js`, `index.html`, `server.mjs`, `test/*`, `README.md`, `.env.example` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -131,11 +132,11 @@ stávající `node_modules`; jinak závislosti doinstaluje:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261021T114431Z` má v záloze předchozí verzi
-(build `20261021-1135-9d9e2ed`); návrat na ni se provede stejným ID:
+Aktuální produkční release `20261021T142402Z` má v záloze předchozí verzi
+(build `20261021-1144-dda222e`); návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261021T114431Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261021T142402Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`;
