@@ -2968,7 +2968,7 @@ let coverageTimer = null;
 
 function coverageSettings() {
   const antenna = Math.min(300, Math.max(1, Number(elements.coverageAntenna.value) || 10));
-  const radius = Math.min(100, Math.max(3, Number(elements.coverageRadius.value) || 50));
+  const radius = Math.min(100, Math.max(3, Number(elements.coverageRadius.value) || 100));
   const frequency = Math.min(6000, Math.max(100, Number(elements.coverageFrequency.value) || 868));
   return { antenna, radius, frequency };
 }
