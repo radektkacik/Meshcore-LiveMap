@@ -69,6 +69,7 @@
 | 2026-10-20 19:38 | `20261020T193817Z.tar.gz` | `20261020-1938-93d9e8d` | Prod: zkrácené relativní časy v detailu uzlu | `src/i18n.js` |
 | 2026-10-20 19:40 | `20261020T194028Z.tar.gz` (stage APP_DIR) | `20261020-1940-2ed24be` | Beta: role uzlu (repeater/room/…) přímo v hlavičce detailu; řádek „Role“ odstraněn | `src/main.js`, `src/i18n.js` |
 | 2026-10-20 19:42 | `20261020T194235Z.tar.gz` | `20261020-1942-9450351` | Prod: role uzlu přímo v hlavičce detailu, řádek „Role“ odstraněn | `src/main.js`, `src/i18n.js` |
+| 2026-10-21 07:02 | `20261021T070243Z.tar.gz` (stage APP_DIR) | `20261021-0702-6db35a9` | Beta: LOS – hledání repeaterů pro body A/B, presety antén, export profilu do CSV a sdílený odkaz na měření včetně antén/frekvence | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
