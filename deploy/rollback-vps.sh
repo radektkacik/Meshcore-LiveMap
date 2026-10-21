@@ -16,10 +16,37 @@ if [[ ! -f "$BACKUP_FILE" ]]; then
   exit 1
 fi
 
+archive_has_node_modules() {
+  tar -tzf "$BACKUP_FILE" 2>/dev/null | grep -qx 'node_modules/'
+}
+
+archive_lock_hash() {
+  tar -xzOf "$BACKUP_FILE" package-lock.json 2>/dev/null | sha256sum | cut -d ' ' -f 1 || true
+}
+
+app_lock_hash() {
+  sha256sum "$APP_DIR/package-lock.json" 2>/dev/null | cut -d ' ' -f 1 || true
+}
+
+keep_node_modules=false
+if ! archive_has_node_modules; then
+  current_lock=$(app_lock_hash)
+  if [[ -n "$current_lock" && "$current_lock" == "$(archive_lock_hash)" && -d "$APP_DIR/node_modules" ]]; then
+    keep_node_modules=true
+  fi
+fi
+
 echo "Obnovuji $BACKUP_FILE (data zůstávají beze změny)"
 systemctl stop "$SERVICE"
-rm -rf "$APP_DIR/dist" "$APP_DIR/node_modules"
+rm -rf "$APP_DIR/dist"
+if [[ "$keep_node_modules" != true ]]; then
+  rm -rf "$APP_DIR/node_modules"
+fi
 tar -xzf "$BACKUP_FILE" -C "$APP_DIR" --exclude='data'
+if [[ ! -d "$APP_DIR/node_modules" ]]; then
+  echo "Závislosti nejsou v záloze ani v aplikaci; instaluji z package-lock.json" >&2
+  (cd "$APP_DIR" && npm ci --omit=dev)
+fi
 chown -R "$APP_USER:$APP_GROUP" "$APP_DIR"
 chmod 600 "$APP_DIR/.env"
 systemctl start "$SERVICE"

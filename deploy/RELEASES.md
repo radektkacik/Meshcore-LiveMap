@@ -5,10 +5,15 @@
 - `./deploy/update-vps.sh` (prod) a `./deploy/update-vps-staging.sh` (stage) vytvoří při každém nasazení zálohu
   `$APP_DIR/backups/<RELEASE_ID>.tar.gz` **ještě před výměnou souborů**.
 - Záloha tedy obsahuje **stav před daným releasem** = verzi, na kterou se dá vrátit.
-- Retence: 20 záloh (`BACKUP_RETENTION` v `deploy/apply-release.sh`).
+- Záloha obsahuje aplikaci a `data/`, ale **neobsahuje `node_modules/`** – archiv je proto řádově menší a jeho vytvoření rychlejší.
+- Při rollbacku se `node_modules/` ponechá, pokud je `package-lock.json` v záloze shodný s aktuálním.
+  Při změně závislostí se složka odstraní a nainstaluje se znovu přes `npm ci --omit=dev`.
+- Retence: 20 záloh (`BACKUP_RETENTION` v `deploy/apply-release.sh`). Starší zálohy vytvořené před tímto
+  omezením mohou `node_modules/` ještě obsahovat, dokud je retence neposune ven.
 - Prod `APP_DIR=/opt/meshcore-live-map`, port 4173, služba `meshcore-live-map`.
 - Stage `APP_DIR=/opt/meshcore-live-map-stage`, port 4174, služba `meshcore-live-map-stage`.
-- Záloha obsahuje i `data/` a `node_modules/` (~73–82 MB na kus).
+- Deploy automaticky aktualizuje i `/root/rollback-meshcore.sh` ze `deploy/rollback-vps.sh`, takže skript
+  vždy odpovídá formátu záloh.
 
 ## Přehled změn
 
@@ -100,6 +105,7 @@ ssh -i ./cntb root@<VPS_HOST>
 systemctl stop meshcore-live-map
 tar -xzf /opt/meshcore-live-map/backups/<RELEASE_ID>.tar.gz \
   -C /opt/meshcore-live-map --exclude='data'
+cd /opt/meshcore-live-map && npm ci --omit=dev
 chown -R meshcore-map:meshcore-map /opt/meshcore-live-map/server.mjs \
   /opt/meshcore-live-map/*.mjs /opt/meshcore-live-map/dist /opt/meshcore-live-map/node_modules
 systemctl start meshcore-live-map
@@ -107,7 +113,8 @@ curl -fsS http://127.0.0.1:4173/ >/dev/null && systemctl is-active meshcore-live
 ```
 
 Pro rychlý rollback je na VPS `/root/rollback-meshcore.sh`. Obnoví aplikaci
-z odpovídající zálohy a `data/` nechá být:
+z odpovídající zálohy a `data/` nechá být. Pokud se lockfile nezměnil, ponechá
+stávající `node_modules`; jinak závislosti doinstaluje:
 
 ```bash
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
@@ -120,7 +127,13 @@ návrat na ni se provede stejným ID:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261021T082652Z'
 ```
 
-Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`.
+Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`;
+skript bere tyto hodnoty z prostředí:
+
+```bash
+ssh -i ./cntb root@<VPS_HOST> \
+  'APP_DIR=/opt/meshcore-live-map-stage SERVICE=meshcore-live-map-stage.service HEALTH_PORT=4174 /root/rollback-meshcore.sh <RELEASE_ID>'
+```
 
 ## Údržba evidence
 

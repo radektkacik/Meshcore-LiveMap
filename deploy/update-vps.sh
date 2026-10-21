@@ -9,6 +9,7 @@ VITE_BASE_PATH=${VITE_BASE_PATH:-/}
 RELEASE_ID=$(date -u +%Y%m%dT%H%M%SZ)
 REMOTE_STAGE="/tmp/meshcore-live-map-$RELEASE_ID"
 BUILD_DIR=$(mktemp -d)
+ROLLBACK_SCRIPT=${ROLLBACK_SCRIPT:-/root/rollback-meshcore.sh}
 
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -40,11 +41,12 @@ else
 fi
 scp -q -i "$SSH_KEY" -o BatchMode=yes \
   "$ROOT_DIR/deploy/apply-release.sh" \
+  "$ROOT_DIR/deploy/rollback-vps.sh" \
   "$ROOT_DIR/deploy/meshcore-live-map-storage.conf" \
   "$DEPLOY_HOST:$REMOTE_STAGE/"
 
 ssh -i "$SSH_KEY" -o BatchMode=yes "$DEPLOY_HOST" \
-  "bash '$REMOTE_STAGE/apply-release.sh' '$REMOTE_STAGE' '$RELEASE_ID'"
+  "ROLLBACK_SCRIPT='$ROLLBACK_SCRIPT' bash '$REMOTE_STAGE/apply-release.sh' '$REMOTE_STAGE' '$RELEASE_ID'"
 
 curl --fail --silent --show-error --max-time 20 "$PUBLIC_URL" >/dev/null || true
 ssh -i "$SSH_KEY" -o BatchMode=yes "$DEPLOY_HOST" \

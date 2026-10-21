@@ -14,8 +14,10 @@ STORAGE_CONF_NAME=${STORAGE_CONF_NAME:-meshcore-live-map-storage.conf}
 HEALTH_PORT=${HEALTH_PORT:-4173}
 APP_USER=${APP_USER:-meshcore-map}
 APP_GROUP=${APP_GROUP:-meshcore-map}
+ROLLBACK_SCRIPT=${ROLLBACK_SCRIPT:-/root/rollback-meshcore.sh}
 
 for file in server.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs visit-stats.mjs feedback.mjs package.json package-lock.json dist/index.html \
+  rollback-vps.sh \
   "$STORAGE_CONF_NAME" \
   node_modules/@michaelhart/meshcore-decoder/package.json \
   node_modules/better-sqlite3/package.json; do
@@ -35,11 +37,37 @@ node --input-type=module -e 'import("better-sqlite3")'
 mkdir -p "$BACKUP_DIR" "$APP_DIR/data"
 chown "$APP_USER:$APP_GROUP" "$APP_DIR/data"
 
+archive_has_node_modules() {
+  tar -tzf "$BACKUP_FILE" 2>/dev/null | grep -qx 'node_modules/'
+}
+
+archive_lock_hash() {
+  tar -xzOf "$BACKUP_FILE" package-lock.json 2>/dev/null | sha256sum | cut -d ' ' -f 1 || true
+}
+
+app_lock_hash() {
+  sha256sum "$APP_DIR/package-lock.json" 2>/dev/null | cut -d ' ' -f 1 || true
+}
+
 rollback() {
   systemctl stop "$SERVICE" || true
-  rm -rf "$APP_DIR/dist" "$APP_DIR/node_modules" "$APP_DIR/data"
+  keep_node_modules=false
+  if ! archive_has_node_modules; then
+    current_lock=$(app_lock_hash)
+    if [[ -n "$current_lock" && "$current_lock" == "$(archive_lock_hash)" && -d "$APP_DIR/node_modules" ]]; then
+      keep_node_modules=true
+    fi
+  fi
+  rm -rf "$APP_DIR/dist" "$APP_DIR/data"
+  if [[ "$keep_node_modules" != true ]]; then
+    rm -rf "$APP_DIR/node_modules"
+  fi
   rm -f "$APP_DIR/backend-utils.mjs" "$APP_DIR/node-metrics.mjs" "$APP_DIR/packet-store.mjs" "$APP_DIR/visit-stats.mjs" "$APP_DIR/feedback.mjs"
   tar -xzf "$BACKUP_FILE" -C "$APP_DIR"
+  if [[ ! -d "$APP_DIR/node_modules" ]]; then
+    echo "Závislosti nejsou v záloze ani v aplikaci; instaluji z package-lock.json" >&2
+    (cd "$APP_DIR" && npm ci --omit=dev)
+  fi
   chown -R "$APP_USER:$APP_GROUP" "$APP_DIR"
   chmod 600 "$APP_DIR/.env"
   if [[ -f "$STAGE/previous-storage.conf" ]]; then
@@ -68,7 +96,7 @@ trap rollback_on_error ERR
 
 systemctl stop "$SERVICE"
 service_stopped=true
-backup_paths=(server.mjs package.json package-lock.json dist node_modules data)
+backup_paths=(server.mjs package.json package-lock.json dist data)
 if [[ -f "$APP_DIR/node-metrics.mjs" ]]; then
   backup_paths+=(node-metrics.mjs)
 fi
@@ -93,6 +121,8 @@ if ((${#existing_backup_paths[@]})); then
 else
   tar -czf "$BACKUP_FILE" -C "$APP_DIR" --files-from /dev/null
 fi
+mkdir -p "$(dirname "$ROLLBACK_SCRIPT")"
+install -o root -g root -m 755 "$STAGE/rollback-vps.sh" "$ROLLBACK_SCRIPT"
 mkdir -p "$OVERRIDE_DIR"
 if [[ -f "$OVERRIDE_FILE" ]]; then
   cp "$OVERRIDE_FILE" "$STAGE/previous-storage.conf"
@@ -135,4 +165,4 @@ if ((${#backups[@]} > BACKUP_RETENTION)); then
   rm -f -- "${backups[@]:BACKUP_RETENTION}"
 fi
 
-echo "Backup: $BACKUP_FILE"
+echo "Backup: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f 1))"

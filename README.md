@@ -50,9 +50,11 @@ Hostitel se v repozitáři záměrně neuvádí. Pro beta instanci použijte
 `./deploy/update-vps-staging.sh` se stejným `DEPLOY_HOST`.
 
 Backupy jsou v `/opt/meshcore-live-map/backups`; uchovává se posledních 20.
-Při neúspěšném startu se předchozí verze obnoví automaticky. Soubor `.env` není
-součástí balíčku ani backupu a aktualizace jej nemění. Konfigurace systemd a
-Nginx se tímto běžným updatem také nemění.
+Zálohy neobsahují `node_modules` – rollback proto při shodném lockfile ponechá
+stávající závislosti a při změně je doinstaluje. Při neúspěšném startu se
+předchozí verze obnoví automaticky. Soubor `.env` není součástí balíčku ani
+backupu a aktualizace jej nemění. Konfigurace systemd a Nginx se tímto běžným
+updatem také nemění.
 
 Aplikace bude dostupná na `http://localhost:4173`. Proměnná `PORT` mění port
 produkčního serveru. MQTT připojení se nastavuje v `.env` podle `.env.example`;

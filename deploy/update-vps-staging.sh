@@ -46,6 +46,7 @@ else
 fi
 scp -q -i "$SSH_KEY" -o BatchMode=yes \
   "$ROOT_DIR/deploy/apply-release.sh" \
+  "$ROOT_DIR/deploy/rollback-vps.sh" \
   "$ROOT_DIR/deploy/meshcore-live-map-stage-storage.conf" \
   "$DEPLOY_HOST:$REMOTE_STAGE/"
 
