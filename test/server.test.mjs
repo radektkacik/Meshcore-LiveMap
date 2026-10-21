@@ -84,12 +84,15 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       TERRAIN_UPSTREAM: `http://127.0.0.1:${upstreamPort}/terrarium`,
       UPSTREAM_TIMEOUT_MS: "100",
     },
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "pipe"],
   });
+  let childLog = "";
+  child.stdout.on("data", (chunk) => { childLog += chunk; });
+  child.stderr.on("data", (chunk) => { childLog += chunk; });
 
   let firstStream;
   try {
-    await waitForServer(appPort, child);
+    await waitForServer(appPort, child, () => childLog.slice(-800));
     const secured = await fetch(`http://127.0.0.1:${appPort}/api/stats`);
     assert.equal(secured.headers.get("x-content-type-options"), "nosniff");
     assert.equal(secured.headers.get("x-frame-options"), "DENY");

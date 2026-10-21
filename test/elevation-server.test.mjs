@@ -13,9 +13,11 @@ function listen(server) {
   });
 }
 
-async function waitForServer(port, child) {
+async function waitForServer(port, child, log = () => "") {
   for (let attempt = 0; attempt < 200; attempt += 1) {
-    if (child.exitCode != null) throw new Error(`Server exited with code ${child.exitCode}`);
+    if (child.exitCode != null) {
+      throw new Error(`Server exited with code ${child.exitCode}: ${log()}`);
+    }
     try {
       const response = await fetch(`http://127.0.0.1:${port}/api/stats`);
       if (response.ok) return;
@@ -24,7 +26,7 @@ async function waitForServer(port, child) {
     }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  throw new Error("Server did not start in time");
+  throw new Error(`Server did not start in time: ${log()}`);
 }
 
 test("HTTP elevation proxy caches results and falls back to a second provider", async () => {
@@ -80,11 +82,14 @@ test("HTTP elevation proxy caches results and falls back to a second provider", 
       UPSTREAM_TIMEOUT_MS: "100",
       VISITS_DB_PATH: join(directory, "visits.sqlite"),
     },
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "pipe"],
   });
+  let childLog = "";
+  child.stdout.on("data", (chunk) => { childLog += chunk; });
+  child.stderr.on("data", (chunk) => { childLog += chunk; });
 
   try {
-    await waitForServer(appPort, child);
+    await waitForServer(appPort, child, () => childLog.slice(-800));
 
     const first = await fetch(`http://127.0.0.1:${appPort}/api/elevation?latitude=50.08,50.09&longitude=14.42,14.43`);
     assert.equal(first.status, 200);
