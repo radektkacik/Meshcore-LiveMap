@@ -142,13 +142,11 @@ const elements = {
   losChart: document.querySelector("#los-chart"),
   losClose: document.querySelector("#los-close"),
   losDialog: document.querySelector("#los-dialog"),
-  losExport: document.querySelector("#los-export"),
   losFrequency: document.querySelector("#los-frequency"),
   losHint: document.querySelector("#los-hint"),
   losHover: document.querySelector("#los-hover"),
   losNodeA: document.querySelector("#los-node-a"),
   losNodeB: document.querySelector("#los-node-b"),
-  losPreset: document.querySelector("#los-preset"),
   losResultsA: document.querySelector("#los-results-a"),
   losResultsB: document.querySelector("#los-results-b"),
   losShare: document.querySelector("#los-share"),
@@ -2372,12 +2370,6 @@ elements.themeToggle.addEventListener("click", () => {
 });
 
 const LOS_SAMPLE_COUNT = 100;
-const LOS_PRESETS = {
-  portable: [2, 2],
-  mobile: [5, 5],
-  repeater: [20, 20],
-  tower: [30, 30],
-};
 const LOS_NODE_INPUTS = [elements.losNodeA, elements.losNodeB];
 const LOS_NODE_RESULTS = [elements.losResultsA, elements.losResultsB];
 
@@ -2407,7 +2399,6 @@ function clearLosDrawing() {
 
 function updateLosActions() {
   elements.losShare.disabled = !(state.losMarkers[0] && state.losMarkers[1]);
-  elements.losExport.disabled = !state.losProfile;
 }
 
 function hideLosResults(index) {
@@ -2550,43 +2541,6 @@ function setLosEndpoint(index, latlng, node = null) {
   }
 }
 
-function exportLosCsv() {
-  const { losProfile, losEndpoints } = state;
-  if (!losProfile || !losEndpoints) return;
-  const [a, b] = losEndpoints;
-  const lines = [
-    ["#", "LOS MeshCore CZ"],
-    ["#", "A", a.lat.toFixed(6), a.lon.toFixed(6)],
-    ["#", "B", b.lat.toFixed(6), b.lon.toFixed(6)],
-    ["#", "frequency_mhz", elements.losFrequency.value],
-    ["#", "antenna_a_m", elements.losAntennaA.value],
-    ["#", "antenna_b_m", elements.losAntennaB.value],
-    ["index", "distance_km", "lat", "lon", "terrain_m", "line_m", "fresnel_m", "clearance_m", "effective_terrain_m"],
-    ...losProfile.map((point, index) => [
-      index,
-      point.distanceKm.toFixed(3),
-      point.lat.toFixed(6),
-      point.lon.toFixed(6),
-      point.terrainM.toFixed(1),
-      point.lineM.toFixed(1),
-      point.fresnelM.toFixed(1),
-      point.clearanceM.toFixed(1),
-      point.effectiveTerrainM.toFixed(1),
-    ]),
-  ];
-  const csv = `\uFEFF${lines.map((line) => line.join(";")).join("\r\n")}`;
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  const stamp = new Date().toISOString().slice(0, 16).replace("T", "-").replace(":", "");
-  link.href = url;
-  link.download = `los-${stamp}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1_000);
-}
-
 function losShareUrl() {
   const a = state.losMarkers[0]?.getLatLng();
   const b = state.losMarkers[1]?.getLatLng();
@@ -2637,7 +2591,6 @@ function initSharedLos(link) {
   if (link.frequency != null) elements.losFrequency.value = String(link.frequency);
   if (link.antennaA != null) elements.losAntennaA.value = String(link.antennaA);
   if (link.antennaB != null) elements.losAntennaB.value = String(link.antennaB);
-  elements.losPreset.value = "custom";
   const entries = link.nodeKeys.map((key) => (key ? findNodeEntry(key) : null));
   const latlngs = link.points.map((point, index) => (
     entries[index] ? entries[index].marker.getLatLng() : L.latLng(point.lat, point.lon)
@@ -2902,20 +2855,9 @@ elements.losDialog.addEventListener("close", clearLosCursor);
 elements.losChart.addEventListener("mousemove", handleLosChartHover);
 elements.losChart.addEventListener("mouseleave", clearLosCursor);
 elements.losShare.addEventListener("click", () => void shareLosLink());
-elements.losExport.addEventListener("click", exportLosCsv);
-elements.losPreset.addEventListener("change", () => {
-  const preset = LOS_PRESETS[elements.losPreset.value];
-  if (!preset) return;
-  elements.losAntennaA.value = String(preset[0]);
-  elements.losAntennaB.value = String(preset[1]);
-  recomputeLos();
-});
 elements.losFrequency.addEventListener("input", recomputeLos);
 for (const input of [elements.losAntennaA, elements.losAntennaB]) {
-  input.addEventListener("input", () => {
-    elements.losPreset.value = "custom";
-    recomputeLos();
-  });
+  input.addEventListener("input", recomputeLos);
 }
 bindLosPicker(0);
 bindLosPicker(1);

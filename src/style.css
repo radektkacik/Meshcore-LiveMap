@@ -377,7 +377,7 @@ html[data-theme="dark"] .route-show-on-map { color: #5fd0a5; background: rgba(7,
 .los-recompute:disabled { opacity: 0.45; cursor: not-allowed; }
 .los-controls { display: flex; gap: 10px; margin-top: 10px; }
 .los-controls label { display: flex; flex: 1 1 0; flex-direction: column; gap: 4px; min-width: 0; color: var(--muted); font: 10px "DM Mono", monospace; }
-.los-controls input, .los-controls select { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; color: #263b31; background: #fff; font: 12px Manrope, sans-serif; }
+.los-controls input { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; color: #263b31; background: #fff; font: 12px Manrope, sans-serif; }
 .los-pickers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
 .los-picker { position: relative; display: flex; flex-direction: column; gap: 4px; min-width: 0; color: var(--muted); font: 10px "DM Mono", monospace; }
 .los-picker input { width: 100%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 7px; color: #263b31; background: #fff; font: 12px Manrope, sans-serif; }
@@ -554,7 +554,6 @@ html[data-theme="dark"] .los-dialog { color: #e6ecef; background: #161d24; borde
 html[data-theme="dark"] .los-chart { background: #0f1418; border-color: var(--line); }
 html[data-theme="dark"] .los-hover { color: #cfd9dd; }
 html[data-theme="dark"] .los-controls input,
-html[data-theme="dark"] .los-controls select,
 html[data-theme="dark"] .los-picker input { color: #e6ecef; background: #1b232b; border-color: var(--line); }
 html[data-theme="dark"] .los-picker-results { background: #1b232b; border-color: var(--line); }
 html[data-theme="dark"] .los-picker-results button { border-color: rgba(255, 255, 255, 0.08); }
