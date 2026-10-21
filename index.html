@@ -259,6 +259,34 @@
             <div id="los-results-b" class="los-picker-results" hidden></div>
           </div>
         </div>
+        <details class="los-budget">
+          <summary>Link budget</summary>
+          <div class="los-budget-fields">
+            <label>Výkon (dBm)
+              <input id="los-tx-power" type="number" min="-30" max="40" step="0.1" value="22" />
+            </label>
+            <label>Zisk A (dBi)
+              <input id="los-gain-a" type="number" min="-10" max="40" step="0.1" value="3" />
+            </label>
+            <label>Zisk B (dBi)
+              <input id="los-gain-b" type="number" min="-10" max="40" step="0.1" value="3" />
+            </label>
+            <label>Ztráta A (dB)
+              <input id="los-loss-a" type="number" min="0" max="100" step="0.1" value="1" />
+            </label>
+            <label>Ztráta B (dB)
+              <input id="los-loss-b" type="number" min="0" max="100" step="0.1" value="1" />
+            </label>
+            <label>Citlivost (dBm)
+              <input id="los-sensitivity" type="number" min="-160" max="0" step="0.1" value="-137" />
+            </label>
+            <label>Požadovaná rezerva (dB)
+              <input id="los-required-margin" type="number" min="0" max="60" step="0.1" value="10" />
+            </label>
+          </div>
+          <p class="los-budget-note">Zisk antény ovlivňuje link budget, ne velikost Fresnelovy zóny.</p>
+        </details>
+        <p id="los-budget-summary" class="los-budget-summary"></p>
         <div id="los-chart" class="los-chart"></div>
         <p id="los-hover" class="los-hover"></p>
         <p class="los-note">Barvy úseků: zelená = volná, oranžová = zásah do Fresnelovy zóny, červená = terén blokuje paprsek. V profilu je plná Fresnelova zóna (F1) světle modrá, doporučených 60 % výrazněji. Výšky: Open-Meteo (Copernicus DEM, ~90 m).</p>

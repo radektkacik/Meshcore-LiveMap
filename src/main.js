@@ -139,19 +139,27 @@ const elements = {
   mapStatus: document.querySelector("#map-status"),
   losAntennaA: document.querySelector("#los-antenna-a"),
   losAntennaB: document.querySelector("#los-antenna-b"),
+  losBudgetSummary: document.querySelector("#los-budget-summary"),
   losChart: document.querySelector("#los-chart"),
   losClose: document.querySelector("#los-close"),
   losDialog: document.querySelector("#los-dialog"),
   losFrequency: document.querySelector("#los-frequency"),
+  losGainA: document.querySelector("#los-gain-a"),
+  losGainB: document.querySelector("#los-gain-b"),
   losHint: document.querySelector("#los-hint"),
+  losLossA: document.querySelector("#los-loss-a"),
+  losLossB: document.querySelector("#los-loss-b"),
   losHover: document.querySelector("#los-hover"),
   losNodeA: document.querySelector("#los-node-a"),
   losNodeB: document.querySelector("#los-node-b"),
+  losRequiredMargin: document.querySelector("#los-required-margin"),
   losResultsA: document.querySelector("#los-results-a"),
   losResultsB: document.querySelector("#los-results-b"),
+  losSensitivity: document.querySelector("#los-sensitivity"),
   losShare: document.querySelector("#los-share"),
   losSummary: document.querySelector("#los-summary"),
   losToggle: document.querySelector("#los-toggle"),
+  losTxPower: document.querySelector("#los-tx-power"),
   mobileSheet: document.querySelector("#mobile-sheet"),
   mobileSheetClose: document.querySelector("#mobile-sheet-close"),
   mobileSheetContent: document.querySelector("#mobile-sheet-content"),
@@ -2416,6 +2424,7 @@ function clearLosMarkers() {
   for (const input of LOS_NODE_INPUTS) input.value = "";
   hideLosResults();
   updateLosActions();
+  renderLosBudget();
 }
 
 function createLosMarker(latlng, label, index, node = null) {
@@ -2541,6 +2550,46 @@ function setLosEndpoint(index, latlng, node = null) {
   }
 }
 
+function renderLosBudget(result = null) {
+  const summary = elements.losBudgetSummary;
+  if (!summary) return;
+  const endpoints = state.losEndpoints;
+  const distanceKm = result?.distanceKm
+    ?? (endpoints ? map.distance([endpoints[0].lat, endpoints[0].lon], [endpoints[1].lat, endpoints[1].lon]) / 1000 : 0);
+  if (!endpoints || !(distanceKm > 0)) {
+    summary.textContent = t("los.budgetNoPath");
+    summary.className = "los-budget-summary";
+    return;
+  }
+  const frequencyMhz = Number(elements.losFrequency.value) || 869.525;
+  const txPower = Number(elements.losTxPower.value);
+  const gainA = Number(elements.losGainA.value);
+  const gainB = Number(elements.losGainB.value);
+  const lossA = Number(elements.losLossA.value);
+  const lossB = Number(elements.losLossB.value);
+  const sensitivity = Number(elements.losSensitivity.value);
+  const required = Number(elements.losRequiredMargin.value);
+  const values = [txPower, gainA, gainB, lossA, lossB, sensitivity, required];
+  if (values.some((value) => !Number.isFinite(value))) {
+    summary.textContent = t("los.budgetNoPath");
+    summary.className = "los-budget-summary";
+    return;
+  }
+  const fspl = 32.44 + 20 * Math.log10(distanceKm) + 20 * Math.log10(frequencyMhz);
+  const rx = txPower + gainA + gainB - lossA - lossB - fspl;
+  const margin = rx - sensitivity;
+  const reserve = margin - required;
+  const status = margin < 0 ? "fail" : (reserve < 0 ? "tight" : "ok");
+  const statusKey = status === "fail" ? "los.budgetFail" : status === "tight" ? "los.budgetTight" : "los.budgetOk";
+  summary.textContent = `${t("los.budgetSummary", {
+    fspl: formatDecimal(fspl, 1),
+    rx: formatDecimal(rx, 1),
+    margin: formatDecimal(margin, 1),
+    reserve: formatDecimal(reserve, 1),
+  })} · ${t(statusKey)}`;
+  summary.className = `los-budget-summary ${status}`;
+}
+
 function losShareUrl() {
   const a = state.losMarkers[0]?.getLatLng();
   const b = state.losMarkers[1]?.getLatLng();
@@ -2552,6 +2601,13 @@ function losShareUrl() {
   url.searchParams.set("losF", elements.losFrequency.value || "869.525");
   url.searchParams.set("losA", elements.losAntennaA.value || "10");
   url.searchParams.set("losB", elements.losAntennaB.value || "10");
+  url.searchParams.set("losTx", elements.losTxPower.value || "22");
+  url.searchParams.set("losGA", elements.losGainA.value || "3");
+  url.searchParams.set("losGB", elements.losGainB.value || "3");
+  url.searchParams.set("losLA", elements.losLossA.value || "1");
+  url.searchParams.set("losLB", elements.losLossB.value || "1");
+  url.searchParams.set("losSens", elements.losSensitivity.value || "-137");
+  url.searchParams.set("losMargin", elements.losRequiredMargin.value || "10");
   if (state.losNodeKeys[0]) url.searchParams.set("losNodeA", state.losNodeKeys[0]);
   else url.searchParams.delete("losNodeA");
   if (state.losNodeKeys[1]) url.searchParams.set("losNodeB", state.losNodeKeys[1]);
@@ -2574,14 +2630,26 @@ function parseLosLink() {
   if (values.length !== 4 || values.some((value) => !Number.isFinite(value))) return null;
   const [latA, lonA, latB, lonB] = values;
   if (Math.abs(latA) > 90 || Math.abs(latB) > 90 || Math.abs(lonA) > 180 || Math.abs(lonB) > 180) return null;
-  const frequency = Number(INITIAL_PARAMS.get("losF"));
-  const antennaA = Number(INITIAL_PARAMS.get("losA"));
-  const antennaB = Number(INITIAL_PARAMS.get("losB"));
+  const numeric = (name) => {
+    const raw = INITIAL_PARAMS.get(name);
+    if (raw == null || raw === "") return null;
+    const value = Number(raw);
+    return Number.isFinite(value) ? value : null;
+  };
   return {
     points: [{ lat: latA, lon: lonA }, { lat: latB, lon: lonB }],
-    frequency: Number.isFinite(frequency) ? frequency : null,
-    antennaA: Number.isFinite(antennaA) ? antennaA : null,
-    antennaB: Number.isFinite(antennaB) ? antennaB : null,
+    frequency: numeric("losF"),
+    antennaA: numeric("losA"),
+    antennaB: numeric("losB"),
+    budget: {
+      txPower: numeric("losTx"),
+      gainA: numeric("losGA"),
+      gainB: numeric("losGB"),
+      lossA: numeric("losLA"),
+      lossB: numeric("losLB"),
+      sensitivity: numeric("losSens"),
+      required: numeric("losMargin"),
+    },
     nodeKeys: [INITIAL_PARAMS.get("losNodeA"), INITIAL_PARAMS.get("losNodeB")],
   };
 }
@@ -2591,6 +2659,18 @@ function initSharedLos(link) {
   if (link.frequency != null) elements.losFrequency.value = String(link.frequency);
   if (link.antennaA != null) elements.losAntennaA.value = String(link.antennaA);
   if (link.antennaB != null) elements.losAntennaB.value = String(link.antennaB);
+  const budgetFields = {
+    txPower: elements.losTxPower,
+    gainA: elements.losGainA,
+    gainB: elements.losGainB,
+    lossA: elements.losLossA,
+    lossB: elements.losLossB,
+    sensitivity: elements.losSensitivity,
+    required: elements.losRequiredMargin,
+  };
+  for (const [key, input] of Object.entries(budgetFields)) {
+    if (link.budget?.[key] != null) input.value = String(link.budget[key]);
+  }
   const entries = link.nodeKeys.map((key) => (key ? findNodeEntry(key) : null));
   const latlngs = link.points.map((point, index) => (
     entries[index] ? entries[index].marker.getLatLng() : L.latLng(point.lat, point.lon)
@@ -2764,6 +2844,7 @@ function renderLosResult(a, b, result) {
     status,
   });
   elements.losChart.innerHTML = renderLosChart(result);
+  renderLosBudget(result);
   if (!elements.losDialog.open) elements.losDialog.show();
   updateLosActions();
 }
@@ -2855,9 +2936,23 @@ elements.losDialog.addEventListener("close", clearLosCursor);
 elements.losChart.addEventListener("mousemove", handleLosChartHover);
 elements.losChart.addEventListener("mouseleave", clearLosCursor);
 elements.losShare.addEventListener("click", () => void shareLosLink());
-elements.losFrequency.addEventListener("input", recomputeLos);
-for (const input of [elements.losAntennaA, elements.losAntennaB]) {
-  input.addEventListener("input", recomputeLos);
+const refreshLosInputs = () => {
+  if (state.losSamples && state.losEndpoints) recomputeLos();
+  else renderLosBudget();
+};
+elements.losFrequency.addEventListener("input", refreshLosInputs);
+for (const input of [
+  elements.losAntennaA,
+  elements.losAntennaB,
+  elements.losTxPower,
+  elements.losGainA,
+  elements.losGainB,
+  elements.losLossA,
+  elements.losLossB,
+  elements.losSensitivity,
+  elements.losRequiredMargin,
+]) {
+  input.addEventListener("input", refreshLosInputs);
 }
 bindLosPicker(0);
 bindLosPicker(1);
