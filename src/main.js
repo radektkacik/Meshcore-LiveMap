@@ -916,7 +916,7 @@ function detailPopupAnchor() {
   const left = rect && rect.width > 0 && !collapsed
     ? Math.min(rect.right + 12, size.x * 0.5)
     : 12;
-  return map.containerPointToLatLng(L.point(left + (size.x - left) / 2, size.y * 0.5));
+  return map.containerPointToLatLng(L.point(left + (size.x - left) / 2, size.y - 24));
 }
 
 function openRouteDetail(route, latlng = null) {
