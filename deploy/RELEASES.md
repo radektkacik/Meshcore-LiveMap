@@ -92,6 +92,7 @@
 | 2026-10-21 14:07 | `20261021T140741Z.tar.gz` (stage APP_DIR) | `20261021-1407-753a1c6` | Beta: pokrytí jemnější (300 vzorků/paprsek), rádius do 100 km, default 50 km, silnější barvy; ověřeno 50 km i 100 km | `src/coverage.js`, `src/main.js`, `src/i18n.js`, `index.html`, `README.md` |
 | 2026-10-21 14:15 | `20261021T141507Z.tar.gz` (stage APP_DIR) | `20261021-1415-2c1fcca` | Beta: výchozí rádius pokrytí 100 km (81 dlaždic), ověřeno | `index.html`, `src/main.js` |
 | 2026-10-21 14:24 | `20261021T142402Z.tar.gz` | `20261021-1424-cf44121` | Prod: nasazení simulace pokrytí terénu (100 km default, 300 vzorků/paprsek); ověřeno překryvem, `/api/terrain` 200 a bez chyb v konzoli | `src/coverage.js`, `src/coverage-worker.js`, `src/main.js`, `src/style.css`, `src/i18n.js`, `index.html`, `server.mjs`, `test/*`, `README.md`, `.env.example` |
+| 2026-10-22 17:43 | `20261022T174327Z.tar.gz` (stage APP_DIR) | `20261022-1743-e70856a` | Beta: výběr paketu v Aktivitě zobrazí všechny observery a jejich trasy; nové `/api/packet-routes?hash=…`; ověřeno na živém paketu (29 observerů) | `packet-store.mjs`, `server.mjs`, `src/main.js`, `src/route-model.js`, `src/i18n.js`, `src/style.css`, `test/*`, `README.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
