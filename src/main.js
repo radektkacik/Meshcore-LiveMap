@@ -850,16 +850,12 @@ async function openPacketDetail(route, latlng = null) {
   const content = document.createElement("div");
   content.className = "packet-popup-content";
   content.innerHTML = packetDetailHtml(occurrences);
-  const anchor = latlng || (route.bounds?.isValid() ? route.bounds.getCenter() : L.latLng(route.points[0].lat, route.points[0].lon));
-  const padding = popupPanPadding();
   const popup = L.popup({
     className: "route-popup packet-popup",
     maxWidth: 460,
     minWidth: 320,
-    autoPan: true,
-    autoPanPaddingTopLeft: padding.topLeft,
-    autoPanPaddingBottomRight: padding.bottomRight,
-  }).setLatLng(anchor).setContent(content).openOn(map);
+    autoPan: false,
+  }).setLatLng(detailPopupAnchor()).setContent(content).openOn(map);
   L.DomEvent.disableClickPropagation(content);
   L.DomEvent.disableScrollPropagation(content);
   bindPacketActions(content, occurrences, () => popup.close());
@@ -910,6 +906,17 @@ function popupPanPadding() {
     topLeft: L.point(left, 24),
     bottomRight: L.point(24, 24),
   };
+}
+
+function detailPopupAnchor() {
+  const size = map.getSize();
+  const hud = document.querySelector("#hud");
+  const rect = hud?.getBoundingClientRect();
+  const collapsed = hud?.classList.contains("collapsed");
+  const left = rect && rect.width > 0 && !collapsed
+    ? Math.min(rect.right + 12, size.x * 0.5)
+    : 12;
+  return map.containerPointToLatLng(L.point(left + (size.x - left) / 2, size.y * 0.5));
 }
 
 function openRouteDetail(route, latlng = null) {
