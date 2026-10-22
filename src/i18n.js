@@ -187,6 +187,8 @@ const cs = {
   "packet.routeDetail": "Detail trasy",
   "packet.unknownObserver": "Neznámý observer",
   "packet.occurrences": { one: "{count} výskyt", few: "{count} výskyty", other: "{count} výskytů" },
+  "packet.focusRoutes": { one: "{count} trasa", few: "{count} trasy", other: "{count} tras" },
+  "packet.focusLiveHidden": "živý provoz skrytý",
 };
 
 const en = {
@@ -374,6 +376,8 @@ const en = {
   "packet.routeDetail": "Route detail",
   "packet.unknownObserver": "Unknown observer",
   "packet.occurrences": { one: "{count} occurrence", other: "{count} occurrences" },
+  "packet.focusRoutes": { one: "{count} route", other: "{count} routes" },
+  "packet.focusLiveHidden": "live traffic hidden",
 };
 
 export const TRANSLATIONS = { cs, en };
@@ -451,6 +455,8 @@ export const STATIC_EN = {
   "Naskenujte v mobilní aplikaci MeshCore": "Scan in the MeshCore mobile app",
   "Zavřít měření": "Close measurement",
   "Zavřít pokrytí": "Close coverage",
+  "Vybraný paket": "Selected packet",
+  "Zrušit výběr": "Clear selection",
   "Pokrytí terénu": "Terrain coverage",
   "Výška antény (m)": "Antenna height (m)",
   "Rádius (km)": "Radius (km)",

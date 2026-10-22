@@ -177,6 +177,10 @@ const elements = {
   mobileSheetContent: document.querySelector("#mobile-sheet-content"),
   nodeLabelsToggle: document.querySelector("#node-labels-toggle"),
   otherTypesToggle: document.querySelector("#other-types-toggle"),
+  packetFocusBar: document.querySelector("#packet-focus-bar"),
+  packetFocusClose: document.querySelector("#packet-focus-close"),
+  packetFocusCount: document.querySelector("#packet-focus-count"),
+  packetFocusHash: document.querySelector("#packet-focus-hash"),
   packetRate: document.querySelector("#packet-rate"),
   qrCanvas: document.querySelector("#node-qr-canvas"),
   qrClose: document.querySelector("#node-qr-close"),
@@ -278,6 +282,7 @@ const state = {
   routeHistoryLoading: false,
   routeWindowMs: 0,
   serverSkewMs: 0,
+  packetFocus: null,
   selectedRouteHashBytes: 0,
   selectedRouteId: null,
   selectedRoutePacketType: null,
@@ -582,7 +587,7 @@ function meshCoreContactPayload(node) {
   return `meshcore://contact/add?${params}`;
 }
 
-function clearSelectedRoute() {
+function clearSelectedLayers() {
   selectedRouteLayer.clearLayers();
   clearTimeout(state.selectedRouteTimeout);
   state.selectedRouteHashBytes = 0;
@@ -591,8 +596,26 @@ function clearSelectedRoute() {
   state.selectedRouteTimeout = null;
 }
 
+function exitPacketFocus() {
+  if (!state.packetFocus) return;
+  state.packetFocus = null;
+  clearSelectedLayers();
+  if (!map.hasLayer(routeLayer)) routeLayer.addTo(map);
+  elements.packetFocusBar.hidden = true;
+  syncRoutePresentation();
+}
+
+function clearSelectedRoute() {
+  if (state.packetFocus) {
+    exitPacketFocus();
+    return;
+  }
+  clearSelectedLayers();
+}
+
 function showRouteOnMap(route) {
-  clearSelectedRoute();
+  if (state.packetFocus) exitPacketFocus();
+  else clearSelectedLayers();
   state.selectedRouteId = route.id;
   state.selectedRouteHashBytes = route.hashBytes;
   state.selectedRoutePacketType = route.packetType;
@@ -726,7 +749,7 @@ function bindPacketActions(root, occurrences, close) {
       const route = occurrences[Number(button.dataset.index)];
       if (!route) return;
       close();
-      showRouteOnMap(route);
+      showPacketOnMap([route]);
     });
   }
   for (const button of root.querySelectorAll(".packet-occurrence-detail")) {
@@ -747,9 +770,19 @@ function bindPacketActions(root, occurrences, close) {
   });
 }
 
+function showPacketFocusBar(hash, count) {
+  elements.packetFocusHash.textContent = `${hash.slice(0, 12)}${hash.length > 12 ? "…" : ""}`;
+  elements.packetFocusHash.title = hash;
+  elements.packetFocusCount.textContent = `${tCount("packet.focusRoutes", count)} · ${t("packet.focusLiveHidden")}`;
+  elements.packetFocusBar.hidden = false;
+}
+
 function showPacketOnMap(occurrences) {
-  clearSelectedRoute();
   const newest = occurrences[0];
+  const hash = newest?.packetHash || String(newest?.id || "").split(":")[0];
+  clearSelectedLayers();
+  if (map.hasLayer(routeLayer)) map.removeLayer(routeLayer);
+  state.packetFocus = { hash, count: occurrences.length };
   state.selectedRouteId = newest?.id || null;
   state.selectedRouteHashBytes = newest?.hashBytes || 0;
   state.selectedRoutePacketType = newest?.packetType ?? null;
@@ -784,7 +817,7 @@ function showPacketOnMap(occurrences) {
   }
   if (bounds.isValid()) map.fitBounds(bounds, { maxZoom: 11, padding: [40, 40] });
   map.closePopup();
-  state.selectedRouteTimeout = setTimeout(clearSelectedRoute, 30_000);
+  showPacketFocusBar(hash, occurrences.length);
 }
 
 function mergePacketOccurrences(primary, extra) {
@@ -818,11 +851,14 @@ async function openPacketDetail(route, latlng = null) {
   content.className = "packet-popup-content";
   content.innerHTML = packetDetailHtml(occurrences);
   const anchor = latlng || (route.bounds?.isValid() ? route.bounds.getCenter() : L.latLng(route.points[0].lat, route.points[0].lon));
+  const padding = popupPanPadding();
   const popup = L.popup({
     className: "route-popup packet-popup",
     maxWidth: 460,
     minWidth: 320,
     autoPan: true,
+    autoPanPaddingTopLeft: padding.topLeft,
+    autoPanPaddingBottomRight: padding.bottomRight,
   }).setLatLng(anchor).setContent(content).openOn(map);
   L.DomEvent.disableClickPropagation(content);
   L.DomEvent.disableScrollPropagation(content);
@@ -863,6 +899,19 @@ function isMobileSheet() {
   return FORCE_MOBILE_SHEET || mobileSheetQuery.matches;
 }
 
+function popupPanPadding() {
+  const hud = document.querySelector("#hud");
+  const rect = hud?.getBoundingClientRect();
+  const collapsed = hud?.classList.contains("collapsed");
+  const left = rect && rect.width > 0 && !collapsed
+    ? Math.min(window.innerWidth * 0.42, rect.right + 16)
+    : 24;
+  return {
+    topLeft: L.point(left, 24),
+    bottomRight: L.point(24, 24),
+  };
+}
+
 function openRouteDetail(route, latlng = null) {
   if (!route?.points?.length) return;
   if (isMobileSheet()) {
@@ -873,11 +922,14 @@ function openRouteDetail(route, latlng = null) {
   content.className = "route-popup-content";
   content.innerHTML = routeDetailHtml(route);
   const anchor = latlng || (route.bounds?.isValid() ? route.bounds.getCenter() : L.latLng(route.points[0].lat, route.points[0].lon));
+  const padding = popupPanPadding();
   const popup = L.popup({
     className: "route-popup",
     maxWidth: 420,
     minWidth: 300,
     autoPan: true,
+    autoPanPaddingTopLeft: padding.topLeft,
+    autoPanPaddingBottomRight: padding.bottomRight,
   }).setLatLng(anchor).setContent(content).openOn(map);
   L.DomEvent.disableClickPropagation(content);
   L.DomEvent.disableScrollPropagation(content);
@@ -891,7 +943,9 @@ function openRouteDetail(route, latlng = null) {
   });
 }
 
-map.on("click", clearSelectedRoute);
+map.on("click", () => {
+  if (!state.packetFocus) clearSelectedRoute();
+});
 map.on("click", (event) => {
   if (state.coverageMode) void handleCoverageClick(event.latlng);
   else if (state.losMode) void handleLosClick(event.latlng);
@@ -2176,6 +2230,7 @@ function resumeFeedAfterInteraction(delay = FEED_AUTO_RESUME_MS) {
   }, delay);
 }
 
+elements.packetFocusClose.addEventListener("click", exitPacketFocus);
 elements.activityPause.addEventListener("click", () => {
   feedState.manualPaused = !feedState.manualPaused;
   clearTimeout(feedState.resumeTimer);
@@ -3436,6 +3491,7 @@ document.addEventListener("keydown", (event) => {
   else if (state.coverageMode) setCoverageMode(false);
   else if (elements.losDialog.open) elements.losDialog.close();
   else if (state.losMode) setLosMode(false);
+  else if (state.packetFocus) exitPacketFocus();
 });
 
 elements.otherTypesToggle.addEventListener("change", () => {

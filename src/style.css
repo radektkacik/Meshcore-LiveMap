@@ -691,6 +691,17 @@ html[data-theme="dark"] .node-label { color: #eef4f6; text-shadow: 0 0 3px #0f14
 html[data-theme="dark"] .node-label { background: rgba(15, 20, 24, 0.85); color: #eef4f6; border-color: rgba(255, 255, 255, 0.22); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); text-shadow: none; }
 
 .map-status { position: absolute; z-index: 550; top: 16px; left: 50%; transform: translateX(-50%); padding: 10px 16px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: rgba(255, 255, 251, 0.92); box-shadow: var(--shadow); backdrop-filter: blur(8px); font: 12px "DM Mono", monospace; text-align: center; pointer-events: none; }
+.packet-focus-bar { position: absolute; z-index: 610; top: 16px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px); padding: 8px 10px 8px 14px; border: 1px solid rgba(40, 127, 201, 0.45); border-radius: 10px; color: #245f94; background: rgba(240, 248, 255, 0.96); box-shadow: var(--shadow); backdrop-filter: blur(8px); font: 11px "DM Mono", monospace; }
+.packet-focus-bar[hidden] { display: none; }
+.packet-focus-bar b { font-size: 11px; }
+.packet-focus-bar code { color: inherit; font: 11px "DM Mono", monospace; }
+.packet-focus-bar button { flex: 0 0 auto; padding: 4px 8px; border: 1px solid rgba(40, 127, 201, 0.45); border-radius: 6px; color: #1f6fb2; background: #fff; font: 10px "DM Mono", monospace; cursor: pointer; }
+.packet-focus-bar button:hover { background: #e8f2fb; }
+html[data-theme="dark"] .packet-focus-bar { color: #9fd1f5; background: rgba(20, 32, 42, 0.96); border-color: rgba(95, 167, 224, 0.45); }
+html[data-theme="dark"] .packet-focus-bar button { color: #9fd1f5; background: #16222c; border-color: rgba(95, 167, 224, 0.45); }
+@media (max-width: 600px) {
+  .packet-focus-bar { top: 8px; left: 50%; right: auto; bottom: auto; max-width: calc(100vw - 18px); transform: translateX(-50%); }
+}
 html[data-theme="dark"] .map-status { background: rgba(18, 24, 30, 0.92); }
 
 .los-dragging .leaflet-overlay-pane,

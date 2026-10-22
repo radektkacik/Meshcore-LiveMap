@@ -110,7 +110,9 @@ přihlašovací údaje zůstávají pouze na serveru.
 - Každý observer publikuje vlastní MQTT pozorování. Aktivní trasy se identifikují
   kombinací hashe paketu a observeru; novější varianta stejné trasy nahradí
   předchozí. Feed seskupuje záznamy podle hashe paketu a kliknutím zobrazí
-  všechny observery, kteří paket zaznamenali.
+  všechny observery, kteří paket zaznamenali. Zobrazení všech tras přepne mapu
+  do režimu pouze vybraného paketu – živý provoz se skryje a vybrané trasy
+  zůstanou, dokud se neklikne na „Zrušit výběr“ nebo Escape.
 - Lokální proxy je nutná, protože Analyzer neposílá CORS hlavičky.
 
 Trasy se vykreslují pro všechny délky hop prefixů (včetně 1B). U hopu, který
