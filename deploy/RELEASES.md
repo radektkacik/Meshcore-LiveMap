@@ -93,6 +93,7 @@
 | 2026-10-21 14:15 | `20261021T141507Z.tar.gz` (stage APP_DIR) | `20261021-1415-2c1fcca` | Beta: výchozí rádius pokrytí 100 km (81 dlaždic), ověřeno | `index.html`, `src/main.js` |
 | 2026-10-21 14:24 | `20261021T142402Z.tar.gz` | `20261021-1424-cf44121` | Prod: nasazení simulace pokrytí terénu (100 km default, 300 vzorků/paprsek); ověřeno překryvem, `/api/terrain` 200 a bez chyb v konzoli | `src/coverage.js`, `src/coverage-worker.js`, `src/main.js`, `src/style.css`, `src/i18n.js`, `index.html`, `server.mjs`, `test/*`, `README.md`, `.env.example` |
 | 2026-10-22 17:43 | `20261022T174327Z.tar.gz` (stage APP_DIR) | `20261022-1743-e70856a` | Beta: výběr paketu v Aktivitě zobrazí všechny observery a jejich trasy; nové `/api/packet-routes?hash=…`; ověřeno na živém paketu (29 observerů) | `packet-store.mjs`, `server.mjs`, `src/main.js`, `src/route-model.js`, `src/i18n.js`, `src/style.css`, `test/*`, `README.md` |
+| 2026-10-22 18:39 | `20261022T183926Z.tar.gz` (stage APP_DIR) | `20261022-1839-7d0868a` | Beta: režim pouze vybraného paketu (živý provoz skrytý), trvalé zobrazení do „Zrušit výběr“/Escape; popup už nezajíždí pod levý HUD | `index.html`, `src/main.js`, `src/style.css`, `src/i18n.js`, `README.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
