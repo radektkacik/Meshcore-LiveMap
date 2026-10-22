@@ -180,7 +180,13 @@ const cs = {
   "route.steps": "Průběh trasy",
   "route.snr": "SNR",
   "route.unresolved": "nerozřešeno",
-  "route.clickHint": "Kliknutím zobrazíte detail trasy.",
+  "route.clickHint": "Kliknutím zobrazíte všechny výskyty paketu.",
+  "packet.title": "Paket",
+  "packet.observations": "Výskyty u observerů",
+  "packet.showAll": "Zobrazit všechny trasy",
+  "packet.routeDetail": "Detail trasy",
+  "packet.unknownObserver": "Neznámý observer",
+  "packet.occurrences": { one: "{count} výskyt", few: "{count} výskyty", other: "{count} výskytů" },
 };
 
 const en = {
@@ -361,7 +367,13 @@ const en = {
   "route.steps": "Route steps",
   "route.snr": "SNR",
   "route.unresolved": "unresolved",
-  "route.clickHint": "Click to view route details.",
+  "route.clickHint": "Click to view all occurrences of the packet.",
+  "packet.title": "Packet",
+  "packet.observations": "Observer occurrences",
+  "packet.showAll": "Show all routes",
+  "packet.routeDetail": "Route detail",
+  "packet.unknownObserver": "Unknown observer",
+  "packet.occurrences": { one: "{count} occurrence", other: "{count} occurrences" },
 };
 
 export const TRANSLATIONS = { cs, en };

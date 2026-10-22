@@ -671,6 +671,164 @@ function routeDetailHtml(route) {
   `;
 }
 
+function packetObserverLabel(route) {
+  if (route.observerName) return route.observerName;
+  if (route.observerId) return route.observerId.slice(0, 8);
+  return t("packet.unknownObserver");
+}
+
+function packetDetailHtml(occurrences) {
+  const first = occurrences[0];
+  const hash = first.packetHash || String(first.id).split(":")[0];
+  const observers = new Set(occurrences.map((route) => route.observerId || route.id));
+  const rows = occurrences.map((route, index) => {
+    const snr = Number.isFinite(route.snr) ? `SNR ${formatDecimal(route.snr, 1)} dB` : null;
+    const meta = [
+      formatTime(route.timestamp),
+      formatHops(Math.max(1, route.points.length - 1)),
+      snr,
+    ].filter(Boolean).map((value) => escapeHtml(value)).join(" · ");
+    return `
+      <li>
+        <button class="packet-occurrence" data-index="${index}" type="button">
+          <span class="packet-observer">${escapeHtml(packetObserverLabel(route))}</span>
+          <small>${meta}</small>
+          <small class="packet-path">${escapeHtml(route.from)} → ${escapeHtml(route.to)}</small>
+        </button>
+        <button class="packet-occurrence-detail" data-index="${index}" type="button" title="${escapeHtml(t("packet.routeDetail"))}" aria-label="${escapeHtml(t("packet.routeDetail"))}">›</button>
+      </li>
+    `;
+  }).join("");
+  return `
+    <section class="route-popup-card packet-popup-card">
+      <header>
+        <div><small>${t("packet.title")}</small><h3>${escapeHtml(first.typeLabel)} · ${first.hashBytes}B</h3></div>
+        <time>${escapeHtml(formatDateTime(first.timestamp))}</time>
+      </header>
+      <div class="route-popup-summary">
+        <code class="packet-hash" title="${escapeHtml(hash)}">${escapeHtml(hash.slice(0, 20))}${hash.length > 20 ? "…" : ""}</code>
+        <small>${tCount("packet.occurrences", occurrences.length)} · ${tCount("units.observers", observers.size)}</small>
+      </div>
+      <h4>${t("packet.observations")}</h4>
+      <ol class="packet-occurrence-list">${rows}</ol>
+      <div class="route-popup-actions">
+        <button class="route-show-on-map packet-show-all" type="button">${t("packet.showAll")}</button>
+      </div>
+    </section>
+  `;
+}
+
+function bindPacketActions(root, occurrences, close) {
+  for (const button of root.querySelectorAll(".packet-occurrence")) {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const route = occurrences[Number(button.dataset.index)];
+      if (!route) return;
+      close();
+      showRouteOnMap(route);
+    });
+  }
+  for (const button of root.querySelectorAll(".packet-occurrence-detail")) {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const route = occurrences[Number(button.dataset.index)];
+      if (!route) return;
+      close();
+      setTimeout(() => openRouteDetail(route, route.bounds?.isValid() ? route.bounds.getCenter() : null), 0);
+    });
+  }
+  root.querySelector(".packet-show-all")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    close();
+    showPacketOnMap(occurrences);
+  });
+}
+
+function showPacketOnMap(occurrences) {
+  clearSelectedRoute();
+  const newest = occurrences[0];
+  state.selectedRouteId = newest?.id || null;
+  state.selectedRouteHashBytes = newest?.hashBytes || 0;
+  state.selectedRoutePacketType = newest?.packetType ?? null;
+  const bounds = L.latLngBounds([]);
+  for (const route of [...occurrences].reverse()) {
+    const highlighted = route === newest;
+    for (const segment of routeSegments(route.points)) {
+      L.polyline(segment, {
+        color: route.color,
+        lineCap: "round",
+        lineJoin: "round",
+        opacity: highlighted ? 0.9 : 0.45,
+        weight: highlighted ? 5 : 3,
+      }).addTo(selectedRouteLayer);
+    }
+    const endpoint = route.points.at(-1);
+    if (endpoint) {
+      L.circleMarker([endpoint.lat, endpoint.lon], {
+        radius: highlighted ? 5 : 4,
+        color: route.color,
+        weight: 2,
+        fillColor: "#ffffff",
+        fillOpacity: 0.95,
+      })
+        .bindTooltip(`${escapeHtml(packetObserverLabel(route))} · ${escapeHtml(formatTime(route.timestamp))}`, {
+          className: "node-tooltip",
+          direction: "top",
+        })
+        .addTo(selectedRouteLayer);
+    }
+    for (const point of route.points) bounds.extend([point.lat, point.lon]);
+  }
+  if (bounds.isValid()) map.fitBounds(bounds, { maxZoom: 11, padding: [40, 40] });
+  map.closePopup();
+  state.selectedRouteTimeout = setTimeout(clearSelectedRoute, 30_000);
+}
+
+function mergePacketOccurrences(primary, extra) {
+  const byRouteId = new Map();
+  for (const route of [...primary, ...extra]) {
+    if (!route || !isRouteVisible(route.packetType, route.hashBytes, state)) continue;
+    const previous = byRouteId.get(route.id);
+    if (!previous || route.timestamp > previous.timestamp) byRouteId.set(route.id, route);
+  }
+  return [...byRouteId.values()].sort((a, b) => b.timestamp - a.timestamp);
+}
+
+async function openPacketDetail(route, latlng = null) {
+  if (!route) return;
+  const hash = route.packetHash || String(route.id || "").split(":")[0];
+  let occurrences = routeStore.packetOccurrences(hash, state, nowMs());
+  if (!occurrences.length) occurrences = [route];
+  try {
+    const data = await getJson(`/api/packet-routes?hash=${encodeURIComponent(hash)}`);
+    occurrences = mergePacketOccurrences(occurrences, historyRoutesFromPackets(data.packets || []));
+  } catch (error) {
+    console.error("Výskyty paketu se nepodařilo načíst", error);
+  }
+  if (!occurrences.length) occurrences = [route];
+  if (isMobileSheet()) {
+    showMobileSheet(packetDetailHtml(occurrences));
+    bindPacketActions(elements.mobileSheetContent, occurrences, closeMobileSheet);
+    return;
+  }
+  const content = document.createElement("div");
+  content.className = "packet-popup-content";
+  content.innerHTML = packetDetailHtml(occurrences);
+  const anchor = latlng || (route.bounds?.isValid() ? route.bounds.getCenter() : L.latLng(route.points[0].lat, route.points[0].lon));
+  const popup = L.popup({
+    className: "route-popup packet-popup",
+    maxWidth: 460,
+    minWidth: 320,
+    autoPan: true,
+  }).setLatLng(anchor).setContent(content).openOn(map);
+  L.DomEvent.disableClickPropagation(content);
+  L.DomEvent.disableScrollPropagation(content);
+  bindPacketActions(content, occurrences, () => popup.close());
+}
+
 function closeMobileSheet() {
   if (elements.mobileSheet.open) elements.mobileSheet.close();
   elements.mobileSheetContent.replaceChildren();
@@ -1705,6 +1863,8 @@ function packetSnrValues(packet) {
 function routeRecord(packet, points, hashBytes, id, versionId, createdAt, timestamp = createdAt) {
   const typeLabel = TYPE_LABELS[packet.payload_type] || `TYPE ${packet.payload_type}`;
   const color = routeColor(packet.payload_type);
+  const snr = Number(packet.snr);
+  const rssi = Number(packet.rssi);
   return {
     bounds: L.latLngBounds(points.map((point) => [point.lat, point.lon])),
     color,
@@ -1714,6 +1874,9 @@ function routeRecord(packet, points, hashBytes, id, versionId, createdAt, timest
     id,
     nodeCount: points.length,
     observerCount: Number(packet.observer_count || 1),
+    observerId: String(packet.observer_id || "").toUpperCase(),
+    observerName: String(packet.observer_name || "").trim() || null,
+    packetHash: String(packet.hash || "").toUpperCase(),
     packetType: packet.payload_type,
     points: points.map(({ lat, lon, name, publicKey, breakBefore }) => ({
       lat,
@@ -1722,7 +1885,9 @@ function routeRecord(packet, points, hashBytes, id, versionId, createdAt, timest
       publicKey,
       breakBefore: Boolean(breakBefore),
     })),
+    rssi: Number.isFinite(rssi) ? rssi : null,
     scope: String(packet.scope_name || "").trim() || null,
+    snr: Number.isFinite(snr) ? snr : null,
     snrValues: packetSnrValues(packet),
     timestamp,
     to: points.at(-1).name || t("common.unknownShort"),
@@ -1731,28 +1896,34 @@ function routeRecord(packet, points, hashBytes, id, versionId, createdAt, timest
   };
 }
 
+function historyRoutesFromPackets(packets) {
+  const routes = [];
+  for (const packet of packets) {
+    const path = parsePath(packet);
+    const hashBytes = packetPathHashBytes(packet, path);
+    if (!path.length) continue;
+    const points = historyRoutePoints(packet);
+    if (!routeSegments(points).length) continue;
+    const id = `${packet.hash || packet.id}:${packet.observer_id || "history"}`;
+    routes.push(routeRecord(
+      packet,
+      points,
+      hashBytes,
+      id,
+      `history:${packet.id || id}`,
+      routeTimestamp(packet, 0),
+    ));
+  }
+  return routes;
+}
+
 async function loadRouteHistory() {
   if (state.routeHistoryLoaded || state.routeHistoryLoading) return;
   state.routeHistoryLoading = true;
   try {
     const data = await getJson(`/api/packets?limit=${ROUTE_HISTORY_LIMIT}`);
     const packets = (data.packets || []).slice().sort((a, b) => Number(b.id) - Number(a.id));
-    for (const packet of packets) {
-      const path = parsePath(packet);
-      const hashBytes = packetPathHashBytes(packet, path);
-      if (!path.length) continue;
-      const points = historyRoutePoints(packet);
-      if (!routeSegments(points).length) continue;
-      const id = `${packet.hash || packet.id}:${packet.observer_id || "history"}`;
-      routeStore.addHistory(routeRecord(
-        packet,
-        points,
-        hashBytes,
-        id,
-        `history:${packet.id || id}`,
-        routeTimestamp(packet, 0),
-      ));
-    }
+    for (const route of historyRoutesFromPackets(packets)) routeStore.addHistory(route);
     state.routeHistoryLoaded = true;
     rebuildNeighborIndex();
     syncRoutePresentation();
@@ -1889,13 +2060,14 @@ function updateFeedPending() {
 function groupFeedRoutes(routes) {
   const groups = new Map();
   for (const route of routes) {
-    const key = `${route.typeLabel}|${route.from}|${route.to}`;
+    const key = route.packetHash || `${route.typeLabel}|${route.from}|${route.to}`;
     const existing = groups.get(key);
     if (existing) {
-      existing.count += 1;
+      existing.ids.add(route.id);
+      existing.count = existing.ids.size;
       if (route.timestamp > existing.route.timestamp) existing.route = route;
     } else {
-      groups.set(key, { route, count: 1 });
+      groups.set(key, { ids: new Set([route.id]), route, count: 1 });
     }
   }
   return [...groups.values()]
@@ -1914,6 +2086,7 @@ function renderFeedNow(groups, emptyText) {
   elements.feed.replaceChildren(...groups.map(({ route, count }) => {
     const item = document.createElement("li");
     item.dataset.hashBytes = String(route.hashBytes);
+    item.dataset.packetHash = route.packetHash || "";
     item.dataset.packetType = String(route.packetType);
     item.style.setProperty("--route-color", route.color);
     item.innerHTML = `
@@ -1923,7 +2096,7 @@ function renderFeedNow(groups, emptyText) {
         <time>${formatTime(route.timestamp)}</time>
       </div>
       <p>${escapeHtml(route.from)} <span>→</span> ${escapeHtml(route.to)}</p>
-      <small>${route.scope?.trim() ? `${escapeHtml(route.scope.trim())} · ` : ""}${formatHops(Math.max(1, route.points.length - 1))} · ${route.hashBytes}B · ${formatObservers(route.observerCount)}</small>
+      <small>${route.scope?.trim() ? `${escapeHtml(route.scope.trim())} · ` : ""}${formatHops(Math.max(1, route.points.length - 1))} · ${route.hashBytes}B · ${formatObservers(count)}</small>
     `;
     item.tabIndex = 0;
     item.setAttribute("role", "button");
@@ -1931,7 +2104,7 @@ function renderFeedNow(groups, emptyText) {
     const openDetail = (event) => {
       event?.preventDefault();
       event?.stopPropagation();
-      openRouteDetail(route, route.bounds?.isValid() ? route.bounds.getCenter() : null);
+      openPacketDetail(route, route.bounds?.isValid() ? route.bounds.getCenter() : null);
     };
     item.addEventListener("click", openDetail);
     item.addEventListener("keydown", (event) => {

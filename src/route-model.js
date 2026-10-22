@@ -81,6 +81,25 @@ export class RouteStore {
       .slice(0, this.feedLimit);
   }
 
+  packetOccurrences(packetHash, filters, now = Date.now()) {
+    const hash = String(packetHash || "").toUpperCase();
+    if (!hash) return [];
+    const cutoff = now - this.retentionMs;
+    const byRouteId = new Map();
+    const add = (route, checkAge) => {
+      if (!route) return;
+      const routeHash = String(route.packetHash || String(route.id || "").split(":")[0]).toUpperCase();
+      if (routeHash !== hash) return;
+      if (checkAge && route.createdAt <= cutoff) return;
+      if (!isRouteVisible(route.packetType, route.hashBytes, filters)) return;
+      const previous = byRouteId.get(route.id);
+      if (!previous || newestFirst(route, previous) < 0) byRouteId.set(route.id, route);
+    };
+    for (const route of this.history) add(route, false);
+    for (const route of this.liveByVersion.values()) add(route, true);
+    return [...byRouteId.values()].sort(newestFirst);
+  }
+
   lastRoutesByNode(filters) {
     const result = new Map();
     const routes = [...this.history, ...this.liveByVersion.values()]

@@ -98,6 +98,9 @@ přihlašovací údaje zůstávají pouze na serveru.
 - `/api/history?since=<ms>&limit=<n>` vrací uložené trasy z vlastní databáze.
   Na něm stojí archivní okna 5 min / 1 h / 24 h a sousedská analýza, takže
   fungují i pro starší data a po restartu.
+- `/api/packet-routes?hash=<hash>` vrací všechny observery, kteří daný paket
+  zaznamenali, z `data/packets.sqlite` (bez ohledu na to, zda jsou v aktuálním
+  feedu). Klik na položku Aktivity zobrazí seznam výskytů a všechny trasy.
 - Režim Live zobrazuje výhradně živé pakety z MQTT (SSE). Při výpadku MQTT se
   tedy nevykreslují žádné trasy — žádná zastaralá cache se nepoužívá.
 - Proti nereálným trasám: u přímých tras (`Direct`, `TransportDirect`) se
@@ -106,7 +109,8 @@ přihlašovací údaje zůstávají pouze na serveru.
   hop trasu přeruší místo spojení přes celou mapu.
 - Každý observer publikuje vlastní MQTT pozorování. Aktivní trasy se identifikují
   kombinací hashe paketu a observeru; novější varianta stejné trasy nahradí
-  předchozí.
+  předchozí. Feed seskupuje záznamy podle hashe paketu a kliknutím zobrazí
+  všechny observery, kteří paket zaznamenali.
 - Lokální proxy je nutná, protože Analyzer neposílá CORS hlavičky.
 
 Trasy se vykreslují pro všechny délky hop prefixů (včetně 1B). U hopu, který

@@ -60,6 +60,52 @@ test("route timestamps fall back across invalid values and support SQLite and ep
   assert.equal(routeTimestamp({ latest: null }, 456_000), 456_000);
 });
 
+test("packet occurrences keep every observer and the newest version per observer", () => {
+  const store = new RouteStore({ retentionMs: 60_000, feedLimit: 8 });
+  store.addLive(route({
+    createdAt: 95_000,
+    id: "AA:observer-a",
+    packetHash: "AA",
+    versionId: "a1",
+  }));
+  store.addLive(route({
+    createdAt: 97_000,
+    id: "AA:observer-a",
+    packetHash: "AA",
+    versionId: "a2",
+  }));
+  store.addLive(route({
+    createdAt: 96_000,
+    id: "AA:observer-b",
+    packetHash: "AA",
+    packetType: 2,
+    versionId: "b1",
+  }));
+  store.addLive(route({
+    createdAt: 98_000,
+    id: "BB:observer-c",
+    packetHash: "BB",
+    versionId: "c1",
+  }));
+  store.addLive(route({
+    createdAt: 10_000,
+    id: "AA:observer-d",
+    packetHash: "AA",
+    versionId: "d1",
+  }));
+  store.addHistory(route({
+    createdAt: 1_000,
+    id: "AA:observer-e",
+    packetHash: "AA",
+    versionId: "history",
+  }));
+
+  const occurrences = store.packetOccurrences("aa", allRoutes, 100_000);
+  assert.deepEqual(occurrences.map((entry) => entry.versionId), ["a2", "b1", "history"]);
+  assert.equal(store.packetOccurrences("aa", primaryTwoByte, 100_000).length, 0);
+  assert.equal(store.packetOccurrences("", allRoutes, 100_000).length, 0);
+});
+
 test("live store evicts the oldest version at its capacity", () => {
   const store = new RouteStore({ retentionMs: 60_000, feedLimit: 8, capacity: 3 });
   for (let index = 0; index < 5; index += 1) {

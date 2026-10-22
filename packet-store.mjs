@@ -79,6 +79,13 @@ export function createPacketStore(dbPath, {
     ORDER BY observed_at DESC
     LIMIT ?
   `);
+  const selectHash = db.prepare(`
+    SELECT hash, observer_id, observed_at, payload_type, route_type, path_hash_bytes,
+      path_json, resolved_path, observer_name, observer_iata, scope_name, snr, rssi, decoded_json
+    FROM packet_routes
+    WHERE hash = ?
+    ORDER BY observed_at DESC
+  `);
   const purgeOld = db.prepare("DELETE FROM packet_routes WHERE observed_at < ?");
   const purgeOverflow = db.prepare(`
     DELETE FROM packet_routes WHERE rowid IN (
@@ -108,6 +115,10 @@ export function createPacketStore(dbPath, {
       if (total > maxRows) purgeOverflow.run(total - maxRows);
     },
     querySince: (sinceMs, limit = 4000) => selectSince.all(Math.floor(sinceMs), Math.floor(limit)).map((row) => ({
+      ...row,
+      resolved_path: safeArray(row.resolved_path),
+    })),
+    queryHash: (hash) => selectHash.all(String(hash || "").toLowerCase()).map((row) => ({
       ...row,
       resolved_path: safeArray(row.resolved_path),
     })),

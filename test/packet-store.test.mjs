@@ -61,6 +61,25 @@ test("packet store filters by time, orders newest first and honors the limit", (
   }
 });
 
+test("packet store returns every observer for a packet hash", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-packets-"));
+  const store = createPacketStore(join(directory, "packets.sqlite"), { retentionMs: 60_000 });
+  try {
+    store.record([
+      row({ hash: "abcd", observer_id: "o1", observed_at: 2_000 }),
+      row({ hash: "abcd", observer_id: "o2", observed_at: 3_000 }),
+      row({ hash: "abce", observer_id: "o3", observed_at: 4_000 }),
+    ]);
+    const rows = store.queryHash("ABCD");
+    assert.deepEqual(rows.map((entry) => entry.observer_id), ["o2", "o1"]);
+    assert.deepEqual(store.queryHash("abce").map((entry) => entry.observer_id), ["o3"]);
+    assert.equal(store.queryHash("ffff").length, 0);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("packet store prunes expired rows and overflow beyond the cap", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-packets-"));
   const store = createPacketStore(join(directory, "packets.sqlite"), { retentionMs: 5_000, maxRows: 2 });

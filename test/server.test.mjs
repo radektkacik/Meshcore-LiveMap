@@ -107,6 +107,10 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.ok((await terrainTile.arrayBuffer()).byteLength > 0);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/terrain/11/9999/1.png`)).status, 400);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/terrain/20/1/1.png`)).status, 400);
+    const packetRoutes = await fetch(`http://127.0.0.1:${appPort}/api/packet-routes?hash=abcd1234`);
+    assert.equal(packetRoutes.status, 200);
+    assert.equal((await packetRoutes.json()).count, 0);
+    assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/packet-routes?hash=xyz`)).status, 400);
     const nodesFresh = await fetch(`http://127.0.0.1:${appPort}/api/nodes?limit=2000`);
     assert.equal(nodesFresh.status, 200);
     nodesFail = true;

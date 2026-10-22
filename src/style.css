@@ -349,6 +349,20 @@ html[data-theme="dark"] .node-history-tip { color: #17271f; background: #e6ecef;
 .route-popup-actions { padding: 0 15px 14px; }
 .route-show-on-map { width: 100%; padding: 9px 10px; border: 1px solid rgba(7, 142, 98, 0.32); border-radius: 7px; color: #087a57; background: #edf7f1; font-size: 11px; font-weight: 700; cursor: pointer; }
 .route-show-on-map:hover { border-color: var(--green); background: #e4f3ea; }
+.packet-hash { display: inline-block; max-width: 100%; overflow: hidden; color: #33493e; font: 11px "DM Mono", monospace; text-overflow: ellipsis; white-space: nowrap; }
+.packet-occurrence-list { list-style: none; margin: 0; padding: 0 15px 8px; }
+.packet-occurrence-list li { display: grid; grid-template-columns: 1fr 24px; align-items: stretch; border-bottom: 1px solid rgba(30, 65, 49, 0.08); }
+.packet-occurrence-list li:last-child { border-bottom: 0; }
+.packet-occurrence { display: grid; gap: 2px; padding: 8px 0; border: 0; color: inherit; background: none; text-align: left; cursor: pointer; }
+.packet-occurrence:hover .packet-observer { color: var(--green); }
+.packet-observer { overflow: hidden; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.packet-occurrence small { color: var(--muted); font: 10px/1.4 "DM Mono", monospace; }
+.packet-occurrence .packet-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.packet-occurrence-detail { border: 0; color: #7c8e85; background: none; font-size: 20px; line-height: 1; cursor: pointer; }
+.packet-occurrence-detail:hover { color: var(--green); }
+html[data-theme="dark"] .packet-occurrence-list li { border-color: rgba(255, 255, 255, 0.08); }
+html[data-theme="dark"] .packet-hash { color: #cfe0d7; }
+html[data-theme="dark"] .packet-occurrence-detail { color: #9fb0b8; }
 html[data-theme="dark"] .data-stale { color: #ffc46b; background: rgba(216, 116, 18, 0.22); }
 html[data-theme="dark"] .route-feed li:hover { background: rgba(95, 208, 165, 0.08); }
 html[data-theme="dark"] .node-stack-popup .leaflet-popup-content-wrapper,

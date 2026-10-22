@@ -941,6 +941,25 @@ async function handleRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/packet-routes") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      return;
+    }
+    const hash = String(url.searchParams.get("hash") || "").trim().toLowerCase();
+    if (!/^[0-9a-f]{4,64}$/.test(hash)) {
+      sendJson(response, 400, { error: "Neplatný hash paketu." });
+      return;
+    }
+    const packets = packetStore.queryHash(hash).map(historyRowToPacket);
+    response.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+    });
+    response.end(JSON.stringify({ count: packets.length, packets }));
+    return;
+  }
+
   if (url.pathname === "/api/history") {
     if (request.method !== "GET" && request.method !== "HEAD") {
       response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
