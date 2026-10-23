@@ -116,6 +116,8 @@
 | 2026-10-23 11:25 | `20261023T112546Z.tar.gz` | `20261023-1125-f62ba77` | Prod: stejná úprava; ověřeno na trace `7474edc7d4a281db` | `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-23 11:44 | `20261023T114423Z.tar.gz` (stage APP_DIR) | `20261023-1144-ebf7dd4` | Beta: režim Historie v Aktivite – posledních 300 paketů ze 7 dní, s datem a klikem do detailu | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-23 11:45 | `20261023T114503Z.tar.gz` | `20261023-1145-ebf7dd4` | Prod: stejná historie paketů (300 položek), ověřeno na produkci | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
+| 2026-10-23 11:54 | `20261023T115427Z.tar.gz` (stage APP_DIR) | `20261023-1154-8331928` | Beta: filtry historie – hledání observer/uze/hashe, typ paketu, okno 1 h/24 h/7 dní | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
+| 2026-10-23 11:54 | `20261023T115439Z.tar.gz` | `20261023-1154-8331928` | Prod: stejné filtry historie; ověřeno (300 → 123 TRACE, hledání 130) | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -156,11 +158,11 @@ stávající `node_modules`; jinak závislosti doinstaluje:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261023T114503Z` má v záloze předchozí verzi
-(build `20261023-1125-f62ba77`); návrat na ni se provede stejným ID:
+Aktuální produkční release `20261023T115439Z` má v záloze předchozí verzi
+(build `20261023-1145-ebf7dd4`); návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T114503Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T115439Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`;
