@@ -157,6 +157,22 @@
               <button id="activity-pause" class="activity-pause" type="button" aria-pressed="false"></button>
             </div>
           </header>
+          <div id="history-filters" class="history-filters" hidden>
+            <input id="history-search" type="search" autocomplete="off" placeholder="Hledat observer, uzel nebo hash…" />
+            <select id="history-type" aria-label="Typ paketu">
+              <option value="">Vše</option>
+              <option value="4">ADVERT</option>
+              <option value="5">CHANNEL</option>
+              <option value="9">TRACE</option>
+              <option value="2">DIRECT</option>
+              <option value="other">Ostatní</option>
+            </select>
+            <select id="history-window" aria-label="Časové okno historie">
+              <option value="3600000">1 h</option>
+              <option value="86400000">24 h</option>
+              <option value="604800000" selected>7 dní</option>
+            </select>
+          </div>
           <ol id="route-feed" class="route-feed">
             <li class="feed-empty">Čekám na paket s trasou…</li>
           </ol>

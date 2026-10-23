@@ -158,6 +158,11 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .activity-pause, .activity-new { padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; color: #49665b; background: #fff; font: 9px "DM Mono", monospace; cursor: pointer; white-space: nowrap; }
 .activity-history { padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; color: #49665b; background: #fff; font: 9px "DM Mono", monospace; cursor: pointer; white-space: nowrap; }
 .activity-history.active { color: #fff; background: #246aa6; border-color: #246aa6; }
+.history-filters { display: flex; gap: 5px; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+.history-filters[hidden] { display: none; }
+.history-filters input { flex: 1 1 auto; min-width: 0; padding: 5px 6px; border: 1px solid var(--line); border-radius: 5px; color: #33493e; background: #fff; font: 10px "DM Mono", monospace; }
+.history-filters select { flex: 0 0 auto; max-width: 92px; padding: 5px 4px; border: 1px solid var(--line); border-radius: 5px; color: #49665b; background: #fff; font: 9px "DM Mono", monospace; }
+html[data-theme="dark"] .history-filters input, html[data-theme="dark"] .history-filters select { color: #d7e2dc; background: #1b232b; border-color: #2f3d46; }
 html[data-theme="dark"] .activity-history { color: #b9c9d2; background: #1b232b; border-color: #2f3d46; }
 html[data-theme="dark"] .activity-history.active { color: #fff; background: #2f6fa6; border-color: #2f6fa6; }
 .activity-pause:hover { color: var(--green); border-color: rgba(7, 142, 98, 0.4); }

@@ -122,6 +122,10 @@ document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) === "da
 const elements = {
   activityNew: document.querySelector("#activity-new"),
   activityHistory: document.querySelector("#activity-history"),
+  historyFilters: document.querySelector("#history-filters"),
+  historySearch: document.querySelector("#history-search"),
+  historyType: document.querySelector("#history-type"),
+  historyWindow: document.querySelector("#history-window"),
   activityTitle: document.querySelector("#activity-title"),
   activityTitleText: document.querySelector("#activity-title-text"),
   activityPanel: document.querySelector("#activity-panel"),
@@ -2273,10 +2277,36 @@ function updateFeed(routes, emptyText = t("feed.empty"), { immediate = false } =
   }, FEED_RENDER_INTERVAL_MS - elapsed);
 }
 
+function filteredHistoryRoutes() {
+  const query = elements.historySearch.value.trim().toLowerCase();
+  const type = elements.historyType.value;
+  const cutoff = Date.now() - Number(elements.historyWindow.value);
+  return feedState.historyRoutes.filter((route) => {
+    if (route.timestamp < cutoff) return false;
+    if (type === "other") {
+      if ([2, 4, 5, 9].includes(Number(route.packetType))) return false;
+    } else if (type && Number(route.packetType) !== Number(type)) {
+      return false;
+    }
+    if (!query) return true;
+    const text = [
+      route.packetHash,
+      route.from,
+      route.to,
+      route.observerName,
+      route.observerId,
+      route.scope,
+    ].filter(Boolean).join(" ").toLowerCase();
+    return text.includes(query);
+  });
+}
+
 function renderHistoryFeed() {
-  const routes = feedState.historyRoutes
+  const routes = filteredHistoryRoutes()
     .filter((route) => isRouteVisible(route.packetType, route.hashBytes, state));
-  renderFeedNow(groupFeedRoutes(routes, HISTORY_FEED_ITEMS), t("activity.historyEmpty"), { history: true });
+  const groups = groupFeedRoutes(routes, HISTORY_FEED_ITEMS);
+  elements.activityTitleText.textContent = `${t("activity.historyTitle")} (${formatNumber(groups.length)})`;
+  renderFeedNow(groups, t("activity.historyEmpty"), { history: true });
 }
 
 async function loadHistoryFeed(force = false) {
@@ -2310,6 +2340,7 @@ function setFeedMode(mode) {
   elements.activityHistory.title = t(history ? "activity.liveHint" : "activity.historyHint");
   elements.activityTitleText.textContent = t(history ? "activity.historyTitle" : "activity.liveTitle");
   elements.activityPause.hidden = history;
+  elements.historyFilters.hidden = !history;
   if (history) {
     setFeedBadge();
     void loadHistoryFeed();
@@ -2340,6 +2371,11 @@ elements.packetFocusClose.addEventListener("click", exitPacketFocus);
 elements.activityHistory.addEventListener("click", () => {
   setFeedMode(feedState.mode === "history" ? "live" : "history");
 });
+for (const input of [elements.historySearch, elements.historyType, elements.historyWindow]) {
+  input.addEventListener("input", () => {
+    if (feedState.mode === "history") renderHistoryFeed();
+  });
+}
 elements.activityPause.addEventListener("click", () => {
   feedState.manualPaused = !feedState.manualPaused;
   clearTimeout(feedState.resumeTimer);
