@@ -124,6 +124,8 @@
 | 2026-10-23 12:29 | `20261023T122929Z.tar.gz` | `20261023-1229-9f3b83b` | Prod: stejný checkbox Observeři; ověřeno zapnutí/vypnutí bez chyb | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-23 12:36 | `20261023T123602Z.tar.gz` (stage APP_DIR) | `20261023-1236-ebfe25f` | Beta: filtr přejmenován na „Typ nodu“, label „Observery“; české plurály observerů upraveny | `index.html`, `src/i18n.js` |
 | 2026-10-23 12:36 | `20261023T123614Z.tar.gz` | `20261023-1236-ebfe25f` | Prod: stejné přejmenování; ověřeno v HTML produkce | `index.html`, `src/i18n.js` |
+| 2026-10-23 12:39 | `20261023T123931Z.tar.gz` (stage APP_DIR) | `20261023-1239-fdd61b8` | Beta: label vrstvy jen „Observer“ | `index.html`, `src/i18n.js` |
+| 2026-10-23 12:39 | `20261023T123943Z.tar.gz` | `20261023-1239-fdd61b8` | Prod: label vrstvy jen „Observer“ | `index.html`, `src/i18n.js` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -164,11 +166,11 @@ stávající `node_modules`; jinak závislosti doinstaluje:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261023T123614Z` má v záloze předchozí verzi
-(build `20261023-1229-9f3b83b`); návrat na ni se provede stejným ID:
+Aktuální produkční release `20261023T123943Z` má v záloze předchozí verzi
+(build `20261023-1236-ebfe25f`); návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T123614Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T123943Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`;
