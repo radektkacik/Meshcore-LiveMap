@@ -109,6 +109,9 @@ const ALL_HASH_SIZES = [1, 2, 3];
 const mobileSheetQuery = window.matchMedia("(max-width: 700px)");
 const FORCE_MOBILE_SHEET = INITIAL_PARAMS.get("sheet") === "1";
 const INITIAL_NODE_KEY = INITIAL_PARAMS.get("node")?.trim().toUpperCase() || null;
+const INITIAL_PACKET_HASH = /^[0-9a-f]{4,64}$/i.test(INITIAL_PARAMS.get("packet") || "")
+  ? INITIAL_PARAMS.get("packet").toLowerCase()
+  : null;
 const INITIAL_ZOOM = Number(INITIAL_PARAMS.get("z"));
 
 const THEME_KEY = "meshcoreTheme";
@@ -830,6 +833,16 @@ function mergePacketOccurrences(primary, extra) {
     if (!previous || route.timestamp > previous.timestamp) byRouteId.set(route.id, route);
   }
   return [...byRouteId.values()].sort((a, b) => b.timestamp - a.timestamp);
+}
+
+async function openPacketByHash(hash) {
+  try {
+    const data = await getJson(`/api/packet-routes?hash=${encodeURIComponent(hash)}`);
+    const routes = await historyRoutesFromPackets(data.packets || []);
+    if (routes.length) await openPacketDetail(routes[0]);
+  } catch (error) {
+    console.error("Paket se nepodařilo otevřít", error);
+  }
 }
 
 async function openPacketDetail(route, latlng = null) {
@@ -3859,6 +3872,7 @@ async function start() {
   await releasePendingPackets();
   if (!nodesLoaded) setConnection(false, t("connection.nodesFailed"));
   if (initialLosLink) initSharedLos(initialLosLink);
+  if (INITIAL_PACKET_HASH) void openPacketByHash(INITIAL_PACKET_HASH);
 }
 
 start();
