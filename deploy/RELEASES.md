@@ -108,6 +108,8 @@
 | 2026-10-23 10:39 | `20261023T103904Z.tar.gz` | `20261023-1039-0ae3c85` | Prod: stejné ukládání TRACE a deep link; ověřen konkrétní trace `0d9ceba5a4044d01` | `server.mjs`, `src/main.js` |
 | 2026-10-23 10:45 | `20261023T104509Z.tar.gz` (stage APP_DIR) | `20261023-1045-410e71a` | Beta: SNR jednotlivých skoků v detailu paketu i v seznamu hopů trasy | `src/main.js`, `src/i18n.js` |
 | 2026-10-23 10:45 | `20261023T104521Z.tar.gz` | `20261023-1045-410e71a` | Prod: stejné zobrazení SNR jednotlivých skoků; ověřeno na trace `2d0d849c6ffde594` | `src/main.js`, `src/i18n.js` |
+| 2026-10-23 10:52 | `20261023T105203Z.tar.gz` (stage APP_DIR) | `20261023-1052-23698f3` | Beta: SNR skoků se u TRACE zobrazuje vždy (i „—“ bez naměřených hodnot) | `src/main.js`, `src/i18n.js` |
+| 2026-10-23 10:52 | `20261023T105216Z.tar.gz` | `20261023-1052-23698f3` | Prod: stejná úprava; ověřeno na trace `7474edc7d4a281db` | `src/main.js`, `src/i18n.js` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -148,11 +150,11 @@ stávající `node_modules`; jinak závislosti doinstaluje:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261023T104521Z` má v záloze předchozí verzi
-(build `20261023-1039-0ae3c85`); návrat na ni se provede stejným ID:
+Aktuální produkční release `20261023T105216Z` má v záloze předchozí verzi
+(build `20261023-1045-410e71a`); návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T104521Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T105216Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`;
