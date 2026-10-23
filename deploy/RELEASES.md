@@ -98,6 +98,8 @@
 | 2026-10-22 18:53 | `20261022T185348Z.tar.gz` (stage APP_DIR) | `20261022-1853-fdc507e` | Beta: stejná finální verze jako produkce (focus režim + popup mimo HUD) | `src/main.js`, `index.html`, `src/style.css`, `src/i18n.js`, `README.md` |
 | 2026-10-23 08:10 | `20261023T081039Z.tar.gz` (stage APP_DIR) | `20261023-0810-1e9579d` | Beta: historické trasy mají stejný limit hopu jako živé (150 km), odstraňuje nereálné dlouhé spojnice | `src/main.js` |
 | 2026-10-23 08:11 | `20261023T081103Z.tar.gz` | `20261023-0811-1e9579d` | Prod: stejná oprava nereálných dlouhých hopů u historických tras; focus režim ověřen na živém paketu | `src/main.js` |
+| 2026-10-23 08:25 | `20261023T082529Z.tar.gz` (stage APP_DIR) | `20261023-0825-5c62264` | Beta: tlačítko „Zobrazit všechny trasy“ přesunuto nahoru nad seznam výskytů, nemusí se scrollovat | `src/main.js`, `src/style.css` |
+| 2026-10-23 08:26 | `20261023T082609Z.tar.gz` | `20261023-0826-5c62264` | Prod: stejné přesunutí akce „Zobrazit všechny trasy“ nahoru; ověřeno, tlačítko je viditelné bez scrollu | `src/main.js`, `src/style.css` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -138,11 +140,11 @@ stávající `node_modules`; jinak závislosti doinstaluje:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261023T081103Z` má v záloze předchozí verzi
-(build `20261022-1852-fdc507e`); návrat na ni se provede stejným ID:
+Aktuální produkční release `20261023T082609Z` má v záloze předchozí verzi
+(build `20261023-0811-1e9579d`); návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T081103Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T082609Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`;
