@@ -96,6 +96,8 @@
 | 2026-10-22 18:39 | `20261022T183926Z.tar.gz` (stage APP_DIR) | `20261022-1839-7d0868a` | Beta: režim pouze vybraného paketu (živý provoz skrytý), trvalé zobrazení do „Zrušit výběr“/Escape; popup už nezajíždí pod levý HUD | `index.html`, `src/main.js`, `src/style.css`, `src/i18n.js`, `README.md` |
 | 2026-10-22 18:52 | `20261022T185253Z.tar.gz` | `20261022-1852-fdc507e` | Prod: výběr paketu se všemi observery, focus režim jen vybraných tras a popup umístěný mimo levý HUD i mimo okraj obrazovky | `packet-store.mjs`, `server.mjs`, `src/main.js`, `src/route-model.js`, `src/i18n.js`, `src/style.css`, `index.html`, `test/*`, `README.md` |
 | 2026-10-22 18:53 | `20261022T185348Z.tar.gz` (stage APP_DIR) | `20261022-1853-fdc507e` | Beta: stejná finální verze jako produkce (focus režim + popup mimo HUD) | `src/main.js`, `index.html`, `src/style.css`, `src/i18n.js`, `README.md` |
+| 2026-10-23 08:10 | `20261023T081039Z.tar.gz` (stage APP_DIR) | `20261023-0810-1e9579d` | Beta: historické trasy mají stejný limit hopu jako živé (150 km), odstraňuje nereálné dlouhé spojnice | `src/main.js` |
+| 2026-10-23 08:11 | `20261023T081103Z.tar.gz` | `20261023-0811-1e9579d` | Prod: stejná oprava nereálných dlouhých hopů u historických tras; focus režim ověřen na živém paketu | `src/main.js` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -136,11 +138,11 @@ stávající `node_modules`; jinak závislosti doinstaluje:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261022T185253Z` má v záloze předchozí verzi
-(build `20261021-1424-cf44121`); návrat na ni se provede stejným ID:
+Aktuální produkční release `20261023T081103Z` má v záloze předchozí verzi
+(build `20261022-1852-fdc507e`); návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261022T185253Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T081103Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`;
