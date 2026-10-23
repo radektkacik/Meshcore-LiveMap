@@ -350,6 +350,7 @@ html[data-theme="dark"] .node-history-tip { color: #17271f; background: #e6ecef;
 .route-show-on-map { width: 100%; padding: 9px 10px; border: 1px solid rgba(7, 142, 98, 0.32); border-radius: 7px; color: #087a57; background: #edf7f1; font-size: 11px; font-weight: 700; cursor: pointer; }
 .route-show-on-map:hover { border-color: var(--green); background: #e4f3ea; }
 .packet-hash { display: inline-block; max-width: 100%; overflow: hidden; color: #33493e; font: 11px "DM Mono", monospace; text-overflow: ellipsis; white-space: nowrap; }
+.packet-hop-snr { color: #087a57 !important; }
 .packet-actions-top { padding: 10px 15px 0; }
 .packet-occurrence-list { list-style: none; margin: 0; padding: 0 15px 8px; }
 .packet-occurrence-list li { display: grid; grid-template-columns: 1fr 24px; align-items: stretch; border-bottom: 1px solid rgba(30, 65, 49, 0.08); }

@@ -729,10 +729,10 @@ function packetDetailHtml(occurrences) {
         <button class="packet-occurrence" data-index="${index}" type="button">
           <span class="packet-observer">${escapeHtml(packetObserverLabel(route))}</span>
           <small>${meta}</small>
-          ${hopSnr ? `<small>${escapeHtml(hopSnr)}</small>` : ""}
+          ${hopSnr ? `<small class="packet-hop-snr">${escapeHtml(hopSnr)}</small>` : ""}
           <small class="packet-path">${escapeHtml(route.from)} → ${escapeHtml(route.to)}</small>
         </button>
-        <button class="packet-occurrence-detail" data-index="${index}" type="button" title="${escapeHtml(t("packet.routeDetail"))}" aria-label="${escapeHtml(t("packet.routeDetail"))}">›</button>
+        <button class="packet-occurrence-detail" data-index="${index}" type="button" title="${escapeHtml(t("packet.showRoute"))}" aria-label="${escapeHtml(t("packet.showRoute"))}">↗</button>
       </li>
     `;
   }).join("");
@@ -763,7 +763,7 @@ function bindPacketActions(root, occurrences, close) {
       const route = occurrences[Number(button.dataset.index)];
       if (!route) return;
       close();
-      showPacketOnMap([route]);
+      setTimeout(() => openRouteDetail(route, route.bounds?.isValid() ? route.bounds.getCenter() : null), 0);
     });
   }
   for (const button of root.querySelectorAll(".packet-occurrence-detail")) {
@@ -773,7 +773,7 @@ function bindPacketActions(root, occurrences, close) {
       const route = occurrences[Number(button.dataset.index)];
       if (!route) return;
       close();
-      setTimeout(() => openRouteDetail(route, route.bounds?.isValid() ? route.bounds.getCenter() : null), 0);
+      showPacketOnMap([route]);
     });
   }
   root.querySelector(".packet-show-all")?.addEventListener("click", (event) => {
