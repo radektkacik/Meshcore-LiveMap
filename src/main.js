@@ -732,11 +732,11 @@ function packetDetailHtml(occurrences) {
         <code class="packet-hash" title="${escapeHtml(hash)}">${escapeHtml(hash.slice(0, 20))}${hash.length > 20 ? "…" : ""}</code>
         <small>${tCount("packet.occurrences", occurrences.length)} · ${tCount("units.observers", observers.size)}</small>
       </div>
-      <h4>${t("packet.observations")}</h4>
-      <ol class="packet-occurrence-list">${rows}</ol>
-      <div class="route-popup-actions">
+      <div class="route-popup-actions packet-actions-top">
         <button class="route-show-on-map packet-show-all" type="button">${t("packet.showAll")}</button>
       </div>
+      <h4>${t("packet.observations")}</h4>
+      <ol class="packet-occurrence-list">${rows}</ol>
     </section>
   `;
 }
@@ -786,7 +786,6 @@ function showPacketOnMap(occurrences) {
   state.selectedRouteId = newest?.id || null;
   state.selectedRouteHashBytes = newest?.hashBytes || 0;
   state.selectedRoutePacketType = newest?.packetType ?? null;
-  window.__lastPacketFocus = occurrences.map((route) => ({ observer: packetObserverLabel(route), id: route.id, points: route.points }));
   const bounds = L.latLngBounds([]);
   for (const route of [...occurrences].reverse()) {
     const highlighted = route === newest;
