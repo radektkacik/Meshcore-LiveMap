@@ -379,7 +379,14 @@ function toStoreRow(packet, now) {
   const observerId = String(packet.observer_id || "");
   if (!hash || !observerId) return null;
   const resolved = Array.isArray(packet.resolved_path) ? packet.resolved_path : [];
-  if (!resolved.some(Boolean)) return null;
+  let path = [];
+  try {
+    const parsed = JSON.parse(typeof packet.path_json === "string" ? packet.path_json : "[]");
+    if (Array.isArray(parsed)) path = parsed;
+  } catch {
+    path = [];
+  }
+  if (!resolved.some(Boolean) && !path.length) return null;
   const observedAt = Date.parse(packet.timestamp || packet.first_seen || "");
   return {
     decoded_json: packet.decoded_json || "",

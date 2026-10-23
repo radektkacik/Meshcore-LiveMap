@@ -839,7 +839,7 @@ async function openPacketDetail(route, latlng = null) {
   if (!occurrences.length) occurrences = [route];
   try {
     const data = await getJson(`/api/packet-routes?hash=${encodeURIComponent(hash)}`);
-    occurrences = mergePacketOccurrences(occurrences, historyRoutesFromPackets(data.packets || []));
+    occurrences = mergePacketOccurrences(occurrences, await historyRoutesFromPackets(data.packets || []));
   } catch (error) {
     console.error("Výskyty paketu se nepodařilo načíst", error);
   }
@@ -1963,13 +1963,22 @@ function routeRecord(packet, points, hashBytes, id, versionId, createdAt, timest
   };
 }
 
-function historyRoutesFromPackets(packets) {
+async function historyRoutesFromPackets(packets) {
+  const pendingPrefixes = new Set();
+  for (const packet of packets) {
+    const resolved = Array.isArray(packet.resolved_path) ? packet.resolved_path : [];
+    if (resolved.some(Boolean)) continue;
+    for (const prefix of parsePath(packet)) pendingPrefixes.add(prefix);
+  }
+  if (pendingPrefixes.size) await resolvePrefixes([...pendingPrefixes]);
+
   const routes = [];
   for (const packet of packets) {
     const path = parsePath(packet);
     const hashBytes = packetPathHashBytes(packet, path);
     if (!path.length) continue;
-    const points = historyRoutePoints(packet);
+    const resolved = Array.isArray(packet.resolved_path) ? packet.resolved_path : [];
+    const points = resolved.some(Boolean) ? historyRoutePoints(packet) : packetPoints(packet, path);
     if (!routeSegments(points).length) continue;
     const id = `${packet.hash || packet.id}:${packet.observer_id || "history"}`;
     routes.push(routeRecord(
@@ -1990,7 +1999,7 @@ async function loadRouteHistory() {
   try {
     const data = await getJson(`/api/packets?limit=${ROUTE_HISTORY_LIMIT}`);
     const packets = (data.packets || []).slice().sort((a, b) => Number(b.id) - Number(a.id));
-    for (const route of historyRoutesFromPackets(packets)) routeStore.addHistory(route);
+    for (const route of await historyRoutesFromPackets(packets)) routeStore.addHistory(route);
     state.routeHistoryLoaded = true;
     rebuildNeighborIndex();
     syncRoutePresentation();
