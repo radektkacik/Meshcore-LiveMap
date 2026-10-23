@@ -714,8 +714,10 @@ function packetDetailHtml(occurrences) {
   const observers = new Set(occurrences.map((route) => route.observerId || route.id));
   const rows = occurrences.map((route, index) => {
     const snr = Number.isFinite(route.snr) ? `SNR ${formatDecimal(route.snr, 1)} dB` : null;
-    const hopSnr = route.snrValues?.length
-      ? t("packet.hopSnr", { values: route.snrValues.map((value) => formatDecimal(value, 1)).join(" / ") })
+    const hopSnr = Number(route.packetType) === 9
+      ? t(route.snrValues?.length ? "packet.hopSnr" : "packet.hopSnrEmpty", {
+        values: route.snrValues?.map((value) => formatDecimal(value, 1)).join(" / "),
+      })
       : null;
     const meta = [
       formatTime(route.timestamp),

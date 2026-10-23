@@ -190,6 +190,7 @@ const cs = {
   "packet.focusRoutes": { one: "{count} trasa", few: "{count} trasy", other: "{count} tras" },
   "packet.focusLiveHidden": "živý provoz skrytý",
   "packet.hopSnr": "SNR skoků: {values} dB",
+  "packet.hopSnrEmpty": "SNR skoků: —",
 };
 
 const en = {
@@ -380,6 +381,7 @@ const en = {
   "packet.focusRoutes": { one: "{count} route", other: "{count} routes" },
   "packet.focusLiveHidden": "live traffic hidden",
   "packet.hopSnr": "Hop SNR: {values} dB",
+  "packet.hopSnrEmpty": "Hop SNR: —",
 };
 
 export const TRANSLATIONS = { cs, en };
