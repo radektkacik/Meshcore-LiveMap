@@ -667,7 +667,10 @@ function routeDetailHtml(route) {
       totalMeters += meters;
       distance = `${formatDecimal(meters / 1000, 1)} km`;
     }
-    return `<li><i>${index + 1}</i><span>${escapeHtml(point.name || t("common.unknownShort"))}</span><small>${escapeHtml(distance)}</small></li>`;
+    const hopSnr = index > 0 ? route.snrValues?.[index - 1] : null;
+    const detail = [distance, Number.isFinite(hopSnr) ? `SNR ${formatDecimal(hopSnr, 1)} dB` : null]
+      .filter(Boolean).map((value) => escapeHtml(value)).join(" · ");
+    return `<li><i>${index + 1}</i><span>${escapeHtml(point.name || t("common.unknownShort"))}</span><small>${detail}</small></li>`;
   }).join("");
   const snr = route.snrValues?.length
     ? `${t("route.snr")} ${route.snrValues.map((value) => formatDecimal(value, 1)).join(" / ")} dB`
@@ -711,6 +714,9 @@ function packetDetailHtml(occurrences) {
   const observers = new Set(occurrences.map((route) => route.observerId || route.id));
   const rows = occurrences.map((route, index) => {
     const snr = Number.isFinite(route.snr) ? `SNR ${formatDecimal(route.snr, 1)} dB` : null;
+    const hopSnr = route.snrValues?.length
+      ? t("packet.hopSnr", { values: route.snrValues.map((value) => formatDecimal(value, 1)).join(" / ") })
+      : null;
     const meta = [
       formatTime(route.timestamp),
       formatHops(Math.max(1, route.points.length - 1)),
@@ -721,6 +727,7 @@ function packetDetailHtml(occurrences) {
         <button class="packet-occurrence" data-index="${index}" type="button">
           <span class="packet-observer">${escapeHtml(packetObserverLabel(route))}</span>
           <small>${meta}</small>
+          ${hopSnr ? `<small>${escapeHtml(hopSnr)}</small>` : ""}
           <small class="packet-path">${escapeHtml(route.from)} → ${escapeHtml(route.to)}</small>
         </button>
         <button class="packet-occurrence-detail" data-index="${index}" type="button" title="${escapeHtml(t("packet.routeDetail"))}" aria-label="${escapeHtml(t("packet.routeDetail"))}">›</button>

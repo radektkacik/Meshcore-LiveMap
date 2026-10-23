@@ -189,6 +189,7 @@ const cs = {
   "packet.occurrences": { one: "{count} výskyt", few: "{count} výskyty", other: "{count} výskytů" },
   "packet.focusRoutes": { one: "{count} trasa", few: "{count} trasy", other: "{count} tras" },
   "packet.focusLiveHidden": "živý provoz skrytý",
+  "packet.hopSnr": "SNR skoků: {values} dB",
 };
 
 const en = {
@@ -378,6 +379,7 @@ const en = {
   "packet.occurrences": { one: "{count} occurrence", other: "{count} occurrences" },
   "packet.focusRoutes": { one: "{count} route", other: "{count} routes" },
   "packet.focusLiveHidden": "live traffic hidden",
+  "packet.hopSnr": "Hop SNR: {values} dB",
 };
 
 export const TRANSLATIONS = { cs, en };
