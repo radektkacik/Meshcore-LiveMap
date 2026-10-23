@@ -786,6 +786,7 @@ function showPacketOnMap(occurrences) {
   state.selectedRouteId = newest?.id || null;
   state.selectedRouteHashBytes = newest?.hashBytes || 0;
   state.selectedRoutePacketType = newest?.packetType ?? null;
+  window.__lastPacketFocus = occurrences.map((route) => ({ observer: packetObserverLabel(route), id: route.id, points: route.points }));
   const bounds = L.latLngBounds([]);
   for (const route of [...occurrences].reverse()) {
     const highlighted = route === newest;
