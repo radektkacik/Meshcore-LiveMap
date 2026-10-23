@@ -120,6 +120,8 @@
 | 2026-10-23 11:54 | `20261023T115439Z.tar.gz` | `20261023-1154-8331928` | Prod: stejné filtry historie; ověřeno (300 → 123 TRACE, hledání 130) | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-23 12:18 | `20261023T121821Z.tar.gz` (stage APP_DIR) | `20261023-1218-7d0320c` | Beta: vrstva observerů – přesná poloha z uzlu, jinak přibližná podle IATA; popup s daty | `index.html`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-23 12:19 | `20261023T121916Z.tar.gz` | `20261023-1219-7d0320c` | Prod: stejná vrstva observerů; `/api/observers` 200, 50 observerů | `index.html`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css` |
+| 2026-10-23 12:29 | `20261023T122917Z.tar.gz` (stage APP_DIR) | `20261023-1229-9f3b83b` | Beta: observeři jako checkbox v existujících filtrech uzlů, bez samostatného tlačítka | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
+| 2026-10-23 12:29 | `20261023T122929Z.tar.gz` | `20261023-1229-9f3b83b` | Prod: stejný checkbox Observeři; ověřeno zapnutí/vypnutí bez chyb | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -160,11 +162,11 @@ stávající `node_modules`; jinak závislosti doinstaluje:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261023T121916Z` má v záloze předchozí verzi
-(build `20261023-1154-8331928`); návrat na ni se provede stejným ID:
+Aktuální produkční release `20261023T122929Z` má v záloze předchozí verzi
+(build `20261023-1219-7d0320c`); návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T121916Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T122929Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`;
