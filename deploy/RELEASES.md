@@ -100,6 +100,8 @@
 | 2026-10-23 08:11 | `20261023T081103Z.tar.gz` | `20261023-0811-1e9579d` | Prod: stejná oprava nereálných dlouhých hopů u historických tras; focus režim ověřen na živém paketu | `src/main.js` |
 | 2026-10-23 08:25 | `20261023T082529Z.tar.gz` (stage APP_DIR) | `20261023-0825-5c62264` | Beta: tlačítko „Zobrazit všechny trasy“ přesunuto nahoru nad seznam výskytů, nemusí se scrollovat | `src/main.js`, `src/style.css` |
 | 2026-10-23 08:26 | `20261023T082609Z.tar.gz` | `20261023-0826-5c62264` | Prod: stejné přesunutí akce „Zobrazit všechny trasy“ nahoru; ověřeno, tlačítko je viditelné bez scrollu | `src/main.js`, `src/style.css` |
+| 2026-10-23 10:10 | `20261023T101003Z.tar.gz` (stage APP_DIR) | `20261023-1010-70a9e47` | Beta: TRACE trasy s 1B prefixy se zobrazují vždy, i když je filtr 1B vypnutý | `src/route-utils.js`, `test/route-utils.test.mjs`, `README.md` |
+| 2026-10-23 10:10 | `20261023T101019Z.tar.gz` | `20261023-1010-70a9e47` | Prod: stejná oprava – 1B TRACE už filtr velikosti hashe neskrývá | `src/route-utils.js`, `test/route-utils.test.mjs`, `README.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -140,11 +142,11 @@ stávající `node_modules`; jinak závislosti doinstaluje:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261023T082609Z` má v záloze předchozí verzi
-(build `20261023-0811-1e9579d`); návrat na ni se provede stejným ID:
+Aktuální produkční release `20261023T101019Z` má v záloze předchozí verzi
+(build `20261023-0826-5c62264`); návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T082609Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T101019Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`;
