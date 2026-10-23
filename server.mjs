@@ -63,6 +63,7 @@ let nodesCacheWrittenAt = 0;
 const resolveCache = new Map();
 const allowedApiPaths = [
   "/api/nodes",
+  "/api/observers",
   "/api/packets",
   "/api/resolve-hops",
   "/api/stats",

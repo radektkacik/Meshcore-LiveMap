@@ -190,6 +190,7 @@ const elements = {
   mobileSheetClose: document.querySelector("#mobile-sheet-close"),
   mobileSheetContent: document.querySelector("#mobile-sheet-content"),
   nodeLabelsToggle: document.querySelector("#node-labels-toggle"),
+  observersToggle: document.querySelector("#observers-toggle"),
   otherTypesToggle: document.querySelector("#other-types-toggle"),
   packetFocusBar: document.querySelector("#packet-focus-bar"),
   packetFocusClose: document.querySelector("#packet-focus-close"),
@@ -288,6 +289,10 @@ const state = {
   nodeMarkerByKey: new Map(),
   nodeMarkers: [],
   observerByKey: new Map(),
+  observers: [],
+  observersLoadedAt: 0,
+  observersLoading: false,
+  showObservers: false,
   prefixCache: new Map(),
   prefixCacheAt: new Map(),
   prefixRequests: new Map(),
@@ -425,6 +430,7 @@ function setBaseLayer(key) {
 
 const nodeLayer = L.layerGroup().addTo(map);
 const routeLayer = L.layerGroup().addTo(map);
+const observerLayer = L.layerGroup();
 const selectedRouteLayer = L.layerGroup().addTo(map);
 const losLayer = L.layerGroup().addTo(map);
 const losMarkerLayer = L.layerGroup().addTo(map);
@@ -791,6 +797,90 @@ function bindPacketActions(root, occurrences, close) {
     close();
     showPacketOnMap(occurrences);
   });
+}
+
+function observerPosition(observer) {
+  const node = state.nodeByKey.get(String(observer.id || "").toUpperCase());
+  if (node && validCoords(node.lat, node.lon)) {
+    return { lat: node.lat, lon: node.lon, approx: false };
+  }
+  const anchor = observerAnchor(observer.iata);
+  return anchor ? { ...anchor, approx: true } : null;
+}
+
+function observerPopupHtml(observer, position) {
+  const rows = [
+    [t("observers.lastSeen"), observer.last_seen ? formatDateTime(observer.last_seen) : "—"],
+    [t("observers.packets"), Number.isFinite(Number(observer.packet_count)) ? formatNumber(Number(observer.packet_count)) : "—"],
+    [t("observers.model"), observer.model || "—"],
+    [t("observers.firmware"), observer.firmware || "—"],
+  ];
+  return `
+    <section class="observer-popup-card">
+      <header>
+        <h3>${escapeHtml(observer.name || t("packet.unknownObserver"))}</h3>
+        <small>${escapeHtml(observer.iata || "")} · ${t(position.approx ? "observers.approx" : "observers.exact")}</small>
+      </header>
+      <dl>${rows.map(([label, value]) => `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(String(value))}</dd>`).join("")}</dl>
+    </section>
+  `;
+}
+
+function renderObservers() {
+  observerLayer.clearLayers();
+  for (const observer of state.observers) {
+    const position = observerPosition(observer);
+    if (!position) continue;
+    L.circleMarker([position.lat, position.lon], {
+      radius: 5,
+      color: position.approx ? "#b07a2a" : "#6b4bb5",
+      weight: 2,
+      dashArray: position.approx ? "3 3" : null,
+      fillColor: "#ffffff",
+      fillOpacity: 0.95,
+      pane: "markerPane",
+    })
+      .bindTooltip(`${position.approx ? "≈ " : ""}${observer.name || t("packet.unknownObserver")}`, {
+        className: "node-tooltip",
+        direction: "top",
+      })
+      .bindPopup(observerPopupHtml(observer, position), {
+        className: "observer-popup",
+        maxWidth: 300,
+        minWidth: 220,
+        autoPan: true,
+      })
+      .addTo(observerLayer);
+  }
+}
+
+async function loadObservers(force = false) {
+  if (state.observersLoading) return;
+  if (!force && state.observersLoadedAt && Date.now() - state.observersLoadedAt < 5 * 60 * 1000) return;
+  state.observersLoading = true;
+  try {
+    const data = await getJson("/api/observers");
+    state.observers = Array.isArray(data.observers) ? data.observers : [];
+    state.observersLoadedAt = Date.now();
+    if (state.showObservers) renderObservers();
+  } catch (error) {
+    console.error("Observery se nepodařilo načíst", error);
+  } finally {
+    state.observersLoading = false;
+  }
+}
+
+async function setObserversVisible(on) {
+  state.showObservers = Boolean(on);
+  elements.observersToggle.classList.toggle("active", state.showObservers);
+  elements.observersToggle.setAttribute("aria-pressed", String(state.showObservers));
+  if (!state.showObservers) {
+    map.removeLayer(observerLayer);
+    return;
+  }
+  observerLayer.addTo(map);
+  await loadObservers();
+  renderObservers();
 }
 
 function showPacketFocusBar(hash, count) {
@@ -3592,6 +3682,7 @@ elements.coverageToggle.addEventListener("click", () => {
     setCoverageStatus(t("coverage.hint"));
   }
 });
+elements.observersToggle.addEventListener("click", () => void setObserversVisible(!state.showObservers));
 elements.coverageClose.addEventListener("click", () => elements.coverageDialog.close());
 elements.coverageDialog.addEventListener("close", () => {
   if (state.coverageMode) setCoverageMode(false);

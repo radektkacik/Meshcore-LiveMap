@@ -374,6 +374,20 @@ html[data-theme="dark"] .node-history-tip { color: #17271f; background: #e6ecef;
 html[data-theme="dark"] .packet-occurrence-list li { border-color: rgba(255, 255, 255, 0.08); }
 html[data-theme="dark"] .packet-hash { color: #cfe0d7; }
 html[data-theme="dark"] .packet-occurrence-detail { color: #9fb0b8; }
+.observer-popup .leaflet-popup-content-wrapper { padding: 0; border: 1px solid rgba(30, 65, 49, 0.18); border-radius: 10px; background: #fffef9; box-shadow: 0 12px 32px rgba(32, 54, 44, 0.2); }
+.observer-popup .leaflet-popup-content { width: auto !important; margin: 0; }
+.observer-popup .leaflet-popup-tip { background: #fffef9; }
+.observer-popup-card { min-width: 210px; color: #263b33; }
+.observer-popup-card header { padding: 10px 30px 8px 12px; border-bottom: 1px solid var(--line); background: #f3f7f3; }
+.observer-popup-card h3 { margin: 0; font-size: 13px; }
+.observer-popup-card header small { display: block; margin-top: 3px; color: var(--muted); font: 9px "DM Mono", monospace; }
+.observer-popup-card dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0; padding: 9px 12px 11px; }
+.observer-popup-card dt { color: var(--muted); font-size: 10px; }
+.observer-popup-card dd { margin: 0; font-size: 10px; text-align: right; word-break: break-word; }
+html[data-theme="dark"] .observer-popup .leaflet-popup-content-wrapper, html[data-theme="dark"] .observer-popup .leaflet-popup-tip { background: #161d24; border-color: var(--line); }
+html[data-theme="dark"] .observer-popup-card { color: #e6ecef; }
+html[data-theme="dark"] .observer-popup-card header { background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .observer-popup-card dl { border-color: var(--line); }
 html[data-theme="dark"] .data-stale { color: #ffc46b; background: rgba(216, 116, 18, 0.22); }
 html[data-theme="dark"] .route-feed li:hover { background: rgba(95, 208, 165, 0.08); }
 html[data-theme="dark"] .node-stack-popup .leaflet-popup-content-wrapper,

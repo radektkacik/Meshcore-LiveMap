@@ -201,6 +201,12 @@ const cs = {
   "packet.focusLiveHidden": "živý provoz skrytý",
   "packet.hopSnr": "SNR skoků: {values} dB",
   "packet.hopSnrEmpty": "SNR skoků: —",
+  "observers.exact": "přesná poloha uzlu",
+  "observers.approx": "přibližná poloha podle IATA",
+  "observers.lastSeen": "Naposledy",
+  "observers.packets": "Paketů",
+  "observers.model": "Model",
+  "observers.firmware": "Firmware",
 };
 
 const en = {
@@ -402,6 +408,12 @@ const en = {
   "packet.focusLiveHidden": "live traffic hidden",
   "packet.hopSnr": "Hop SNR: {values} dB",
   "packet.hopSnrEmpty": "Hop SNR: —",
+  "observers.exact": "exact node location",
+  "observers.approx": "approximate location by IATA",
+  "observers.lastSeen": "Last seen",
+  "observers.packets": "Packets",
+  "observers.model": "Model",
+  "observers.firmware": "Firmware",
 };
 
 export const TRANSLATIONS = { cs, en };
@@ -447,6 +459,8 @@ export const STATIC_EN = {
   "Poslední trasy": "Latest routes",
   "Živá aktivita": "Live activity",
   "Historie": "History",
+  "Observeři": "Observers",
+  "Zobrazit observery na mapě": "Show observers on the map",
   "Vše": "All",
   "Hledat observer, uzel nebo hash…": "Search observer, node or hash…",
   "Typ paketu": "Packet type",
