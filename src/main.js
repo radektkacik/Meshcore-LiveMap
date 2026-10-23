@@ -49,6 +49,8 @@ applyStaticTranslations();
 
 const MAX_FEED_ITEMS = 8;
 const FEED_SOURCE_LIMIT = MAX_FEED_ITEMS * 4;
+const HISTORY_FEED_ITEMS = 300;
+const HISTORY_SOURCE_LIMIT = 2000;
 const FEED_RENDER_INTERVAL_MS = 2_000;
 const FEED_AUTO_RESUME_MS = 2_500;
 const FEED_SCROLL_RESUME_MS = 6_000;
@@ -119,6 +121,9 @@ document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) === "da
 
 const elements = {
   activityNew: document.querySelector("#activity-new"),
+  activityHistory: document.querySelector("#activity-history"),
+  activityTitle: document.querySelector("#activity-title"),
+  activityTitleText: document.querySelector("#activity-title-text"),
   activityPanel: document.querySelector("#activity-panel"),
   activityPause: document.querySelector("#activity-pause"),
   animationToggle: document.querySelector("#animation-toggle"),
@@ -2128,12 +2133,20 @@ const feedState = {
   latestEmptyText: t("feed.empty"),
   latestRoutes: [],
   manualPaused: false,
+  mode: "live",
+  historyLoadedAt: 0,
+  historyLoading: false,
+  historyRoutes: [],
   pendingVersions: new Set(),
   renderTimer: null,
   resumeTimer: null,
 };
 
 function setFeedBadge() {
+  if (feedState.mode === "history") {
+    elements.activityNew.hidden = true;
+    return;
+  }
   const count = feedState.pendingVersions.size;
   elements.activityNew.hidden = count === 0;
   elements.activityNew.textContent = count === 0 ? "" : (count > 99 ? "99+" : tCount("activity.newItems", count));
@@ -2155,7 +2168,7 @@ function updateFeedPending() {
   setFeedBadge();
 }
 
-function groupFeedRoutes(routes) {
+function groupFeedRoutes(routes, limit = MAX_FEED_ITEMS) {
   const groups = new Map();
   for (const route of routes) {
     const key = route.packetHash || `${route.typeLabel}|${route.from}|${route.to}`;
@@ -2170,10 +2183,10 @@ function groupFeedRoutes(routes) {
   }
   return [...groups.values()]
     .sort((a, b) => b.route.timestamp - a.route.timestamp)
-    .slice(0, MAX_FEED_ITEMS);
+    .slice(0, limit);
 }
 
-function renderFeedNow(groups, emptyText) {
+function renderFeedNow(groups, emptyText, { history = false } = {}) {
   if (!groups.length) {
     const empty = document.createElement("li");
     empty.className = "feed-empty";
@@ -2187,11 +2200,12 @@ function renderFeedNow(groups, emptyText) {
     item.dataset.packetHash = route.packetHash || "";
     item.dataset.packetType = String(route.packetType);
     item.style.setProperty("--route-color", route.color);
+    const when = history ? formatDateTimeShort(route.timestamp) : formatTime(route.timestamp);
     item.innerHTML = `
       <div>
         <b>${escapeHtml(route.typeLabel)}</b>
         ${count > 1 ? `<span class="feed-count">×${count}</span>` : ""}
-        <time>${formatTime(route.timestamp)}</time>
+        <time>${escapeHtml(when)}</time>
       </div>
       <p>${escapeHtml(route.from)} <span>→</span> ${escapeHtml(route.to)}</p>
       <small>${route.scope?.trim() ? `${escapeHtml(route.scope.trim())} · ` : ""}${formatHops(Math.max(1, route.points.length - 1))} · ${route.hashBytes}B · ${formatObservers(count)}</small>
@@ -2213,6 +2227,7 @@ function renderFeedNow(groups, emptyText) {
 }
 
 function flushFeed(force = false) {
+  if (feedState.mode === "history") return;
   if (feedState.renderTimer != null) {
     clearTimeout(feedState.renderTimer);
     feedState.renderTimer = null;
@@ -2234,6 +2249,7 @@ function flushFeed(force = false) {
 }
 
 function updateFeed(routes, emptyText = t("feed.empty"), { immediate = false } = {}) {
+  if (feedState.mode === "history") return;
   feedState.latestRoutes = routes;
   feedState.latestEmptyText = emptyText;
   if (elements.activityPanel.hidden) return;
@@ -2257,6 +2273,52 @@ function updateFeed(routes, emptyText = t("feed.empty"), { immediate = false } =
   }, FEED_RENDER_INTERVAL_MS - elapsed);
 }
 
+function renderHistoryFeed() {
+  const routes = feedState.historyRoutes
+    .filter((route) => isRouteVisible(route.packetType, route.hashBytes, state));
+  renderFeedNow(groupFeedRoutes(routes, HISTORY_FEED_ITEMS), t("activity.historyEmpty"), { history: true });
+}
+
+async function loadHistoryFeed(force = false) {
+  if (feedState.historyLoading) return;
+  if (!force && feedState.historyLoadedAt && Date.now() - feedState.historyLoadedAt < 60_000) {
+    renderHistoryFeed();
+    return;
+  }
+  feedState.historyLoading = true;
+  renderFeedNow([], t("activity.historyLoading"), { history: true });
+  try {
+    const since = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const data = await getJson(`/api/history?since=${since}&limit=${HISTORY_SOURCE_LIMIT}`);
+    feedState.historyRoutes = await historyRoutesFromPackets(data.packets || []);
+    feedState.historyLoadedAt = Date.now();
+    renderHistoryFeed();
+  } catch (error) {
+    console.error("Historii paketů se nepodařilo načíst", error);
+    renderFeedNow([], t("activity.historyFailed"), { history: true });
+  } finally {
+    feedState.historyLoading = false;
+  }
+}
+
+function setFeedMode(mode) {
+  const history = mode === "history";
+  feedState.mode = history ? "history" : "live";
+  elements.activityHistory.classList.toggle("active", history);
+  elements.activityHistory.setAttribute("aria-pressed", String(history));
+  elements.activityHistory.textContent = t(history ? "activity.live" : "activity.history");
+  elements.activityHistory.title = t(history ? "activity.liveHint" : "activity.historyHint");
+  elements.activityTitleText.textContent = t(history ? "activity.historyTitle" : "activity.liveTitle");
+  elements.activityPause.hidden = history;
+  if (history) {
+    setFeedBadge();
+    void loadHistoryFeed();
+  } else {
+    if (state.routeWindowMs !== 0) renderArchive();
+    else syncRoutePresentation();
+  }
+}
+
 function pauseFeedForInteraction() {
   clearTimeout(feedState.resumeTimer);
   feedState.resumeTimer = null;
@@ -2275,6 +2337,9 @@ function resumeFeedAfterInteraction(delay = FEED_AUTO_RESUME_MS) {
 }
 
 elements.packetFocusClose.addEventListener("click", exitPacketFocus);
+elements.activityHistory.addEventListener("click", () => {
+  setFeedMode(feedState.mode === "history" ? "live" : "history");
+});
 elements.activityPause.addEventListener("click", () => {
   feedState.manualPaused = !feedState.manualPaused;
   clearTimeout(feedState.resumeTimer);
@@ -2655,6 +2720,7 @@ function refreshAfterFilterChange() {
     && !isRouteVisible(state.selectedRoutePacketType, state.selectedRouteHashBytes, state)) clearSelectedRoute();
   if (state.routeWindowMs !== 0) void setRouteWindow(state.routeWindowMs);
   else syncRoutePresentation();
+  if (feedState.mode === "history") renderHistoryFeed();
 }
 
 for (const toggle of elements.sizeToggles) {

@@ -156,6 +156,10 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .activity-panel header { height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 13px; border-bottom: 1px solid var(--line); }
 .activity-head-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 .activity-pause, .activity-new { padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; color: #49665b; background: #fff; font: 9px "DM Mono", monospace; cursor: pointer; white-space: nowrap; }
+.activity-history { padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; color: #49665b; background: #fff; font: 9px "DM Mono", monospace; cursor: pointer; white-space: nowrap; }
+.activity-history.active { color: #fff; background: #246aa6; border-color: #246aa6; }
+html[data-theme="dark"] .activity-history { color: #b9c9d2; background: #1b232b; border-color: #2f3d46; }
+html[data-theme="dark"] .activity-history.active { color: #fff; background: #2f6fa6; border-color: #2f6fa6; }
 .activity-pause:hover { color: var(--green); border-color: rgba(7, 142, 98, 0.4); }
 .activity-pause.active { color: #fff; background: var(--green); border-color: var(--green); }
 .activity-new { color: #fff; background: var(--green); border-color: var(--green); }
