@@ -104,6 +104,8 @@
 | 2026-10-23 10:10 | `20261023T101019Z.tar.gz` | `20261023-1010-70a9e47` | Prod: stejná oprava – 1B TRACE už filtr velikosti hashe neskrývá | `src/route-utils.js`, `test/route-utils.test.mjs`, `README.md` |
 | 2026-10-23 10:27 | `20261023T102743Z.tar.gz` (stage APP_DIR) | `20261023-1027-dc57038` | Beta: ambiguous 1B TRACE – výběr celého kandidátního řetězu minimalizací vzdálenosti, kotva podle IATA observeru | `src/main.js`, `src/route-utils.js`, `src/observer-locations.js`, `test/*` |
 | 2026-10-23 10:27 | `20261023T102758Z.tar.gz` | `20261023-1027-dc57038` | Prod: stejné řešení ambiguous TRACE tras; ověřeno na živém TRACE | `src/main.js`, `src/route-utils.js`, `src/observer-locations.js`, `test/*` |
+| 2026-10-23 10:38 | `20261023T103808Z.tar.gz` (stage APP_DIR) | `20261023-1038-0ae3c85` | Beta: TRACE pakety se ukládají i bez resolved_path a resolvují se klientsky; deep link `?packet=<hash>` | `server.mjs`, `src/main.js` |
+| 2026-10-23 10:39 | `20261023T103904Z.tar.gz` | `20261023-1039-0ae3c85` | Prod: stejné ukládání TRACE a deep link; ověřen konkrétní trace `0d9ceba5a4044d01` | `server.mjs`, `src/main.js` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -144,11 +146,11 @@ stávající `node_modules`; jinak závislosti doinstaluje:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261023T102758Z` má v záloze předchozí verzi
-(build `20261023-1010-70a9e47`); návrat na ni se provede stejným ID:
+Aktuální produkční release `20261023T103904Z` má v záloze předchozí verzi
+(build `20261023-1027-dc57038`); návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T102758Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T103904Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`;
