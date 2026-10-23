@@ -460,7 +460,6 @@ export const STATIC_EN = {
   "Poslední trasy": "Latest routes",
   "Živá aktivita": "Live activity",
   "Historie": "History",
-  "Observery": "Observers",
   "Zobrazit observery na mapě": "Show observers on the map",
   "Vše": "All",
   "Hledat observer, uzel nebo hash…": "Search observer, node or hash…",
