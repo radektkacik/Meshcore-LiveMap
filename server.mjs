@@ -215,7 +215,7 @@ function parseMqttPacket(topic, message) {
     || null;
 
   return {
-    decoded_json: JSON.stringify(advertData),
+    decoded_json: JSON.stringify(payloadType === 4 ? advertData : payloadType === 9 ? payloadDecoded : advertData),
     first_seen: new Date().toISOString(),
     hash: String(source.hash || decoded.messageHash || "").toLowerCase(),
     latest: new Date().toISOString(),
