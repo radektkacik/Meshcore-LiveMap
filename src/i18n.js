@@ -442,6 +442,7 @@ export const STATIC_EN = {
   "Časové okno tras": "Route time window",
   "Velikost hashe": "Hash size",
   "Role uzlu": "Node role",
+  "Uzly a observeři": "Nodes and observers",
   "Ostatní": "Other",
   "Zobrazit ostatní typy": "Show other types",
   "REQ, RESPONSE, ACK, DATA a CONTROL": "REQ, RESPONSE, ACK, DATA and CONTROL",

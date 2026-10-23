@@ -65,7 +65,6 @@
               <button id="stats-toggle" type="button" aria-pressed="false">Statistiky</button>
               <button id="los-toggle" type="button" aria-pressed="false" title="Změřit přímou viditelnost mezi dvěma body">LOS</button>
               <button id="coverage-toggle" type="button" aria-pressed="false" title="Simulovat pokrytí terénu z jednoho bodu">Pokrytí</button>
-              <button id="observers-toggle" type="button" aria-pressed="false" title="Zobrazit observery na mapě">Observeři</button>
               <button id="feedback-toggle" type="button" class="wide">Kniha návštěv</button>
             </div>
 
@@ -98,13 +97,14 @@
             </fieldset>
 
             <fieldset class="filter-block">
-              <legend class="filter-title">Role uzlu</legend>
+              <legend class="filter-title">Uzly a observeři</legend>
               <div class="filter-chips">
                 <label><input id="role-toggle-repeater" type="checkbox" checked /> Repeater</label>
                 <label><input id="role-toggle-companion" type="checkbox" checked /> Companion</label>
                 <label><input id="role-toggle-room" type="checkbox" checked /> Room</label>
                 <label><input id="role-toggle-sensor" type="checkbox" checked /> Sensor</label>
                 <label><input id="role-toggle-unknown" type="checkbox" checked /> Ostatní</label>
+                <label class="layer-observers"><input id="observers-toggle" type="checkbox" /> Observeři</label>
               </div>
             </fieldset>
 

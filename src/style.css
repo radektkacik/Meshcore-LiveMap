@@ -116,6 +116,7 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .filter-chips label:hover, .filter-chips button:hover { border-color: rgba(7, 142, 98, 0.4); color: var(--green); }
 .filter-chips input { width: 12px; height: 12px; margin: 0; accent-color: var(--green); }
 .filter-chips button.active { color: #fff; border-color: var(--green); background: var(--green); }
+.filter-chips .layer-observers { border-style: dashed; }
 .packet-filter { display: flex; align-items: center; gap: 8px; margin-top: 9px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; background: rgba(255, 255, 255, 0.72); cursor: pointer; }
 .packet-filter input { width: 14px; height: 14px; margin: 0; accent-color: var(--green); }
 .packet-filter span { min-width: 0; }

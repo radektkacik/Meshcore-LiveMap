@@ -872,8 +872,7 @@ async function loadObservers(force = false) {
 
 async function setObserversVisible(on) {
   state.showObservers = Boolean(on);
-  elements.observersToggle.classList.toggle("active", state.showObservers);
-  elements.observersToggle.setAttribute("aria-pressed", String(state.showObservers));
+  elements.observersToggle.checked = state.showObservers;
   if (!state.showObservers) {
     map.removeLayer(observerLayer);
     return;
@@ -3682,7 +3681,7 @@ elements.coverageToggle.addEventListener("click", () => {
     setCoverageStatus(t("coverage.hint"));
   }
 });
-elements.observersToggle.addEventListener("click", () => void setObserversVisible(!state.showObservers));
+elements.observersToggle.addEventListener("change", () => void setObserversVisible(elements.observersToggle.checked));
 elements.coverageClose.addEventListener("click", () => elements.coverageDialog.close());
 elements.coverageDialog.addEventListener("close", () => {
   if (state.coverageMode) setCoverageMode(false);
