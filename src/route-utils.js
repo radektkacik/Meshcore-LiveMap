@@ -55,3 +55,71 @@ export function isRouteVisible(packetType, hashBytes, filters) {
   if (!filters.showOneByteRoutes && hashBytes < 2) return false;
   return true;
 }
+
+function distanceKm(a, b) {
+  const rad = Math.PI / 180;
+  const dLat = (b.lat - a.lat) * rad;
+  const dLon = (b.lon - a.lon) * rad;
+  const h = Math.sin(dLat / 2) ** 2
+    + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+export function resolveCandidateChain(candidateSets, { maxHopKm = 150, start = null, end = null } = {}) {
+  const sets = candidateSets.map((list) => (Array.isArray(list) ? list : []).filter((candidate) => (
+    candidate && Number.isFinite(Number(candidate.lat)) && Number.isFinite(Number(candidate.lon))
+  )));
+  if (!sets.length || sets.some((list) => !list.length)) return null;
+
+  let costs = sets[0].map((candidate) => {
+    if (!start) return 0;
+    const distance = distanceKm(start, candidate);
+    return distance <= maxHopKm ? distance : Infinity;
+  });
+  const parents = [sets[0].map(() => -1)];
+
+  for (let index = 1; index < sets.length; index += 1) {
+    const nextCosts = sets[index].map(() => Infinity);
+    const nextParents = sets[index].map(() => -1);
+    for (let current = 0; current < sets[index].length; current += 1) {
+      const candidate = sets[index][current];
+      for (let previous = 0; previous < sets[index - 1].length; previous += 1) {
+        if (!Number.isFinite(costs[previous])) continue;
+        const distance = distanceKm(sets[index - 1][previous], candidate);
+        if (distance > maxHopKm) continue;
+        const total = costs[previous] + distance;
+        if (total < nextCosts[current]) {
+          nextCosts[current] = total;
+          nextParents[current] = previous;
+        }
+      }
+    }
+    costs = nextCosts;
+    parents.push(nextParents);
+  }
+
+  let best = -1;
+  let bestCost = Infinity;
+  for (let index = 0; index < sets.at(-1).length; index += 1) {
+    if (!Number.isFinite(costs[index])) continue;
+    let total = costs[index];
+    if (end) {
+      const distance = distanceKm(sets.at(-1)[index], end);
+      if (distance > maxHopKm) continue;
+      total += distance;
+    }
+    if (total < bestCost) {
+      best = index;
+      bestCost = total;
+    }
+  }
+  if (best < 0) return null;
+
+  const chain = new Array(sets.length);
+  let current = best;
+  for (let index = sets.length - 1; index >= 0; index -= 1) {
+    chain[index] = sets[index][current];
+    current = parents[index][current];
+  }
+  return chain;
+}

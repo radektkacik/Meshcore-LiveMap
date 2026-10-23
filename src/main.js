@@ -8,11 +8,13 @@ import {
   liveRouteCreatedAt,
   packetPathHashBytes,
   parsePath,
+  resolveCandidateChain,
 } from "./route-utils.js";
 import { analyzePath, interpolatePath, nearestOnPath, profilePointAt } from "./los.js";
 import { CLEAR, PARTIAL } from "./coverage.js";
 import { createElevationService, ElevationError } from "./elevation.js";
 import { createPerfMonitor } from "./perf.js";
+import { observerAnchor } from "./observer-locations.js";
 import {
   isNodeActive,
   isNodeRoleAllowed,
@@ -1783,24 +1785,6 @@ function haversineKm(latA, lonA, latB, lonB) {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-const AMBIGUOUS_MARGIN = 0.5;
-
-function chooseCandidate(resolved, anchorLat, anchorLon) {
-  const candidates = (resolved?.candidates || []).filter((candidate) => validCoords(candidate.lat, candidate.lon));
-  if (!candidates.length) return null;
-  if (anchorLat == null || anchorLon == null) {
-    return candidates.length > 1 ? null : candidates[0];
-  }
-  const ranked = candidates
-    .map((candidate) => ({ candidate, distance: haversineKm(anchorLat, anchorLon, candidate.lat, candidate.lon) }))
-    .sort((a, b) => a.distance - b.distance);
-  const best = ranked[0];
-  const second = ranked[1];
-  // Nejbližší kandidát musí být výrazně blíž, jinak je prefix nejednoznačný a raději trasu přerušíme.
-  if (second && best.distance > second.distance * AMBIGUOUS_MARGIN) return null;
-  return best.candidate;
-}
-
 function packetPoints(packet, path) {
   const decoded = parseDecoded(packet);
   const points = [];
@@ -1822,44 +1806,61 @@ function packetPoints(packet, path) {
     }
   }
 
-  let anchorLat = points.at(-1)?.lat ?? null;
-  let anchorLon = points.at(-1)?.lon ?? null;
+  const observerKey = (packet.observer_id || "").toUpperCase();
+  const observerNode = state.nodeByKey.get(observerKey);
+  const isDirectRoute = [2, 3].includes(Number(packet.route_type));
+  const observerPoint = observerNode && validCoords(observerNode.lat, observerNode.lon)
+    ? { lat: observerNode.lat, lon: observerNode.lon }
+    : observerAnchor(packet.observer_iata);
+  const end = observerPoint;
 
+  let block = [];
+  const blocks = [];
   for (const prefix of path) {
     const resolved = state.prefixCache.get(prefix);
-    const candidate = chooseCandidate(resolved, anchorLat, anchorLon);
-    if (!candidate || !validCoords(candidate.lat, candidate.lon)) {
+    const candidates = (resolved?.candidates || []).filter((candidate) => (
+      validCoords(candidate.lat, candidate.lon)
+    ));
+    if (!candidates.length) {
+      if (block.length) blocks.push(block);
+      block = [];
       breakNext = true;
       continue;
     }
-    if (anchorLat != null && anchorLon != null) {
-      const dist = haversineKm(anchorLat, anchorLon, candidate.lat, candidate.lon);
-      if (dist > MAX_ROUTE_HOP_KM) {
-        breakNext = true;
-        continue;
-      }
+    block.push(candidates);
+  }
+  if (block.length) blocks.push(block);
+
+  for (const candidateSets of blocks) {
+    const last = points.at(-1);
+    const start = last ? { lat: last.lat, lon: last.lon } : null;
+    let chain = resolveCandidateChain(candidateSets, { maxHopKm: MAX_ROUTE_HOP_KM, start, end });
+    if (!chain && end) chain = resolveCandidateChain(candidateSets, { maxHopKm: MAX_ROUTE_HOP_KM, start });
+    if (!chain) {
+      breakNext = true;
+      continue;
     }
-    const previous = points.at(-1);
-    if (previous && previous.lat === candidate.lat && previous.lon === candidate.lon) continue;
-    pushPoint(candidate.lat, candidate.lon, candidate.name || resolved?.name || prefix, candidate.pubkey || candidate.public_key);
-    anchorLat = candidate.lat;
-    anchorLon = candidate.lon;
+    for (const candidate of chain) {
+      const previous = points.at(-1);
+      if (previous && previous.lat === candidate.lat && previous.lon === candidate.lon) continue;
+      pushPoint(
+        candidate.lat,
+        candidate.lon,
+        candidate.name || candidate.pubkey || t("common.unknownShort"),
+        candidate.pubkey || candidate.public_key,
+      );
+    }
   }
 
-  const isDirectRoute = [2, 3].includes(Number(packet.route_type));
-  const observerKey = (packet.observer_id || "").toUpperCase();
-  if (!isDirectRoute && observerKey.length >= 4) {
-    const observerNode = state.nodeByKey.get(observerKey);
-    if (observerNode && validCoords(observerNode.lat, observerNode.lon)) {
-      const last = points.at(-1);
-      const plausibleDistance = !last
-        || haversineKm(last.lat, last.lon, observerNode.lat, observerNode.lon) <= MAX_ROUTE_HOP_KM;
-      const distinct = !last || last.lat !== observerNode.lat || last.lon !== observerNode.lon;
-      if (plausibleDistance && distinct) {
-        pushPoint(observerNode.lat, observerNode.lon, observerNode.name || packet.observer_name || "Observer", observerNode.public_key);
-      } else if (!plausibleDistance) {
-        breakNext = true;
-      }
+  if (!isDirectRoute && observerKey.length >= 4 && observerNode && validCoords(observerNode.lat, observerNode.lon)) {
+    const last = points.at(-1);
+    const plausibleDistance = !last
+      || haversineKm(last.lat, last.lon, observerNode.lat, observerNode.lon) <= MAX_ROUTE_HOP_KM;
+    const distinct = !last || last.lat !== observerNode.lat || last.lon !== observerNode.lon;
+    if (plausibleDistance && distinct) {
+      pushPoint(observerNode.lat, observerNode.lon, observerNode.name || packet.observer_name || "Observer", observerNode.public_key);
+    } else if (!plausibleDistance) {
+      breakNext = true;
     }
   }
 

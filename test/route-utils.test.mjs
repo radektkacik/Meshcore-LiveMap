@@ -8,6 +8,7 @@ import {
   packetPathHashBytes,
   parsePath,
   pathHashBytes,
+  resolveCandidateChain,
 } from "../src/route-utils.js";
 
 test("parses and normalizes packet paths", () => {
@@ -75,4 +76,27 @@ test("trace routes stay visible even when one-byte routes are filtered out", () 
   assert.equal(isRouteVisible(9, 1, twoThree), true);
   assert.equal(isRouteVisible(9, 2, twoThree), true);
   assert.equal(isRouteVisible(9, 0, twoThree), false);
+});
+
+test("candidate chain prefers a compact sequence across ambiguous hops", () => {
+  const near = (name, lat, lon) => ({ name, lat, lon });
+  const sets = [
+    [near("far-a", 50.9, 15.9), near("near-a", 50.0, 15.0)],
+    [near("far-b", 50.8, 15.8), near("near-b", 50.05, 15.05)],
+    [near("far-c", 50.7, 15.7), near("near-c", 50.1, 15.1)],
+  ];
+  const chain = resolveCandidateChain(sets, { maxHopKm: 150 });
+  assert.deepEqual(chain.map((candidate) => candidate.name), ["near-a", "near-b", "near-c"]);
+});
+
+test("candidate chain respects a start anchor and the hop limit", () => {
+  const start = { lat: 50, lon: 15 };
+  const sets = [
+    [{ name: "near", lat: 50.02, lon: 15.02 }, { name: "far", lat: 51.5, lon: 16.5 }],
+    [{ name: "next", lat: 50.04, lon: 15.04 }],
+  ];
+  const chain = resolveCandidateChain(sets, { maxHopKm: 50, start });
+  assert.deepEqual(chain.map((candidate) => candidate.name), ["near", "next"]);
+  assert.equal(resolveCandidateChain([[{ name: "far", lat: 51.5, lon: 16.5 }]], { maxHopKm: 50, start }), null);
+  assert.equal(resolveCandidateChain([], { maxHopKm: 50 }), null);
 });
