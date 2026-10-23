@@ -110,6 +110,8 @@
 | 2026-10-23 10:45 | `20261023T104521Z.tar.gz` | `20261023-1045-410e71a` | Prod: stejné zobrazení SNR jednotlivých skoků; ověřeno na trace `2d0d849c6ffde594` | `src/main.js`, `src/i18n.js` |
 | 2026-10-23 10:52 | `20261023T105203Z.tar.gz` (stage APP_DIR) | `20261023-1052-23698f3` | Beta: SNR skoků se u TRACE zobrazuje vždy (i „—“ bez naměřených hodnot) | `src/main.js`, `src/i18n.js` |
 | 2026-10-23 10:52 | `20261023T105216Z.tar.gz` | `20261023-1052-23698f3` | Prod: stejná úprava; ověřeno na trace `7474edc7d4a281db` | `src/main.js`, `src/i18n.js` |
+| 2026-10-23 11:20 | `20261023T112023Z.tar.gz` (stage APP_DIR) | `20261023-1120-63d4bf2` | Beta: živé MQTT TRACE pakety nesou snrValues v decoded_json, SNR skoků jde vidět hned | `server.mjs` |
+| 2026-10-23 11:20 | `20261023T112038Z.tar.gz` | `20261023-1120-63d4bf2` | Prod: stejná oprava živých TRACE SNR | `server.mjs` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
@@ -150,11 +152,11 @@ stávající `node_modules`; jinak závislosti doinstaluje:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261023T105216Z` má v záloze předchozí verzi
-(build `20261023-1045-410e71a`); návrat na ni se provede stejným ID:
+Aktuální produkční release `20261023T112038Z` má v záloze předchozí verzi
+(build `20261023-1052-23698f3`); návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T105216Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261023T112038Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`;
