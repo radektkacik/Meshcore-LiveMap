@@ -131,11 +131,12 @@ Z typů paketů jsou ve výchozím stavu viditelné zprávy (`DIRECT`, `CHANNEL`
 `ADVERT` a diagnostické `TRACE`. `PATH` se nekreslí vůbec (jeho trasy bývají
 z velké části nerozřešené a působí nereálně) a přepínač ostatních typů zobrazí
 jen `REQ`, `RESPONSE`, `ACK`, `DATA` a `CONTROL`. `TRACE` se barví podle SNR.
+Trasy `TRACE` s 1B prefixy se zobrazují vždy, i když je filtr 1B vypnutý –
+jinak by typicky nebyly vidět žádné trace pakety.
 
 Viditelnost trasy je pevně nastavená na 60 sekund bez postupného slábnutí; po
 uplynutí této doby se trasa odstraní okamžitě. Současně se vykresluje vždy
-nejvýše 250 nejnovějších živých tras, aby špičkový provoz nezhoršil plynulost
-mapy. Trasy nad tento strop zůstávají dostupné v popupu uzlu.
+nejvýše 250 nejnovějších živých tras, aby špičkový provoz nezhoršil plynulostmapy. Trasy nad tento strop zůstávají dostupné v popupu uzlu.
 Mapovým podkladem je standardní světlá mapa OpenStreetMap.
 
 Stejný paket může během floodu postupně získávat delší nebo odlišnou cestu.

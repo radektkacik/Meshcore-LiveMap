@@ -69,3 +69,10 @@ test("hash size set overrides the single one-byte toggle", () => {
   const all = { allowedHashBytes: new Set([1, 2, 3]), showOtherPacketTypes: false };
   assert.equal(isRouteVisible(4, 1, all), true);
 });
+
+test("trace routes stay visible even when one-byte routes are filtered out", () => {
+  const twoThree = { allowedHashBytes: new Set([2, 3]), showOtherPacketTypes: false };
+  assert.equal(isRouteVisible(9, 1, twoThree), true);
+  assert.equal(isRouteVisible(9, 2, twoThree), true);
+  assert.equal(isRouteVisible(9, 0, twoThree), false);
+});

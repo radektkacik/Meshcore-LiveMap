@@ -49,6 +49,7 @@ export function archiveQuery(windowMs, now = Date.now()) {
 
 export function isRouteVisible(packetType, hashBytes, filters) {
   if (Number(packetType) === 8) return false;
+  if (Number(packetType) === 9) return Number(hashBytes) >= 1;
   if (!filters.showOtherPacketTypes && !isPrimaryPacketType(packetType)) return false;
   if (filters.allowedHashBytes) return filters.allowedHashBytes.has(Number(hashBytes));
   if (!filters.showOneByteRoutes && hashBytes < 2) return false;
