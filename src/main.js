@@ -53,7 +53,7 @@ const FEED_SCROLL_RESUME_MS = 6_000;
 const NODE_HISTORY_TTL_MS = 5 * 60 * 1000;
 const MAX_LIVE_RENDERED = 250;
 const MAX_LIVE_STORED = 3000;
-const MAX_ROUTE_HOP_KM = 230;
+const MAX_ROUTE_HOP_KM = 150;
 const MAX_ROUTE_PATH_LENGTH = 32;
 const ROUTE_RETENTION_MS = 60_000;
 const SELECTED_ROUTE_MS = 20_000;
@@ -1901,6 +1901,11 @@ function historyRoutePoints(packet) {
       continue;
     }
     if (seen.has(key)) continue;
+    const previous = points.at(-1);
+    if (previous && haversineKm(previous.lat, previous.lon, node.lat, node.lon) > MAX_ROUTE_HOP_KM) {
+      breakNext = true;
+      continue;
+    }
     seen.add(key);
     points.push({
       lat: node.lat,
