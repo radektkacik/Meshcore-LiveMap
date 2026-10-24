@@ -17,20 +17,20 @@ Aktualizováno: 2026-10-24
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261024T190206Z`
-- Build: `20261024-1902-bdcd33f`
-- Asset: `index-Dn266rjk.js`
+- Release: `20261024T191818Z`
+- Build: `20261024-1918-fb41936`
+- Asset: `index-D-J-klmW.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261024T190206Z.tar.gz`
-- Tag: `prod-20261024-1902`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261024T191818Z.tar.gz`
+- Tag: `prod-20261024-1918`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261024T185810Z`
-- Build: `20261024-1858-a28d6c8`
-- Asset: `index-9uyoAt4w.js`
+- Release: `20261024T191751Z`
+- Build: `20261024-1917-fb41936`
+- Asset: `index-CqJptaSC.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261024T185810Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261024T191751Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka
@@ -149,7 +149,7 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261024T190206Z'
 ## 8. Známe problémy a rizika
 
 - `/api/health` stále chybí; health check je HTTP 200.
-- MQTT se občas čistě reconnectuje (řádově jednotky až desítky za den), feed zůstává online.
+- MQTT reconnecty přicházejí zhruba 1–2× za hodinu, většinou tiše (Cloudflare/broker zavře WSS); keepalive je 30 s, backoff 3–60 s s jitterem, výpadek obvykle 5–10 s. Feed zůstává online.
 - CoreScope občas selže při sběru tras (`Packet route update failed: fetch failed`); aplikace jede z cache.
 - 1B prefixy jsou nejednoznačné; názvy uzlů se mohou lišit od Analyzeru.
 - Pakety bez path se nekreslí; PATH (typ 11) se záměrně ignoruje.

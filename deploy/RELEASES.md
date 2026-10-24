@@ -140,6 +140,8 @@
 | 2026-10-24 18:58 | `20261024T185810Z.tar.gz` (stage APP_DIR) | `20261024-1858-a28d6c8` | Beta: clustery observerů mají rozbalitelné detaily každého observeru; clustery i pro překryvy přesných pozic | `src/main.js`, `src/style.css` |
 | 2026-10-24 19:02 | `20261024T190206Z.tar.gz` | `20261024-1902-bdcd33f` | Prod: rozbalitelné detaily observerů v clusterech; ověřeno PRG 13 observerů | `src/main.js`, `src/style.css` |
 | 2026-10-24 14:35 | `20261024T143509Z.tar.gz` | `20261024-1435-a3cb8d3` | Prod: zdraví observerů, síťový souhrn, anomálie tras, veřejné kanály rozdělené po #kanálech; ověřeno | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
+| 2026-10-24 19:17 | `20261024T191751Z.tar.gz` (stage APP_DIR) | `20261024-1917-fb41936` | Beta: MQTT keepalive 30 s (detekce výpadku ~45 s), vlastní reconnect s backoffem 3–60 s, jitterem ±20 % a resetem jen po spojení delším než 30 s | `server.mjs`, `.env.example` |
+| 2026-10-24 19:18 | `20261024T191818Z.tar.gz` | `20261024-1918-fb41936` | Prod: stejná MQTT úprava; ověřeno MQTT connected/subscribed, HTTP 200 | `server.mjs`, `.env.example` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
