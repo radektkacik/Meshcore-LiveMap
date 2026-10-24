@@ -121,11 +121,13 @@ document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) === "da
 
 const elements = {
   activityNew: document.querySelector("#activity-new"),
+  activityChannels: document.querySelector("#activity-channels"),
   activityHistory: document.querySelector("#activity-history"),
   historyFilters: document.querySelector("#history-filters"),
   historySearch: document.querySelector("#history-search"),
   historyType: document.querySelector("#history-type"),
   historyWindow: document.querySelector("#history-window"),
+  historyAnomalies: document.querySelector("#history-anomalies"),
   activityTitle: document.querySelector("#activity-title"),
   activityTitleText: document.querySelector("#activity-title-text"),
   activityPanel: document.querySelector("#activity-panel"),
@@ -207,6 +209,7 @@ const elements = {
   routeCount: document.querySelector("#route-count"),
   sizeToggles: [1, 2, 3].map((size) => document.querySelector(`#size-toggle-${size}`)),
   statsClose: document.querySelector("#stats-close"),
+  networkSummary: document.querySelector("#network-summary"),
   statsCounts: document.querySelector("#stats-counts"),
   statsList: document.querySelector("#stats-list"),
   statsMetric: document.querySelector("#stats-metric"),
@@ -310,6 +313,7 @@ const state = {
   packetSource: null,
   showNodeLabels: localStorage.getItem("meshcoreShowNodeLabels") === "true",
   showOtherPacketTypes: elements.otherTypesToggle.checked,
+  networkStats: null,
   statsCount: 10,
   statsMetric: "relay",
   statsWindow: "24h",
@@ -697,6 +701,7 @@ function routeDetailHtml(route) {
     route.scope?.trim(),
     snr,
   ].filter(Boolean).map((value) => escapeHtml(value)).join(" · ");
+  const anomalies = routeAnomalies(route);
   return `
     <section class="route-popup-card">
       <header>
@@ -707,6 +712,7 @@ function routeDetailHtml(route) {
         <p><strong>${escapeHtml(route.from)}</strong> <span>→</span> <strong>${escapeHtml(route.to)}</strong></p>
         <small>${meta}</small>
         <small>${t("route.distanceTotal", { distance: formatDecimal(totalMeters / 1000, 1) })}</small>
+        ${anomalies.length ? `<small class="route-anomaly-line">⚠ ${anomalies.map((value) => escapeHtml(value)).join(" · ")}</small>` : ""}
       </div>
       <h4>${t("route.steps")}</h4>
       <ol class="route-hop-list">${rows}</ol>
@@ -734,6 +740,10 @@ function packetDetailHtml(occurrences) {
         values: route.snrValues?.map((value) => formatDecimal(value, 1)).join(" / "),
       })
       : null;
+    const anomalies = routeAnomalies(route);
+    const anomalyBadge = anomalies.length
+      ? `<span class="packet-anomaly" title="${escapeHtml(anomalies.join(" · "))}">⚠ ${anomalies.length}</span>`
+      : "";
     const meta = [
       formatTime(route.timestamp),
       formatHops(Math.max(1, route.points.length - 1)),
@@ -742,7 +752,7 @@ function packetDetailHtml(occurrences) {
     return `
       <li>
         <button class="packet-occurrence" data-index="${index}" type="button">
-          <span class="packet-observer">${escapeHtml(packetObserverLabel(route))}</span>
+          <span class="packet-observer">${escapeHtml(packetObserverLabel(route))}${anomalyBadge}</span>
           <small>${meta}</small>
           ${hopSnr ? `<small class="packet-hop-snr">${escapeHtml(hopSnr)}</small>` : ""}
           <small class="packet-path">${escapeHtml(route.from)} → ${escapeHtml(route.to)}</small>
@@ -808,10 +818,34 @@ function observerPosition(observer) {
   return anchor ? { ...anchor, approx: true } : null;
 }
 
+function observerHealth(observer) {
+  const last = Date.parse(observer.last_seen || "");
+  if (!Number.isFinite(last)) return "offline";
+  const age = Date.now() - last;
+  if (age <= 15 * 60 * 1000) return "online";
+  if (age <= 24 * 60 * 60 * 1000) return "stale";
+  return "offline";
+}
+
+function observerHealthColor(health) {
+  if (health === "online") return "#2e9b63";
+  if (health === "stale") return "#d18a1f";
+  return "#8a8f8c";
+}
+
 function observerPopupHtml(observer, position) {
+  const uptime = Number(observer.uptime_secs);
+  const uptimeText = Number.isFinite(uptime)
+    ? `${Math.floor(uptime / 86400)} d ${Math.floor((uptime % 86400) / 3600)} h`
+    : "—";
   const rows = [
     [t("observers.lastSeen"), observer.last_seen ? formatDateTime(observer.last_seen) : "—"],
     [t("observers.packets"), Number.isFinite(Number(observer.packet_count)) ? formatNumber(Number(observer.packet_count)) : "—"],
+    [t("observers.packetsHour"), Number.isFinite(Number(observer.packetsLastHour)) ? formatNumber(Number(observer.packetsLastHour)) : "—"],
+    [t("observers.noise"), Number.isFinite(Number(observer.noise_floor)) ? `${formatDecimal(Number(observer.noise_floor), 0)} dBm` : "—"],
+    [t("observers.battery"), Number.isFinite(Number(observer.battery_mv)) ? `${formatNumber(Number(observer.battery_mv))} mV` : "—"],
+    [t("observers.uptime"), uptimeText],
+    [t("observers.clock"), Number.isFinite(Number(observer.clock_skew_seconds)) ? `${formatDecimal(Number(observer.clock_skew_seconds), 0)} s` : "—"],
     [t("observers.model"), observer.model || "—"],
     [t("observers.firmware"), observer.firmware || "—"],
   ];
@@ -831,9 +865,10 @@ function renderObservers() {
   for (const observer of state.observers) {
     const position = observerPosition(observer);
     if (!position) continue;
+    const health = observerHealth(observer);
     L.circleMarker([position.lat, position.lon], {
       radius: 5,
-      color: position.approx ? "#b07a2a" : "#6b4bb5",
+      color: observerHealthColor(health),
       weight: 2,
       dashArray: position.approx ? "3 3" : null,
       fillColor: "#ffffff",
@@ -863,6 +898,7 @@ async function loadObservers(force = false) {
     state.observers = Array.isArray(data.observers) ? data.observers : [];
     state.observersLoadedAt = Date.now();
     if (state.showObservers) renderObservers();
+    if (!elements.statsPanel.hidden) renderNetworkSummary();
   } catch (error) {
     console.error("Observery se nepodařilo načíst", error);
   } finally {
@@ -1804,6 +1840,8 @@ async function loadStats() {
   try {
     const data = await getJson("/api/stats");
     elements.packetRate.textContent = formatNumber(Number(data.packetsLastHour || 0));
+    state.networkStats = data;
+    if (!elements.statsPanel.hidden) renderNetworkSummary();
   } catch (error) {
     console.error("Statistiky se nepodařilo načíst", error);
   } finally {
@@ -1999,6 +2037,32 @@ function routeSegments(points) {
   }
   if (current.length) segments.push(current);
   return segments.filter((segment) => segment.length >= 2);
+}
+
+function routeAnomalies(route) {
+  const points = route?.points || [];
+  const anomalies = [];
+  let longest = 0;
+  let broken = false;
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const point = points[index];
+    if (point.breakBefore) broken = true;
+    else longest = Math.max(longest, haversineKm(previous.lat, previous.lon, point.lat, point.lon));
+  }
+  if (longest > 120) anomalies.push(t("anomaly.longHop", { distance: formatDecimal(longest, 0) }));
+  if (broken) anomalies.push(t("anomaly.broken"));
+  const seen = new Set();
+  for (const point of points) {
+    const key = String(point.publicKey || `${point.name}|${point.lat}|${point.lon}`).toUpperCase();
+    if (seen.has(key)) {
+      anomalies.push(t("anomaly.loop", { name: point.name || t("common.unknownShort") }));
+      break;
+    }
+    seen.add(key);
+  }
+  if (points.length - 1 > 20) anomalies.push(t("anomaly.manyHops", { count: points.length - 1 }));
+  return anomalies;
 }
 
 function routeColor(packetType) {
@@ -2230,13 +2294,16 @@ const feedState = {
   historyLoadedAt: 0,
   historyLoading: false,
   historyRoutes: [],
+  channelMessages: [],
+  channelsLoadedAt: 0,
+  channelsLoading: false,
   pendingVersions: new Set(),
   renderTimer: null,
   resumeTimer: null,
 };
 
 function setFeedBadge() {
-  if (feedState.mode === "history") {
+  if (feedState.mode !== "live") {
     elements.activityNew.hidden = true;
     return;
   }
@@ -2320,7 +2387,7 @@ function renderFeedNow(groups, emptyText, { history = false } = {}) {
 }
 
 function flushFeed(force = false) {
-  if (feedState.mode === "history") return;
+  if (feedState.mode !== "live") return;
   if (feedState.renderTimer != null) {
     clearTimeout(feedState.renderTimer);
     feedState.renderTimer = null;
@@ -2342,7 +2409,7 @@ function flushFeed(force = false) {
 }
 
 function updateFeed(routes, emptyText = t("feed.empty"), { immediate = false } = {}) {
-  if (feedState.mode === "history") return;
+  if (feedState.mode !== "live") return;
   feedState.latestRoutes = routes;
   feedState.latestEmptyText = emptyText;
   if (elements.activityPanel.hidden) return;
@@ -2372,6 +2439,7 @@ function filteredHistoryRoutes() {
   const cutoff = Date.now() - Number(elements.historyWindow.value);
   return feedState.historyRoutes.filter((route) => {
     if (route.timestamp < cutoff) return false;
+    if (elements.historyAnomalies.checked && !routeAnomalies(route).length) return false;
     if (type === "other") {
       if ([2, 4, 5, 9].includes(Number(route.packetType))) return false;
     } else if (type && Number(route.packetType) !== Number(type)) {
@@ -2420,19 +2488,109 @@ async function loadHistoryFeed(force = false) {
   }
 }
 
+function renderChannelFeed() {
+  const messages = feedState.channelMessages;
+  const title = `${t("activity.channelsTitle")} (${formatNumber(messages.length)})`;
+  elements.activityTitleText.textContent = title;
+  if (!messages.length) {
+    renderFeedNow([], t("activity.channelsEmpty"), { history: true });
+    return;
+  }
+  elements.feed.replaceChildren(...messages.slice(0, 200).map((message) => {
+    const item = document.createElement("li");
+    item.className = "channel-feed-item";
+    item.dataset.packetHash = message.hash;
+    item.innerHTML = `
+      <div>
+        <b>${escapeHtml(message.channel)}</b>
+        <time>${escapeHtml(formatDateTimeShort(message.timestamp))}</time>
+      </div>
+      <p class="channel-text">${escapeHtml(message.sender ? `${message.sender}: ${message.text}` : message.text)}</p>
+      <small>${escapeHtml(packetObserverLabel(message))}${Number.isFinite(message.snr) ? ` · SNR ${formatDecimal(message.snr, 1)} dB` : ""}${message.observerCount > 1 ? ` · ${tCount("units.observers", message.observerCount)}` : ""}</small>
+    `;
+    item.tabIndex = 0;
+    item.setAttribute("role", "button");
+    const open = (event) => {
+      event?.preventDefault();
+      event?.stopPropagation();
+      void openPacketByHash(message.hash);
+    };
+    item.addEventListener("click", open);
+    item.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") open(event);
+    });
+    return item;
+  }));
+}
+
+async function loadChannels(force = false) {
+  if (feedState.channelsLoading) return;
+  if (!force && feedState.channelsLoadedAt && Date.now() - feedState.channelsLoadedAt < 60_000) {
+    renderChannelFeed();
+    return;
+  }
+  feedState.channelsLoading = true;
+  renderFeedNow([], t("activity.channelsLoading"), { history: true });
+  try {
+    const data = await getJson("/api/packets?limit=1200");
+    const byHash = new Map();
+    for (const packet of data.packets || []) {
+      if (Number(packet.payload_type) !== 5) continue;
+      const decoded = parseDecoded(packet);
+      const channel = String(decoded.channel || "");
+      const text = String(decoded.text || "").trim();
+      if (decoded.decryptionStatus !== "decrypted" || !channel.startsWith("#") || !text) continue;
+      const timestamp = routeTimestamp(packet, 0);
+      const existing = byHash.get(packet.hash);
+      const observerCount = (existing?.observerCount || 0) + 1;
+      if (!existing || timestamp > existing.timestamp) {
+        byHash.set(packet.hash, {
+          channel,
+          hash: packet.hash,
+          observerCount,
+          observerName: packet.observer_name,
+          observerId: packet.observer_id,
+          sender: String(decoded.sender || "").trim(),
+          snr: Number(packet.snr),
+          text,
+          timestamp,
+        });
+      } else {
+        existing.observerCount = observerCount;
+      }
+    }
+    feedState.channelMessages = [...byHash.values()].sort((a, b) => b.timestamp - a.timestamp);
+    feedState.channelsLoadedAt = Date.now();
+    renderChannelFeed();
+  } catch (error) {
+    console.error("Kanály se nepodařilo načíst", error);
+    renderFeedNow([], t("activity.channelsFailed"), { history: true });
+  } finally {
+    feedState.channelsLoading = false;
+  }
+}
+
 function setFeedMode(mode) {
   const history = mode === "history";
-  feedState.mode = history ? "history" : "live";
+  const channels = mode === "channels";
+  feedState.mode = history ? "history" : channels ? "channels" : "live";
   elements.activityHistory.classList.toggle("active", history);
   elements.activityHistory.setAttribute("aria-pressed", String(history));
-  elements.activityHistory.textContent = t(history ? "activity.live" : "activity.history");
-  elements.activityHistory.title = t(history ? "activity.liveHint" : "activity.historyHint");
-  elements.activityTitleText.textContent = t(history ? "activity.historyTitle" : "activity.liveTitle");
-  elements.activityPause.hidden = history;
+  elements.activityChannels.classList.toggle("active", channels);
+  elements.activityChannels.setAttribute("aria-pressed", String(channels));
+  elements.activityHistory.textContent = t("activity.history");
+  elements.activityChannels.textContent = t("activity.channels");
+  elements.activityTitleText.textContent = t(history
+    ? "activity.historyTitle"
+    : channels ? "activity.channelsTitle" : "activity.liveTitle");
+  elements.activityPause.hidden = history || channels;
   elements.historyFilters.hidden = !history;
   if (history) {
     setFeedBadge();
     void loadHistoryFeed();
+  } else if (channels) {
+    setFeedBadge();
+    void loadChannels();
   } else {
     if (state.routeWindowMs !== 0) renderArchive();
     else syncRoutePresentation();
@@ -2460,7 +2618,10 @@ elements.packetFocusClose.addEventListener("click", exitPacketFocus);
 elements.activityHistory.addEventListener("click", () => {
   setFeedMode(feedState.mode === "history" ? "live" : "history");
 });
-for (const input of [elements.historySearch, elements.historyType, elements.historyWindow]) {
+elements.activityChannels.addEventListener("click", () => {
+  setFeedMode(feedState.mode === "channels" ? "live" : "channels");
+});
+for (const input of [elements.historySearch, elements.historyType, elements.historyWindow, elements.historyAnomalies]) {
   input.addEventListener("input", () => {
     if (feedState.mode === "history") renderHistoryFeed();
   });
@@ -3794,6 +3955,36 @@ function formatStatsValue(field, value) {
     : formatNumber(value);
 }
 
+function renderNetworkSummary() {
+  const stats = state.networkStats;
+  if (!stats) {
+    elements.networkSummary.replaceChildren();
+    return;
+  }
+  const online = state.observers.filter((observer) => observerHealth(observer) === "online").length;
+  const stale = state.observers.filter((observer) => observerHealth(observer) === "stale").length;
+  const offline = state.observers.length - online - stale;
+  const counts = stats.counts || {};
+  elements.networkSummary.innerHTML = `
+    <div class="network-grid">
+      <div><span>${t("network.nodes")}</span><strong>${formatNumber(Number(stats.totalNodes || 0))}</strong></div>
+      <div><span>${t("network.observers")}</span><strong>${formatNumber(state.observers.length)}</strong></div>
+      <div><span>${t("network.packetsHour")}</span><strong>${formatNumber(Number(stats.packetsLastHour || 0))}</strong></div>
+      <div><span>${t("network.packets24h")}</span><strong>${formatNumber(Number(stats.packetsLast24h || 0))}</strong></div>
+    </div>
+    <div class="network-observer-line">
+      <span class="online"><b>${online}</b> ${t("network.online")}</span>
+      <span class="stale"><b>${stale}</b> ${t("network.stale")}</span>
+      <span class="offline"><b>${offline}</b> ${t("network.offline")}</span>
+      <span>${t("network.roles", {
+        repeaters: formatNumber(Number(counts.repeaters || 0)),
+        rooms: formatNumber(Number(counts.rooms || 0)),
+        companions: formatNumber(Number(counts.companions || 0)),
+      })}</span>
+    </div>
+  `;
+}
+
 function renderStats() {
   if (elements.statsPanel.hidden) return;
   const field = resolveStatsField(state.statsMetric, state.statsWindow);
@@ -3880,7 +4071,10 @@ elements.statsToggle.addEventListener("click", () => {
   elements.statsToggle.textContent = show ? t("stats.hide") : t("stats.show");
   elements.statsToggle.setAttribute("aria-pressed", String(show));
   if (show) {
+    renderNetworkSummary();
     renderStats();
+    void loadStats();
+    void loadObservers().then(() => renderNetworkSummary());
     void loadVisitStats();
   }
 });
