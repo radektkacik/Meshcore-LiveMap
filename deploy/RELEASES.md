@@ -132,6 +132,7 @@
 | 2026-10-24 13:43 | `20261024T134348Z.tar.gz` (stage APP_DIR) | `20261024-1343-85b9907` | Beta: doladění filtru anomálií (jen dlouhé skoky/smyčky/mnoho hopů) a textů kanálů | `src/main.js`, `src/i18n.js` |
 | 2026-10-24 14:30 | `20261024T143025Z.tar.gz` (stage APP_DIR) | `20261024-1430-64f39ed` | Beta: kanály rozdělené po #kanálech (Vše, #praha, #test, #tech, #brno…), historie 24 h | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-24 14:41 | `20261024T144109Z.tar.gz` (stage APP_DIR) | `20261024-1441-aba5c3e` | Beta: observeři bez přesné pozice se shlukují podle IATA do jednoho markeru s počtem a seznamem | `src/main.js`, `src/style.css` |
+| 2026-10-24 14:46 | `20261024T144606Z.tar.gz` | `20261024-1446-828d508` | Prod: clustery observerů podle IATA; ověřeno PRG 13 observerů | `src/main.js`, `src/style.css` |
 | 2026-10-24 14:35 | `20261024T143509Z.tar.gz` | `20261024-1435-a3cb8d3` | Prod: zdraví observerů, síťový souhrn, anomálie tras, veřejné kanály rozdělené po #kanálech; ověřeno | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
@@ -173,11 +174,11 @@ stávající `node_modules`; jinak závislosti doinstaluje:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261024T143509Z` má v záloze předchozí verzi
-(build `20261024-1239-9133bde`); návrat na ni se provede stejným ID:
+Aktuální produkční release `20261024T144606Z` má v záloze předchozí verzi
+(build `20261024-1435-a3cb8d3`); návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261024T143509Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261024T144606Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`;
