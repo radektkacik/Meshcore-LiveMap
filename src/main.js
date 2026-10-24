@@ -123,6 +123,7 @@ const elements = {
   activityNew: document.querySelector("#activity-new"),
   activityChannels: document.querySelector("#activity-channels"),
   activityHistory: document.querySelector("#activity-history"),
+  channelTabs: document.querySelector("#channel-tabs"),
   historyFilters: document.querySelector("#history-filters"),
   historySearch: document.querySelector("#history-search"),
   historyType: document.querySelector("#history-type"),
@@ -2293,6 +2294,7 @@ const feedState = {
   historyLoading: false,
   historyRoutes: [],
   channelMessages: [],
+  channelFilter: "",
   channelsLoadedAt: 0,
   channelsLoading: false,
   pendingVersions: new Set(),
@@ -2487,9 +2489,32 @@ async function loadHistoryFeed(force = false) {
 }
 
 function renderChannelFeed() {
-  const messages = feedState.channelMessages;
-  const title = `${t("activity.channelsTitle")} (${formatNumber(messages.length)})`;
-  elements.activityTitleText.textContent = title;
+  const allMessages = feedState.channelMessages;
+  const counts = new Map();
+  for (const message of allMessages) counts.set(message.channel, (counts.get(message.channel) || 0) + 1);
+  if (feedState.channelFilter && !counts.has(feedState.channelFilter)) feedState.channelFilter = "";
+  const messages = feedState.channelFilter
+    ? allMessages.filter((message) => message.channel === feedState.channelFilter)
+    : allMessages;
+
+  elements.channelTabs.replaceChildren(...[
+    { channel: "", label: t("activity.channelsAll"), count: allMessages.length },
+    ...[...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([channel, count]) => ({ channel, label: channel, count })),
+  ].map(({ channel, label, count }) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = `${label} (${count})`;
+    button.classList.toggle("active", feedState.channelFilter === channel);
+    button.addEventListener("click", () => {
+      feedState.channelFilter = channel;
+      renderChannelFeed();
+    });
+    return button;
+  }));
+
+  elements.activityTitleText.textContent = `${t("activity.channelsTitle")} (${formatNumber(messages.length)})`;
   if (!messages.length) {
     renderFeedNow([], t("activity.channelsEmpty"), { history: true });
     return;
@@ -2530,7 +2555,8 @@ async function loadChannels(force = false) {
   feedState.channelsLoading = true;
   renderFeedNow([], t("activity.channelsLoading"), { history: true });
   try {
-    const data = await getJson("/api/packets?limit=1200");
+    const since = Date.now() - 24 * 60 * 60 * 1000;
+    const data = await getJson(`/api/history?since=${since}&limit=4000`);
     const byHash = new Map();
     for (const packet of data.packets || []) {
       if (Number(packet.payload_type) !== 5) continue;
@@ -2583,6 +2609,7 @@ function setFeedMode(mode) {
     : channels ? "activity.channelsTitle" : "activity.liveTitle");
   elements.activityPause.hidden = history || channels;
   elements.historyFilters.hidden = !history;
+  elements.channelTabs.hidden = !channels;
   if (history) {
     setFeedBadge();
     void loadHistoryFeed();

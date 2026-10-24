@@ -378,6 +378,12 @@ html[data-theme="dark"] .node-history-tip { color: #17271f; background: #e6ecef;
 .packet-anomaly { margin-left: 5px; padding: 0 4px; border-radius: 4px; color: #9a6420; background: #fdf1dc; font: 9px "DM Mono", monospace; }
 .route-anomaly-line { color: #a36a1a !important; }
 .channel-feed-item .channel-text { white-space: normal; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.channel-tabs { display: flex; gap: 5px; padding: 7px 10px; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: thin; }
+.channel-tabs[hidden] { display: none; }
+.channel-tabs button { flex: 0 0 auto; padding: 4px 7px; border: 1px solid var(--line); border-radius: 999px; color: #49665b; background: #fff; font: 9px "DM Mono", monospace; cursor: pointer; white-space: nowrap; }
+.channel-tabs button.active { color: #fff; background: #246aa6; border-color: #246aa6; }
+html[data-theme="dark"] .channel-tabs button { color: #b9c9d2; background: #1b232b; border-color: #2f3d46; }
+html[data-theme="dark"] .channel-tabs button.active { color: #fff; background: #2f6fa6; border-color: #2f6fa6; }
 .channel-feed-item b { color: #1f6fb2; }
 html[data-theme="dark"] .channel-feed-item b { color: #7db8e8; }
 .packet-actions-top { padding: 10px 15px 0; }
