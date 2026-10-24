@@ -834,12 +834,12 @@ function observerHealthColor(health) {
   return "#8a8f8c";
 }
 
-function observerPopupHtml(observer, position) {
+function observerDetailRows(observer) {
   const uptime = Number(observer.uptime_secs);
   const uptimeText = Number.isFinite(uptime)
     ? `${Math.floor(uptime / 86400)} d ${Math.floor((uptime % 86400) / 3600)} h`
     : "—";
-  const rows = [
+  return [
     [t("observers.lastSeen"), observer.last_seen ? formatDateTime(observer.last_seen) : "—"],
     [t("observers.packets"), Number.isFinite(Number(observer.packet_count)) ? formatNumber(Number(observer.packet_count)) : "—"],
     [t("observers.packetsHour"), Number.isFinite(Number(observer.packetsLastHour)) ? formatNumber(Number(observer.packetsLastHour)) : "—"],
@@ -850,6 +850,10 @@ function observerPopupHtml(observer, position) {
     [t("observers.model"), observer.model || "—"],
     [t("observers.firmware"), observer.firmware || "—"],
   ];
+}
+
+function observerPopupHtml(observer, position) {
+  const rows = observerDetailRows(observer);
   return `
     <section class="observer-popup-card">
       <header>
@@ -861,25 +865,33 @@ function observerPopupHtml(observer, position) {
   `;
 }
 
-function observerClusterPopupHtml(observers, iata) {
+function observerClusterPopupHtml(observers, position) {
   const rows = observers.map((observer) => {
     const health = observerHealth(observer);
     const packets = Number.isFinite(Number(observer.packetsLastHour)) ? formatNumber(Number(observer.packetsLastHour)) : "—";
-    const noise = Number.isFinite(Number(observer.noise_floor)) ? `${formatDecimal(Number(observer.noise_floor), 0)} dBm` : "—";
-    const battery = Number.isFinite(Number(observer.battery_mv)) ? `${formatNumber(Number(observer.battery_mv))} mV` : "—";
+    const detail = observerDetailRows(observer)
+      .map(([label, value]) => `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(String(value))}</dd>`)
+      .join("");
     return `
       <li>
-        <b><i class="observer-dot ${health}"></i>${escapeHtml(observer.name || t("packet.unknownObserver"))}</b>
-        <small>${escapeHtml(t(`network.${health}`))} · ${packets} pkt/h · ${noise} · ${battery}</small>
-        <small>${observer.last_seen ? escapeHtml(formatDateTime(observer.last_seen)) : "—"}</small>
+        <details>
+          <summary>
+            <b><i class="observer-dot ${health}"></i>${escapeHtml(observer.name || t("packet.unknownObserver"))}</b>
+            <small>${escapeHtml(t(`network.${health}`))} · ${packets} pkt/h</small>
+          </summary>
+          <dl class="observer-detail-dl">${detail}</dl>
+        </details>
       </li>
     `;
   }).join("");
+  const title = position.approx
+    ? `≈ ${escapeHtml(observers[0].iata || "")} · ${tCount("units.observers", observers.length)}`
+    : tCount("units.observers", observers.length);
   return `
     <section class="observer-popup-card observer-cluster-card">
       <header>
-        <h3>≈ ${escapeHtml(iata)} · ${tCount("units.observers", observers.length)}</h3>
-        <small>${t("observers.approx")}</small>
+        <h3>${title}</h3>
+        <small>${t(position.approx ? "observers.approx" : "observers.exact")}</small>
       </header>
       <ul class="observer-cluster-list">${rows}</ul>
     </section>
@@ -892,10 +904,14 @@ function renderObservers() {
   for (const observer of state.observers) {
     const position = observerPosition(observer);
     if (!position) continue;
-    const key = position.approx ? `approx:${String(observer.iata || "").toUpperCase()}` : `exact:${observer.id}`;
+    const key = `${position.lat.toFixed(5)},${position.lon.toFixed(5)}`;
     const group = groups.get(key);
-    if (group) group.observers.push(observer);
-    else groups.set(key, { observers: [observer], position });
+    if (group) {
+      group.observers.push(observer);
+      group.position = { ...group.position, approx: group.position.approx && position.approx };
+    } else {
+      groups.set(key, { observers: [observer], position });
+    }
   }
   for (const { observers, position } of groups.values()) {
     if (position.approx) {
@@ -910,21 +926,21 @@ function renderObservers() {
         interactive: false,
       }).addTo(observerLayer);
     }
-    if (observers.length > 1 && position.approx) {
+    if (observers.length > 1) {
       L.marker([position.lat, position.lon], {
         icon: L.divIcon({
-          className: "observer-cluster-icon",
+          className: `observer-cluster-icon${position.approx ? "" : " exact"}`,
           html: `<span>${observers.length}</span>`,
           iconSize: [26, 26],
           iconAnchor: [13, 13],
         }),
         pane: "markerPane",
       })
-        .bindTooltip(`≈ ${observers[0].iata} · ${tCount("units.observers", observers.length)}`, {
+        .bindTooltip(`${position.approx ? `≈ ${observers[0].iata} · ` : ""}${tCount("units.observers", observers.length)}`, {
           className: "node-tooltip",
           direction: "top",
         })
-        .bindPopup(observerClusterPopupHtml(observers, observers[0].iata), {
+        .bindPopup(observerClusterPopupHtml(observers, position), {
           className: "observer-popup",
           maxWidth: 330,
           minWidth: 260,
