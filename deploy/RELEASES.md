@@ -128,6 +128,8 @@
 | 2026-10-23 12:39 | `20261023T123943Z.tar.gz` | `20261023-1239-fdd61b8` | Prod: label vrstvy jen „Observer“ | `index.html`, `src/i18n.js` |
 | 2026-10-24 12:38 | `20261024T123852Z.tar.gz` (stage APP_DIR) | `20261024-1238-9133bde` | Beta: limit jednoho hopu zvýšen ze 150 na 170 km | `src/main.js` |
 | 2026-10-24 12:39 | `20261024T123911Z.tar.gz` | `20261024-1239-9133bde` | Prod: stejný limit hopu 170 km | `src/main.js` |
+| 2026-10-24 13:41 | `20261024T134159Z.tar.gz` (stage APP_DIR) | `20261024-1341-5f0e012` | Beta: zdraví observerů, síťový souhrn ve statistikách, detekce anomálií tras a feed veřejných kanálů | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
+| 2026-10-24 13:43 | `20261024T134348Z.tar.gz` (stage APP_DIR) | `20261024-1343-85b9907` | Beta: doladění filtru anomálií (jen dlouhé skoky/smyčky/mnoho hopů) a textů kanálů | `src/main.js`, `src/i18n.js` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
