@@ -134,6 +134,7 @@
 | 2026-10-24 14:41 | `20261024T144109Z.tar.gz` (stage APP_DIR) | `20261024-1441-aba5c3e` | Beta: observeři bez přesné pozice se shlukují podle IATA do jednoho markeru s počtem a seznamem | `src/main.js`, `src/style.css` |
 | 2026-10-24 14:46 | `20261024T144606Z.tar.gz` | `20261024-1446-828d508` | Prod: clustery observerů podle IATA; ověřeno PRG 13 observerů | `src/main.js`, `src/style.css` |
 | 2026-10-24 18:02 | `20261024T180251Z.tar.gz` (stage APP_DIR) | `20261024-1802-fcbf47b` | Beta: režim „Záblesky“ – slabá trasa v pozadí a jasné krátké dash záblesky rychle po trase | `index.html`, `src/main.js`, `src/i18n.js` |
+| 2026-10-24 18:19 | `20261024T181956Z.tar.gz` (stage APP_DIR) | `20261024-1819-df1ad93` | Beta: revert režimu „Záblesky“; animace tras je zpět v původním režimu | `index.html`, `src/main.js`, `src/i18n.js` |
 | 2026-10-24 14:35 | `20261024T143509Z.tar.gz` | `20261024-1435-a3cb8d3` | Prod: zdraví observerů, síťový souhrn, anomálie tras, veřejné kanály rozdělené po #kanálech; ověřeno | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
