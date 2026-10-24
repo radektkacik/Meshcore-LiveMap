@@ -137,6 +137,7 @@
 | 2026-10-24 18:19 | `20261024T181956Z.tar.gz` (stage APP_DIR) | `20261024-1819-df1ad93` | Beta: revert režimu „Záblesky“; animace tras je zpět v původním režimu | `index.html`, `src/main.js`, `src/i18n.js` |
 | 2026-10-24 18:53 | `20261024T185338Z.tar.gz` (stage APP_DIR) | `20261024-1853-e5f99b1` | Beta: limit živých tras zvýšen z 250 na 350 | `src/main.js` |
 | 2026-10-24 18:53 | `20261024T185353Z.tar.gz` | `20261024-1853-e5f99b1` | Prod: stejný limit 350 živých tras | `src/main.js` |
+| 2026-10-24 18:58 | `20261024T185810Z.tar.gz` (stage APP_DIR) | `20261024-1858-a28d6c8` | Beta: clustery observerů mají rozbalitelné detaily každého observeru; clustery i pro překryvy přesných pozic | `src/main.js`, `src/style.css` |
 | 2026-10-24 14:35 | `20261024T143509Z.tar.gz` | `20261024-1435-a3cb8d3` | Prod: zdraví observerů, síťový souhrn, anomálie tras, veřejné kanály rozdělené po #kanálech; ověřeno | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
