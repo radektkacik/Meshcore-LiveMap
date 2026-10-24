@@ -134,7 +134,6 @@ const elements = {
   activityPanel: document.querySelector("#activity-panel"),
   activityPause: document.querySelector("#activity-pause"),
   animationToggle: document.querySelector("#animation-toggle"),
-  flashToggle: document.querySelector("#flash-toggle"),
   baseLayerButtons: [...document.querySelectorAll("#base-layer-buttons button")],
   buildStamp: document.querySelector("#build-stamp"),
   betaBadge: document.querySelector("#beta-badge"),
@@ -255,12 +254,10 @@ langButton.addEventListener("click", () => {
 });
 elements.themeToggle.after(langButton);
 elements.animationToggle.checked = localStorage.getItem("meshcoreAnimateRoutes") !== "false";
-elements.flashToggle.checked = localStorage.getItem("meshcoreFlashRoutes") === "true";
 
 const state = {
   activeRoutes: new Map(),
   animationEnabled: elements.animationToggle.checked,
-  flashMode: elements.flashToggle.checked,
   animationMode: new URLSearchParams(location.search).get("anim") === "svg" ? "svg" : "canvas",
   allowedHashBytes: new Set([2, 3]),
   allowedRoles: new Set(ALL_NODE_ROLES),
@@ -901,6 +898,18 @@ function renderObservers() {
     else groups.set(key, { observers: [observer], position });
   }
   for (const { observers, position } of groups.values()) {
+    if (position.approx) {
+      L.circle([position.lat, position.lon], {
+        radius: 25000,
+        color: "#b07a2a",
+        weight: 1,
+        opacity: 0.5,
+        dashArray: "4 7",
+        fillColor: "#d18a1f",
+        fillOpacity: 0.07,
+        interactive: false,
+      }).addTo(observerLayer);
+    }
     if (observers.length > 1 && position.approx) {
       L.marker([position.lat, position.lon], {
         icon: L.divIcon({
@@ -931,7 +940,7 @@ function renderObservers() {
       color: observerHealthColor(health),
       weight: 2,
       dashArray: position.approx ? "3 3" : null,
-      fillColor: "#ffffff",
+      fillColor: position.approx ? "#fff1d9" : "#ffffff",
       fillOpacity: 0.95,
       pane: "markerPane",
     })
@@ -2265,47 +2274,40 @@ function renderRoute(route, { archive = false } = {}) {
   const useSvg = state.animationMode === "svg";
   const layerRenderer = useSvg ? routeSvgRenderer : routeRenderer;
   const lineClass = useSvg && !archive ? "route-svg-path" : undefined;
-  const flash = state.flashMode && !archive;
   const weight = archive ? 2.5 : 4;
   const opacity = archive ? 0.42 : 1;
-  const dashArray = archive ? "4 8" : flash ? "3 34" : "6 10";
+  const dashArray = archive ? "4 8" : "6 10";
   const snrValues = route.snrValues || [];
   const lines = [];
-
-  const addLine = (coords, color) => {
-    if (flash) {
-      L.polyline(coords, {
-        renderer: layerRenderer,
-        color,
-        className: lineClass,
-        dashArray: "1 8",
-        lineCap: "round",
-        lineJoin: "round",
-        opacity: 0.08,
-        weight: 3,
-      }).addTo(group);
-    }
-    const line = L.polyline(coords, {
-      renderer: layerRenderer,
-      color,
-      className: lineClass,
-      dashArray,
-      lineCap: "round",
-      lineJoin: "round",
-      opacity,
-      weight,
-    }).addTo(group);
-    lines.push(line);
-  };
 
   if (snrValues.length >= 2 && segments.length === 1) {
     const segment = segments[0];
     for (let index = 0; index < segment.length - 1; index += 1) {
       const snr = snrValues[Math.min(index, snrValues.length - 1)];
-      addLine([segment[index], segment[index + 1]], snrColor(snr));
+      lines.push(L.polyline([segment[index], segment[index + 1]], {
+        renderer: layerRenderer,
+        color: snrColor(snr),
+        className: lineClass,
+        dashArray,
+        lineCap: "round",
+        lineJoin: "round",
+        opacity,
+        weight,
+      }).addTo(group));
     }
   } else {
-    for (const segment of segments) addLine(segment, route.color);
+    for (const segment of segments) {
+      lines.push(L.polyline(segment, {
+        renderer: layerRenderer,
+        color: route.color,
+        className: lineClass,
+        dashArray,
+        lineCap: "round",
+        lineJoin: "round",
+        opacity,
+        weight,
+      }).addTo(group));
+    }
   }
 
   if (useSvg && !archive) {
@@ -2313,7 +2315,7 @@ function renderRoute(route, { archive = false } = {}) {
       const element = typeof line.getElement === "function" ? line.getElement() : null;
       if (!element) continue;
       element.style.strokeDasharray = dashArray;
-      element.style.animation = state.flashMode ? "route-dash 0.28s linear infinite" : state.animationEnabled ? "route-dash 1s linear infinite" : "none";
+      element.style.animation = state.animationEnabled ? "route-dash 1s linear infinite" : "none";
     }
   }
 
@@ -2322,8 +2324,7 @@ function renderRoute(route, { archive = false } = {}) {
     renderer: layerRenderer,
     color: "#ffffff",
     fillColor: route.color,
-    fillOpacity: flash ? 0.35 : 1,
-    opacity: flash ? 0.35 : 1,
+    fillOpacity: 1,
     radius: archive ? 4 : 6,
     weight: 2,
   }).addTo(group);
@@ -2970,16 +2971,14 @@ let lastRouteAnimationAt = 0;
 const CANVAS_ANIMATION_FPS = 10;
 
 function routeAnimationEnabled() {
-  return (state.animationEnabled || state.flashMode) && state.activeRoutes.size > 0 && !document.hidden;
+  return state.animationEnabled && state.activeRoutes.size > 0 && !document.hidden;
 }
 
 function animateRoutes(timestamp) {
   routeAnimationFrame = null;
   if (!routeAnimationEnabled()) return;
   if (timestamp - lastRouteAnimationAt >= 1000 / CANVAS_ANIMATION_FPS) {
-    const dashLength = state.flashMode ? 37 : 16;
-    const dashSpeed = state.flashMode ? 42 : 75;
-    routeRenderer._dashOffset = -((timestamp / dashSpeed) % dashLength);
+    routeRenderer._dashOffset = -((timestamp / 75) % 16);
     perf.measure("canvas", () => routeRenderer._redraw());
     perf.hit("kresba");
     lastRouteAnimationAt = timestamp;
@@ -2990,7 +2989,7 @@ function animateRoutes(timestamp) {
 function applyLineAnimation(lines, animated) {
   for (const line of lines || []) {
     const element = typeof line.getElement === "function" ? line.getElement() : null;
-    if (element) element.style.animation = animated ? (state.flashMode ? "route-dash 0.28s linear infinite" : "route-dash 1s linear infinite") : "none";
+    if (element) element.style.animation = animated ? "route-dash 1s linear infinite" : "none";
   }
 }
 
@@ -3995,12 +3994,6 @@ elements.animationToggle.addEventListener("change", () => {
   state.animationEnabled = elements.animationToggle.checked;
   localStorage.setItem("meshcoreAnimateRoutes", String(state.animationEnabled));
   updateRouteAnimation();
-});
-elements.flashToggle.addEventListener("change", () => {
-  state.flashMode = elements.flashToggle.checked;
-  localStorage.setItem("meshcoreFlashRoutes", String(state.flashMode));
-  clearLivePresentation();
-  syncRoutePresentation();
 });
 
 elements.nodeLabelsToggle.checked = state.showNodeLabels;
