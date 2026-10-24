@@ -135,6 +135,8 @@
 | 2026-10-24 14:46 | `20261024T144606Z.tar.gz` | `20261024-1446-828d508` | Prod: clustery observerů podle IATA; ověřeno PRG 13 observerů | `src/main.js`, `src/style.css` |
 | 2026-10-24 18:02 | `20261024T180251Z.tar.gz` (stage APP_DIR) | `20261024-1802-fcbf47b` | Beta: režim „Záblesky“ – slabá trasa v pozadí a jasné krátké dash záblesky rychle po trase | `index.html`, `src/main.js`, `src/i18n.js` |
 | 2026-10-24 18:19 | `20261024T181956Z.tar.gz` (stage APP_DIR) | `20261024-1819-df1ad93` | Beta: revert režimu „Záblesky“; animace tras je zpět v původním režimu | `index.html`, `src/main.js`, `src/i18n.js` |
+| 2026-10-24 18:53 | `20261024T185338Z.tar.gz` (stage APP_DIR) | `20261024-1853-e5f99b1` | Beta: limit živých tras zvýšen z 250 na 350 | `src/main.js` |
+| 2026-10-24 18:53 | `20261024T185353Z.tar.gz` | `20261024-1853-e5f99b1` | Prod: stejný limit 350 živých tras | `src/main.js` |
 | 2026-10-24 14:35 | `20261024T143509Z.tar.gz` | `20261024-1435-a3cb8d3` | Prod: zdraví observerů, síťový souhrn, anomálie tras, veřejné kanály rozdělené po #kanálech; ověřeno | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
@@ -176,11 +178,11 @@ stávající `node_modules`; jinak závislosti doinstaluje:
 ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh <RELEASE_ID>'
 ```
 
-Aktuální produkční release `20261024T144606Z` má v záloze předchozí verzi
-(build `20261024-1435-a3cb8d3`); návrat na ni se provede stejným ID:
+Aktuální produkční release `20261024T185353Z` má v záloze předchozí verzi
+(build `20261024-1446-828d508`); návrat na ni se provede stejným ID:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261024T144606Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261024T185353Z'
 ```
 
 Pro stage použít `meshcore-live-map-stage`, `4174` a `APP_DIR=/opt/meshcore-live-map-stage`;
