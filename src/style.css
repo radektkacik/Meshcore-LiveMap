@@ -410,6 +410,16 @@ html[data-theme="dark"] .packet-occurrence-detail { color: #9fb0b8; }
 .observer-popup-card dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0; padding: 9px 12px 11px; }
 .observer-popup-card dt { color: var(--muted); font-size: 10px; }
 .observer-popup-card dd { margin: 0; font-size: 10px; text-align: right; word-break: break-word; }
+.observer-cluster-icon { display: grid; place-items: center; width: 26px; height: 26px; border: 2px solid #b07a2a; border-radius: 50%; color: #8a5b15; background: #fff4e2; box-shadow: 0 1px 4px rgba(32, 54, 44, 0.25); font: 700 10px "DM Mono", monospace; }
+.observer-cluster-list { list-style: none; margin: 0; padding: 6px 0; max-height: 300px; overflow-y: auto; }
+.observer-cluster-list li { padding: 5px 12px; border-bottom: 1px solid rgba(30, 65, 49, 0.08); }
+.observer-cluster-list li:last-child { border-bottom: 0; }
+.observer-cluster-list b { display: flex; align-items: center; gap: 5px; font-size: 11px; }
+.observer-cluster-list small { display: block; margin-top: 2px; color: var(--muted); font: 9px/1.4 "DM Mono", monospace; }
+.observer-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
+.observer-dot.online { background: #2e9b63; }
+.observer-dot.stale { background: #d18a1f; }
+.observer-dot.offline { background: #8a8f8c; }
 html[data-theme="dark"] .observer-popup .leaflet-popup-content-wrapper, html[data-theme="dark"] .observer-popup .leaflet-popup-tip { background: #161d24; border-color: var(--line); }
 html[data-theme="dark"] .observer-popup-card { color: #e6ecef; }
 html[data-theme="dark"] .observer-popup-card header { background: #1b232b; border-color: var(--line); }

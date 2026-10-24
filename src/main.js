@@ -861,11 +861,67 @@ function observerPopupHtml(observer, position) {
   `;
 }
 
+function observerClusterPopupHtml(observers, iata) {
+  const rows = observers.map((observer) => {
+    const health = observerHealth(observer);
+    const packets = Number.isFinite(Number(observer.packetsLastHour)) ? formatNumber(Number(observer.packetsLastHour)) : "—";
+    const noise = Number.isFinite(Number(observer.noise_floor)) ? `${formatDecimal(Number(observer.noise_floor), 0)} dBm` : "—";
+    const battery = Number.isFinite(Number(observer.battery_mv)) ? `${formatNumber(Number(observer.battery_mv))} mV` : "—";
+    return `
+      <li>
+        <b><i class="observer-dot ${health}"></i>${escapeHtml(observer.name || t("packet.unknownObserver"))}</b>
+        <small>${escapeHtml(t(`network.${health}`))} · ${packets} pkt/h · ${noise} · ${battery}</small>
+        <small>${observer.last_seen ? escapeHtml(formatDateTime(observer.last_seen)) : "—"}</small>
+      </li>
+    `;
+  }).join("");
+  return `
+    <section class="observer-popup-card observer-cluster-card">
+      <header>
+        <h3>≈ ${escapeHtml(iata)} · ${tCount("units.observers", observers.length)}</h3>
+        <small>${t("observers.approx")}</small>
+      </header>
+      <ul class="observer-cluster-list">${rows}</ul>
+    </section>
+  `;
+}
+
 function renderObservers() {
   observerLayer.clearLayers();
+  const groups = new Map();
   for (const observer of state.observers) {
     const position = observerPosition(observer);
     if (!position) continue;
+    const key = position.approx ? `approx:${String(observer.iata || "").toUpperCase()}` : `exact:${observer.id}`;
+    const group = groups.get(key);
+    if (group) group.observers.push(observer);
+    else groups.set(key, { observers: [observer], position });
+  }
+  for (const { observers, position } of groups.values()) {
+    if (observers.length > 1 && position.approx) {
+      L.marker([position.lat, position.lon], {
+        icon: L.divIcon({
+          className: "observer-cluster-icon",
+          html: `<span>${observers.length}</span>`,
+          iconSize: [26, 26],
+          iconAnchor: [13, 13],
+        }),
+        pane: "markerPane",
+      })
+        .bindTooltip(`≈ ${observers[0].iata} · ${tCount("units.observers", observers.length)}`, {
+          className: "node-tooltip",
+          direction: "top",
+        })
+        .bindPopup(observerClusterPopupHtml(observers, observers[0].iata), {
+          className: "observer-popup",
+          maxWidth: 330,
+          minWidth: 260,
+          autoPan: true,
+        })
+        .addTo(observerLayer);
+      continue;
+    }
+    const observer = observers[0];
     const health = observerHealth(observer);
     L.circleMarker([position.lat, position.lon], {
       radius: 5,
