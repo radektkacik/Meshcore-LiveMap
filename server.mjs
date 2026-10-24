@@ -482,22 +482,39 @@ function broadcastStatus() {
 
 const mqttUrl = process.env.MQTT_URL;
 if (mqttUrl && process.env.MQTT_USERNAME && process.env.MQTT_PASSWORD) {
-  const MQTT_RECONNECT_MS = Math.max(1_000, Number(process.env.MQTT_RECONNECT_MS || 5_000));
-  const MQTT_RECONNECT_MAX_MS = Math.max(MQTT_RECONNECT_MS, Number(process.env.MQTT_RECONNECT_MAX_MS || 300_000));
-  let mqttBackoff = MQTT_RECONNECT_MS;
+  const MQTT_KEEPALIVE_S = Math.min(300, Math.max(10, Number(process.env.MQTT_KEEPALIVE || 30)));
+  const MQTT_RECONNECT_MS = Math.max(1_000, Number(process.env.MQTT_RECONNECT_MS || 3_000));
+  const MQTT_RECONNECT_MAX_MS = Math.max(MQTT_RECONNECT_MS, Number(process.env.MQTT_RECONNECT_MAX_MS || 60_000));
+  const MQTT_STABLE_MS = 30_000;
+  const MQTT_JITTER = 0.2;
+  let mqttReconnectDelay = MQTT_RECONNECT_MS;
+  let mqttReconnectTimer = null;
+  let mqttConnectedAt = 0;
+  const scheduleMqttReconnect = () => {
+    if (mqttReconnectTimer) return;
+    const jitter = 1 - MQTT_JITTER + Math.random() * MQTT_JITTER * 2;
+    const delay = Math.round(mqttReconnectDelay * jitter);
+    console.log(`MQTT reconnect in ${delay} ms`);
+    mqttReconnectTimer = setTimeout(() => {
+      mqttReconnectTimer = null;
+      mqttClient.reconnect();
+    }, delay);
+    mqttReconnectDelay = Math.min(mqttReconnectDelay * 2, MQTT_RECONNECT_MAX_MS);
+  };
   const mqttClient = mqtt.connect(mqttUrl, {
     clean: true,
     clientId: `meshcore-map-${Math.random().toString(16).slice(2)}`,
     connectTimeout: 10_000,
+    keepalive: MQTT_KEEPALIVE_S,
     password: process.env.MQTT_PASSWORD,
     protocolVersion: 4,
-    reconnectPeriod: MQTT_RECONNECT_MS,
+    reconnectPeriod: 0,
     username: process.env.MQTT_USERNAME,
   });
   mqttClient.on("connect", () => {
     console.log("MQTT connected");
-    mqttBackoff = MQTT_RECONNECT_MS;
-    mqttClient.options.reconnectPeriod = MQTT_RECONNECT_MS;
+    mqttConnectedAt = Date.now();
+    mqttReconnectDelay = MQTT_RECONNECT_MS;
     mqttConnected = true;
     const topic = process.env.MQTT_TOPIC || "meshcore/+/+/packets";
     mqttClient.subscribe(topic, { qos: 0 }, (error) => {
@@ -508,9 +525,12 @@ if (mqttUrl && process.env.MQTT_USERNAME && process.env.MQTT_PASSWORD) {
   });
   mqttClient.on("close", () => {
     mqttConnected = false;
-    mqttClient.options.reconnectPeriod = mqttBackoff;
-    mqttBackoff = Math.min(mqttBackoff * 2, MQTT_RECONNECT_MAX_MS);
+    if (mqttConnectedAt && Date.now() - mqttConnectedAt >= MQTT_STABLE_MS) {
+      mqttReconnectDelay = MQTT_RECONNECT_MS;
+    }
+    mqttConnectedAt = 0;
     broadcastStatus();
+    scheduleMqttReconnect();
   });
   let lastMqttErrorLog = 0;
   let lastMqttErrorMessage = "";
