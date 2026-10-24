@@ -2043,15 +2043,13 @@ function routeAnomalies(route) {
   const points = route?.points || [];
   const anomalies = [];
   let longest = 0;
-  let broken = false;
   for (let index = 1; index < points.length; index += 1) {
     const previous = points[index - 1];
     const point = points[index];
-    if (point.breakBefore) broken = true;
-    else longest = Math.max(longest, haversineKm(previous.lat, previous.lon, point.lat, point.lon));
+    if (point.breakBefore) continue;
+    longest = Math.max(longest, haversineKm(previous.lat, previous.lon, point.lat, point.lon));
   }
-  if (longest > 120) anomalies.push(t("anomaly.longHop", { distance: formatDecimal(longest, 0) }));
-  if (broken) anomalies.push(t("anomaly.broken"));
+  if (longest > 140) anomalies.push(t("anomaly.longHop", { distance: formatDecimal(longest, 0) }));
   const seen = new Set();
   for (const point of points) {
     const key = String(point.publicKey || `${point.name}|${point.lat}|${point.lon}`).toUpperCase();
@@ -2505,7 +2503,7 @@ function renderChannelFeed() {
         <b>${escapeHtml(message.channel)}</b>
         <time>${escapeHtml(formatDateTimeShort(message.timestamp))}</time>
       </div>
-      <p class="channel-text">${escapeHtml(message.sender ? `${message.sender}: ${message.text}` : message.text)}</p>
+      <p class="channel-text">${escapeHtml(message.sender && !message.text.startsWith(`${message.sender}:`) ? `${message.sender}: ${message.text}` : message.text)}</p>
       <small>${escapeHtml(packetObserverLabel(message))}${Number.isFinite(message.snr) ? ` · SNR ${formatDecimal(message.snr, 1)} dB` : ""}${message.observerCount > 1 ? ` · ${tCount("units.observers", message.observerCount)}` : ""}</small>
     `;
     item.tabIndex = 0;
