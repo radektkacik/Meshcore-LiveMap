@@ -129,6 +129,14 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(defaultHistory.status, 200);
     const defaultHistoryBody = await defaultHistory.json();
     assert.ok(defaultHistoryBody.since > Date.now() - 2 * 24 * 60 * 60 * 1000);
+    assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/route-explorer?a=xyz&b=${"b".repeat(64)}`)).status, 400);
+    assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/route-explorer?a=${"a".repeat(64)}&b=${"a".repeat(64)}`)).status, 400);
+    const explorerEmpty = await fetch(`http://127.0.0.1:${appPort}/api/route-explorer?a=${"a".repeat(64)}&b=${"b".repeat(64)}`);
+    assert.equal(explorerEmpty.status, 200);
+    const explorerEmptyBody = await explorerEmpty.json();
+    assert.deepEqual(explorerEmptyBody.routes, []);
+    assert.equal(explorerEmptyBody.scanned, 0);
+    assert.ok(explorerEmptyBody.since > Date.now() - 2 * 24 * 60 * 60 * 1000);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/node-history?key=short`)).status, 400);
     const nodeHistory = await fetch(`http://127.0.0.1:${appPort}/api/node-history?key=${"a".repeat(64)}&days=7`);
     assert.equal(nodeHistory.status, 200);

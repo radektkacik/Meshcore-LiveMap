@@ -86,6 +86,13 @@ export function createPacketStore(dbPath, {
     WHERE hash = ?
     ORDER BY observed_at DESC
   `);
+  const selectExplorer = db.prepare(`
+    SELECT observer_id, observed_at, payload_type, resolved_path, snr
+    FROM packet_routes
+    WHERE observed_at >= ? AND resolved_path LIKE ? AND resolved_path LIKE ?
+    ORDER BY observed_at DESC
+    LIMIT ?
+  `);
   const purgeOld = db.prepare("DELETE FROM packet_routes WHERE observed_at < ?");
   const purgeOverflow = db.prepare(`
     DELETE FROM packet_routes WHERE rowid IN (
@@ -94,6 +101,70 @@ export function createPacketStore(dbPath, {
   `);
   const countRows = db.prepare("SELECT COUNT(*) AS total FROM packet_routes");
   const oldestRow = db.prepare("SELECT MIN(observed_at) AS oldest FROM packet_routes");
+
+  const queryExplorer = (aKey, bKey, sinceMs, limit = 20_000) => {
+    const a = String(aKey || "").toLowerCase();
+    const b = String(bKey || "").toLowerCase();
+    if (!a || !b || a === b) return { scanned: 0, routes: [] };
+    const rows = selectExplorer.all(
+      Math.floor(sinceMs),
+      `%"${a}"%`,
+      `%"${b}"%`,
+      Math.floor(limit),
+    );
+    const groups = new Map();
+    for (const row of rows) {
+      if (Number(row.payload_type) === 8) continue;
+      const path = safeArray(row.resolved_path).map((hop) => (hop ? String(hop).toLowerCase() : null));
+      const from = path.indexOf(a);
+      const to = path.indexOf(b);
+      if (from < 0 || to <= from) continue;
+      const chain = path.slice(from, to + 1);
+      const signature = chain.map((hop) => hop || "?").join(">");
+      let group = groups.get(signature);
+      if (!group) {
+        group = {
+          count: 0,
+          lastAt: 0,
+          observers: new Set(),
+          path: chain,
+          snrCount: 0,
+          snrMax: null,
+          snrMin: null,
+          snrSum: 0,
+          types: {},
+        };
+        groups.set(signature, group);
+      }
+      group.count += 1;
+      group.lastAt = Math.max(group.lastAt, row.observed_at);
+      group.observers.add(row.observer_id);
+      const snr = Number(row.snr);
+      if (Number.isFinite(snr)) {
+        group.snrSum += snr;
+        group.snrCount += 1;
+        group.snrMin = group.snrMin == null ? snr : Math.min(group.snrMin, snr);
+        group.snrMax = group.snrMax == null ? snr : Math.max(group.snrMax, snr);
+      }
+      const type = Number(row.payload_type) || 0;
+      group.types[type] = (group.types[type] || 0) + 1;
+    }
+    const routes = [...groups.values()]
+      .sort((left, right) => right.count - left.count || right.lastAt - left.lastAt)
+      .slice(0, 100)
+      .map((group) => ({
+        count: group.count,
+        hops: group.path.length - 1,
+        lastAt: group.lastAt,
+        observers: group.observers.size,
+        path: group.path,
+        snrAvg: group.snrCount ? Math.round((group.snrSum / group.snrCount) * 10) / 10 : null,
+        snrMax: group.snrMax,
+        snrMin: group.snrMin,
+        types: group.types,
+      }));
+    return { scanned: rows.length, routes };
+  };
 
   const record = db.transaction((rows) => {
     let stored = 0;
@@ -122,6 +193,7 @@ export function createPacketStore(dbPath, {
       ...row,
       resolved_path: safeArray(row.resolved_path),
     })),
+    queryExplorer,
     record: (rows) => record(rows),
   };
 }

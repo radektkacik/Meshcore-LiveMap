@@ -1006,6 +1006,35 @@ async function handleRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/route-explorer") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      return;
+    }
+    const a = String(url.searchParams.get("a") || "").trim().toLowerCase();
+    const b = String(url.searchParams.get("b") || "").trim().toLowerCase();
+    const validKey = (value) => /^[0-9a-f]{4,64}$/.test(value);
+    if (!validKey(a) || !validKey(b)) {
+      sendJson(response, 400, { error: "Neplatný klíč uzlu." });
+      return;
+    }
+    if (a === b) {
+      sendJson(response, 400, { error: "Uzly A a B musí být různé." });
+      return;
+    }
+    const sinceParam = url.searchParams.has("since") ? Number(url.searchParams.get("since")) : NaN;
+    const since = Number.isFinite(sinceParam)
+      ? Math.max(sinceParam, Date.now() - 7 * 24 * 60 * 60 * 1000)
+      : Date.now() - 24 * 60 * 60 * 1000;
+    const limitParam = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : NaN;
+    const limit = Number.isFinite(limitParam)
+      ? Math.min(Math.max(1, limitParam), 50_000)
+      : 20_000;
+    const result = packetStore.queryExplorer(a, b, since, limit);
+    sendJson(response, 200, { a, b, since, ...result });
+    return;
+  }
+
   if (url.pathname === "/api/node-history") {
     if (request.method !== "GET") {
       response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");

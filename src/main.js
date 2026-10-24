@@ -29,6 +29,14 @@ import {
   validCoords,
 } from "./node-model.js";
 import { buildNeighborIndex, RouteStore, RouteVersionState, routeTimestamp } from "./route-model.js";
+import { buildHeatmap, heatmapColor } from "./heatmap.js";
+import {
+  playbackCursor,
+  playbackFraction,
+  playbackRate,
+  playbackTrailMs,
+  playbackVisibleRoutes,
+} from "./playback.js";
 import {
   applyStaticTranslations,
   formatDate,
@@ -154,6 +162,32 @@ const elements = {
   feedbackSend: document.querySelector("#feedback-send"),
   feedbackStatus: document.querySelector("#feedback-status"),
   feedbackToggle: document.querySelector("#feedback-toggle"),
+  exploreClose: document.querySelector("#explore-close"),
+  exploreDialog: document.querySelector("#explore-dialog"),
+  exploreHide: document.querySelector("#explore-hide"),
+  exploreNodeA: document.querySelector("#explore-node-a"),
+  exploreNodeB: document.querySelector("#explore-node-b"),
+  exploreResults: document.querySelector("#explore-results"),
+  exploreResultsA: document.querySelector("#explore-results-a"),
+  exploreResultsB: document.querySelector("#explore-results-b"),
+  exploreRun: document.querySelector("#explore-run"),
+  exploreShowAll: document.querySelector("#explore-show-all"),
+  exploreStatus: document.querySelector("#explore-status"),
+  exploreSummary: document.querySelector("#explore-summary"),
+  exploreSwap: document.querySelector("#explore-swap"),
+  exploreToggle: document.querySelector("#explore-toggle"),
+  exploreWindow: document.querySelector("#explore-window"),
+  heatmapLegend: document.querySelector("#heatmap-legend"),
+  heatmapToggle: document.querySelector("#heatmap-toggle"),
+  playbackBar: document.querySelector("#playback-bar"),
+  playbackClock: document.querySelector("#playback-clock"),
+  playbackClose: document.querySelector("#playback-close"),
+  playbackPlay: document.querySelector("#playback-play"),
+  playbackRange: document.querySelector("#playback-range"),
+  playbackScrub: document.querySelector("#playback-scrub"),
+  playbackSpeed: document.querySelector("#playback-speed"),
+  playbackToggle: document.querySelector("#playback-toggle"),
+  playbackWindows: [...document.querySelectorAll("#playback-windows button")],
   lastUpdate: document.querySelector("#last-update"),
   mapStatus: document.querySelector("#map-status"),
   losAntennaA: document.querySelector("#los-antenna-a"),
@@ -312,6 +346,13 @@ const state = {
   selectedRouteTimeout: null,
   mqttConnected: false,
   packetSource: null,
+  playback: null,
+  playbackTimer: null,
+  heatmapEnabled: localStorage.getItem("meshcoreHeatmap") === "true",
+  heatmapLayer: null,
+  heatmapTimer: null,
+  exploreKeys: [null, null],
+  exploreRoutes: [],
   showNodeLabels: localStorage.getItem("meshcoreShowNodeLabels") === "true",
   showOtherPacketTypes: elements.otherTypesToggle.checked,
   networkStats: null,
@@ -437,6 +478,10 @@ const nodeLayer = L.layerGroup().addTo(map);
 const routeLayer = L.layerGroup().addTo(map);
 const observerLayer = L.layerGroup();
 const selectedRouteLayer = L.layerGroup().addTo(map);
+const exploreLayer = L.layerGroup().addTo(map);
+const heatmapPane = map.createPane("trafficHeat");
+heatmapPane.style.zIndex = "350";
+heatmapPane.style.pointerEvents = "none";
 const losLayer = L.layerGroup().addTo(map);
 const losMarkerLayer = L.layerGroup().addTo(map);
 const nodeLabelLayer = L.layerGroup().addTo(map);
@@ -2270,6 +2315,7 @@ async function loadRouteHistory() {
     state.routeHistoryLoaded = true;
     rebuildNeighborIndex();
     syncRoutePresentation();
+    scheduleHeatmap();
   } catch (error) {
     console.error("Historie tras se nepodařilo načíst", error);
   } finally {
@@ -2811,7 +2857,9 @@ function scheduleViewportRender() {
 }
 
 function updateRouteCount() {
-  const count = state.routeWindowMs !== 0 ? state.archiveRoutes.size : state.liveRouteCount;
+  const count = state.playback
+    ? state.playback.visible
+    : (state.routeWindowMs !== 0 ? state.archiveRoutes.size : state.liveRouteCount);
   elements.routeCount.textContent = formatNumber(count);
   updateMapStatus();
 }
@@ -2838,11 +2886,10 @@ function clearArchivePresentation() {
   state.archiveRoutes.clear();
 }
 
-async function loadArchiveWindow(windowMs) {
-  const requestId = ++state.windowRequestId;
+async function buildArchiveRoutes(windowMs, requestId) {
   const data = await getJson(`/api/history?${archiveQuery(windowMs, nowMs())}`);
-  if (requestId !== state.windowRequestId || state.routeWindowMs !== windowMs) return;
-  state.archiveRoutes.clear();
+  if (requestId !== state.windowRequestId || state.routeWindowMs !== windowMs) return null;
+  const routes = new Map();
   for (const parent of data.packets || []) {
     const observations = parent.observations?.length ? parent.observations : [parent];
     for (const observation of observations) {
@@ -2855,9 +2902,18 @@ async function loadArchiveWindow(windowMs) {
       if (!routeSegments(points).length) continue;
       const observedAt = routeTimestamp(packet, 0);
       const id = `${packet.hash || "archive"}:${packet.observer_id || "archive"}`;
-      state.archiveRoutes.set(id, routeRecord(packet, points, hashBytes, id, `archive:${id}`, observedAt));
+      routes.set(id, routeRecord(packet, points, hashBytes, id, `archive:${id}`, observedAt));
     }
   }
+  return routes;
+}
+
+async function loadArchiveWindow(windowMs) {
+  const requestId = ++state.windowRequestId;
+  const routes = await buildArchiveRoutes(windowMs, requestId);
+  if (!routes) return;
+  state.archiveRoutes.clear();
+  for (const [id, route] of routes) state.archiveRoutes.set(id, route);
   renderArchive();
 }
 
@@ -2883,6 +2939,10 @@ function archiveRoutesSorted() {
 }
 
 function renderArchive() {
+  if (state.playback) {
+    renderPlaybackFrame(true);
+    return;
+  }
   const routes = archiveRoutesSorted();
   const viewport = map.getBounds().pad(0.25);
   updateArchiveLayers(routes.filter((route) => routeVisibleIn(viewport, route)).slice(0, ARCHIVE_MAX_ROUTES));
@@ -2890,9 +2950,14 @@ function renderArchive() {
   rebuildNeighborIndex();
   updateFeed(routes.slice(0, FEED_SOURCE_LIMIT));
   updatePerfGauges();
+  scheduleHeatmap();
 }
 
 function renderArchiveViewport() {
+  if (state.playback) {
+    renderPlaybackFrame();
+    return;
+  }
   const viewport = map.getBounds().pad(0.25);
   const routes = archiveRoutesSorted()
     .filter((route) => routeVisibleIn(viewport, route))
@@ -2901,6 +2966,7 @@ function renderArchiveViewport() {
 }
 
 async function setRouteWindow(windowMs) {
+  stopPlayback({ restore: false });
   state.routeWindowMs = Number(windowMs);
   for (const button of elements.windowButtons) {
     button.classList.toggle("active", Number(button.dataset.windowMs) === state.routeWindowMs);
@@ -2910,6 +2976,7 @@ async function setRouteWindow(windowMs) {
     clearArchivePresentation();
     updateFeed([], t("feed.empty"), { immediate: true });
     syncRoutePresentation();
+    scheduleHeatmap();
     return;
   }
   state.windowRequestId += 1;
@@ -2922,6 +2989,201 @@ async function setRouteWindow(windowMs) {
   } catch (error) {
     console.error("Historii tras se nepodařilo načíst", error);
   }
+}
+
+const PLAYBACK_TICK_MS = 200;
+
+function formatPlaybackTime(value, rangeMs) {
+  return Number(rangeMs) > 24 * 60 * 60 * 1000 ? formatDateTimeShort(value) : formatTime(value);
+}
+
+function updatePlaybackUi() {
+  const playback = state.playback;
+  if (!playback) return;
+  elements.playbackScrub.value = String(Math.round(playbackFraction(playback.start, playback.end, playback.cursor) * 1000));
+  elements.playbackClock.textContent = formatPlaybackTime(playback.cursor, playback.end - playback.start);
+  elements.playbackRange.textContent = playback.loading
+    ? t("playback.loading")
+    : tCount("playback.routes", playback.visible);
+  elements.playbackPlay.textContent = playback.playing ? "❚❚" : "▶";
+  elements.playbackPlay.setAttribute("aria-label", playback.playing ? t("playback.pause") : t("playback.play"));
+  for (const button of elements.playbackWindows) {
+    button.classList.toggle("active", Number(button.dataset.windowMs) === playback.windowMs);
+  }
+}
+
+function renderPlaybackFrame(force = false) {
+  const playback = state.playback;
+  if (!playback || playback.loading) return;
+  const trail = playbackTrailMs(playback.end - playback.start);
+  const routes = playbackVisibleRoutes([...state.archiveRoutes.values()], playback.cursor, trail)
+    .sort((left, right) => right.timestamp - left.timestamp);
+  playback.visible = routes.length;
+  const viewport = map.getBounds().pad(0.25);
+  updateArchiveLayers(routes
+    .filter((route) => routeVisibleIn(viewport, route))
+    .slice(0, ARCHIVE_MAX_ROUTES));
+  updateRouteCount();
+  updateFeed(routes.slice(0, FEED_SOURCE_LIMIT), t("playback.empty"));
+  if (force) rebuildNeighborIndex();
+  updatePerfGauges();
+}
+
+function stopPlaybackTimer() {
+  if (state.playbackTimer != null) {
+    clearInterval(state.playbackTimer);
+    state.playbackTimer = null;
+  }
+}
+
+function advancePlayback(elapsedMs) {
+  const playback = state.playback;
+  if (!playback || !playback.playing) return;
+  playback.cursor = Math.min(playback.end, playback.cursor + elapsedMs * playbackRate(playback.end - playback.start, playback.speed));
+  if (playback.cursor >= playback.end) {
+    playback.playing = false;
+    stopPlaybackTimer();
+  }
+  renderPlaybackFrame();
+  updatePlaybackUi();
+}
+
+function startPlaybackTimer() {
+  stopPlaybackTimer();
+  if (!state.playback) return;
+  let last = performance.now();
+  state.playbackTimer = setInterval(() => {
+    const now = performance.now();
+    const elapsed = now - last;
+    last = now;
+    advancePlayback(elapsed);
+  }, PLAYBACK_TICK_MS);
+}
+
+function stopPlayback({ restore = true } = {}) {
+  stopPlaybackTimer();
+  const wasActive = Boolean(state.playback);
+  state.playback = null;
+  elements.playbackBar.hidden = true;
+  elements.playbackToggle.classList.remove("active");
+  elements.playbackToggle.setAttribute("aria-pressed", "false");
+  for (const button of elements.playbackWindows) button.classList.remove("active");
+  if (wasActive && restore && state.routeWindowMs !== 0) renderArchive();
+}
+
+async function startPlayback(windowMs) {
+  const nextWindow = Number(windowMs) > 0 ? Number(windowMs) : 24 * 60 * 60 * 1000;
+  stopPlayback({ restore: false });
+  clearSelectedRoute();
+  clearLivePresentation();
+  clearArchivePresentation();
+  state.routeWindowMs = nextWindow;
+  for (const button of elements.windowButtons) {
+    button.classList.toggle("active", Number(button.dataset.windowMs) === nextWindow);
+  }
+  const requestId = ++state.windowRequestId;
+  const end = nowMs();
+  const playback = {
+    cursor: end - nextWindow,
+    end,
+    loading: true,
+    playing: false,
+    requestId,
+    speed: Number(elements.playbackSpeed.value) || 1,
+    start: end - nextWindow,
+    visible: 0,
+    windowMs: nextWindow,
+  };
+  state.playback = playback;
+  elements.playbackBar.hidden = false;
+  elements.playbackToggle.classList.add("active");
+  elements.playbackToggle.setAttribute("aria-pressed", "true");
+  updatePlaybackUi();
+  updateRouteCount();
+  let routes = null;
+  try {
+    routes = await buildArchiveRoutes(nextWindow, requestId);
+  } catch (error) {
+    console.error("Archiv pro přehrávání se nepodařilo načíst", error);
+  }
+  if (!routes || state.playback !== playback) {
+    if (state.playback === playback) stopPlayback({ restore: true });
+    return;
+  }
+  state.archiveRoutes.clear();
+  for (const [id, route] of routes) state.archiveRoutes.set(id, route);
+  const timestamps = [...state.archiveRoutes.values()]
+    .map((route) => route.timestamp)
+    .filter(Number.isFinite);
+  if (timestamps.length) {
+    playback.start = Math.min(...timestamps);
+    playback.end = Math.max(...timestamps);
+    if (playback.end <= playback.start) playback.end = playback.start + 1_000;
+    playback.cursor = playback.start;
+  }
+  playback.loading = false;
+  playback.playing = state.archiveRoutes.size > 0;
+  renderPlaybackFrame(true);
+  updatePlaybackUi();
+  scheduleHeatmap();
+  if (playback.playing) startPlaybackTimer();
+}
+
+function heatmapRoutes() {
+  if (state.playback || state.routeWindowMs !== 0) return [...state.archiveRoutes.values()];
+  return [...routeStore.history, ...routeStore.liveByVersion.values()];
+}
+
+function scheduleHeatmap() {
+  if (!state.heatmapEnabled) return;
+  if (state.heatmapTimer != null) clearTimeout(state.heatmapTimer);
+  state.heatmapTimer = setTimeout(() => {
+    state.heatmapTimer = null;
+    renderHeatmap();
+  }, 300);
+}
+
+function renderHeatmap() {
+  if (state.heatmapTimer != null) {
+    clearTimeout(state.heatmapTimer);
+    state.heatmapTimer = null;
+  }
+  if (state.heatmapLayer) {
+    map.removeLayer(state.heatmapLayer);
+    state.heatmapLayer = null;
+  }
+  elements.heatmapLegend.hidden = !state.heatmapEnabled;
+  if (!state.heatmapEnabled) return;
+  const viewport = map.getBounds().pad(0.02);
+  const grid = buildHeatmap(heatmapRoutes(), {
+    east: viewport.getEast(),
+    north: viewport.getNorth(),
+    south: viewport.getSouth(),
+    west: viewport.getWest(),
+  }, { size: 192 });
+  if (!grid.max) return;
+  const canvas = document.createElement("canvas");
+  canvas.width = grid.dimension;
+  canvas.height = grid.dimension;
+  const context = canvas.getContext("2d");
+  const image = context.createImageData(grid.dimension, grid.dimension);
+  for (let index = 0; index < grid.cells.length; index += 1) {
+    const value = Math.pow(grid.cells[index] / grid.max, 0.35);
+    if (!value) continue;
+    const [red, green, blue, alpha] = heatmapColor(value);
+    const offset = index * 4;
+    image.data[offset] = red;
+    image.data[offset + 1] = green;
+    image.data[offset + 2] = blue;
+    image.data[offset + 3] = alpha;
+  }
+  context.putImageData(image, 0, 0);
+  state.heatmapLayer = L.imageOverlay(canvas.toDataURL("image/png"), viewport, {
+    className: "traffic-heat",
+    interactive: false,
+    opacity: 0.7,
+    pane: "trafficHeat",
+  }).addTo(map);
 }
 
 function updatePerfGauges() {
@@ -3919,6 +4181,240 @@ const scheduleCoverage = () => {
   coverageTimer = setTimeout(() => void computeCoverage(), 350);
 };
 
+const EXPLORE_NODE_INPUTS = [elements.exploreNodeA, elements.exploreNodeB];
+const EXPLORE_NODE_RESULTS = [elements.exploreResultsA, elements.exploreResultsB];
+const EXPLORE_COLORS = ["#d61f8c", "#246fc4", "#2bbf88", "#d87412", "#9547b7", "#0e8f8f"];
+
+function explorerNodeMatches(value) {
+  const { query, hexQuery } = parseNodeQuery(value);
+  if ((!query || query.length < 2) && hexQuery.length < 2) return [];
+  return state.nodeMarkers
+    .filter((entry) => validCoords(entry.node.lat, entry.node.lon))
+    .filter((entry) => nodeMatchesQuery(entry.node, query, hexQuery))
+    .sort((left, right) => Number(isNodeActive(right.node, nowMs(), NODE_ACTIVE_MS))
+      - Number(isNodeActive(left.node, nowMs(), NODE_ACTIVE_MS))
+      || String(left.node.name || "").localeCompare(String(right.node.name || ""), getLocale()))
+    .slice(0, 8);
+}
+
+function hideExploreResults(index = null) {
+  for (let current = 0; current < 2; current += 1) {
+    if (index == null || index === current) EXPLORE_NODE_RESULTS[current].hidden = true;
+  }
+}
+
+function renderExploreResults(index, entries) {
+  const results = EXPLORE_NODE_RESULTS[index];
+  results.replaceChildren();
+  if (!entries.length) {
+    const empty = document.createElement("div");
+    empty.className = "los-picker-empty";
+    empty.textContent = t("los.noResults");
+    results.appendChild(empty);
+  } else {
+    for (const entry of entries) {
+      const button = document.createElement("button");
+      button.type = "button";
+      const active = isNodeActive(entry.node, nowMs(), NODE_ACTIVE_MS);
+      button.innerHTML = `<strong>${escapeHtml(entry.node.name || t("common.unknownNode"))}</strong><small>${escapeHtml(roleLabel(entry.node.role))} · ${active ? t("common.active") : t("common.inactive")}</small>`;
+      button.addEventListener("click", () => {
+        EXPLORE_NODE_INPUTS[index].value = entry.node.name || t("common.unknownNode");
+        state.exploreKeys[index] = entry.node.public_key?.toUpperCase() || null;
+        hideExploreResults(index);
+        updateExploreActions();
+      });
+      results.appendChild(button);
+    }
+  }
+  results.hidden = false;
+}
+
+function updateExploreResults(index) {
+  const value = EXPLORE_NODE_INPUTS[index].value.trim();
+  const { query, hexQuery } = parseNodeQuery(value);
+  if ((query.length < 2) && (hexQuery.length < 2)) {
+    hideExploreResults(index);
+    return;
+  }
+  renderExploreResults(index, explorerNodeMatches(value));
+}
+
+function updateExploreActions() {
+  const [a, b] = state.exploreKeys;
+  elements.exploreRun.disabled = !(a && b && a !== b);
+}
+
+function bindExplorePicker(index) {
+  const input = EXPLORE_NODE_INPUTS[index];
+  input.addEventListener("input", () => {
+    state.exploreKeys[index] = null;
+    updateExploreActions();
+    updateExploreResults(index);
+  });
+  input.addEventListener("focus", () => updateExploreResults(index));
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      hideExploreResults(index);
+      input.blur();
+      return;
+    }
+    if (event.key !== "Enter") return;
+    const first = EXPLORE_NODE_RESULTS[index].querySelector("button");
+    if (!first) return;
+    event.preventDefault();
+    first.click();
+  });
+}
+
+function setExploreStatus(text) {
+  elements.exploreStatus.textContent = text || "";
+}
+
+function explorerPoints(path) {
+  const points = [];
+  let breakNext = false;
+  for (const hop of path) {
+    const key = hop ? String(hop).toUpperCase() : "";
+    const node = key ? state.nodeByKey.get(key) : null;
+    if (!node || !validCoords(node.lat, node.lon)) {
+      breakNext = true;
+      continue;
+    }
+    const previous = points.at(-1);
+    if (previous && haversineKm(previous.lat, previous.lon, node.lat, node.lon) > MAX_ROUTE_HOP_KM) breakNext = true;
+    points.push({
+      lat: node.lat,
+      lon: node.lon,
+      name: node.name || key.slice(0, 4),
+      publicKey: key,
+      breakBefore: breakNext && points.length > 0,
+    });
+    breakNext = false;
+  }
+  return points;
+}
+
+function explorerDistance(points) {
+  let total = 0;
+  for (let index = 1; index < points.length; index += 1) {
+    if (points[index].breakBefore) continue;
+    total += haversineKm(
+      points[index - 1].lat,
+      points[index - 1].lon,
+      points[index].lat,
+      points[index].lon,
+    );
+  }
+  return total;
+}
+
+function renderExploreList() {
+  elements.exploreResults.replaceChildren();
+  state.exploreRoutes.forEach((route, index) => {
+    const names = route.path.map((hop) => {
+      const node = hop ? state.nodeByKey.get(String(hop).toUpperCase()) : null;
+      if (node) return node.name || t("common.unknownNode");
+      return hop ? String(hop).slice(0, 4) : t("explore.unknownHop");
+    });
+    const item = document.createElement("li");
+    const path = document.createElement("div");
+    path.className = "explore-path";
+    path.textContent = names.join(" → ");
+    const meta = document.createElement("div");
+    meta.className = "explore-meta";
+    const parts = [
+      `×${formatNumber(route.count)}`,
+      tCount("explore.hops", route.hops),
+    ];
+    if (route.points.length > 1) {
+      parts.push(t("explore.distanceKm", { distance: formatDecimal(explorerDistance(route.points), 1) }));
+    }
+    if (route.snrAvg != null) {
+      parts.push(route.snrMin != null && route.snrMax != null && route.snrMin !== route.snrMax
+        ? t("explore.snr", {
+          avg: formatDecimal(route.snrAvg, 1),
+          min: formatDecimal(route.snrMin, 1),
+          max: formatDecimal(route.snrMax, 1),
+        })
+        : t("explore.snrAvg", { avg: formatDecimal(route.snrAvg, 1) }));
+    }
+    parts.push(t("explore.lastSeen", { time: formatNodeDate(route.lastAt) }));
+    meta.textContent = parts.join(" · ");
+    const show = document.createElement("button");
+    show.type = "button";
+    show.className = "explore-show";
+    show.textContent = t("explore.show");
+    show.addEventListener("click", () => {
+      for (const row of elements.exploreResults.querySelectorAll("li")) row.classList.remove("active");
+      item.classList.add("active");
+      drawExploreRoutes([route], index);
+    });
+    item.append(path, meta, show);
+    elements.exploreResults.appendChild(item);
+  });
+}
+
+function drawExploreRoutes(routes, selectedIndex = null) {
+  exploreLayer.clearLayers();
+  const bounds = L.latLngBounds([]);
+  routes.forEach((route, index) => {
+    const color = selectedIndex == null ? EXPLORE_COLORS[index % EXPLORE_COLORS.length] : EXPLORE_COLORS[0];
+    for (const segment of routeSegments(route.points)) {
+      L.polyline(segment, {
+        color,
+        dashArray: selectedIndex == null ? "5 6" : undefined,
+        lineCap: "round",
+        opacity: selectedIndex == null ? 0.65 : 0.95,
+        weight: selectedIndex == null ? 3 : 5,
+      }).addTo(exploreLayer);
+      bounds.extend(segment);
+    }
+  });
+  elements.exploreHide.hidden = routes.length === 0;
+  elements.exploreShowAll.hidden = state.exploreRoutes.length < 2;
+  if (bounds.isValid()) map.fitBounds(bounds, { maxZoom: 12, padding: [40, 40] });
+}
+
+function clearExploreRoutes() {
+  exploreLayer.clearLayers();
+  elements.exploreHide.hidden = true;
+  elements.exploreShowAll.hidden = state.exploreRoutes.length < 2;
+  for (const row of elements.exploreResults.querySelectorAll("li")) row.classList.remove("active");
+}
+
+async function runExplore() {
+  const [a, b] = state.exploreKeys;
+  if (!a || !b) {
+    setExploreStatus(t("explore.pickBoth"));
+    return;
+  }
+  if (a === b) {
+    setExploreStatus(t("explore.same"));
+    return;
+  }
+  elements.exploreRun.disabled = true;
+  setExploreStatus(t("explore.loading"));
+  elements.exploreResults.replaceChildren();
+  elements.exploreShowAll.hidden = true;
+  clearExploreRoutes();
+  try {
+    const since = Date.now() - Number(elements.exploreWindow.value || 86400000);
+    const data = await getJson(`/api/route-explorer?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}&since=${since}&limit=20000`);
+    state.exploreRoutes = (data.routes || []).map((route) => ({ ...route, points: explorerPoints(route.path) }));
+    renderExploreList();
+    setExploreStatus(state.exploreRoutes.length
+      ? tCount("explore.found", state.exploreRoutes.length)
+      : t("explore.empty"));
+    elements.exploreShowAll.hidden = state.exploreRoutes.length < 2;
+  } catch (error) {
+    console.error("Trasy mezi uzly se nepodařilo načíst", error);
+    setExploreStatus(t("explore.failed"));
+  } finally {
+    elements.exploreRun.disabled = false;
+    updateExploreActions();
+  }
+}
+
 function setLosMode(on) {
   if (on && state.coverageMode) setCoverageMode(false);
   state.losMode = Boolean(on);
@@ -3991,12 +4487,112 @@ document.addEventListener("click", (event) => {
   hideLosResults();
 });
 updateLosActions();
+
+elements.playbackToggle.textContent = t("playback.toggle");
+elements.playbackToggle.title = t("playback.toggleTitle");
+elements.playbackClose.setAttribute("aria-label", t("playback.close"));
+elements.playbackScrub.setAttribute("aria-label", t("playback.scrub"));
+document.querySelector("#playback-speed-label").textContent = t("playback.speed");
+document.querySelector("#playback-windows").setAttribute("aria-label", t("playback.windowLabel"));
+elements.heatmapToggle.checked = state.heatmapEnabled;
+const heatmapLegendParts = elements.heatmapLegend.querySelectorAll("span");
+if (heatmapLegendParts.length === 2) {
+  heatmapLegendParts[0].textContent = t("heatmap.less");
+  heatmapLegendParts[1].textContent = t("heatmap.more");
+}
+
+elements.playbackToggle.addEventListener("click", () => {
+  if (state.playback) stopPlayback({ restore: true });
+  else void startPlayback(state.routeWindowMs || 24 * 60 * 60 * 1000);
+});
+elements.playbackClose.addEventListener("click", () => stopPlayback({ restore: true }));
+elements.playbackPlay.addEventListener("click", () => {
+  const playback = state.playback;
+  if (!playback) return;
+  if (!playback.playing && playback.cursor >= playback.end) playback.cursor = playback.start;
+  playback.playing = !playback.playing;
+  if (playback.playing) startPlaybackTimer();
+  else stopPlaybackTimer();
+  renderPlaybackFrame();
+  updatePlaybackUi();
+});
+elements.playbackScrub.addEventListener("input", () => {
+  const playback = state.playback;
+  if (!playback) return;
+  playback.playing = false;
+  stopPlaybackTimer();
+  playback.cursor = playbackCursor(playback.start, playback.end, Number(elements.playbackScrub.value) / 1000);
+  renderPlaybackFrame();
+  updatePlaybackUi();
+});
+elements.playbackSpeed.addEventListener("change", () => {
+  if (state.playback) state.playback.speed = Number(elements.playbackSpeed.value) || 1;
+});
+for (const button of elements.playbackWindows) {
+  button.addEventListener("click", () => void startPlayback(Number(button.dataset.windowMs)));
+}
+
+elements.heatmapToggle.addEventListener("change", () => {
+  state.heatmapEnabled = elements.heatmapToggle.checked;
+  localStorage.setItem("meshcoreHeatmap", String(state.heatmapEnabled));
+  if (state.heatmapEnabled && state.routeWindowMs === 0 && !state.routeHistoryLoaded) void loadRouteHistory();
+  renderHeatmap();
+});
+map.on("moveend zoomend", scheduleHeatmap);
+
+elements.exploreToggle.textContent = t("explore.toggle");
+elements.exploreToggle.title = t("explore.toggleTitle");
+elements.exploreClose.setAttribute("aria-label", t("explore.title"));
+document.querySelector("#explore-title").textContent = t("explore.title");
+document.querySelector("#explore-summary").textContent = t("explore.hint");
+document.querySelector('label[for="explore-node-a"]').textContent = t("explore.nodeA");
+document.querySelector('label[for="explore-node-b"]').textContent = t("explore.nodeB");
+document.querySelector("#explore-window-label").textContent = t("explore.window");
+elements.exploreNodeA.placeholder = t("explore.search");
+elements.exploreNodeB.placeholder = t("explore.search");
+elements.exploreSwap.textContent = t("explore.swap");
+elements.exploreRun.textContent = t("explore.run");
+elements.exploreShowAll.textContent = t("explore.showAll");
+elements.exploreHide.textContent = t("explore.hide");
+
+elements.exploreToggle.addEventListener("click", () => {
+  hideExploreResults();
+  updateExploreActions();
+  if (!elements.exploreDialog.open) elements.exploreDialog.showModal();
+});
+elements.exploreClose.addEventListener("click", () => elements.exploreDialog.close());
+elements.exploreDialog.addEventListener("close", () => hideExploreResults());
+elements.exploreSwap.addEventListener("click", () => {
+  state.exploreKeys = [state.exploreKeys[1], state.exploreKeys[0]];
+  const value = EXPLORE_NODE_INPUTS[0].value;
+  EXPLORE_NODE_INPUTS[0].value = EXPLORE_NODE_INPUTS[1].value;
+  EXPLORE_NODE_INPUTS[1].value = value;
+  state.exploreRoutes = [];
+  elements.exploreResults.replaceChildren();
+  setExploreStatus("");
+  clearExploreRoutes();
+  updateExploreActions();
+});
+elements.exploreRun.addEventListener("click", () => void runExplore());
+elements.exploreShowAll.addEventListener("click", () => {
+  drawExploreRoutes(state.exploreRoutes);
+  for (const row of elements.exploreResults.querySelectorAll("li")) row.classList.remove("active");
+});
+elements.exploreHide.addEventListener("click", clearExploreRoutes);
+bindExplorePicker(0);
+bindExplorePicker(1);
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".explore-dialog .los-picker")) hideExploreResults();
+});
+updateExploreActions();
+
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   if (elements.coverageDialog.open) elements.coverageDialog.close();
   else if (state.coverageMode) setCoverageMode(false);
   else if (elements.losDialog.open) elements.losDialog.close();
   else if (state.losMode) setLosMode(false);
+  else if (elements.exploreDialog.open) elements.exploreDialog.close();
   else if (state.packetFocus) exitPacketFocus();
 });
 
@@ -4366,11 +4962,14 @@ async function start() {
   setInterval(watchPacketStream, 30_000);
   setInterval(rebuildNeighborIndex, 5_000);
   setInterval(() => {
-    if (state.routeWindowMs !== 0) {
+    if (state.routeWindowMs !== 0 && !state.playback) {
       void loadArchiveWindow(state.routeWindowMs)
         .catch((error) => console.error("Obnova historie selhala", error));
     }
   }, ARCHIVE_REFRESH_MS);
+  setInterval(() => {
+    if (state.heatmapEnabled) scheduleHeatmap();
+  }, 60_000);
   updateRouteAnimation();
   const nodesLoaded = await nodesPromise;
   await releasePendingPackets();

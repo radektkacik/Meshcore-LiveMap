@@ -69,7 +69,9 @@ přihlašovací údaje zůstávají pouze na serveru.
   path a posílá pakety prohlížeči přes SSE endpoint `/events/packets`. Novému
   klientovi endpoint přehraje také pakety přijaté během posledních 120 sekund.
   Replay buffer má nejvýše 5 000 paketů a SSE endpoint chrání limity klientů a
-  odpojením pomalých příjemců.
+  odpojením pomalých příjemců. MQTT spojení používá keepalive 30 s; po výpadku
+  se reconnectuje s backoffem 3–60 s a jitterem, takže výpadek brokeru
+  nezpůsobí smyčku stovek připojení.
 - `/api/resolve-hops` převádí path prefixy na repeatery a souřadnice.
 - Backend každých 5 minut stahuje z CoreScope poslední rozřešené trasy a ukládá
   je do SQLite (`data/packets.sqlite`). Deduplikuje se podle dvojice hash paketu
@@ -98,6 +100,9 @@ přihlašovací údaje zůstávají pouze na serveru.
 - `/api/history?since=<ms>&limit=<n>` vrací uložené trasy z vlastní databáze.
   Na něm stojí archivní okna 5 min / 1 h / 24 h a sousedská analýza, takže
   fungují i pro starší data a po restartu.
+- `/api/route-explorer?a=<key>&b=<key>&since=<ms>&limit=<n>` hledá v SQLite
+  pozorované cesty z uzlu A do uzlu B (směr A → B) a agreguje je podle posloupnosti
+  hopů. Vrací počet výskytů, počet observerů, SNR a čas posledního pozorování.
 - `/api/packet-routes?hash=<hash>` vrací všechny observery, kteří daný paket
   zaznamenali, z `data/packets.sqlite` (bez ohledu na to, zda jsou v aktuálním
   feedu). Klik na položku Aktivity zobrazí seznam výskytů a všechny trasy.
@@ -168,6 +173,26 @@ Top 25/100 používá sedmidenní průměr metrik uložený v SQLite a zahrnuje 
 aktivní během posledních 24 hodin. Server načítá metriky každých 15 minut,
 ukládá nejvýše jeden aktualizovaný vzorek za hodinu a historii drží 30 dní v
 `data/node-metrics.sqlite`.
+
+## Přehrávání, heatmapa a trasy A→B
+
+Tlačítko **Přehrát** otevře časovou osu archivu. Přehrát lze okno 1 h, 24 h nebo
+7 dní; rychlost 1× znamená celé okno za minutu, volitelně 2× a 4×. Trasy se
+zobrazují v krátké stopě (2 min až 6 h podle délky okna), takže je vidět pohyb
+v čase. Posuvník, pauza a přepnutí okna fungují i během přehrávání; tlačítko ×
+se vrátí k celému archivu. Data se berou z `/api/history`.
+
+Přepínač **Heatmapa provozu** vykreslí hustotu tras za zvolené okno (v režimu
+Live za posledních 7 dní z archivní cache). Výpočet probíhá v prohlížeči nad
+aktuálním výřezem mapy, barvy jdou od modré přes tyrkysovou a žlutou do červené.
+Vrstva leží pod trasami a uzly a nepřijímá kliknutí; při posunu mapy se přepočítá.
+
+Tlačítko **Trasy A→B** otevře dialog pro výběr dvou uzlů a období. Backend vrátí
+všechny pozorované cesty ve směru A → B, seskupené podle posloupnosti hopů, s
+počtem výskytů, počtem hopů, vzdáleností, SNR a časem posledního pozorování.
+Tlačítko „Zobrazit“ vykreslí vybranou cestu na mapu, „Zobrazit vše“ všechny
+nalezené alternativy. Neznámé hopy se zobrazují jako „neznámý hop“ a přeruší
+kreslení, stejně jako jinde v mapě.
 
 ## Pokrytí terénu
 
