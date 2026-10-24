@@ -142,6 +142,7 @@
 | 2026-10-24 14:35 | `20261024T143509Z.tar.gz` | `20261024-1435-a3cb8d3` | Prod: zdraví observerů, síťový souhrn, anomálie tras, veřejné kanály rozdělené po #kanálech; ověřeno | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-24 19:17 | `20261024T191751Z.tar.gz` (stage APP_DIR) | `20261024-1917-fb41936` | Beta: MQTT keepalive 30 s (detekce výpadku ~45 s), vlastní reconnect s backoffem 3–60 s, jitterem ±20 % a resetem jen po spojení delším než 30 s | `server.mjs`, `.env.example` |
 | 2026-10-24 19:18 | `20261024T191818Z.tar.gz` | `20261024-1918-fb41936` | Prod: stejná MQTT úprava; ověřeno MQTT connected/subscribed, HTTP 200 | `server.mjs`, `.env.example` |
+| 2026-10-24 20:29 | `20261024T202923Z.tar.gz` (stage APP_DIR) | `20261024-2029-982ed8e` | Beta: přehrávání archivu s časovou osou (1 h / 24 h / 7 dní, 1–4×, stopa 2 min–6 h), heatmapa hustoty tras, trasy A→B přes `/api/route-explorer`; ověřeno v prohlížeči. Předchozí testovací nasazení `20261024T202115Z` a `20261024T202524Z` | `server.mjs`, `packet-store.mjs`, `src/main.js`, `src/playback.js`, `src/heatmap.js`, `src/i18n.js`, `src/style.css`, `index.html`, testy |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
