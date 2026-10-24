@@ -898,6 +898,18 @@ function renderObservers() {
     else groups.set(key, { observers: [observer], position });
   }
   for (const { observers, position } of groups.values()) {
+    if (position.approx) {
+      L.circle([position.lat, position.lon], {
+        radius: 25000,
+        color: "#b07a2a",
+        weight: 1,
+        opacity: 0.5,
+        dashArray: "4 7",
+        fillColor: "#d18a1f",
+        fillOpacity: 0.07,
+        interactive: false,
+      }).addTo(observerLayer);
+    }
     if (observers.length > 1 && position.approx) {
       L.marker([position.lat, position.lon], {
         icon: L.divIcon({
@@ -928,7 +940,7 @@ function renderObservers() {
       color: observerHealthColor(health),
       weight: 2,
       dashArray: position.approx ? "3 3" : null,
-      fillColor: "#ffffff",
+      fillColor: position.approx ? "#fff1d9" : "#ffffff",
       fillOpacity: 0.95,
       pane: "markerPane",
     })
