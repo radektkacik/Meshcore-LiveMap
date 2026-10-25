@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-25 (prod `20261025T191126Z`, beta `20261025T190035Z`)  
+Aktualizováno: 2026-10-25 (prod `20261025T191126Z`, beta `20261025T191713Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -26,11 +26,11 @@ Aktualizováno: 2026-10-25 (prod `20261025T191126Z`, beta `20261025T190035Z`)
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261025T190035Z`
-- Build: `20261025-1900-39dadf0`
-- Asset: `index-BIRlznji.js` + `wasm-bundle-CJw2oklK.js`
+- Release: `20261025T191713Z`
+- Build: `20261025-1917-a606dc8`
+- Asset: `index-J2aeU0nW.js` + `wasm-bundle-Cysba9IR.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T190035Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T191713Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka
@@ -60,6 +60,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T191126Z`, beta `20261025T190035Z`)
 ### Mapa a nody
 - Repeater vždy navrchu při překryvu nodů
 - Stack nodů na stejných souřadnicích
+- Sousedé na mapě (beta): z detailu nodu vykreslí čáry ke všem sousedům s dosažitelnými souřadnicemi, tloušťka podle četnosti, štítky `N×`, lišta se souhrnem a zrušením; klik na spojnici otevře sousední nod.
 - Detail nodu: role v hlavičce, relativní časy (`teď`, `12 min`, `3 h`, `2 d`), V síti od, region, obohacení sousedů (role, vzdálenost, naposledy), odkaz do Analyzeru
 - Historie užitečnosti: 7 dní hodinových vzorků, hover tooltip; bez průměrování
 - Zvýraznění užitečnosti: relativní Top 5 % (červená) a 5–15 % (žlutá) z aktivních nodů se skóre za 24 h; počty v legendě

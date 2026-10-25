@@ -186,6 +186,7 @@
 | 2026-10-25 19:00 | `20261025T190035Z.tar.gz` (stage APP_DIR) | `20261025-1900-39dadf0` | Beta: šipky vlevo/vpravo a klávesy ←/→ pro procházení fotek v lightboxu, počítadlo 1/4 | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
 | 2026-10-25 19:00 | `20261025T190057Z.tar.gz` | `20261025-1900-39dadf0` | Prod: stejné procházení fotek; ověřeno 4 fotky, počítadlo 1/4→2/4→3/4 a zpět | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
 | 2026-10-25 19:11 | `20261025T191126Z.tar.gz` | `20261025-1911-fae5f7e` | Prod: přepínač „Jen nody s fotkami“ skrytý (zůstává na betě); export stále skrytý | `src/main.js`, `src/style.css`, `CONTEXT.md` |
+| 2026-10-25 19:17 | `20261025T191713Z.tar.gz` (stage APP_DIR) | `20261025-1917-a606dc8` | Beta: sousedé nodu na mapě – spojnice s četnostmi, štítky `N×`, souhrnná lišta a zrušení; klik na spojnici otevře souseda | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
