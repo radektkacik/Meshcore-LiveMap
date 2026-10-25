@@ -160,6 +160,8 @@
 | 2026-10-25 08:54 | `20261025T085409Z.tar.gz` | `20261025-0854-c439e57` | Prod: stejný graf paketů/h; ověřeno 24 bodů pro 24 h a 168 pro 7 dní | `server.mjs`, `packet-store.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-25 09:01 | `20261025T090151Z.tar.gz` (stage APP_DIR) | `20261025-0901-c788a6d` | Beta: graf paketů/h srovnán na měřítko Analyzeru – tvar z lokální DB, faktor z `packetsLast24h`, poslední hodina z `packetsLastHour`; označeno jako odhad | `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, `README.md`, `CONTEXT.md` |
 | 2026-10-25 09:02 | `20261025T090209Z.tar.gz` | `20261025-0902-c788a6d` | Prod: stejné srovnání grafu; 24h součet ~666k vs. Analyzer 635k, poslední hodina shodná s HUD (~31,7k) | `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, `README.md`, `CONTEXT.md` |
+| 2026-10-25 09:19 | `20261025T091954Z.tar.gz` (stage APP_DIR) | `20261025-0919-af3b587` | Beta: skutečná historie Analyzeru – sběr `/api/stats` každých 5 min do `stats_samples` v `node-metrics.sqlite`, retence 30 dní; graf čte jen vzorky, chybějící hodiny jsou mezery | `node-metrics.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, testy, `.env.example`, `README.md`, `CONTEXT.md` |
+| 2026-10-25 09:20 | `20261025T092014Z.tar.gz` | `20261025-0920-af3b587` | Prod: stejný sběr historie; první vzorek 34 343/h, graf 1 z 24 hodin. Historie se začíná plnit od tohoto nasazení | `node-metrics.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, testy, `.env.example`, `README.md`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
