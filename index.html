@@ -21,30 +21,6 @@
           <button id="packet-focus-close" type="button">Zrušit výběr</button>
         </div>
 
-        <div class="playback-bar" id="playback-bar" hidden>
-          <button id="playback-play" class="playback-play" type="button" aria-label="Přehrát">▶</button>
-          <div class="playback-main">
-            <div class="playback-meta">
-              <time id="playback-clock">--:--</time>
-              <span id="playback-range"></span>
-            </div>
-            <input id="playback-scrub" type="range" min="0" max="1000" step="1" value="0" aria-label="Časová osa přehrávání" />
-          </div>
-          <label class="playback-speed"><span id="playback-speed-label">Rychlost</span>
-            <select id="playback-speed">
-              <option value="1">1×</option>
-              <option value="2">2×</option>
-              <option value="4">4×</option>
-            </select>
-          </label>
-          <div class="playback-windows" id="playback-windows" role="group" aria-label="Okno přehrávání">
-            <button type="button" data-window-ms="3600000">1 h</button>
-            <button type="button" data-window-ms="86400000" class="active">24 h</button>
-            <button type="button" data-window-ms="604800000">7 dní</button>
-          </div>
-          <button id="playback-close" class="playback-close" type="button" aria-label="Zavřít přehrávání">×</button>
-        </div>
-
         <section id="hud" class="hud" aria-label="Ovládání mapy">
           <header class="hud-header">
             <button id="hud-toggle" class="logo-button" type="button" aria-label="Skrýt nebo zobrazit panel">
@@ -89,8 +65,6 @@
               <button id="stats-toggle" type="button" aria-pressed="false">Statistiky</button>
               <button id="los-toggle" type="button" aria-pressed="false" title="Změřit přímou viditelnost mezi dvěma body">LOS</button>
               <button id="coverage-toggle" type="button" aria-pressed="false" title="Simulovat pokrytí terénu z jednoho bodu">Pokrytí</button>
-              <button id="playback-toggle" type="button" aria-pressed="false" title="Přehrát archiv tras">Přehrát</button>
-              <button id="explore-toggle" type="button" aria-pressed="false" title="Najít pozorované trasy mezi dvěma uzly">Trasy A→B</button>
               <button id="feedback-toggle" type="button" class="wide">Kniha návštěv</button>
             </div>
 
@@ -148,15 +122,6 @@
               <input id="node-labels-toggle" type="checkbox" />
               <span><strong>Zobrazit názvy uzlů</strong></span>
             </label>
-
-            <label class="packet-filter">
-              <input id="heatmap-toggle" type="checkbox" />
-              <span><strong>Heatmapa provozu</strong><small>hustota tras za zvolené okno</small></span>
-            </label>
-
-            <div class="heatmap-legend" id="heatmap-legend" hidden>
-              <span>méně</span><i aria-hidden="true"></i><span>více</span>
-            </div>
 
             <div class="legend" aria-label="Legenda">
               <span><i class="node top25"></i> Top 25 Užitečnost</span>
@@ -382,43 +347,6 @@
         <div id="los-chart" class="los-chart"></div>
         <p id="los-hover" class="los-hover"></p>
         <p class="los-note">Barvy úseků: zelená = volná, oranžová = zásah do Fresnelovy zóny, červená = terén blokuje paprsek. V profilu je plná Fresnelova zóna (F1) světle modrá, doporučených 60 % výrazněji. Výšky: Open-Meteo (Copernicus DEM, ~90 m).</p>
-      </dialog>
-
-      <dialog id="explore-dialog" class="los-dialog explore-dialog" aria-labelledby="explore-title">
-        <button id="explore-close" class="los-close" type="button" aria-label="Zavřít trasy">×</button>
-        <header>
-          <h2 id="explore-title">Trasy mezi uzly</h2>
-          <p id="explore-summary"></p>
-        </header>
-        <div class="los-pickers">
-          <div class="los-picker">
-            <label for="explore-node-a">Uzel A</label>
-            <input id="explore-node-a" type="search" autocomplete="off" placeholder="Hledat uzel…" />
-            <div id="explore-results-a" class="los-picker-results" hidden></div>
-          </div>
-          <div class="los-picker">
-            <label for="explore-node-b">Uzel B</label>
-            <input id="explore-node-b" type="search" autocomplete="off" placeholder="Hledat uzel…" />
-            <div id="explore-results-b" class="los-picker-results" hidden></div>
-          </div>
-        </div>
-        <div class="explore-controls">
-          <label><span id="explore-window-label">Období</span>
-            <select id="explore-window">
-              <option value="3600000">1 h</option>
-              <option value="86400000" selected>24 h</option>
-              <option value="604800000">7 dní</option>
-            </select>
-          </label>
-          <button id="explore-swap" type="button" class="los-recompute">Prohodit A ↔ B</button>
-          <button id="explore-run" type="button" class="los-recompute">Najít trasy</button>
-        </div>
-        <p id="explore-status" class="coverage-status"></p>
-        <div class="explore-actions">
-          <button id="explore-show-all" class="los-recompute" type="button" hidden>Zobrazit vše</button>
-          <button id="explore-hide" class="los-recompute" type="button" hidden>Skrýt z mapy</button>
-        </div>
-        <ol id="explore-results" class="explore-results"></ol>
       </dialog>
 
       <dialog id="feedback-dialog" class="feedback-dialog" aria-labelledby="feedback-title">

@@ -55,11 +55,6 @@ Aktualizováno: 2026-10-24
 - Detail trasy z feedu i kliknutím na trasu, seznam hopů, vzdálenosti, SNR
 - Mobilní bottom sheet pro detail uzlu/trasy, `?sheet=1`
 
-### Přehrávání, heatmapa, trasy A→B (beta)
-- Přehrát archiv 1 h / 24 h / 7 dní, rychlost 1×/2×/4×, stopa 2 min–6 h, posuvník a pauza
-- Heatmapa hustoty tras nad aktuálním výřezem, počítaná v prohlížeči
-- Trasy A→B: výběr dvou uzlů, směr A → B, agregace podle posloupnosti hopů, SNR, vzdálenost, „Zobrazit vše“
-
 ### LOS
 - Dialog se otevře po zapnutí LOS
 - Hledání repeaterů pro A/B jménem nebo prefixem
@@ -103,7 +98,7 @@ Aktualizováno: 2026-10-24
 - Původní žebříčky uzlů podle metrik zůstávají
 
 ### Backend
-- `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/route-explorer`, `/api/recent`, `/api/packets`, `/api/nodes`, `/api/stats`
+- `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/recent`, `/api/packets`, `/api/nodes`, `/api/stats`
 - Cache `/api/nodes` a `/api/resolve-hops` proti výpadkům CoreScope; uzly se vydávají z cache okamžitě (SWR, soft TTL 15 min)
 - Start stránky: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE běží s `?replay=0`
 - MQTT reconnect/backoff, SSE feed, replay buffer
@@ -113,7 +108,7 @@ Aktualizováno: 2026-10-24
 
 ## 4. Testy a CI
 
-- `npm test`: 82 testů, 79 pass, 3 skip, 0 fail
+- `npm test`: 73 testů, 70 pass, 3 skip, 0 fail
 - `npm audit --omit=dev`: 0 zranitelností
 - GitHub Actions CI: Node 20 a 22, běží `npm ci`, syntax check, testy, build
 - CI nelze z tohoto prostředí číst bez GitHub přihlášení

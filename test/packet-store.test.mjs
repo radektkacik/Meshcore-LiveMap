@@ -43,40 +43,6 @@ test("packet store dedupes by hash and observer and returns resolved paths", () 
   }
 });
 
-test("packet store aggregates directed routes between two nodes", () => {
-  const directory = mkdtempSync(join(tmpdir(), "meshcore-packets-"));
-  const store = createPacketStore(join(directory, "packets.sqlite"), { retentionMs: 60_000 });
-  const a = "a".repeat(64);
-  const b = "b".repeat(64);
-  const x = "c".repeat(64);
-  const path = (...keys) => JSON.stringify(keys);
-  try {
-    store.record([
-      row({ hash: "1", observer_id: "o1", observed_at: 1_000, resolved_path: path(a, x, b), snr: 4 }),
-      row({ hash: "2", observer_id: "o2", observed_at: 2_000, resolved_path: path(a, x, b), snr: 8 }),
-      row({ hash: "3", observer_id: "o3", observed_at: 1_500, resolved_path: path(a, b) }),
-      row({ hash: "4", observer_id: "o4", observed_at: 1_600, resolved_path: path(b, a) }),
-      row({ hash: "5", observer_id: "o5", observed_at: 1_700, resolved_path: JSON.stringify([a, null, b]) }),
-    ]);
-    const result = store.queryExplorer(a.toUpperCase(), b, 0, 1_000);
-    assert.equal(result.scanned, 5);
-    assert.equal(result.routes.length, 3);
-    const signature = (entry) => entry.path.map((hop) => hop || "?").join(">");
-    assert.equal(signature(result.routes[0]), `${a}>${x}>${b}`);
-    assert.equal(result.routes[0].count, 2);
-    assert.equal(result.routes[0].observers, 2);
-    assert.equal(result.routes[0].snrAvg, 6);
-    assert.equal(signature(result.routes[1]), `${a}>?>${b}`);
-    assert.equal(signature(result.routes[2]), `${a}>${b}`);
-    assert.equal(result.routes[2].hops, 1);
-    assert.deepEqual(store.queryExplorer(a, b, 10_000, 1_000).routes, []);
-    assert.deepEqual(store.queryExplorer(a, a, 0, 1_000), { scanned: 0, routes: [] });
-  } finally {
-    store.close();
-    rmSync(directory, { recursive: true, force: true });
-  }
-});
-
 test("packet store filters by time, orders newest first and honors the limit", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-packets-"));
   const store = createPacketStore(join(directory, "packets.sqlite"), { retentionMs: 60_000 });
