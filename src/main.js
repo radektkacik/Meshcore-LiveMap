@@ -172,6 +172,7 @@ const elements = {
   feedbackSend: document.querySelector("#feedback-send"),
   feedbackStatus: document.querySelector("#feedback-status"),
   feedbackToggle: document.querySelector("#feedback-toggle"),
+  hideRoutesToggle: document.querySelector("#hide-routes-toggle"),
   lastUpdate: document.querySelector("#last-update"),
   legendTop: document.querySelector("#legend-top"),
   legendSecond: document.querySelector("#legend-second"),
@@ -392,6 +393,7 @@ const state = {
   observers: [],
   observersLoadedAt: 0,
   observersLoading: false,
+  hideRoutes: localStorage.getItem("meshcoreHideRoutes") === "true",
   photoCache: new Map(),
   photoNodeKeys: new Set(),
   photoNodesLoadedAt: 0,
@@ -549,6 +551,11 @@ const routeLayer = L.layerGroup().addTo(map);
 const observerLayer = L.layerGroup();
 const selectedRouteLayer = L.layerGroup().addTo(map);
 const neighborLayer = L.layerGroup();
+if (state.hideRoutes) {
+  map.removeLayer(routeLayer);
+  map.removeLayer(selectedRouteLayer);
+}
+elements.hideRoutesToggle.checked = state.hideRoutes;
 const losLayer = L.layerGroup().addTo(map);
 const losMarkerLayer = L.layerGroup().addTo(map);
 const nodeLabelLayer = L.layerGroup().addTo(map);
@@ -725,7 +732,7 @@ function exitPacketFocus() {
   if (!state.packetFocus) return;
   state.packetFocus = null;
   clearSelectedLayers();
-  if (!map.hasLayer(routeLayer)) routeLayer.addTo(map);
+  if (!state.hideRoutes && !map.hasLayer(routeLayer)) routeLayer.addTo(map);
   elements.packetFocusBar.hidden = true;
   syncRoutePresentation();
 }
@@ -1775,6 +1782,21 @@ async function setPhotosOnly(on) {
   state.photosOnly = Boolean(on);
   if (state.photosOnly) await loadPhotoNodes();
   refreshNodeState();
+}
+
+function setRoutesHidden(hidden) {
+  state.hideRoutes = Boolean(hidden);
+  elements.hideRoutesToggle.checked = state.hideRoutes;
+  localStorage.setItem("meshcoreHideRoutes", String(state.hideRoutes));
+  if (state.hideRoutes) {
+    if (state.packetFocus) exitPacketFocus();
+    if (map.hasLayer(routeLayer)) map.removeLayer(routeLayer);
+    if (map.hasLayer(selectedRouteLayer)) map.removeLayer(selectedRouteLayer);
+  } else {
+    if (!state.packetFocus && !map.hasLayer(routeLayer)) routeLayer.addTo(map);
+    if (!map.hasLayer(selectedRouteLayer)) selectedRouteLayer.addTo(map);
+  }
+  updateRouteAnimation();
 }
 
 async function loadNodePhotos(root, node) {
@@ -3837,7 +3859,7 @@ let lastRouteAnimationAt = 0;
 const CANVAS_ANIMATION_FPS = 10;
 
 function routeAnimationEnabled() {
-  return state.animationEnabled && state.activeRoutes.size > 0 && !document.hidden;
+  return state.animationEnabled && !state.hideRoutes && state.activeRoutes.size > 0 && !document.hidden;
 }
 
 function animateRoutes(timestamp) {
@@ -4918,6 +4940,9 @@ elements.nodeLabelsToggle.addEventListener("change", () => {
 });
 elements.photosOnlyToggle.addEventListener("change", () => {
   void setPhotosOnly(elements.photosOnlyToggle.checked);
+});
+elements.hideRoutesToggle.addEventListener("change", () => {
+  setRoutesHidden(elements.hideRoutesToggle.checked);
 });
 map.on("moveend zoomend", scheduleNodeLabels);
 map.on("moveend zoomend resize", scheduleViewportRender);
