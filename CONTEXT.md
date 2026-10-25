@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-24  
+Aktualizováno: 2026-10-25  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -26,11 +26,11 @@ Aktualizováno: 2026-10-24
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261025T073210Z`
-- Build: `20261025-0732-cf17c21`
-- Asset: `index-DVWPh45n.js`
+- Release: `20261025T073409Z`
+- Build: `20261025-0734-f348abd`
+- Asset: `index-d3vEgDBf.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T073210Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T073409Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka
