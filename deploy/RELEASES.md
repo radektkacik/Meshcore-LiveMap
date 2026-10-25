@@ -172,6 +172,9 @@
 | 2026-10-25 15:40 | `20261025T154013Z.tar.gz` (stage APP_DIR) | `20261025-1540-697c099` | Beta: stejné odebrání „Multi-byte“ | `src/main.js`, `src/i18n.js`, `CONTEXT.md` |
 | 2026-10-25 17:40 | `20261025T174033Z.tar.gz` (stage APP_DIR) | `20261025-1740-aaa70c8` | Beta: terminologie „nod/nody/nodů“ místo „uzel/uzly/uzlů“ v UI i dokumentaci | `src/i18n.js`, `src/main.js`, `src/perf.js`, `index.html`, `README.md`, `CONTEXT.md`, `test/i18n.test.mjs` |
 | 2026-10-25 17:41 | `20261025T174112Z.tar.gz` | `20261025-1741-aaa70c8` | Prod: stejná terminologie nod/nody/nodů | `src/i18n.js`, `src/main.js`, `src/perf.js`, `index.html`, `README.md`, `CONTEXT.md`, `test/i18n.test.mjs` |
+| 2026-10-25 17:57 | `20261025T175749Z.tar.gz` (stage APP_DIR) | `20261025-1757-d580dd6` | Beta: veřejné nahrávání fotek nodů s moderací, galerie a lightbox v detailu, soubory v `uploads/` mimo zálohy | `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `deploy/*`, testy, `.env.example`, `.gitignore`, `README.md`, `CONTEXT.md` |
+| 2026-10-25 17:59 | `20261025T175946Z.tar.gz` (stage APP_DIR) | `20261025-1759-c50e80d` | Beta: náhledy fotek se načítají eager (lazy je v Leaflet popupu nespustil) | `src/main.js` |
+| 2026-10-25 18:00 | `20261025T180019Z.tar.gz` | `20261025-1800-c50e80d` | Prod: fotky nodů s moderací; zdraví `ok`, testovací nahrání/schválení/zobrazení/smazání ověřeno, záloha `uploads/` neobsahuje | `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `deploy/*`, testy, `.env.example`, `.gitignore`, `README.md`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 

@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-25 (prod `20261025T174112Z`, beta `20261025T174033Z`)  
+Aktualizováno: 2026-10-25 (prod `20261025T180019Z`, beta `20261025T175946Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -17,20 +17,20 @@ Aktualizováno: 2026-10-25 (prod `20261025T174112Z`, beta `20261025T174033Z`)
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261025T174112Z`
-- Build: `20261025-1741-aaa70c8`
-- Asset: `index-BlAhBCOu.js`
+- Release: `20261025T180019Z`
+- Build: `20261025-1800-c50e80d`
+- Asset: `index-QOoE-yWQ.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T174112Z.tar.gz`
-- Tag: `prod-20261025-1741`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T180019Z.tar.gz`
+- Tag: `prod-20261025-1800`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261025T174033Z`
-- Build: `20261025-1740-aaa70c8`
-- Asset: `index-CVxYrG_3.js`
+- Release: `20261025T175946Z`
+- Build: `20261025-1759-c50e80d`
+- Asset: `index-28XJ78Jg.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T174033Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T175946Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka
@@ -55,7 +55,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T174112Z`, beta `20261025T174033Z`)
 - Z detailu nodu odstraněn řádek „Stav hashe“
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
 - Rychlé výhry (prod i beta): `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (nody, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export nodů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
-- Fotky nodů (beta): veřejné nahrávání JPEG/PNG/WebP s potvrzením práv, fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`
+- Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP s potvrzením práv, fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`
 
 ### Mapa a nody
 - Repeater vždy navrchu při překryvu nodů
@@ -156,10 +156,10 @@ Aktualizováno: 2026-10-25 (prod `20261025T174112Z`, beta `20261025T174033Z`)
 - Rollback při shodném lockfile ponechá `node_modules`, jinak spustí `npm ci --omit=dev`.
 - Na VPS `/root/rollback-meshcore.sh`, aktualizuje se při deployi.
 - Retence 20 záloh.
-- Rollback aktuální produkce `20261025T174112Z` na předchozí `20261025T153903Z`:
+- Rollback aktuální produkce `20261025T180019Z` na předchozí `20261025T174112Z`:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T174112Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T180019Z'
 ```
 
 ## 7. Deploy konvence
