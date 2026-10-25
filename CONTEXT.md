@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-25 (prod `20261025T180019Z`, beta `20261025T175946Z`)  
+Aktualizováno: 2026-10-25 (prod `20261025T183328Z`, beta `20261025T183259Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -17,20 +17,20 @@ Aktualizováno: 2026-10-25 (prod `20261025T180019Z`, beta `20261025T175946Z`)
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261025T180019Z`
-- Build: `20261025-1800-c50e80d`
-- Asset: `index-QOoE-yWQ.js`
+- Release: `20261025T183328Z`
+- Build: `20261025-1833-82e9bbd`
+- Asset: `index-8dgj1mCB.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T180019Z.tar.gz`
-- Tag: `prod-20261025-1800`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T183328Z.tar.gz`
+- Tag: `prod-20261025-1833`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261025T175946Z`
-- Build: `20261025-1759-c50e80d`
-- Asset: `index-28XJ78Jg.js`
+- Release: `20261025T183259Z`
+- Build: `20261025-1832-82e9bbd`
+- Asset: `index-yW8i5Emk.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T175946Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T183259Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka
@@ -136,7 +136,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T180019Z`, beta `20261025T175946Z`)
 
 ## 4. Testy a CI
 
-- `npm test`: 95 testů, 92 pass, 3 skip, 0 fail
+- `npm test`: 96 testů, 93 pass, 3 skip, 0 fail
 - `npm audit --omit=dev`: 0 zranitelností
 - GitHub Actions CI: Node 20 a 22, běží `npm ci`, syntax check, testy, build
 - CI nelze z tohoto prostředí číst bez GitHub přihlášení
@@ -156,10 +156,10 @@ Aktualizováno: 2026-10-25 (prod `20261025T180019Z`, beta `20261025T175946Z`)
 - Rollback při shodném lockfile ponechá `node_modules`, jinak spustí `npm ci --omit=dev`.
 - Na VPS `/root/rollback-meshcore.sh`, aktualizuje se při deployi.
 - Retence 20 záloh.
-- Rollback aktuální produkce `20261025T180019Z` na předchozí `20261025T174112Z`:
+- Rollback aktuální produkce `20261025T183328Z` na předchozí `20261025T180019Z`:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T180019Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T183328Z'
 ```
 
 ## 7. Deploy konvence

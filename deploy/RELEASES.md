@@ -175,6 +175,8 @@
 | 2026-10-25 17:57 | `20261025T175749Z.tar.gz` (stage APP_DIR) | `20261025-1757-d580dd6` | Beta: veřejné nahrávání fotek nodů s moderací, galerie a lightbox v detailu, soubory v `uploads/` mimo zálohy | `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `deploy/*`, testy, `.env.example`, `.gitignore`, `README.md`, `CONTEXT.md` |
 | 2026-10-25 17:59 | `20261025T175946Z.tar.gz` (stage APP_DIR) | `20261025-1759-c50e80d` | Beta: náhledy fotek se načítají eager (lazy je v Leaflet popupu nespustil) | `src/main.js` |
 | 2026-10-25 18:00 | `20261025T180019Z.tar.gz` | `20261025-1800-c50e80d` | Prod: fotky nodů s moderací; zdraví `ok`, testovací nahrání/schválení/zobrazení/smazání ověřeno, záloha `uploads/` neobsahuje | `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `deploy/*`, testy, `.env.example`, `.gitignore`, `README.md`, `CONTEXT.md` |
+| 2026-10-25 18:32 | `20261025T183259Z.tar.gz` (stage APP_DIR) | `20261025-1832-82e9bbd` | Beta: serverový limit rozlišení fotky 2400 px na delší straně (`PHOTO_MAX_DIMENSION`); 3000px test vrací 413 | `photos.mjs`, `server.mjs`, `.env.example`, `README.md`, `CONTEXT.md`, testy |
+| 2026-10-25 18:33 | `20261025T183328Z.tar.gz` | `20261025-1833-82e9bbd` | Prod: stejný limit rozlišení; 3000px test vrací 413, health `ok` | `photos.mjs`, `server.mjs`, `.env.example`, `README.md`, `CONTEXT.md`, testy |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
