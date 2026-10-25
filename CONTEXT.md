@@ -49,6 +49,7 @@ Aktualizováno: 2026-10-25
 - Stack uzlů na stejných souřadnicích
 - Detail uzlu: role v hlavičce, relativní časy (`teď`, `12 min`, `3 h`, `2 d`)
 - Historie užitečnosti: 7 dní hodinových vzorků, hover tooltip; bez průměrování
+- Zvýraznění užitečnosti: relativní Top 5 % (červená) a 5–15 % (žlutá) z aktivních uzlů se skóre za 24 h; počty v legendě
 - Tmavá mapa: OSM dlaždice + CSS filtr
 - Sdílené odkazy: uzel, pozice, filtry, časové okno, jazyk
 - Rychlý start: 30s snapshot živých paketů + uzly z cache (SWR), první trasy ~1 s

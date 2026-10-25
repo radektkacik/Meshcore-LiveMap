@@ -85,14 +85,18 @@ export function rankNodeMetric(nodes, node, field, roles) {
   return total ? { rank, total } : null;
 }
 
-export function rankNodeTiers(nodes, now, activeMs) {
+export function rankNodeTiers(nodes, now, activeMs, { topPercent = 0.05, secondPercent = 0.15 } = {}) {
   const ranked = nodes
     .map((node, index) => ({ index, node, score: activeUsefulnessScore(node, now, activeMs) }))
     .filter(({ score }) => score != null)
     .sort((a, b) => b.score - a.score || a.index - b.index);
 
+  const total = ranked.length;
+  const topCount = Math.min(total, Math.max(1, Math.round(total * topPercent)));
+  const secondCount = Math.min(total, Math.max(topCount, Math.round(total * secondPercent)));
+
   return new Map(ranked.map(({ node }, index) => [
     node,
-    index < 25 ? "top25" : index < 100 ? "top100" : null,
+    index < topCount ? "top" : index < secondCount ? "second" : null,
   ]));
 }

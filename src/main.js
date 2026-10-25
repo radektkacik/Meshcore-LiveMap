@@ -157,6 +157,8 @@ const elements = {
   feedbackStatus: document.querySelector("#feedback-status"),
   feedbackToggle: document.querySelector("#feedback-toggle"),
   lastUpdate: document.querySelector("#last-update"),
+  legendTop: document.querySelector("#legend-top"),
+  legendSecond: document.querySelector("#legend-second"),
   mapStatus: document.querySelector("#map-status"),
   losAntennaA: document.querySelector("#los-antenna-a"),
   losAntennaB: document.querySelector("#los-antenna-b"),
@@ -458,8 +460,8 @@ function roleColor(role) {
   return "#3b91d9";
 }
 
-const TOP25_COLOR = "#df5064";
-const TOP100_COLOR = "#efa438";
+const TOP_TIER_COLOR = "#df5064";
+const SECOND_TIER_COLOR = "#efa438";
 
 function nodeMarkerStyle(node, tier) {
   const color = roleColor(node.role);
@@ -471,11 +473,11 @@ function nodeMarkerStyle(node, tier) {
     opacity: 1,
     weight: 1,
   };
-  if (tier === "top25") {
-    return { ...base, fillColor: TOP25_COLOR };
+  if (tier === "top") {
+    return { ...base, fillColor: TOP_TIER_COLOR };
   }
-  if (tier === "top100") {
-    return { ...base, fillColor: TOP100_COLOR };
+  if (tier === "second") {
+    return { ...base, fillColor: SECOND_TIER_COLOR };
   }
   return base;
 }
@@ -1819,6 +1821,14 @@ function applyNodeMembership() {
 
 function applyNodeTiers() {
   const tiers = rankNodeTiers(state.nodeMarkers.map(({ node }) => node), nowMs(), NODE_RANKING_ACTIVE_MS);
+  let top = 0;
+  let second = 0;
+  for (const tier of tiers.values()) {
+    if (tier === "top") top += 1;
+    else if (tier === "second") second += 1;
+  }
+  if (elements.legendTop) elements.legendTop.textContent = tCount("legend.top", top);
+  if (elements.legendSecond) elements.legendSecond.textContent = tCount("legend.second", second);
   for (const entry of state.nodeMarkers) applyNodeStyle(entry, tiers.get(entry.node));
 }
 

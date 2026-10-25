@@ -27,7 +27,7 @@ test("node activity uses the newest valid activity timestamp", () => {
   assert.equal(isNodeActive({ last_seen: new Date(now - hour).toISOString() }, now, hour), false);
 });
 
-test("ranking assigns Top 25 and Top 100 only to active nodes with valid scores", () => {
+test("ranking assigns top 5 % and top 15 % only to active nodes with valid scores", () => {
   const nodes = Array.from({ length: 102 }, (_, index) => ({
     lat: 49,
     lon: 15,
@@ -37,11 +37,11 @@ test("ranking assigns Top 25 and Top 100 only to active nodes with valid scores"
   nodes[101].last_seen = new Date(now - 25 * hour).toISOString();
   const tiers = rankNodeTiers(nodes, now, 24 * hour);
 
-  assert.equal(tiers.get(nodes[0]), "top25");
-  assert.equal(tiers.get(nodes[24]), "top25");
-  assert.equal(tiers.get(nodes[25]), "top100");
-  assert.equal(tiers.get(nodes[99]), "top100");
-  assert.equal(tiers.get(nodes[100]), null);
+  assert.equal(tiers.get(nodes[0]), "top");
+  assert.equal(tiers.get(nodes[4]), "top");
+  assert.equal(tiers.get(nodes[5]), "second");
+  assert.equal(tiers.get(nodes[14]), "second");
+  assert.equal(tiers.get(nodes[15]), null);
   assert.equal(tiers.has(nodes[101]), false);
 });
 

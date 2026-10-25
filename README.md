@@ -175,7 +175,7 @@ mobilní aplikací a žádná data se při jeho vytvoření neposílají extern�
 
 Uzel je označen jako aktivní, pokud během poslední hodiny odeslal advert, byl
 slyšen nebo přes něj podle Analyzeru prošel relay provoz (`last_relayed`).
-Top 25/100 používá sedmidenní průměr metrik uložený v SQLite a zahrnuje uzly
+Top 5 % / 15 % používá sedmidenní průměr metrik uložený v SQLite a zahrnuje uzly
 aktivní během posledních 24 hodin. Server načítá metriky každých 15 minut,
 ukládá nejvýše jeden aktualizovaný vzorek za hodinu a historii drží 30 dní v
 `data/node-metrics.sqlite`.
