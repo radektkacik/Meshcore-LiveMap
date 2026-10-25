@@ -17,7 +17,7 @@ test("Czech and English dictionaries have the same keys", () => {
 
 test("translations interpolate parameters", () => {
   setLocale("cs");
-  assert.equal(t("los.firstHint"), "Klikněte na první bod nebo uzel.");
+  assert.equal(t("los.firstHint"), "Klikněte na první bod nebo nod.");
   setLocale("en");
   assert.equal(t("los.firstHint"), "Click the first point or a node.");
   assert.equal(t("node.scoreSamples", { count: 4 }), "7-day average from 4 hourly samples.");

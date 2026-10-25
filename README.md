@@ -2,7 +2,7 @@
 
 Živá mapa paketových tras české sítě MeshCore. Paketový provoz přijímá živě z
 MQTT; veřejné API služby [CoreScope](https://analyzer.meshcore.cz/) poskytuje
-seznam uzlů, statistiky a resolver hop prefixů.
+seznam nodů, statistiky a resolver hop prefixů.
 
 ## Spuštění
 
@@ -70,15 +70,15 @@ přihlašovací údaje zůstávají pouze na serveru.
 
 ## Datový tok
 
-- `/api/nodes?limit=2000` načte všechny známé uzly a jejich souřadnice. Bez
-  explicitního limitu CoreScope vrací pouze prvních 50 položek. Uzly a souhrnné
-  statistiky se obnovují nezávisle každých 15 minut. Server drží uzlovou cache
+- `/api/nodes?limit=2000` načte všechny známé nody a jejich souřadnice. Bez
+  explicitního limitu CoreScope vrací pouze prvních 50 položek. Nody a souhrnné
+  statistiky se obnovují nezávisle každých 15 minut. Server drží nodovou cache
   (7 dní) a vydává ji okamžitě (stale-while-revalidate); při cache starší než
   15 minut odpoví s `X-Data-Stale: 1` a obnovení běží na pozadí. Start stránky
   tak nečeká na pomalý CoreScope.
 - `/api/recent?seconds=30` vrací posledních N sekund živých paketů z paměťového
   kruhového bufferu (max. 120 s) jako jeden JSON. Klient ho načte paralelně
-  s uzly, všechny prefixy vyřeší jedním dávkovým requestem a trasy vykreslí
+  s nody, všechny prefixy vyřeší jedním dávkovým requestem a trasy vykreslí
   najednou, místo aby zpracovával stovky SSE událostí po jednom.
 - `/api/packet-history?hours=24|168` vrací hodinové hodnoty z tabulky
   `stats_samples` v `data/node-metrics.sqlite`. Server ukládá `packetsLastHour`
@@ -121,7 +121,7 @@ přihlašovací údaje zůstávají pouze na serveru.
   unikátní návštěvníci přes denní hash IP a maximální souběžný počet diváků).
   Ukládá se do `data/visits.sqlite`; raw IP se neukládá.
 - `/api/node-history?key=<public_key>&days=7` vrací hodinové vzorky metrik
-  vybraného uzlu z `data/node-metrics.sqlite` pro mini graf v detailu uzlu.
+  vybraného nodu z `data/node-metrics.sqlite` pro mini graf v detailu nodu.
 - `/api/history?since=<ms>&limit=<n>` vrací uložené trasy z vlastní databáze.
   Na něm stojí archivní okna 5 min / 1 h / 24 h a sousedská analýza, takže
   fungují i pro starší data a po restartu.
@@ -132,11 +132,11 @@ přihlašovací údaje zůstávají pouze na serveru.
   zadaným hex prefixem (2–64 znaků) a vrací nejnovější výskyt každého z nich.
   Používá ho globální hledání v HUD.
 - `/api/health` vrací diagnostiku: uptime, stav MQTT, počet reconnectů a stáří
-  posledního paketu, stáří cache uzlů a statistik, počet SSE streamů a velikosti
+  posledního paketu, stáří cache nodů a statistik, počet SSE streamů a velikosti
   SQLite databází. Vrací vždy HTTP 200; `status` je `ok`, nebo `degraded`.
-- Hledání v HUD prohledává uzly, observery, hashe paketů (živé trasy i lokální
+- Hledání v HUD prohledává nody, observery, hashe paketů (živé trasy i lokální
   archiv) a veřejné kanály; výsledek se otevře přímo na mapě. Tlačítko Export
-  stáhne uzly, observery nebo právě zobrazené trasy jako CSV (UTF-8, středník)
+  stáhne nody, observery nebo právě zobrazené trasy jako CSV (UTF-8, středník)
   nebo GeoJSON.
 - Režim Live zobrazuje výhradně živé pakety z MQTT (SSE). Při výpadku MQTT se
   tedy nevykreslují žádné trasy — žádná zastaralá cache se nepoužívá.
@@ -154,15 +154,15 @@ přihlašovací údaje zůstávají pouze na serveru.
 
 Trasy se vykreslují pro všechny délky hop prefixů (včetně 1B). U hopu, který
 Analyzer neoznačí jako jednoznačný (`unique_prefix`) a má více kandidátů, se
-vybere prostorově nejbližší uzel k předchozímu bodu trasy. Bez předchozího bodu
+vybere prostorově nejbližší nod k předchozímu bodu trasy. Bez předchozího bodu
 se kolidující prefix nepoužije. Cesty delší než 32 prefixů se ignorují a hop,
 pro který by vznikl skok delší než 150 km, se přeskočí; vzdálenostní limit
 blokuje zjevně chybné dálkové skoky.
 Nastavení zobrazení 1B tras se ukládá do `localStorage`. Filtry velikosti hashe
-lze zapnout pro 1B, 2B a 3B samostatně; role uzlů mají vlastní přepínače.
+lze zapnout pro 1B, 2B a 3B samostatně; role nodů mají vlastní přepínače.
 Archivní okna (5 min / 1 h / 24 h) kreslí uloženou historii z `/api/history`.
 Přepínače pouze filtrují společný route store; po opětovném zapnutí se dosud
-neexpirované trasy, feed a poslední trasy uzlů znovu zobrazí.
+neexpirované trasy, feed a poslední trasy nodů znovu zobrazí.
 
 Z typů paketů jsou ve výchozím stavu viditelné zprávy (`DIRECT`, `CHANNEL`),
 `ADVERT` a diagnostické `TRACE`. `PATH` se nekreslí vůbec (jeho trasy bývají
@@ -173,7 +173,7 @@ jinak by typicky nebyly vidět žádné trace pakety.
 
 Viditelnost trasy je pevně nastavená na 60 sekund bez postupného slábnutí; po
 uplynutí této doby se trasa odstraní okamžitě. Současně se vykresluje vždy
-nejvýše 350 nejnovějších živých tras, aby špičkový provoz nezhoršil plynulost mapy. Trasy nad tento strop zůstávají dostupné v popupu uzlu.
+nejvýše 350 nejnovějších živých tras, aby špičkový provoz nezhoršil plynulost mapy. Trasy nad tento strop zůstávají dostupné v popupu nodu.
 Mapovým podkladem je standardní světlá mapa OpenStreetMap.
 
 Stejný paket může během floodu postupně získávat delší nebo odlišnou cestu.
@@ -184,16 +184,16 @@ paketu a observeru.
 `lineDashOffset`. Animace je omezená na 10 FPS a neběží bez aktivních tras, ve
 skrytém tabu.
 
-Rozhraní používá kompaktní plovoucí HUD nad mapou, vyhledávání uzlů a samostatný
+Rozhraní používá kompaktní plovoucí HUD nad mapou, vyhledávání nodů a samostatný
 panel posledních tras. Panel Aktivity lze zvětšit tažením za levý horní roh
 (nebo klávesami se šipkami po fokusu na roh); velikost se ukládá do
-`localStorage`, dvojklik nebo Home ji vrátí na výchozí. Kliknutí na uzel otevře popup se stavem, časy pozorování,
+`localStorage`, dvojklik nebo Home ji vrátí na výchozí. Kliknutí na nod otevře popup se stavem, časy pozorování,
 relay statistikami, dostupnou telemetrií a veřejným klíčem. HUD lze kliknutím na
 symbol sbalit.
 
-Popup při otevření ukazuje také poslední trasu zachycenou přes daný uzel od
-načtení stránky: typ a čas paketu, délku hop hashe, celý seznam uzlů a pozici
-  daného uzlu v trase. Tlačítko trasu vykreslí jako samostatnou očíslovanou vrstvu
+Popup při otevření ukazuje také poslední trasu zachycenou přes daný nod od
+načtení stránky: typ a čas paketu, délku hop hashe, celý seznam nodů a pozici
+  daného nodu v trase. Tlačítko trasu vykreslí jako samostatnou očíslovanou vrstvu
   na mapě; vrstva automaticky zmizí po 20 sekundách nebo po kliknutí do mapy. Veřejný
 klíč lze z popupu zkopírovat do schránky.
 
@@ -201,9 +201,9 @@ Popup umí lokálně vygenerovat QR kontakt ve formátu dokumentovaném MeshCore
 `meshcore://contact/add?name=...&public_key=...&type=...`. QR lze naskenovat
 mobilní aplikací a žádná data se při jeho vytvoření neposílají externí službě.
 
-Uzel je označen jako aktivní, pokud během poslední hodiny odeslal advert, byl
+Nod je označen jako aktivní, pokud během poslední hodiny odeslal advert, byl
 slyšen nebo přes něj podle Analyzeru prošel relay provoz (`last_relayed`).
-Top 5 % / 5–15 % používá sedmidenní průměr metrik uložený v SQLite a zahrnuje uzly
+Top 5 % / 5–15 % používá sedmidenní průměr metrik uložený v SQLite a zahrnuje nody
 aktivní během posledních 24 hodin. Server načítá metriky každých 15 minut,
 ukládá nejvýše jeden aktualizovaný vzorek za hodinu a historii drží 30 dní v
 `data/node-metrics.sqlite`.
@@ -220,7 +220,7 @@ je neúplná.
 
 ## Pokrytí terénu
 
-Tlačítko **Pokrytí** zapne režim, ve kterém kliknutí do mapy nebo na uzel spočítá
+Tlačítko **Pokrytí** zapne režim, ve kterém kliknutí do mapy nebo na nod spočítá
 terénní viditelnost z daného bodu. Volitelná je výška antény, rádius a frekvence
 (pro částečný zásah Fresnelovy zóny). Výsledek se zobrazí jako překryv nad mapou:
 
@@ -240,7 +240,7 @@ npm test
 ```
 
 Testy pokrývají SQLite agregaci, parsování path hashů, nedestruktivní filtrování
-tras, deduplikaci souběžných paketů, ranking uzlů, MQTT replay buffer a HTTP
+tras, deduplikaci souběžných paketů, ranking nodů, MQTT replay buffer a HTTP
 chování při neplatném URL, timeoutu CoreScope a překročení SSE limitu.
 
 ## Licence

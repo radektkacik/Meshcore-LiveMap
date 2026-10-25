@@ -1592,7 +1592,7 @@ async function loadNodeHistory(root, node) {
     state.nodeHistoryCache.set(key, { at: Date.now(), samples: data.samples || [] });
     if (root.isConnected) renderNodeHistory(root, data.samples || []);
   } catch (error) {
-    console.error("Historii uzlu se nepodařilo načíst", error);
+    console.error("Historii nodu se nepodařilo načíst", error);
     if (!root.isConnected) return;
     const chart = root.querySelector(".node-history-chart");
     if (chart) chart.textContent = t("node.historyUnavailable");
@@ -1993,7 +1993,7 @@ async function loadNodes() {
     if (!state.routeHistoryLoaded && packetHandlingReady) void loadRouteHistory();
     return true;
   } catch (error) {
-    console.error("Uzly se nepodařilo načíst", error);
+    console.error("Nody se nepodařilo načíst", error);
     return false;
   } finally {
     nodeRefreshActive = false;
@@ -3320,8 +3320,8 @@ function updatePerfGauges() {
   perf.set("trasy", state.liveRouteCount);
   perf.set("animované", state.animationEnabled ? state.activeRoutes.size : 0);
   perf.set("prvky", elements);
-  perf.set("uzly", shownNodes);
-  perf.set("uzlyCelkem", state.nodeMarkers.length);
+  perf.set("nody", shownNodes);
+  perf.set("nodyCelkem", state.nodeMarkers.length);
   perf.set("archiv", state.archiveRendered.size);
 }
 
@@ -3656,7 +3656,7 @@ function createLosMarker(latlng, label, index, node = null) {
   });
   marker.on("dragend", () => {
     void computeLos();
-    // Až po kliknutí (mouseup) zase povolíme vrstvy, aby uzel pod kurzorem nechytil klik.
+    // Až po kliknutí (mouseup) zase povolíme vrstvy, aby nod pod kurzorem nechytil klik.
     setTimeout(() => container.classList.remove("los-dragging"), 0);
   });
   marker.addTo(losMarkerLayer);

@@ -56,7 +56,7 @@ export function createPerfMonitor(enabled, { windowMs = 1000 } = {}) {
     ensureElement();
     if (!element) return;
     const lines = [`FPS ${fps.toFixed(0)} · max frame ${worstFrameMs.toFixed(0)} ms`];
-    const order = ["trasy", "animované", "prvky", "uzly", "uzlyCelkem", "archiv"];
+    const order = ["trasy", "animované", "prvky", "nody", "nodyCelkem", "archiv"];
     const gaugeText = order
       .filter((name) => gauges.has(name))
       .map((name) => `${name} ${formatNumber(gauges.get(name))}`)

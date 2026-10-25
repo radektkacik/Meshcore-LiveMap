@@ -51,24 +51,24 @@ Aktualizováno: 2026-10-25 (prod `20261025T153903Z`, beta `20261025T154013Z`)
 - `/api/nodes` SWR (soft TTL 15 min), `/api/stats` cache 24 h + lokální fallback z DB
 - Průběžný sběr `/api/stats` každých 5 min do `stats_samples` v `node-metrics.sqlite` (retence 30 dní); graf Paketů/h z reálných vzorků, chybějící hodiny jsou mezery
 - Panel Aktivity: zvětšování tažením za roh, persistované rozměry, dvojklik/Home reset; oprava skrývání (`display:flex` přebíjel `[hidden]`)
-- Zvýraznění uzlů: relativní Top 5 % (červená) a 5–15 % (žlutá) místo pevných Top 25/100; počty v legendě
-- Z detailu uzlu odstraněn řádek „Stav hashe“
+- Zvýraznění nodů: relativní Top 5 % (červená) a 5–15 % (žlutá) místo pevných Top 25/100; počty v legendě
+- Z detailu nodu odstraněn řádek „Stav hashe“
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
-- Rychlé výhry (prod i beta): `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (uzly, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export uzlů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
+- Rychlé výhry (prod i beta): `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (nody, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export nodů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
 
-### Mapa a uzly
-- Repeater vždy navrchu při překryvu uzlů
-- Stack uzlů na stejných souřadnicích
-- Detail uzlu: role v hlavičce, relativní časy (`teď`, `12 min`, `3 h`, `2 d`), V síti od, region, obohacení sousedů (role, vzdálenost, naposledy), odkaz do Analyzeru
+### Mapa a nody
+- Repeater vždy navrchu při překryvu nodů
+- Stack nodů na stejných souřadnicích
+- Detail nodu: role v hlavičce, relativní časy (`teď`, `12 min`, `3 h`, `2 d`), V síti od, region, obohacení sousedů (role, vzdálenost, naposledy), odkaz do Analyzeru
 - Historie užitečnosti: 7 dní hodinových vzorků, hover tooltip; bez průměrování
-- Zvýraznění užitečnosti: relativní Top 5 % (červená) a 5–15 % (žlutá) z aktivních uzlů se skóre za 24 h; počty v legendě
+- Zvýraznění užitečnosti: relativní Top 5 % (červená) a 5–15 % (žlutá) z aktivních nodů se skóre za 24 h; počty v legendě
 - Tmavá mapa: OSM dlaždice + CSS filtr
-- Sdílené odkazy: uzel, pozice, filtry, časové okno, jazyk
-- Rychlý start: 30s snapshot živých paketů + uzly z cache (SWR), první trasy ~1 s
+- Sdílené odkazy: nod, pozice, filtry, časové okno, jazyk
+- Rychlý start: 30s snapshot živých paketů + nody z cache (SWR), první trasy ~1 s
 - Cache posledních zobrazených live tras: localStorage, max. 200 tras / 15 min; po refreshi okamžitě jako „z cache“ do příchodu živých dat
 - Klik na „Paketů/h“: SVG graf 24 h / 7 dní ze skutečných vzorků Analyzeru (sběr 5 min, retence 30 dní, mezery bez dopočtu)
 - Detail trasy z feedu i kliknutím na trasu, seznam hopů, vzdálenosti, SNR
-- Mobilní bottom sheet pro detail uzlu/trasy, `?sheet=1`
+- Mobilní bottom sheet pro detail nodu/trasy, `?sheet=1`
 - Panel Aktivity: uživatelsky měnitelná velikost tažením za levý horní roh, persistováno; dvojklik/Home reset
 
 ### LOS
@@ -80,7 +80,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T153903Z`, beta `20261025T154013Z`)
 - Sdílený odkaz včetně parametrů
 
 ### Pokrytí terénu
-- Režim **Pokrytí**, klik do mapy/na uzel
+- Režim **Pokrytí**, klik do mapy/na nod
 - Výška antény, rádius 3–100 km, výchozí **100 km**, frekvence
 - Terénní viditelnost + částečná Fresnelova zóna
 - Web Worker, DEM dlaždice Mapzen Terrarium přes `/api/terrain/{z}/{x}/{y}.png`
@@ -96,7 +96,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T153903Z`, beta `20261025T154013Z`)
 - Deep link `?packet=<hash>`
 - TRACE: 1B se zobrazují vždy, SNR skoků v detailu i u hopů
 - Ambiguous 1B cesty: výběr celého kandidátního řetězu minimalizací vzdálenosti, kotva podle IATA observeru
-- Režim Historie: 300 paketů ze 7 dní; filtry observer/uzel/hash, typ, okno 1 h/24 h/7 dní, „Jen anomálie“
+- Režim Historie: 300 paketů ze 7 dní; filtry observer/nod/hash, typ, okno 1 h/24 h/7 dní, „Jen anomálie“
 - Anomálie: dlouhý skok >140 km, smyčka, >20 hopů
 - Režim Kanály: veřejné dešifrované zprávy z 24 h, rozdělení po `#kanálech`, filtr chipy
 - Live limit: **350 tras**, archiv **1 500**, v paměti 3 000 live verzí
@@ -104,19 +104,19 @@ Aktualizováno: 2026-10-25 (prod `20261025T153903Z`, beta `20261025T154013Z`)
 
 ### Observery
 - Data z `/api/observers`, vrstva zapínatelná checkboxem v „Typ nodu“
-- Přesná poloha, pokud observer ID odpovídá uzlu se souřadnicemi (23 z 50)
+- Přesná poloha, pokud observer ID odpovídá nodu se souřadnicemi (23 z 50)
 - Jinak přibližná poloha podle IATA (27 z 50), vykreslená jako oblast 25 km
 - Clustery pro více observerů na stejné pozici, rozbalitelné detaily
 - Detail: online/stale/offline, pakety, pakety/h, noise floor, baterie, uptime, clock skew, model, firmware
 - Barevné zdraví: zelená online, oranžová stale, šedá offline
 
 ### Statistiky
-- Síťový souhrn: uzly, observeři, pakety/h, pakety/24 h, online/stale/offline, počty rolí
-- Původní žebříčky uzlů podle metrik zůstávají
+- Síťový souhrn: nody, observeři, pakety/h, pakety/24 h, online/stale/offline, počty rolí
+- Původní žebříčky nodů podle metrik zůstávají
 
 ### Backend
 - `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/recent`, `/api/packet-history`, `/api/packets`, `/api/nodes`, `/api/stats`, `/api/search`, `/api/health`
-- Cache `/api/nodes` a `/api/resolve-hops` proti výpadkům CoreScope; uzly se vydávají z cache okamžitě (SWR, soft TTL 15 min)
+- Cache `/api/nodes` a `/api/resolve-hops` proti výpadkům CoreScope; nody se vydávají z cache okamžitě (SWR, soft TTL 15 min)
 - Start stránky: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE běží s `?replay=0`
 - `/api/stats` cache (24 h) + lokální fallback z `packet_routes` při výpadku Analyzeru; klient zobrazí stale/partial hodnotu oranžově a zkusí obnovu za 60 s
 - Sběr `/api/stats` každých 5 min do `stats_samples` v `data/node-metrics.sqlite` (retence 30 dní); graf Paketů/h čte jen tyto vzorky, chybějící hodiny jsou mezery
@@ -131,7 +131,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T153903Z`, beta `20261025T154013Z`)
 - Start stránky: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkový `/api/resolve-hops`, jedno vykreslení; SSE `?replay=0`.
 - Archiv: `/api/history`, `/api/packet-routes`; statistiky `/api/stats`, `/api/packet-history`.
 - CoreScope proxy: `/api/nodes`, `/api/stats`, `/api/observers`, `/api/packets`, `/api/resolve-hops`; server drží cache a stale fallbacky.
-- SQLite: `packets.sqlite` (archiv tras), `node-metrics.sqlite` (skóre uzlů + `stats_samples`), `visits.sqlite`, `feedback.sqlite`.
+- SQLite: `packets.sqlite` (archiv tras), `node-metrics.sqlite` (skóre nodů + `stats_samples`), `visits.sqlite`, `feedback.sqlite`.
 
 ## 4. Testy a CI
 
@@ -183,7 +183,7 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T153903Z'
 - SSE replay (120 s) je legacy a při backpressure se zkracuje; klient používá `/api/recent` a `?replay=0`.
 - Cache posledních live tras v `localStorage` může po refreshi ukázat až 15 min staré trasy; je označená „z cache“ a nahradí se živými daty.
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly na betě vyzkoušeny a revertovány; v produkci nejsou.
-- 1B prefixy jsou nejednoznačné; názvy uzlů se mohou lišit od Analyzeru.
+- 1B prefixy jsou nejednoznačné; názvy nodů se mohou lišit od Analyzeru.
 - Pakety bez path se nekreslí; PATH (typ 11) se záměrně ignoruje.
 - Přibližná poloha observeru je jen IATA oblast, ne přesné letiště.
 - Kanály jsou jen veřejné dešifrované zprávy, soukromé zůstávají šifrované.
@@ -195,13 +195,13 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T153903Z'
 ## 9. Backlog a návrhy do budoucna
 
 ### Střední
-- Přenést další data z Analyzeru do detailu uzlu: total packets, packets today, avg hops, heard-by observeři s SNR/RSSI, recent adverts, paths through node, clock skew (proxy per-node endpointů s cache)
-- Clustering uzlů při oddálení
+- Přenést další data z Analyzeru do detailu nodu: total packets, packets today, avg hops, heard-by observeři s SNR/RSSI, recent adverts, paths through node, clock skew (proxy per-node endpointů s cache)
+- Clustering nodů při oddálení
 - Playback archivu s časovou osou (dříve zkoušeno na betě, revertováno)
 - Heatmapa provozu (dříve zkoušeno na betě, revertováno)
 - Trasy A→B / route explorer (dříve zkoušeno na betě, revertováno)
-- Watchlist a notifikace při offline uzlu/anomálii
-- Grafy trendů v detailu uzlu/observeru (SNR, baterie, uptime)
+- Watchlist a notifikace při offline nodu/anomálii
+- Grafy trendů v detailu nodu/observeru (SNR, baterie, uptime)
 - PWA / offline režim
 - Refaktor `src/main.js` (cca 4 400 řádků) do modulů
 - Přístupnost/klávesnice a další mobilní doladění

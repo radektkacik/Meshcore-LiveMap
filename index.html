@@ -60,7 +60,7 @@
             </div>
 
             <div class="node-search">
-              <input id="node-search" type="search" autocomplete="off" placeholder="Hledat uzel, observer, paket nebo kanál…" aria-controls="search-results" aria-expanded="false" />
+              <input id="node-search" type="search" autocomplete="off" placeholder="Hledat nod, observer, paket nebo kanál…" aria-controls="search-results" aria-expanded="false" />
               <ol id="search-results" class="search-results" hidden></ol>
             </div>
 
@@ -69,7 +69,7 @@
               <button id="stats-toggle" type="button" aria-pressed="false">Statistiky</button>
               <button id="los-toggle" type="button" aria-pressed="false" title="Změřit přímou viditelnost mezi dvěma body">LOS</button>
               <button id="coverage-toggle" type="button" aria-pressed="false" title="Simulovat pokrytí terénu z jednoho bodu">Pokrytí</button>
-              <button id="export-toggle" type="button" class="wide" title="Stáhnout uzly, observery nebo trasy jako CSV či GeoJSON">Export</button>
+              <button id="export-toggle" type="button" class="wide" title="Stáhnout nody, observery nebo trasy jako CSV či GeoJSON">Export</button>
               <button id="feedback-toggle" type="button" class="wide">Kniha návštěv</button>
             </div>
 
@@ -125,7 +125,7 @@
 
             <label class="packet-filter">
               <input id="node-labels-toggle" type="checkbox" />
-              <span><strong>Zobrazit názvy uzlů</strong></span>
+              <span><strong>Zobrazit názvy nodů</strong></span>
             </label>
 
             <div class="legend" aria-label="Legenda">
@@ -168,7 +168,7 @@
             </div>
           </header>
           <div id="history-filters" class="history-filters" hidden>
-            <input id="history-search" type="search" autocomplete="off" placeholder="Hledat observer, uzel nebo hash…" />
+            <input id="history-search" type="search" autocomplete="off" placeholder="Hledat observer, nod nebo hash…" />
             <select id="history-type" aria-label="Typ paketu">
               <option value="">Vše</option>
               <option value="4">ADVERT</option>
@@ -199,16 +199,16 @@
           <details class="stats-help">
             <summary><span class="stats-help-icon" aria-hidden="true">i</span> Vysvětlení metrik</summary>
             <div class="stats-help-panel">
-              <p>Hodnoty pocházejí z uzlů a dlouhodobých hodinových vzorků (sběr po 15 minutách).</p>
+              <p>Hodnoty pocházejí z nodů a dlouhodobých hodinových vzorků (sběr po 15 minutách).</p>
               <dl>
-                <div><dt>Přenos</dt><dd>Počet výskytů uzlu jako relay hop za zvolené období.</dd></div>
+                <div><dt>Přenos</dt><dd>Počet výskytů nodu jako relay hop za zvolené období.</dd></div>
                 <div><dt>Přenos bez scope</dt><dd>Část relay provozu tvořená flood pakety bez scope za 24 h. Vyšší hodnota může znamenat nevhodné nastavení flood.max.unscoped.</dd></div>
-                <div><dt>Advertů</dt><dd>Počet zachycených oznámení, kterými uzel zveřejňuje svoji identitu.</dd></div>
-                <div><dt>Podíl provozu</dt><dd>Část neadvertového provozu, ve kterém se uzel objevil jako relay hop.</dd></div>
+                <div><dt>Advertů</dt><dd>Počet zachycených oznámení, kterými nod zveřejňuje svoji identitu.</dd></div>
+                <div><dt>Podíl provozu</dt><dd>Část neadvertového provozu, ve kterém se nod objevil jako relay hop.</dd></div>
                 <div><dt>Užitečnost</dt><dd>Složené skóre: 30 % bridge + 25 % pokrytí + 25 % kritičnost + 20 % podíl provozu.</dd></div>
-                <div><dt>Pokrytí</dt><dd>Jak dobře je uzel přes kvalitní cesty dosažitelný ze zbytku sítě.</dd></div>
-                <div><dt>Bridge</dt><dd>Jak často uzel leží na nejvýhodnějších cestách mezi ostatními uzly.</dd></div>
-                <div><dt>Kritičnost</dt><dd>Nakolik by odstranění uzlu rozdělilo síť.</dd></div>
+                <div><dt>Pokrytí</dt><dd>Jak dobře je nod přes kvalitní cesty dosažitelný ze zbytku sítě.</dd></div>
+                <div><dt>Bridge</dt><dd>Jak často nod leží na nejvýhodnějších cestách mezi ostatními nody.</dd></div>
+                <div><dt>Kritičnost</dt><dd>Nakolik by odstranění nodu rozdělilo síť.</dd></div>
               </dl>
               <p>Období: 1 h a 24 h ukazují aktuální hodnotu, 7 dní dlouhodobý průměr. Přenos bez scope je dostupný jen za 24 h.</p>
             </div>
@@ -235,7 +235,7 @@
                 </select>
               </label>
             </div>
-            <div class="stats-counts" id="stats-counts" role="group" aria-label="Počet uzlů">
+            <div class="stats-counts" id="stats-counts" role="group" aria-label="Počet nodů">
               <button type="button" data-count="10" class="active">10</button>
               <button type="button" data-count="25">25</button>
               <button type="button" data-count="50">50</button>
