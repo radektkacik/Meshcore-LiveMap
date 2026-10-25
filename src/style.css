@@ -520,6 +520,31 @@ html[data-theme="dark"] .route-show-on-map { color: #5fd0a5; background: rgba(7,
 .los-budget-summary.ok { color: #087a57; border-color: rgba(7, 142, 98, 0.3); background: #edf7f1; }
 .los-budget-summary.tight { color: #8a5a00; border-color: rgba(216, 116, 18, 0.35); background: #fff6e8; }
 .los-budget-summary.fail { color: #a02a35; border-color: rgba(209, 55, 77, 0.35); background: #fdf0f1; }
+.metric-link { cursor: pointer; }
+.metric-link:hover { background: rgba(7, 142, 98, 0.07); }
+.metric-link:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
+.metric-chart-icon { width: 10px; height: 10px; margin-left: 2px; vertical-align: -1px; opacity: 0.55; }
+
+.packet-history-dialog { width: min(720px, calc(100vw - 32px)); }
+.packet-history-windows { display: flex; gap: 4px; margin-top: 8px; }
+.packet-history-windows button { padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; color: #49665b; background: #fff; font: 10px "DM Mono", monospace; cursor: pointer; }
+.packet-history-windows button.active { color: #fff; border-color: var(--green); background: var(--green); }
+.packet-history-chart { min-height: 200px; margin-top: 10px; }
+.packet-history-chart svg { display: block; width: 100%; height: 200px; overflow: visible; }
+.packet-history-grid { stroke: rgba(30, 65, 49, 0.12); stroke-width: 1; }
+.packet-history-area { fill: rgba(7, 142, 98, 0.12); }
+.packet-history-line { fill: none; stroke: var(--green); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.packet-history-dot { fill: var(--green); stroke: #fff; stroke-width: 1.5; }
+.packet-history-axis { fill: #7a8c83; font: 9px "DM Mono", monospace; }
+.packet-history-cursor { stroke: rgba(23, 39, 31, 0.35); stroke-width: 1; pointer-events: none; }
+.packet-history-empty { padding: 30px 8px; color: var(--muted); font-size: 11px; text-align: center; }
+html[data-theme="dark"] .packet-history-windows button { color: #b9c9d2; background: #1b232b; border-color: #2f3d46; }
+html[data-theme="dark"] .packet-history-windows button.active { color: #fff; background: var(--green); border-color: var(--green); }
+html[data-theme="dark"] .packet-history-grid { stroke: rgba(255, 255, 255, 0.12); }
+html[data-theme="dark"] .packet-history-axis { fill: #8fa0a8; }
+html[data-theme="dark"] .packet-history-dot { stroke: #161d24; }
+html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3); }
+
 .los-hover { min-height: 16px; margin: 8px 0 0; color: #40574c; font: 11px/1.4 "DM Mono", monospace; }
 .los-note { margin: 10px 0 0; color: #7a8c83; font-size: 10px; line-height: 1.45; }
 .los-point { width: 22px !important; height: 22px !important; border: 2px solid #fff; border-radius: 50%; color: #fff; background: #287fc9; box-shadow: 0 2px 6px rgba(20, 42, 32, 0.35); font: 600 10px/18px "DM Mono", monospace; text-align: center; }

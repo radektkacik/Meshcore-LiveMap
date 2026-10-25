@@ -62,6 +62,27 @@ test("packet store counts distinct packets since a time and exposes the newest r
   }
 });
 
+test("packet store groups hourly packet and observation counts", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-packets-"));
+  const store = createPacketStore(join(directory, "packets.sqlite"), { retentionMs: 60_000 });
+  const hour = 3_600_000;
+  try {
+    store.record([
+      row({ hash: "a", observer_id: "o1", observed_at: hour + 1_000 }),
+      row({ hash: "a", observer_id: "o2", observed_at: hour + 2_000 }),
+      row({ hash: "b", observer_id: "o1", observed_at: hour + 3_000 }),
+      row({ hash: "c", observer_id: "o1", observed_at: 2 * hour + 1_000 }),
+    ]);
+    assert.deepEqual(store.hourlySeries(0), [
+      { hour, observations: 3, packets: 2 },
+      { hour: 2 * hour, observations: 1, packets: 1 },
+    ]);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("packet store filters by time, orders newest first and honors the limit", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-packets-"));
   const store = createPacketStore(join(directory, "packets.sqlite"), { retentionMs: 60_000 });

@@ -76,6 +76,7 @@ const allowedApiPaths = [
   "/api/packets",
   "/api/resolve-hops",
   "/api/stats",
+  "/api/packet-history",
 ];
 const packetStreams = new Set();
 const packetBufferMs = 120_000;
@@ -1097,6 +1098,31 @@ async function handleRequest(request, response) {
       "Cache-Control": "no-store",
     });
     response.end(JSON.stringify({ count: packets.length, packets, since }));
+    return;
+  }
+
+  if (url.pathname === "/api/packet-history") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      return;
+    }
+    const hoursParam = url.searchParams.has("hours") ? Number(url.searchParams.get("hours")) : NaN;
+    const hours = Number.isFinite(hoursParam) ? Math.min(Math.max(1, Math.round(hoursParam)), 168) : 24;
+    const bucketMs = 3_600_000;
+    const end = Math.floor(Date.now() / bucketMs) * bucketMs;
+    const since = end - (hours - 1) * bucketMs;
+    const rows = new Map(packetStore.hourlySeries(since).map((row) => [row.hour, row]));
+    const series = [];
+    for (let index = 0; index < hours; index += 1) {
+      const hour = since + index * bucketMs;
+      const row = rows.get(hour);
+      series.push({
+        hour,
+        observations: row?.observations || 0,
+        packets: row?.packets || 0,
+      });
+    }
+    sendJson(response, 200, { bucketMs, hours, series, since });
     return;
   }
 

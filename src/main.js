@@ -209,6 +209,13 @@ const elements = {
   packetFocusCount: document.querySelector("#packet-focus-count"),
   packetFocusHash: document.querySelector("#packet-focus-hash"),
   packetRate: document.querySelector("#packet-rate"),
+  packetRateCard: document.querySelector("#packet-rate-card"),
+  packetHistoryChart: document.querySelector("#packet-history-chart"),
+  packetHistoryClose: document.querySelector("#packet-history-close"),
+  packetHistoryDialog: document.querySelector("#packet-history-dialog"),
+  packetHistoryHover: document.querySelector("#packet-history-hover"),
+  packetHistorySummary: document.querySelector("#packet-history-summary"),
+  packetHistoryWindows: [...document.querySelectorAll("#packet-history-windows button")],
   qrCanvas: document.querySelector("#node-qr-canvas"),
   qrClose: document.querySelector("#node-qr-close"),
   qrDialog: document.querySelector("#node-qr-dialog"),
@@ -318,6 +325,8 @@ const state = {
   routeWindowMs: 0,
   serverSkewMs: 0,
   packetFocus: null,
+  packetHistoryHours: 24,
+  packetHistoryRequestId: 0,
   selectedRouteHashBytes: 0,
   selectedRouteId: null,
   selectedRoutePacketType: null,
@@ -1964,6 +1973,160 @@ async function loadStats() {
   } finally {
     statsRefreshActive = false;
   }
+}
+
+function svgNode(name, attributes = {}) {
+  const node = document.createElementNS("http://www.w3.org/2000/svg", name);
+  for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, String(value));
+  return node;
+}
+
+function renderPacketHistory(series, hours) {
+  elements.packetHistoryChart.replaceChildren();
+  elements.packetHistoryHover.textContent = "";
+  const points = Array.isArray(series) ? series : [];
+  if (!points.length) {
+    const empty = document.createElement("div");
+    empty.className = "packet-history-empty";
+    empty.textContent = t("packetHistory.empty");
+    elements.packetHistoryChart.appendChild(empty);
+    elements.packetHistorySummary.textContent = "";
+    return;
+  }
+  const packets = points.map((point) => Number(point.packets) || 0);
+  const total = packets.reduce((sum, value) => sum + value, 0);
+  const peak = Math.max(0, ...packets);
+  elements.packetHistorySummary.textContent = t("packetHistory.summary", {
+    avg: formatNumber(Math.round(total / points.length)),
+    peak: formatNumber(peak),
+    total: formatNumber(total),
+  });
+  const width = 640;
+  const height = 200;
+  const left = 38;
+  const right = 12;
+  const top = 12;
+  const bottom = 24;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const maxValue = Math.max(1, peak);
+  const x = (index) => left + (points.length === 1 ? plotWidth / 2 : (index / (points.length - 1)) * plotWidth);
+  const y = (value) => top + plotHeight - (value / maxValue) * plotHeight;
+  const svg = svgNode("svg", {
+    "aria-label": t("packetHistory.title"),
+    role: "img",
+    viewBox: `0 0 ${width} ${height}`,
+  });
+  for (const ratio of [0, 0.5, 1]) {
+    const lineY = top + plotHeight * (1 - ratio);
+    svg.appendChild(svgNode("line", {
+      class: "packet-history-grid",
+      x1: left,
+      x2: width - right,
+      y1: lineY,
+      y2: lineY,
+    }));
+    const label = svgNode("text", {
+      "text-anchor": "end",
+      class: "packet-history-axis",
+      x: left - 5,
+      y: lineY + 3,
+    });
+    label.textContent = formatNumber(Math.round(maxValue * ratio));
+    svg.appendChild(label);
+  }
+  const step = hours > 48 ? 24 : 6;
+  for (let index = 0; index < points.length; index += step) {
+    const label = svgNode("text", {
+      "text-anchor": "middle",
+      class: "packet-history-axis",
+      x: x(index),
+      y: height - 6,
+    });
+    label.textContent = hours > 48
+      ? formatDate(new Date(points[index].hour))
+      : `${String(new Date(points[index].hour).getHours()).padStart(2, "0")}:00`;
+    svg.appendChild(label);
+  }
+  const area = [`M ${x(0)} ${top + plotHeight}`];
+  for (let index = 0; index < points.length; index += 1) area.push(`L ${x(index)} ${y(packets[index])}`);
+  area.push(`L ${x(points.length - 1)} ${top + plotHeight}`, "Z");
+  svg.appendChild(svgNode("path", { class: "packet-history-area", d: area.join(" ") }));
+  const line = [`M ${x(0)} ${y(packets[0])}`];
+  for (let index = 1; index < points.length; index += 1) line.push(`L ${x(index)} ${y(packets[index])}`);
+  svg.appendChild(svgNode("path", { class: "packet-history-line", d: line.join(" ") }));
+  if (points.length <= 48) {
+    for (let index = 0; index < points.length; index += 1) {
+      svg.appendChild(svgNode("circle", {
+        class: "packet-history-dot",
+        cx: x(index),
+        cy: y(packets[index]),
+        r: 2.5,
+      }));
+    }
+  }
+  const cursor = svgNode("line", {
+    class: "packet-history-cursor",
+    style: "display:none",
+    x1: x(0),
+    x2: x(0),
+    y1: top,
+    y2: top + plotHeight,
+  });
+  svg.appendChild(cursor);
+  svg.appendChild(svgNode("rect", {
+    fill: "transparent",
+    height: plotHeight,
+    width: plotWidth,
+    x: left,
+    y: top,
+  }));
+  svg.addEventListener("mousemove", (event) => {
+    const rect = svg.getBoundingClientRect();
+    const localX = ((event.clientX - rect.left) / rect.width) * width;
+    const ratio = Math.min(1, Math.max(0, (localX - left) / plotWidth));
+    const index = Math.min(points.length - 1, Math.max(0, Math.round(ratio * (points.length - 1))));
+    const point = points[index];
+    elements.packetHistoryHover.textContent = t("packetHistory.hover", {
+      observations: formatNumber(Number(point.observations) || 0),
+      packets: formatNumber(Number(point.packets) || 0),
+      time: formatDateTimeShort(point.hour),
+    });
+    cursor.setAttribute("x1", x(index));
+    cursor.setAttribute("x2", x(index));
+    cursor.style.display = "";
+  });
+  svg.addEventListener("mouseleave", () => {
+    cursor.style.display = "none";
+    elements.packetHistoryHover.textContent = "";
+  });
+  elements.packetHistoryChart.appendChild(svg);
+}
+
+async function loadPacketHistory(hours) {
+  const nextHours = Number(hours) === 168 ? 168 : 24;
+  state.packetHistoryHours = nextHours;
+  for (const button of elements.packetHistoryWindows) {
+    button.classList.toggle("active", Number(button.dataset.hours) === nextHours);
+  }
+  const requestId = ++state.packetHistoryRequestId;
+  elements.packetHistorySummary.textContent = t("packetHistory.loading");
+  elements.packetHistoryChart.replaceChildren();
+  elements.packetHistoryHover.textContent = "";
+  try {
+    const data = await getJson(`/api/packet-history?hours=${nextHours}`);
+    if (requestId !== state.packetHistoryRequestId) return;
+    renderPacketHistory(data.series || [], nextHours);
+  } catch (error) {
+    if (requestId !== state.packetHistoryRequestId) return;
+    console.error("Historii paketů se nepodařilo načíst", error);
+    elements.packetHistorySummary.textContent = t("packetHistory.failed");
+  }
+}
+
+function openPacketHistory() {
+  if (!elements.packetHistoryDialog.open) elements.packetHistoryDialog.showModal();
+  void loadPacketHistory(state.packetHistoryHours);
 }
 
 async function loadBaseData() {
@@ -4145,12 +4308,36 @@ document.addEventListener("click", (event) => {
   hideLosResults();
 });
 updateLosActions();
+
+elements.packetRateCard.addEventListener("click", openPacketHistory);
+elements.packetRateCard.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  event.preventDefault();
+  openPacketHistory();
+});
+elements.packetHistoryClose.addEventListener("click", () => elements.packetHistoryDialog.close());
+for (const button of elements.packetHistoryWindows) {
+  button.addEventListener("click", () => void loadPacketHistory(Number(button.dataset.hours)));
+}
+elements.packetRateCard.setAttribute("aria-label", t("packetHistory.openAria"));
+elements.packetRateCard.title = t("packetHistory.openTitle");
+document.querySelector("#packet-history-title").textContent = t("packetHistory.title");
+elements.packetHistoryClose.setAttribute("aria-label", t("packetHistory.close"));
+document.querySelector("#packet-history-windows").setAttribute("aria-label", t("packetHistory.period"));
+for (const button of elements.packetHistoryWindows) {
+  button.textContent = Number(button.dataset.hours) === 168
+    ? t("packetHistory.window7d")
+    : t("packetHistory.window24");
+}
+document.querySelector("#packet-history-dialog .los-note").textContent = t("packetHistory.note");
+
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
   if (elements.coverageDialog.open) elements.coverageDialog.close();
   else if (state.coverageMode) setCoverageMode(false);
   else if (elements.losDialog.open) elements.losDialog.close();
   else if (state.losMode) setLosMode(false);
+  else if (elements.packetHistoryDialog.open) elements.packetHistoryDialog.close();
   else if (state.packetFocus) exitPacketFocus();
 });
 
