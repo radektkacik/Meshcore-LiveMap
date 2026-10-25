@@ -31,6 +31,32 @@ test("stores hourly samples and decorates nodes with a seven-day average", () =>
   }
 });
 
+test("stores analyzer stats samples in five-minute buckets and prunes old ones", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-metrics-"));
+  const store = createNodeMetricsStore(join(directory, "metrics.sqlite"), { statsHistoryDays: 30 });
+  const start = Date.UTC(2026, 8, 1, 10, 0);
+  try {
+    store.recordStats({ packetsLast24h: 2_000, packetsLastHour: 100 }, start);
+    store.recordStats({ packetsLast24h: 2_100, packetsLastHour: 120 }, start + 60_000);
+    store.recordStats({ packetsLast24h: 3_000, packetsLastHour: 300 }, start + 5 * 60_000);
+    assert.equal(store.recordStats({}), null);
+
+    const series = store.statsSeries(0);
+    assert.equal(series.length, 2);
+    assert.equal(series[0].packetsLastHour, 120);
+    assert.equal(series[0].packetsLast24h, 2_100);
+    assert.equal(series[1].packetsLastHour, 300);
+
+    store.recordStats({ packetsLastHour: 1 }, start + 31 * 24 * 60 * 60_000);
+    const pruned = store.statsSeries(0);
+    assert.equal(pruned.length, 1);
+    assert.equal(pruned[0].packetsLastHour, 1);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("drops samples outside the seven-day scoring window", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-metrics-"));
   const store = createNodeMetricsStore(join(directory, "metrics.sqlite"));

@@ -54,7 +54,7 @@ Aktualizováno: 2026-10-25
 - Sdílené odkazy: uzel, pozice, filtry, časové okno, jazyk
 - Rychlý start: 30s snapshot živých paketů + uzly z cache (SWR), první trasy ~1 s
 - Cache posledních zobrazených live tras: localStorage, max. 200 tras / 15 min; po refreshi okamžitě jako „z cache“ do příchodu živých dat
-- Klik na „Paketů/h“: SVG graf 24 h / 7 dní; tvar z lokální DB tras, měřítko z poměru k Analyzeru, poslední hodina přímo z Analyzeru
+- Klik na „Paketů/h“: SVG graf 24 h / 7 dní ze skutečných vzorků Analyzeru (sběr 5 min, retence 30 dní, mezery bez dopočtu)
 - Detail trasy z feedu i kliknutím na trasu, seznam hopů, vzdálenosti, SNR
 - Mobilní bottom sheet pro detail uzlu/trasy, `?sheet=1`
 - Panel Aktivity: uživatelsky měnitelná velikost tažením za levý horní roh, persistováno; dvojklik/Home reset
@@ -106,6 +106,7 @@ Aktualizováno: 2026-10-25
 - Cache `/api/nodes` a `/api/resolve-hops` proti výpadkům CoreScope; uzly se vydávají z cache okamžitě (SWR, soft TTL 15 min)
 - Start stránky: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE běží s `?replay=0`
 - `/api/stats` cache (24 h) + lokální fallback z `packet_routes` při výpadku Analyzeru; klient zobrazí stale/partial hodnotu oranžově a zkusí obnovu za 60 s
+- Sběr `/api/stats` každých 5 min do `stats_samples` v `data/node-metrics.sqlite` (retence 30 dní); graf Paketů/h čte jen tyto vzorky, chybějící hodiny jsou mezery
 - MQTT reconnect/backoff, SSE feed, replay buffer
 - Ukládání TRACE i bez `resolved_path`; cesty se doresolvují na klientu
 - Security headers: CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP

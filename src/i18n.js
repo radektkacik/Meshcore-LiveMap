@@ -239,11 +239,12 @@ const cs = {
   "packetHistory.window7d": "7 dní",
   "packetHistory.loading": "Načítám historii…",
   "packetHistory.failed": "Historii se nepodařilo načíst.",
-  "packetHistory.empty": "Žádná data v tomto období.",
+  "packetHistory.empty": "Zatím žádné vzorky v tomto období.",
   "packetHistory.summary": "celkem {total} · průměr {avg}/h · maximum {peak}/h",
   "packetHistory.hover": "{time} · {packets} paketů",
-  "packetHistory.noteLocal": "Z lokální databáze tras (unikátní pakety s rozřešenou trasou); celkové „Paketů/h“ v HUD pochází z Analyzeru. Sběr každých 5 minut, poslední hodina je neúplná.",
-  "packetHistory.noteEstimated": "Odhad celkových paketů/h: tvar z lokální DB tras, měřítko z aktuálního poměru k Analyzeru. Poslední hodina je přímo z Analyzeru.",
+  "packetHistory.coverage": "vzorek v {count} z {hours} hodin",
+  "packetHistory.noSample": "{time} · bez vzorku",
+  "packetHistory.note": "Skutečná data z Analyzeru, sběr každých 5 minut. Mezery = výpadek nebo doba před začátkem sběru; aktuální hodina je neúplná.",
 };
 
 const en = {
@@ -483,11 +484,12 @@ const en = {
   "packetHistory.window7d": "7 days",
   "packetHistory.loading": "Loading history…",
   "packetHistory.failed": "History could not be loaded.",
-  "packetHistory.empty": "No data in this period.",
+  "packetHistory.empty": "No samples in this period yet.",
   "packetHistory.summary": "total {total} · average {avg}/h · peak {peak}/h",
   "packetHistory.hover": "{time} · {packets} packets",
-  "packetHistory.noteLocal": "From the local route database (unique packets with a resolved route); the overall “Packets/h” in the HUD comes from the Analyzer. Collected every 5 minutes, the current hour is incomplete.",
-  "packetHistory.noteEstimated": "Estimated total packets/h: shape from the local route database, scale from the current Analyzer ratio. The current hour is taken directly from the Analyzer.",
+  "packetHistory.coverage": "{count} of {hours} hours sampled",
+  "packetHistory.noSample": "{time} · no sample",
+  "packetHistory.note": "Actual Analyzer data, collected every 5 minutes. Gaps mean an outage or time before collection began; the current hour is incomplete.",
 };
 
 export const TRANSLATIONS = { cs, en };
@@ -624,7 +626,7 @@ export const STATIC_EN = {
   "Období grafu": "Chart period",
   "Zobrazit graf 24 h / 7 dní": "Show the 24 h / 7 day chart",
   "Zobrazit graf paketů za hodinu": "Show the packets-per-hour chart",
-  "Z lokální databáze tras (unikátní pakety s rozřešenou trasou); celkové „Paketů/h“ v HUD pochází z Analyzeru. Sběr každých 5 minut, poslední hodina je neúplná.": "From the local route database (unique packets with a resolved route); the overall “Packets/h” in the HUD comes from the Analyzer. Collected every 5 minutes, the current hour is incomplete.",
+  "Skutečná data z Analyzeru, sběr každých 5 minut. Mezery = výpadek nebo doba před začátkem sběru; aktuální hodina je neúplná.": "Actual Analyzer data, collected every 5 minutes. Gaps mean an outage or time before collection began; the current hour is incomplete.",
 };
 
 function resolveLocale() {

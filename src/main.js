@@ -1982,14 +1982,14 @@ function svgNode(name, attributes = {}) {
   return node;
 }
 
-function renderPacketHistory(series, hours, meta = {}) {
+function renderPacketHistory(series, hours) {
   elements.packetHistoryChart.replaceChildren();
   elements.packetHistoryHover.textContent = "";
-  elements.packetHistoryNote.textContent = meta.estimated === true
-    ? t("packetHistory.noteEstimated")
-    : t("packetHistory.noteLocal");
+  elements.packetHistoryNote.textContent = t("packetHistory.note");
   const points = Array.isArray(series) ? series : [];
-  if (!points.length) {
+  const values = points.map((point) => (point.packets == null ? null : Number(point.packets)));
+  const present = values.filter((value) => value != null);
+  if (!points.length || !present.length) {
     const empty = document.createElement("div");
     empty.className = "packet-history-empty";
     empty.textContent = t("packetHistory.empty");
@@ -1997,14 +1997,13 @@ function renderPacketHistory(series, hours, meta = {}) {
     elements.packetHistorySummary.textContent = "";
     return;
   }
-  const packets = points.map((point) => Number(point.packets) || 0);
-  const total = packets.reduce((sum, value) => sum + value, 0);
-  const peak = Math.max(0, ...packets);
-  elements.packetHistorySummary.textContent = t("packetHistory.summary", {
-    avg: formatNumber(Math.round(total / points.length)),
+  const total = present.reduce((sum, value) => sum + value, 0);
+  const peak = Math.max(0, ...present);
+  elements.packetHistorySummary.textContent = `${t("packetHistory.summary", {
+    avg: formatNumber(Math.round(total / present.length)),
     peak: formatNumber(peak),
     total: formatNumber(total),
-  });
+  })} · ${tCount("packetHistory.coverage", present.length, { hours: points.length })}`;
   const width = 640;
   const height = 200;
   const left = 38;
@@ -2052,21 +2051,38 @@ function renderPacketHistory(series, hours, meta = {}) {
       : `${String(new Date(points[index].hour).getHours()).padStart(2, "0")}:00`;
     svg.appendChild(label);
   }
-  const area = [`M ${x(0)} ${top + plotHeight}`];
-  for (let index = 0; index < points.length; index += 1) area.push(`L ${x(index)} ${y(packets[index])}`);
-  area.push(`L ${x(points.length - 1)} ${top + plotHeight}`, "Z");
-  svg.appendChild(svgNode("path", { class: "packet-history-area", d: area.join(" ") }));
-  const line = [`M ${x(0)} ${y(packets[0])}`];
-  for (let index = 1; index < points.length; index += 1) line.push(`L ${x(index)} ${y(packets[index])}`);
-  svg.appendChild(svgNode("path", { class: "packet-history-line", d: line.join(" ") }));
-  if (points.length <= 48) {
-    for (let index = 0; index < points.length; index += 1) {
-      svg.appendChild(svgNode("circle", {
-        class: "packet-history-dot",
-        cx: x(index),
-        cy: y(packets[index]),
-        r: 2.5,
-      }));
+  const segments = [];
+  let segment = [];
+  for (let index = 0; index < values.length; index += 1) {
+    if (values[index] == null) {
+      if (segment.length) segments.push(segment);
+      segment = [];
+    } else {
+      segment.push(index);
+    }
+  }
+  if (segment.length) segments.push(segment);
+  for (const indexes of segments) {
+    if (indexes.length >= 2) {
+      const area = [`M ${x(indexes[0])} ${top + plotHeight}`];
+      for (const index of indexes) area.push(`L ${x(index)} ${y(values[index])}`);
+      area.push(`L ${x(indexes.at(-1))} ${top + plotHeight}`, "Z");
+      svg.appendChild(svgNode("path", { class: "packet-history-area", d: area.join(" ") }));
+      const line = [`M ${x(indexes[0])} ${y(values[indexes[0]])}`];
+      for (let offset = 1; offset < indexes.length; offset += 1) {
+        line.push(`L ${x(indexes[offset])} ${y(values[indexes[offset]])}`);
+      }
+      svg.appendChild(svgNode("path", { class: "packet-history-line", d: line.join(" ") }));
+    }
+    if (indexes.length === 1 || points.length <= 48) {
+      for (const index of indexes) {
+        svg.appendChild(svgNode("circle", {
+          class: "packet-history-dot",
+          cx: x(index),
+          cy: y(values[index]),
+          r: 2.5,
+        }));
+      }
     }
   }
   const cursor = svgNode("line", {
@@ -2091,10 +2107,13 @@ function renderPacketHistory(series, hours, meta = {}) {
     const ratio = Math.min(1, Math.max(0, (localX - left) / plotWidth));
     const index = Math.min(points.length - 1, Math.max(0, Math.round(ratio * (points.length - 1))));
     const point = points[index];
-    elements.packetHistoryHover.textContent = t("packetHistory.hover", {
-      packets: formatNumber(Number(point.packets) || 0),
-      time: formatDateTimeShort(point.hour),
-    });
+    const value = values[index];
+    elements.packetHistoryHover.textContent = value == null
+      ? t("packetHistory.noSample", { time: formatDateTimeShort(point.hour) })
+      : t("packetHistory.hover", {
+        packets: formatNumber(value),
+        time: formatDateTimeShort(point.hour),
+      });
     cursor.setAttribute("x1", x(index));
     cursor.setAttribute("x2", x(index));
     cursor.style.display = "";
@@ -2119,7 +2138,7 @@ async function loadPacketHistory(hours) {
   try {
     const data = await getJson(`/api/packet-history?hours=${nextHours}`);
     if (requestId !== state.packetHistoryRequestId) return;
-    renderPacketHistory(data.series || [], nextHours, data);
+    renderPacketHistory(data.series || [], nextHours);
   } catch (error) {
     if (requestId !== state.packetHistoryRequestId) return;
     console.error("Historii paketů se nepodařilo načíst", error);
@@ -4332,7 +4351,7 @@ for (const button of elements.packetHistoryWindows) {
     ? t("packetHistory.window7d")
     : t("packetHistory.window24");
 }
-document.querySelector("#packet-history-dialog .los-note").textContent = t("packetHistory.noteLocal");
+document.querySelector("#packet-history-dialog .los-note").textContent = t("packetHistory.note");
 
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;

@@ -98,15 +98,6 @@ export function createPacketStore(dbPath, {
   const countDistinctSince = db.prepare(`
     SELECT COUNT(DISTINCT hash) AS total FROM packet_routes WHERE observed_at >= ?
   `);
-  const selectHourly = db.prepare(`
-    SELECT (observed_at / 3600000) * 3600000 AS hour,
-      COUNT(DISTINCT hash) AS packets,
-      COUNT(*) AS observations
-    FROM packet_routes
-    WHERE observed_at >= ?
-    GROUP BY hour
-    ORDER BY hour ASC
-  `);
 
   const record = db.transaction((rows) => {
     let stored = 0;
@@ -122,11 +113,6 @@ export function createPacketStore(dbPath, {
     close: () => db.close(),
     count: () => countRows.get().total,
     countDistinctSince: (sinceMs) => countDistinctSince.get(Math.floor(sinceMs)).total,
-    hourlySeries: (sinceMs) => selectHourly.all(Math.floor(sinceMs)).map((row) => ({
-      hour: Number(row.hour),
-      observations: Number(row.observations),
-      packets: Number(row.packets),
-    })),
     newest: () => newestRow.get().newest,
     oldest: () => oldestRow.get().oldest,
     prune: (now = Date.now()) => {

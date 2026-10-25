@@ -72,9 +72,10 @@ přihlašovací údaje zůstávají pouze na serveru.
   kruhového bufferu (max. 120 s) jako jeden JSON. Klient ho načte paralelně
   s uzly, všechny prefixy vyřeší jedním dávkovým requestem a trasy vykreslí
   najednou, místo aby zpracovával stovky SSE událostí po jednom.
-- `/api/packet-history?hours=24|168` vrací hodinové počty z `packet_routes`.
-  Tvar je z lokální DB, měřítko se násobí poměrem `packetsLast24h` z Analyzeru
-  k lokálnímu 24h součtu; poslední hodina se bere přímo z `packetsLastHour`.
+- `/api/packet-history?hours=24|168` vrací hodinové hodnoty z tabulky
+  `stats_samples` v `data/node-metrics.sqlite`. Server ukládá `packetsLastHour`
+  z Analyzeru každých 5 minut (retence 30 dní); chybějící hodiny jsou `null`
+  (mezera), žádný dopočet.
 - `/api/stats` se ukládá do `data/stats-cache.json` (24 h). Při výpadku
   Analyzeru se vydá poslední známá odpověď s `X-Data-Stale: 1`; pokud cache
   chybí, server dopočítá `packetsLastHour` z lokální DB (unikátní hashe za
@@ -194,11 +195,10 @@ minut). Po refreshi stránky se okamžitě vykreslí přerušovaně s odznakem
 „z cache“ a po příchodu živých tras se nahradí; tím se nečeká na první paket
 s trasou, pokud je feed zrovna tichý nebo je nedostupný Analyzer.
 
-Kliknutí na metriku „Paketů/h“ otevře graf 24 h / 7 dní. Tvar křivky vychází
-z hodinových počtů v lokální databázi tras, měřítko se dopočítá z poměru
-k Analyzeru (`packetsLast24h`), takže hodnoty odpovídají HUD; poslední hodina
-je přímo z Analyzeru. Pokud Analyzer není dostupný, zobrazí se jen lokální
-počty tras s vysvětlující poznámkou.
+Kliknutí na metriku „Paketů/h“ otevře graf 24 h / 7 dní ze skutečných vzorků
+Analyzeru. Server je ukládá každých 5 minut do `node-metrics.sqlite` (retence
+30 dní); mezery znamenají výpadek nebo dobu před začátkem sběru. Aktuální hodina
+je neúplná.
 
 ## Pokrytí terénu
 

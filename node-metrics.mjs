@@ -4,6 +4,7 @@ import Database from "better-sqlite3";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
+const STATS_BUCKET_MS = 5 * 60 * 1000;
 const METRIC_FIELDS = [
   "usefulness_score",
   "coverage_score",
@@ -18,7 +19,12 @@ function finiteNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
-export function createNodeMetricsStore(dbPath, { historyDays = 30, windowDays = 7 } = {}) {
+export function createNodeMetricsStore(dbPath, {
+  historyDays = 30,
+  windowDays = 7,
+  statsHistoryDays = 30,
+  statsBucketMs = STATS_BUCKET_MS,
+} = {}) {
   mkdirSync(dirname(dbPath), { recursive: true });
   const db = new Database(dbPath);
   db.pragma("journal_mode = WAL");
@@ -47,6 +53,17 @@ export function createNodeMetricsStore(dbPath, { historyDays = 30, windowDays = 
       first_sample_at INTEGER NOT NULL,
       last_sample_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS stats_samples (
+      bucket_at INTEGER PRIMARY KEY,
+      sampled_at INTEGER NOT NULL,
+      packets_last_hour INTEGER,
+      packets_last_24h INTEGER,
+      total_observations INTEGER,
+      total_nodes INTEGER,
+      total_observers INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS stats_samples_bucket
+      ON stats_samples (bucket_at);
   `);
 
   const upsertSample = db.prepare(`
@@ -89,6 +106,30 @@ export function createNodeMetricsStore(dbPath, { historyDays = 30, windowDays = 
     FROM node_score_samples
     WHERE public_key = ? AND sampled_at >= ?
     ORDER BY sampled_at
+  `);
+  const upsertStats = db.prepare(`
+    INSERT INTO stats_samples (
+      bucket_at, sampled_at, packets_last_hour, packets_last_24h,
+      total_observations, total_nodes, total_observers
+    ) VALUES (
+      @bucket_at, @sampled_at, @packets_last_hour, @packets_last_24h,
+      @total_observations, @total_nodes, @total_observers
+    )
+    ON CONFLICT(bucket_at) DO UPDATE SET
+      sampled_at = excluded.sampled_at,
+      packets_last_hour = excluded.packets_last_hour,
+      packets_last_24h = excluded.packets_last_24h,
+      total_observations = excluded.total_observations,
+      total_nodes = excluded.total_nodes,
+      total_observers = excluded.total_observers
+  `);
+  const purgeStats = db.prepare("DELETE FROM stats_samples WHERE bucket_at < ?");
+  const readStats = db.prepare(`
+    SELECT bucket_at, sampled_at, packets_last_hour, packets_last_24h,
+      total_observations, total_nodes, total_observers
+    FROM stats_samples
+    WHERE bucket_at >= ?
+    ORDER BY bucket_at
   `);
 
   const recordNodes = db.transaction((nodes, now) => {
@@ -135,10 +176,42 @@ export function createNodeMetricsStore(dbPath, { historyDays = 30, windowDays = 
     }));
   }
 
+  function recordStats(stats, now = Date.now()) {
+    const packetsLastHour = finiteNumber(stats?.packetsLastHour);
+    const packetsLast24h = finiteNumber(stats?.packetsLast24h);
+    if (packetsLastHour == null && packetsLast24h == null) return null;
+    const bucketAt = Math.floor(now / statsBucketMs) * statsBucketMs;
+    upsertStats.run({
+      bucket_at: bucketAt,
+      packets_last_24h: packetsLast24h,
+      packets_last_hour: packetsLastHour,
+      sampled_at: now,
+      total_nodes: finiteNumber(stats?.totalNodes),
+      total_observers: finiteNumber(stats?.totalObservers),
+      total_observations: finiteNumber(stats?.totalObservations),
+    });
+    purgeStats.run(now - statsHistoryDays * DAY_MS);
+    return bucketAt;
+  }
+
+  function statsSeries(sinceMs) {
+    return readStats.all(Math.floor(Number(sinceMs) || 0)).map((row) => ({
+      bucketAt: row.bucket_at,
+      packetsLast24h: row.packets_last_24h,
+      packetsLastHour: row.packets_last_hour,
+      sampledAt: row.sampled_at,
+      totalNodes: row.total_nodes,
+      totalObservers: row.total_observers,
+      totalObservations: row.total_observations,
+    }));
+  }
+
   return {
     close: () => db.close(),
     decorateNodes,
     history,
     recordNodes: (nodes, now = Date.now()) => recordNodes(nodes, now),
+    recordStats: (stats, now = Date.now()) => recordStats(stats, now),
+    statsSeries,
   };
 }

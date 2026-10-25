@@ -17,9 +17,15 @@ const upstream = process.env.CORESCOPE_URL || "https://analyzer.meshcore.cz";
 const requestBase = "http://localhost";
 const upstreamTimeoutMs = Math.max(1, Number(process.env.UPSTREAM_TIMEOUT_MS || 15_000));
 const statsTimeoutMs = Math.max(1_000, Number(process.env.STATS_TIMEOUT_MS || 5_000));
+const statsCollectMs = Math.max(0, Number(process.env.STATS_COLLECT_MS ?? 5 * 60 * 1000));
+const statsHistoryDays = Math.max(1, Number(process.env.STATS_HISTORY_DAYS || 30));
 const metricsCollectionMs = 15 * 60 * 1000;
 const metricsStore = createNodeMetricsStore(
   process.env.SCORE_DB_PATH || join(process.cwd(), "data", "node-metrics.sqlite"),
+  {
+    statsBucketMs: statsCollectMs || 5 * 60 * 1000,
+    statsHistoryDays,
+  },
 );
 const packetStore = createPacketStore(
   process.env.PACKET_DB_PATH || join(process.cwd(), "data", "packets.sqlite"),
@@ -685,6 +691,36 @@ async function collectNodeMetrics() {
 void collectNodeMetrics();
 setInterval(collectNodeMetrics, metricsCollectionMs).unref();
 
+let statsCollectionActive = false;
+async function collectStats() {
+  if (statsCollectionActive) return;
+  statsCollectionActive = true;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), statsTimeoutMs);
+  timeout.unref();
+  try {
+    const response = await fetch(`${upstream}/api/stats`, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`CoreScope returned HTTP ${response.status}`);
+    const body = Buffer.from(await response.arrayBuffer());
+    const data = JSON.parse(body.toString("utf8"));
+    metricsStore.recordStats(data);
+    storeStatsCache(body, response.headers.get("content-type"));
+  } catch (error) {
+    console.error(`Stats collection failed: ${error.message}`);
+  } finally {
+    clearTimeout(timeout);
+    statsCollectionActive = false;
+  }
+}
+
+if (statsCollectMs > 0) {
+  void collectStats();
+  setInterval(collectStats, statsCollectMs).unref();
+}
+
 function mergeStoreRows(resolvedPackets, scopedPackets, now) {
   const rows = new Map();
   for (const packet of resolvedPackets) {
@@ -1111,45 +1147,31 @@ async function handleRequest(request, response) {
     const bucketMs = 3_600_000;
     const end = Math.floor(Date.now() / bucketMs) * bucketMs;
     const since = end - (hours - 1) * bucketMs;
-    const rows = new Map(packetStore.hourlySeries(since).map((row) => [row.hour, row]));
-    let analyzer = null;
-    if (statsCache && statsCacheFresh()) {
-      try {
-        analyzer = JSON.parse(statsCache.body);
-      } catch {
-        analyzer = null;
-      }
+    const byHour = new Map();
+    for (const sample of metricsStore.statsSeries(since)) {
+      const hour = Math.floor(sample.bucketAt / bucketMs) * bucketMs;
+      const previous = byHour.get(hour);
+      if (!previous || sample.bucketAt > previous.bucketAt) byHour.set(hour, sample);
     }
-    const dayStart = end - 23 * bucketMs;
-    const localDayTotal = packetStore.hourlySeries(dayStart)
-      .reduce((sum, row) => sum + row.packets, 0);
-    const analyzer24h = Number(analyzer?.packetsLast24h) || 0;
-    const analyzerHour = Number(analyzer?.packetsLastHour) || 0;
-    const factor = analyzer24h > 0 && localDayTotal > 0 ? analyzer24h / localDayTotal : 1;
     const series = [];
     for (let index = 0; index < hours; index += 1) {
       const hour = since + index * bucketMs;
-      const row = rows.get(hour);
-      const localPackets = row?.packets || 0;
-      const current = index === hours - 1;
-      const packets = current && analyzerHour > 0 && localPackets > 0
-        ? analyzerHour
-        : Math.round(localPackets * factor);
+      const sample = byHour.get(hour);
+      const value = sample ? Number(sample.packetsLastHour) : NaN;
       series.push({
-        estimated: factor !== 1 && !(current && analyzerHour > 0),
         hour,
-        observations: row?.observations || 0,
-        packets,
+        packets: Number.isFinite(value) ? value : null,
+        sampledAt: sample?.sampledAt || null,
       });
     }
     sendJson(response, 200, {
-      analyzer: { packetsLast24h: analyzer24h, packetsLastHour: analyzerHour },
       bucketMs,
-      estimated: factor !== 1,
-      factor: Math.round(factor * 1000) / 1000,
+      collectMs: statsCollectMs,
       hours,
+      retentionDays: statsHistoryDays,
       series,
       since,
+      source: "stats-history",
     });
     return;
   }
