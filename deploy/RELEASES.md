@@ -158,6 +158,8 @@
 | 2026-10-25 08:46 | `20261025T084617Z.tar.gz` | `20261025-0846-add2f6a` | Prod: stejná cache/fallback statistik | `server.mjs`, `packet-store.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, testy, `.env.example`, `README.md`, `CONTEXT.md` |
 | 2026-10-25 08:53 | `20261025T085352Z.tar.gz` (stage APP_DIR) | `20261025-0853-c439e57` | Beta: klik na „Paketů/h“ otevře SVG graf 24 h / 7 dní z lokální DB tras (`/api/packet-history`), hover, průměr a maximum | `server.mjs`, `packet-store.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-25 08:54 | `20261025T085409Z.tar.gz` | `20261025-0854-c439e57` | Prod: stejný graf paketů/h; ověřeno 24 bodů pro 24 h a 168 pro 7 dní | `server.mjs`, `packet-store.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, testy, `README.md`, `CONTEXT.md` |
+| 2026-10-25 09:01 | `20261025T090151Z.tar.gz` (stage APP_DIR) | `20261025-0901-c788a6d` | Beta: graf paketů/h srovnán na měřítko Analyzeru – tvar z lokální DB, faktor z `packetsLast24h`, poslední hodina z `packetsLastHour`; označeno jako odhad | `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, `README.md`, `CONTEXT.md` |
+| 2026-10-25 09:02 | `20261025T090209Z.tar.gz` | `20261025-0902-c788a6d` | Prod: stejné srovnání grafu; 24h součet ~666k vs. Analyzer 635k, poslední hodina shodná s HUD (~31,7k) | `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, `README.md`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
