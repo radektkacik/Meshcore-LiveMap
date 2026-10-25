@@ -122,6 +122,8 @@ přihlašovací údaje zůstávají pouze na serveru.
   `photos.sqlite` jsou v `uploads/` mimo `data/`, takže se nedostanou do záloh.
   Platí limity: 8 fotek/hodinu na IP, 30/den, 8 fotek na nod, 2 GB celkem
   a max. 2400 px na delší straně (klient posílá max. 1600 px).
+  HEIC/HEIF z iPhonu prohlížeč převede přes `libheif-js` (WASM) na WebP,
+  takže se nemusí ručně exportovat jako JPEG.
 - `POST /api/photos/report` (JSON `photoId`, `reason`, `message`, `contact`)
   založí žádost o smazání nebo nahlášení fotky. Žádosti se zobrazují v tabu
   „Žádosti“ v administraci fotek; správce může fotku smazat nebo žádost zamítnout.
@@ -259,6 +261,7 @@ chování při neplatném URL, timeoutu CoreScope a překročení SSE limitu.
 ## Licence
 
 Kód projektu je dostupný pod licencí MIT – viz [`LICENSE`](LICENSE).
+HEIC/HEIF dekódování v prohlížeči používá [`libheif-js`](https://github.com/catdad-experiments/libheif-js) (LGPL-3.0), načítaný dynamicky jen při nahrání HEIC fotky.
 Copyright (c) 2026 MeshCore.cz.
 
 Licence se vztahuje na zdrojový kód tohoto repozitáře. Závislosti

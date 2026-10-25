@@ -128,7 +128,7 @@ const securityHeaders = {
     "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.opentopomap.org https://server.arcgisonline.com",
     "manifest-src 'self'",
     "object-src 'none'",
-    "script-src 'self'",
+    "script-src 'self' 'wasm-unsafe-eval'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "worker-src 'self' blob:",
     "upgrade-insecure-requests",

@@ -1830,13 +1830,59 @@ function openPhotoReport() {
   if (!elements.photoReportDialog.open) elements.photoReportDialog.showModal();
 }
 
+function isHeicFile(file) {
+  const name = String(file?.name || "").toLowerCase();
+  const type = String(file?.type || "").toLowerCase();
+  return type === "image/heic" || type === "image/heif"
+    || name.endsWith(".heic") || name.endsWith(".heif");
+}
+
+async function decodeHeic(file) {
+  const module = await import("libheif-js/wasm-bundle");
+  const libheif = module.default || module;
+  const decoder = new libheif.HeifDecoder();
+  const images = decoder.decode(new Uint8Array(await file.arrayBuffer()));
+  try {
+    if (!images?.length) throw new Error("heic");
+    const image = images[0];
+    const width = image.get_width();
+    const height = image.get_height();
+    if (!width || !height || width * height > 40_000_000) throw new Error("heic");
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("heic");
+    const imageData = context.createImageData(width, height);
+    await new Promise((resolve, reject) => {
+      image.display(imageData, (data) => {
+        if (data) resolve();
+        else reject(new Error("heic"));
+      });
+    });
+    context.putImageData(imageData, 0, 0);
+    return canvas;
+  } finally {
+    for (const image of images || []) image.free?.();
+  }
+}
+
 async function loadPhotoBitmap(file) {
+  let source = file;
+  if (isHeicFile(file)) {
+    try {
+      source = await decodeHeic(file);
+    } catch (error) {
+      console.error("HEIC se nepodařilo převést", error);
+      throw new Error("heic");
+    }
+  }
   if (typeof createImageBitmap === "function") {
     try {
-      return await createImageBitmap(file);
+      return await createImageBitmap(source);
     } catch {}
   }
-  const url = URL.createObjectURL(file);
+  const url = URL.createObjectURL(source);
   try {
     const image = new Image();
     await new Promise((resolve, reject) => {
@@ -5571,8 +5617,8 @@ elements.photoForm.addEventListener("submit", async (event) => {
   let blob;
   try {
     blob = await preparePhotoBlob(file);
-  } catch {
-    setPhotoStatus(t("photos.invalid"), true);
+  } catch (error) {
+    setPhotoStatus(error?.message === "heic" ? t("photos.heicFailed") : t("photos.invalid"), true);
     state.photoUploading = false;
     elements.photoSubmit.disabled = false;
     return;

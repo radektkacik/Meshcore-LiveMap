@@ -9,7 +9,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T183855Z`, beta `20261025T183827Z`)
 - GitHub: privátní `radektkacik/Meshcore-LiveMap`, branch `main`
 - Remote přes SSH, klíč `~/.ssh/meshcore_livemap_github`, v repu nastavený `core.sshCommand`
 - Lokální Node: 22.23.2, VPS Node: 20.20.2
-- Stack: Vite 8.3.4, Leaflet, vanilla JS, Node HTTP server, SQLite (`better-sqlite3` 11.10.0), MQTT 5.16.1
+- Stack: Vite 8.3.4, Leaflet, vanilla JS, Node HTTP server, SQLite (`better-sqlite3` 11.10.0), MQTT 5.16.1, `libheif-js` 1.23.5 (HEIC ve WASM)
 - UI česky, runtime i18n CZ/EN, volba v localStorage nebo `?lang=en/cs`
 - Licence MIT, copyright `MeshCore.cz` (`LICENSE`, `public/LICENSE.txt`)
 
@@ -55,7 +55,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T183855Z`, beta `20261025T183827Z`)
 - Z detailu nodu odstraněn řádek „Stav hashe“
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
 - Rychlé výhry (prod i beta): `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (nody, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export nodů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
-- Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP s potvrzením práv, fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`. V lightboxu lze podat žádost o smazání/nahlášení, která se objeví v tabu „Žádosti“.
+- Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP + automatický převod HEIC/HEIF z iPhonu přes `libheif-js` (WASM) v prohlížeči, s potvrzením práv; fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`. V lightboxu lze podat žádost o smazání/nahlášení, která se objeví v tabu „Žádosti“.
 
 ### Mapa a nody
 - Repeater vždy navrchu při překryvu nodů
@@ -124,7 +124,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T183855Z`, beta `20261025T183827Z`)
 - MQTT reconnect/backoff, SSE feed, replay buffer
 - Ukládání TRACE i bez `resolved_path`; cesty se doresolvují na klientu
 - Security headers: CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP
-- CSP povoluje Google Fonts, OSM, OpenTopoMap, Esri
+- CSP povoluje Google Fonts, OSM, OpenTopoMap, Esri a `wasm-unsafe-eval` pro HEIC dekodér
 
 ### Komunikace s backendem
 - Klient je same-origin (žádné CORS); nginx/Cloudflare jen proxují na Node server.
