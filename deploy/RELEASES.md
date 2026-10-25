@@ -168,6 +168,8 @@
 | 2026-10-25 14:26 | `20261025T142606Z.tar.gz` (stage APP_DIR) | `20261025-1426-1834cc6` | Beta: detail uzlu – V síti od, region, multi-byte status, obohacení sousedů (role, vzdálenost, naposledy), odkaz do Analyzeru | `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
 | 2026-10-25 15:32 | `20261025T153241Z.tar.gz` (stage APP_DIR) | `20261025-1532-f460a32` | Beta: odkaz „Otevřít v Analyzeru“ v detailu paketu a trasy (`#/packets/<hash>`), včetně lišty vybraného paketu | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
 | 2026-10-25 15:34 | `20261025T153456Z.tar.gz` | `20261025-1534-6f8c3c6` | Prod: obohacený detail uzlu (V síti od, region, multi-byte, sousedé s role/vzdáleností/časem, odkaz do Analyzeru) + odkazy na paket v Analyzeru v detailu paketu/trasy a v liště fokusu; export zůstává skrytý | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
+| 2026-10-25 15:39 | `20261025T153903Z.tar.gz` | `20261025-1539-697c099` | Prod: odebrán řádek „Multi-byte“ z detailu uzlu | `src/main.js`, `src/i18n.js`, `CONTEXT.md` |
+| 2026-10-25 15:40 | `20261025T154013Z.tar.gz` (stage APP_DIR) | `20261025-1540-697c099` | Beta: stejné odebrání „Multi-byte“ | `src/main.js`, `src/i18n.js`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
