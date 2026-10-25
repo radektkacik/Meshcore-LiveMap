@@ -113,7 +113,9 @@ přihlašovací údaje zůstávají pouze na serveru.
   limit nedal obejít podvrženou hlavičkou. Administrace je na
   `GET /api/feedback/view?token=<FEEDBACK_TOKEN>` (HTML) nebo
   `GET /api/feedback?token=<FEEDBACK_TOKEN>` (JSON). Bez správného tokenu vrací 404.
-- `GET /api/photos?key=<public_key>` vrací schválené fotky nodu. `POST /api/photos`
+- `GET /api/photos?key=<public_key>` vrací schválené fotky nodu. `GET
+  /api/photos/nodes` vrací počty schválených fotek podle nodů pro přepínač
+  „Jen nody s fotkami“ v HUD. `POST /api/photos`
   přijímá binární JPEG/PNG/WebP (max 5 MB) s hlavičkami `X-Photo-Key`,
   `X-Photo-Caption`, `X-Photo-Author` a `X-Photo-Consent: 1`; fotka se uloží
   jako `pending` a zobrazí se až po schválení.

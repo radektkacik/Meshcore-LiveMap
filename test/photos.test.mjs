@@ -120,6 +120,30 @@ test("photo store rejects images above the configured resolution", () => {
   }
 });
 
+test("photo store lists approved node counts", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
+  const store = createPhotoStore(directory);
+  const first = "1".repeat(64);
+  const second = "2".repeat(64);
+  try {
+    const a = store.create({ buffer: pngBuffer(), nodeKey: first });
+    const a2 = store.create({ buffer: pngBuffer(), nodeKey: first });
+    const b = store.create({ buffer: pngBuffer(), nodeKey: second });
+    store.setStatus(a.id, "approved");
+    store.setStatus(a2.id, "approved");
+    store.setStatus(b.id, "approved");
+    assert.deepEqual(store.listApprovedNodeCounts(), [
+      { count: 2, nodeKey: first },
+      { count: 1, nodeKey: second },
+    ]);
+    store.setStatus(b.id, "hidden");
+    assert.deepEqual(store.listApprovedNodeCounts(), [{ count: 2, nodeKey: first }]);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("photo reports are stored, listed and resolved with the photo", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
   const store = createPhotoStore(directory);

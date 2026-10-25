@@ -1502,6 +1502,20 @@ async function handleRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/photos/nodes") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      return;
+    }
+    const nodes = photoStore.listApprovedNodeCounts();
+    response.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+    });
+    response.end(request.method === "HEAD" ? undefined : JSON.stringify({ nodes, total: nodes.length }));
+    return;
+  }
+
   if (url.pathname === "/api/photos/view") {
     if (!photoToken || url.searchParams.get("token") !== photoToken) {
       response.writeHead(404).end("Not Found");

@@ -264,6 +264,7 @@ const elements = {
   mobileSheetClose: document.querySelector("#mobile-sheet-close"),
   mobileSheetContent: document.querySelector("#mobile-sheet-content"),
   nodeLabelsToggle: document.querySelector("#node-labels-toggle"),
+  photosOnlyToggle: document.querySelector("#photos-only-toggle"),
   observersToggle: document.querySelector("#observers-toggle"),
   otherTypesToggle: document.querySelector("#other-types-toggle"),
   packetFocusAnalyzer: document.querySelector("#packet-focus-analyzer"),
@@ -382,6 +383,10 @@ const state = {
   observersLoadedAt: 0,
   observersLoading: false,
   photoCache: new Map(),
+  photoNodeKeys: new Set(),
+  photoNodesLoadedAt: 0,
+  photoNodesLoading: false,
+  photosOnly: false,
   photoPreviewUrl: null,
   photoTarget: null,
   photoUploading: false,
@@ -1667,6 +1672,29 @@ async function loadNodeHistory(root, node) {
   }
 }
 
+async function loadPhotoNodes(force = false) {
+  if (!force && state.photoNodesLoadedAt && Date.now() - state.photoNodesLoadedAt < 60_000) return;
+  if (state.photoNodesLoading) return;
+  state.photoNodesLoading = true;
+  try {
+    const data = await getJson("/api/photos/nodes");
+    state.photoNodeKeys = new Set((data.nodes || []).map((item) => String(item.nodeKey || "").toUpperCase()));
+    state.photoNodesLoadedAt = Date.now();
+  } catch (error) {
+    console.error("Nody s fotkami se nepodařilo načíst", error);
+    state.photosOnly = false;
+    elements.photosOnlyToggle.checked = false;
+  } finally {
+    state.photoNodesLoading = false;
+  }
+}
+
+async function setPhotosOnly(on) {
+  state.photosOnly = Boolean(on);
+  if (state.photosOnly) await loadPhotoNodes();
+  refreshNodeState();
+}
+
 async function loadNodePhotos(root, node) {
   const list = root.querySelector(".node-photos-list");
   if (!list) return;
@@ -2101,7 +2129,9 @@ function addNodeMarker(node) {
       else openNodeEntry(entry);
     });
   marker.off("click", marker._openPopup, marker);
-  const allowed = isNodeRoleAllowed(node, state.allowedRoles);
+  const key = node.public_key?.toUpperCase();
+  const allowed = isNodeRoleAllowed(node, state.allowedRoles)
+    && (!state.photosOnly || state.photoNodeKeys.has(key));
   if (allowed) {
     marker.addTo(nodeLayer);
     applyNodeStacking(marker, node);
@@ -2110,7 +2140,6 @@ function addNodeMarker(node) {
   entry.shown = allowed;
   entry.styleKey = nodeStyleKey(node, null);
   state.nodeMarkers.push(entry);
-  const key = node.public_key?.toUpperCase();
   if (key) state.nodeMarkerByKey.set(key, entry);
   return entry;
 }
@@ -2196,7 +2225,9 @@ function applyNodeStyle(entry, tier) {
 function applyNodeMembership() {
   const bounds = map.getBounds().pad(NODE_CULL_PAD);
   for (const entry of state.nodeMarkers) {
-    const allowed = isNodeRoleAllowed(entry.node, state.allowedRoles);
+    const key = String(entry.node.public_key || "").toUpperCase();
+    const allowed = isNodeRoleAllowed(entry.node, state.allowedRoles)
+      && (!state.photosOnly || state.photoNodeKeys.has(key));
     const shouldShow = allowed
       && (entry.marker.isPopupOpen() || bounds.contains([entry.node.lat, entry.node.lon]));
     const shown = nodeLayer.hasLayer(entry.marker);
@@ -4775,6 +4806,9 @@ elements.nodeLabelsToggle.addEventListener("change", () => {
   state.showNodeLabels = elements.nodeLabelsToggle.checked;
   localStorage.setItem("meshcoreShowNodeLabels", String(state.showNodeLabels));
   rebuildNodeLabels();
+});
+elements.photosOnlyToggle.addEventListener("change", () => {
+  void setPhotosOnly(elements.photosOnlyToggle.checked);
 });
 map.on("moveend zoomend", scheduleNodeLabels);
 map.on("moveend zoomend resize", scheduleViewportRender);

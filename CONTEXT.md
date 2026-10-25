@@ -55,7 +55,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T185125Z`, beta `20261025T185020Z`)
 - Z detailu nodu odstraněn řádek „Stav hashe“
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
 - Rychlé výhry (prod i beta): `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (nody, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export nodů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
-- Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP + automatický převod HEIC/HEIF z iPhonu přes `libheif-js` (WASM) v prohlížeči, s potvrzením práv; fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`. V lightboxu lze podat žádost o smazání/nahlášení, která se objeví v tabu „Žádosti“.
+- Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP + automatický převod HEIC/HEIF z iPhonu přes `libheif-js` (WASM) v prohlížeči, s potvrzením práv; fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`. V lightboxu lze podat žádost o smazání/nahlášení, která se objeví v tabu „Žádosti“. Přepínač „Jen nody s fotkami“ filtruje mapu podle `/api/photos/nodes`.
 
 ### Mapa a nody
 - Repeater vždy navrchu při překryvu nodů
@@ -116,7 +116,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T185125Z`, beta `20261025T185020Z`)
 - Původní žebříčky nodů podle metrik zůstávají
 
 ### Backend
-- `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/recent`, `/api/packet-history`, `/api/packets`, `/api/nodes`, `/api/stats`, `/api/search`, `/api/health`, `/api/photos`, `/api/photos/report`
+- `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/recent`, `/api/packet-history`, `/api/packets`, `/api/nodes`, `/api/stats`, `/api/search`, `/api/health`, `/api/photos`, `/api/photos/nodes`, `/api/photos/report`
 - Cache `/api/nodes` a `/api/resolve-hops` proti výpadkům CoreScope; nody se vydávají z cache okamžitě (SWR, soft TTL 15 min)
 - Start stránky: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE běží s `?replay=0`
 - `/api/stats` cache (24 h) + lokální fallback z `packet_routes` při výpadku Analyzeru; klient zobrazí stale/partial hodnotu oranžově a zkusí obnovu za 60 s
@@ -136,7 +136,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T185125Z`, beta `20261025T185020Z`)
 
 ## 4. Testy a CI
 
-- `npm test`: 97 testů, 94 pass, 3 skip, 0 fail
+- `npm test`: 98 testů, 95 pass, 3 skip, 0 fail
 - `npm audit --omit=dev`: 0 zranitelností
 - GitHub Actions CI: Node 20 a 22, běží `npm ci`, syntax check, testy, build
 - CI nelze z tohoto prostředí číst bez GitHub přihlášení
