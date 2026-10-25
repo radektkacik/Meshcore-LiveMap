@@ -578,18 +578,6 @@ function countWithRank(value, nodes, node, field) {
   return `${formatNumber(value)}${rankSuffix(nodes, node, field)}`;
 }
 
-const HASH_STATUSES = new Set(["confirmed", "suspected", "unknown"]);
-
-function formatHashStatus(node) {
-  const status = HASH_STATUSES.has(node.multi_byte_status)
-    ? t(`node.hashStatus.${node.multi_byte_status}`)
-    : node.multi_byte_status;
-  const evidence = node.multi_byte_evidence === "advert"
-    ? t("node.hashEvidence.advert")
-    : node.multi_byte_evidence === "path" ? t("node.hashEvidence.path") : null;
-  return status ? `${status}${evidence ? ` · ${evidence}` : ""}` : null;
-}
-
 function renderNodeDetails(title, rows, help = "") {
   const details = rows
     .filter(([, value]) => value != null)
@@ -1370,7 +1358,6 @@ function nodePopupContent(node, active) {
     [t("node.coordinates"), `${Number(node.lat).toFixed(6)}, ${Number(node.lon).toFixed(6)}`],
     [t("node.prefix"), prefix, t("node.prefixHelp")],
     [t("node.hashMode"), hashSize ? (hashSize >= 2 ? "2B+" : "1B") : null, t("node.hashModeHelp")],
-    [t("node.hashStatus"), formatHashStatus(node), t("node.hashStatusHelp")],
     [t("node.inconsistentHash"), node.hash_size_inconsistent ? t("common.yes") : null, t("node.inconsistentHashHelp")],
   ]);
   const trafficDetails = renderNodeDetails(t("node.trafficDetails"), [
