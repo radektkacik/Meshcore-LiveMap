@@ -26,11 +26,11 @@ Aktualizováno: 2026-10-25
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261025T074705Z`
-- Build: `20261025-0747-4a860fd`
-- Asset: `index-D0hl9ZdR.js`
+- Release: `20261025T081855Z`
+- Build: `20261025-0818-dbfc172`
+- Asset: `index-CxCFb_C3.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T074705Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T081855Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka

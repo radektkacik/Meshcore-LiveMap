@@ -150,6 +150,7 @@
 | 2026-10-25 07:43 | `20261025T074349Z.tar.gz` | `20261025-0743-57253a4` | Prod: stejné zvětšování panelu Aktivity; ověřeno tažení 340×84 → 430×154 a reset dvojklikem | `index.html`, `src/style.css`, `src/main.js`, `src/activity-size.js`, `src/i18n.js`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-25 07:47 | `20261025T074705Z.tar.gz` (stage APP_DIR) | `20261025-0747-4a860fd` | Beta: oprava skrývání panelu Aktivity – `display:flex` přebíjel `[hidden]`; ověřeno otevřít/zavřít tlačítkem | `src/style.css` |
 | 2026-10-25 07:47 | `20261025T074719Z.tar.gz` | `20261025-0747-4a860fd` | Prod: stejná oprava skrývání panelu Aktivity; ověřeno v prohlížeči | `src/style.css` |
+| 2026-10-25 08:18 | `20261025T081855Z.tar.gz` (stage APP_DIR) | `20261025-0818-dbfc172` | Beta: relativní zvýraznění užitečnosti – Top 5 % červeně, 5–15 % žlutě; počty uzlů v legendě; prod beze změny | `src/node-model.js`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `test/node-model.test.mjs`, `README.md`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
