@@ -54,7 +54,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T092014Z`, beta `20261025T131658Z`)
 - Zvýraznění uzlů: relativní Top 5 % (červená) a 5–15 % (žlutá) místo pevných Top 25/100; počty v legendě
 - Z detailu uzlu odstraněn řádek „Stav hashe“
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
-- Rychlé výhry na betě: `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (uzly, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export uzlů, observerů a tras do CSV/GeoJSON
+- Rychlé výhry na betě: `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (uzly, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export uzlů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
 
 ### Mapa a uzly
 - Repeater vždy navrchu při překryvu uzlů

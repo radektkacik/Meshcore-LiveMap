@@ -274,6 +274,8 @@ if (IS_BETA) {
   prodLink.textContent = t("lang.production");
   prodLink.title = t("lang.productionTitle");
   elements.betaBadge.after(prodLink);
+} else {
+  elements.exportToggle.hidden = true;
 }
 
 const nextLocale = getLocale() === "cs" ? "en" : "cs";

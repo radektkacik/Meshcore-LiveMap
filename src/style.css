@@ -112,6 +112,7 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .map-actions > button:hover { border-color: rgba(7, 142, 98, 0.4); color: var(--green); }
 .map-actions > button.wide { grid-column: 1 / -1; }
 .map-actions > button.active { color: #fff; border-color: var(--green); background: var(--green); }
+.map-actions > button[hidden] { display: none; }
 .los-hint { margin-top: 8px; padding: 7px 9px; border: 1px dashed rgba(40, 127, 201, 0.5); border-radius: 7px; color: #246aa6; background: rgba(40, 127, 201, 0.08); font: 10px/1.4 "DM Mono", monospace; }
 .los-hint[hidden] { display: none; }
 .filter-block { display: block; margin: 9px 0 0; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; background: rgba(255, 255, 255, 0.72); }
