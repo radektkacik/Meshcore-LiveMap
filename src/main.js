@@ -266,6 +266,11 @@ const elements = {
   mobileSheet: document.querySelector("#mobile-sheet"),
   mobileSheetClose: document.querySelector("#mobile-sheet-close"),
   mobileSheetContent: document.querySelector("#mobile-sheet-content"),
+  neighborFocusBar: document.querySelector("#neighbor-focus-bar"),
+  neighborFocusClose: document.querySelector("#neighbor-focus-close"),
+  neighborFocusCount: document.querySelector("#neighbor-focus-count"),
+  neighborFocusName: document.querySelector("#neighbor-focus-name"),
+  neighborFocusTitle: document.querySelector("#neighbor-focus-title"),
   nodeLabelsToggle: document.querySelector("#node-labels-toggle"),
   photosOnlyToggle: document.querySelector("#photos-only-toggle"),
   observersToggle: document.querySelector("#observers-toggle"),
@@ -378,6 +383,7 @@ const state = {
   coverageOverlay: null,
   coverageWorker: null,
   neighborByNode: new Map(),
+  neighborFocusKey: null,
   nodeByKey: new Map(),
   nodeHistoryCache: new Map(),
   nodeMarkerByKey: new Map(),
@@ -542,6 +548,7 @@ const nodeLayer = L.layerGroup().addTo(map);
 const routeLayer = L.layerGroup().addTo(map);
 const observerLayer = L.layerGroup();
 const selectedRouteLayer = L.layerGroup().addTo(map);
+const neighborLayer = L.layerGroup();
 const losLayer = L.layerGroup().addTo(map);
 const losMarkerLayer = L.layerGroup().addTo(map);
 const nodeLabelLayer = L.layerGroup().addTo(map);
@@ -1106,6 +1113,7 @@ async function setObserversVisible(on) {
 }
 
 function showPacketFocusBar(hash, count) {
+  if (state.neighborFocusKey) clearNeighborFocus();
   elements.packetFocusHash.textContent = `${hash.slice(0, 12)}${hash.length > 12 ? "…" : ""}`;
   elements.packetFocusHash.title = hash;
   elements.packetFocusCount.textContent = `${tCount("packet.focusRoutes", count)} · ${t("packet.focusLiveHidden")}`;
@@ -1303,6 +1311,7 @@ function openRouteDetail(route, latlng = null) {
 
 map.on("click", () => {
   if (!state.packetFocus) clearSelectedRoute();
+  if (state.neighborFocusKey) clearNeighborFocus();
 });
 map.on("click", (event) => {
   if (state.coverageMode) void handleCoverageClick(event.latlng);
@@ -1467,6 +1476,7 @@ function nodeNeighbors(node) {
         neighbors: tCount("units.neighbors", neighbors.size),
         connections: tCount("units.links", connections),
       })}</small>
+      <button class="node-neighbors-map" type="button" data-node-key="${escapeHtml(key)}">${t("node.showNeighborsMap")}</button>
     </div>
   `;
 }
@@ -1482,6 +1492,71 @@ function nodePhotos(node) {
       <div class="node-photos-list"><p class="node-photos-empty">${t("photos.loading")}</p></div>
     </div>
   `;
+}
+
+function clearNeighborFocus() {
+  neighborLayer.clearLayers();
+  if (map.hasLayer(neighborLayer)) map.removeLayer(neighborLayer);
+  state.neighborFocusKey = null;
+  elements.neighborFocusBar.hidden = true;
+}
+
+function showNodeNeighborsOnMap(node) {
+  const key = String(node.public_key || "").toUpperCase();
+  if (!key || !validCoords(node.lat, node.lon)) return;
+  const neighbors = state.neighborByNode.get(key);
+  if (!neighbors?.size) return;
+  const entries = [];
+  for (const [neighborKey, info] of neighbors) {
+    const neighbor = state.nodeByKey.get(neighborKey);
+    if (!neighbor || !validCoords(neighbor.lat, neighbor.lon)) continue;
+    entries.push({ info, key: neighborKey, neighbor });
+  }
+  if (!entries.length) return;
+  clearNeighborFocus();
+  if (state.packetFocus) exitPacketFocus();
+  const maxCount = Math.max(1, ...entries.map(({ info }) => Number(info.count) || 1));
+  const bounds = L.latLngBounds(L.latLng(node.lat, node.lon));
+  let connections = 0;
+  for (const { info, key: neighborKey, neighbor } of entries) {
+    const count = Number(info.count) || 0;
+    connections += count;
+    const line = L.polyline([[node.lat, node.lon], [neighbor.lat, neighbor.lon]], {
+      className: "neighbor-link",
+      color: "#078e62",
+      opacity: 0.6,
+      weight: 1.5 + 4 * Math.sqrt(count / maxCount),
+    }).addTo(neighborLayer);
+    line.bindTooltip(`${escapeHtml(neighbor.name || t("common.unknownShort"))} · ${count}×`, {
+      className: "node-tooltip",
+      sticky: true,
+    });
+    line.on("click", (event) => {
+      L.DomEvent.stopPropagation(event);
+      const entry = state.nodeMarkerByKey.get(neighborKey);
+      if (entry) {
+        revealNodeMarker(entry);
+        openNodeEntry(entry);
+      }
+    });
+    L.marker(
+      [node.lat + (neighbor.lat - node.lat) * 0.55, node.lon + (neighbor.lon - node.lon) * 0.55],
+      {
+        icon: L.divIcon({ className: "neighbor-count", html: `${count}×`, iconSize: [34, 18], iconAnchor: [17, 9] }),
+        interactive: false,
+        keyboard: false,
+      },
+    ).addTo(neighborLayer);
+    bounds.extend([neighbor.lat, neighbor.lon]);
+  }
+  neighborLayer.addTo(map);
+  map.fitBounds(bounds, { maxZoom: 11, padding: [40, 40] });
+  state.neighborFocusKey = key;
+  elements.neighborFocusTitle.textContent = t("node.neighborsTitle");
+  elements.neighborFocusName.textContent = node.name || t("common.unknownNode");
+  elements.neighborFocusCount.textContent = `${tCount("units.neighbors", entries.length)} · ${tCount("units.links", connections)}`;
+  elements.neighborFocusClose.textContent = t("node.hideNeighbors");
+  elements.neighborFocusBar.hidden = false;
 }
 
 function nodePopupContent(node, active) {
@@ -3491,6 +3566,7 @@ function resumeFeedAfterInteraction(delay = FEED_AUTO_RESUME_MS) {
 }
 
 elements.packetFocusClose.addEventListener("click", exitPacketFocus);
+elements.neighborFocusClose.addEventListener("click", clearNeighborFocus);
 elements.activityHistory.addEventListener("click", () => {
   setFeedMode(feedState.mode === "history" ? "live" : "history");
 });
@@ -4819,6 +4895,7 @@ document.addEventListener("keydown", (event) => {
   else if (state.losMode) setLosMode(false);
   else if (elements.packetHistoryDialog.open) elements.packetHistoryDialog.close();
   else if (state.packetFocus) exitPacketFocus();
+  else if (state.neighborFocusKey) clearNeighborFocus();
 });
 
 elements.otherTypesToggle.addEventListener("change", () => {
@@ -5396,6 +5473,18 @@ document.addEventListener("click", (event) => {
     nodeSearch.setAttribute("aria-expanded", "false");
   }
 });
+
+document.addEventListener("click", (event) => {
+  const target = event.target instanceof Element ? event.target.closest(".node-neighbors-map") : null;
+  if (!target) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const node = state.nodeByKey.get(String(target.dataset.nodeKey || "").toUpperCase());
+  if (!node) return;
+  if (isMobileSheet()) closeMobileSheet();
+  else map.closePopup();
+  showNodeNeighborsOnMap(node);
+}, true);
 
 const EXPORT_DATASETS = ["nodes", "observers", "routes"];
 const NODE_EXPORT_COLUMNS = [

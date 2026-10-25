@@ -22,7 +22,12 @@
           <button id="packet-focus-close" type="button">Zrušit výběr</button>
         </div>
 
-        <section id="hud" class="hud" aria-label="Ovládání mapy">
+        <div class="packet-focus-bar neighbor-focus-bar" id="neighbor-focus-bar" hidden>
+    <span><b id="neighbor-focus-title"></b> <span id="neighbor-focus-name"></span> · <span id="neighbor-focus-count"></span></span>
+    <button id="neighbor-focus-close" type="button"></button>
+  </div>
+
+  <section id="hud" class="hud" aria-label="Ovládání mapy">
           <header class="hud-header">
             <button id="hud-toggle" class="logo-button" type="button" aria-label="Skrýt nebo zobrazit panel">
               <img class="brand-logo" src="meshcore.svg" alt="" aria-hidden="true" />

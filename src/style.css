@@ -348,6 +348,13 @@ html[data-theme="dark"] .node-history-tip { color: #17271f; background: #e6ecef;
 .node-neighbor-main em { overflow: hidden; color: var(--muted); font: 9px "DM Mono", monospace; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
 .node-neighbor small { flex: 0 0 auto; color: var(--muted); font: 10px "DM Mono", monospace; }
 .node-neighbors > small { display: block; margin-top: 6px; color: var(--muted); font: 10px "DM Mono", monospace; }
+.node-neighbors-map { width: 100%; margin-top: 7px; padding: 7px 9px; border: 1px solid rgba(7, 142, 98, 0.32); border-radius: 6px; color: #087a57; background: #edf7f1; font-size: 11px; font-weight: 700; cursor: pointer; }
+.node-neighbors-map:hover { border-color: var(--green); background: #e4f3ea; }
+.neighbor-link { cursor: pointer; }
+.neighbor-count { display: grid; place-items: center; width: 34px !important; height: 18px !important; border: 1px solid rgba(7, 142, 98, 0.35); border-radius: 5px; color: #087a57; background: rgba(255, 255, 251, 0.92); font: 700 9px/1 "DM Mono", monospace; box-shadow: 0 1px 3px rgba(20, 42, 32, 0.2); }
+.neighbor-focus-bar { border-color: rgba(7, 142, 98, 0.45); color: #087a57; background: rgba(240, 255, 248, 0.96); }
+.neighbor-focus-bar button { border-color: rgba(7, 142, 98, 0.45); color: #087a57; background: #fff; }
+.neighbor-focus-bar button:hover { background: #e4f3ea; }
 .node-photos { padding: 10px 15px; border-top: 1px solid var(--line); }
 .node-photos-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .node-photos-head span { color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: 0.09em; text-transform: uppercase; }
@@ -897,6 +904,10 @@ html[data-theme="dark"] .node-label { background: rgba(15, 20, 24, 0.85); color:
 html[data-theme="dark"] .packet-focus-bar { color: #9fd1f5; background: rgba(20, 32, 42, 0.96); border-color: rgba(95, 167, 224, 0.45); }
 html[data-theme="dark"] .packet-focus-bar button { color: #9fd1f5; background: #16222c; border-color: rgba(95, 167, 224, 0.45); }
 html[data-theme="dark"] .packet-focus-bar .packet-focus-analyzer { color: #9fd1f5; background: #16222c; border-color: rgba(95, 167, 224, 0.45); }
+html[data-theme="dark"] .neighbor-focus-bar { color: #5fd0a5; background: rgba(16, 32, 26, 0.96); border-color: rgba(95, 208, 165, 0.45); }
+html[data-theme="dark"] .neighbor-focus-bar button { color: #5fd0a5; background: #16221c; border-color: rgba(95, 208, 165, 0.45); }
+html[data-theme="dark"] .node-neighbors-map { color: #5fd0a5; background: rgba(7, 142, 98, 0.16); border-color: rgba(7, 142, 98, 0.4); }
+html[data-theme="dark"] .neighbor-count { color: #5fd0a5; background: rgba(16, 32, 26, 0.9); border-color: rgba(95, 208, 165, 0.4); }
 @media (max-width: 600px) {
   .packet-focus-bar { top: 8px; left: 50%; right: auto; bottom: auto; max-width: calc(100vw - 18px); transform: translateX(-50%); }
 }
