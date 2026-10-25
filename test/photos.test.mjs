@@ -120,6 +120,42 @@ test("photo store rejects images above the configured resolution", () => {
   }
 });
 
+test("photo reports are stored, listed and resolved with the photo", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
+  const store = createPhotoStore(directory);
+  const nodeKey = "e".repeat(64);
+  try {
+    const photo = store.create({ buffer: pngBuffer(), nodeKey });
+    store.setStatus(photo.id, "approved");
+    assert.equal(store.createReport({ photoId: "f".repeat(36), message: "test" }), null);
+    const reportId = store.createReport({
+      contact: "tester@example.com",
+      message: "Je to moje fotka.",
+      photoId: photo.id,
+      reason: "owner",
+    });
+    assert.ok(reportId);
+    assert.equal(store.openReportCount(), 1);
+    const reports = store.listReports("open");
+    assert.equal(reports.length, 1);
+    assert.equal(reports[0].reason, "owner");
+    assert.equal(reports[0].contact, "tester@example.com");
+    assert.equal(reports[0].photo.nodeKey, nodeKey);
+
+    assert.equal(store.resolveReport(reportId), true);
+    assert.equal(store.openReportCount(), 0);
+    assert.equal(store.listReports("open").length, 0);
+
+    store.createReport({ message: "Druhá žádost", photoId: photo.id, reason: "other" });
+    assert.equal(store.openReportCount(), 1);
+    assert.equal(store.remove(photo.id), true);
+    assert.equal(store.openReportCount(), 0);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("photo store removes metadata and the file", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
   const store = createPhotoStore(directory);

@@ -158,9 +158,28 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(photoFile.status, 200);
     assert.equal(photoFile.headers.get("content-type"), "image/png");
     assert.ok((await photoFile.arrayBuffer()).byteLength > 0);
+    const report = await fetch(`http://127.0.0.1:${appPort}/api/photos/report`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contact: "tester@example.com",
+        message: "Chci tuto fotku smazat.",
+        photoId: uploaded.id,
+        reason: "owner",
+      }),
+    });
+    assert.equal(report.status, 200);
+    assert.equal((await report.json()).ok, true);
+    const reportsPage = await fetch(`http://127.0.0.1:${appPort}/api/photos/view?token=photo-token&status=reports`);
+    assert.equal(reportsPage.status, 200);
+    assert.match(await reportsPage.text(), /Chci tuto fotku smazat/);
     const hidden = await fetch(`http://127.0.0.1:${appPort}/api/photos/moderate?token=photo-token&id=${uploaded.id}&action=hide&status=approved`, { redirect: "manual" });
     assert.equal(hidden.status, 303);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos/${uploaded.id}`)).status, 404);
+    const deleted = await fetch(`http://127.0.0.1:${appPort}/api/photos/moderate?token=photo-token&id=${uploaded.id}&action=delete&status=reports`, { redirect: "manual" });
+    assert.equal(deleted.status, 303);
+    const reportsAfter = await fetch(`http://127.0.0.1:${appPort}/api/photos/view?token=photo-token&status=reports`);
+    assert.doesNotMatch(await reportsAfter.text(), /Chci tuto fotku smazat/);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos/view?token=wrong`)).status, 404);
     const terrainTile = await fetch(`http://127.0.0.1:${appPort}/api/terrain/11/1/1.png`);
     assert.equal(terrainTile.status, 200);

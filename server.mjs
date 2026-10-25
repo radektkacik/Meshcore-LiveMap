@@ -453,6 +453,9 @@ const photoRate = new Map();
 const photoRateLimit = Math.max(1, Number(process.env.PHOTO_RATE_LIMIT || 8));
 const photoDailyLimit = Math.max(1, Number(process.env.PHOTO_DAILY_LIMIT || 30));
 const photoCooldownMs = Math.max(0, Number(process.env.PHOTO_COOLDOWN_MS || 10_000));
+const photoReportRate = new Map();
+const photoReportLimit = Math.max(1, Number(process.env.PHOTO_REPORT_RATE_LIMIT || 5));
+const photoReportCooldownMs = Math.max(0, Number(process.env.PHOTO_REPORT_COOLDOWN_MS || 10_000));
 
 function checkPhotoUpload(ip, now = Date.now()) {
   const hourStart = now - 60 * 60 * 1000;
@@ -488,6 +491,36 @@ function checkPhotoUpload(ip, now = Date.now()) {
   if (photoRate.size > 5000) {
     for (const [key, value] of photoRate) {
       if (!value.some((stamp) => stamp > dayStart)) photoRate.delete(key);
+    }
+  }
+  return { ok: true };
+}
+
+function checkPhotoReport(ip, now = Date.now()) {
+  const hourStart = now - 60 * 60 * 1000;
+  const stamps = (photoReportRate.get(ip) || []).filter((stamp) => stamp > hourStart);
+  const last = stamps[stamps.length - 1];
+  if (last != null && now - last < photoReportCooldownMs) {
+    photoReportRate.set(ip, stamps);
+    return {
+      message: "Mezi žádostmi je krátká pauza, zkuste to prosím za chvíli.",
+      ok: false,
+      retryAfter: Math.max(1, Math.ceil((photoReportCooldownMs - (now - last)) / 1000)),
+    };
+  }
+  if (stamps.length >= photoReportLimit) {
+    photoReportRate.set(ip, stamps);
+    return {
+      message: "Příliš mnoho žádostí za hodinu, zkuste to později.",
+      ok: false,
+      retryAfter: 3600,
+    };
+  }
+  stamps.push(now);
+  photoReportRate.set(ip, stamps);
+  if (photoReportRate.size > 5000) {
+    for (const [key, value] of photoReportRate) {
+      if (!value.some((stamp) => stamp > hourStart)) photoReportRate.delete(key);
     }
   }
   return { ok: true };
@@ -549,12 +582,18 @@ ${entries.length ? `<ul>${rows}</ul>` : '<p class="empty">Zatím žádné zpráv
 </html>`;
 }
 
-function renderPhotoPage(entries, token, status) {
+function renderPhotoPage(entries, reports, token, status, openReports) {
   const names = photoNodeNames();
-  const tabs = ["pending", "approved", "hidden", "all"].map((value) => {
-    const label = { pending: "Čekající", approved: "Schválené", hidden: "Skryté", all: "Vše" }[value];
+  const labels = {
+    all: "Vše",
+    approved: "Schválené",
+    hidden: "Skryté",
+    pending: "Čekající",
+    reports: `Žádosti${openReports ? ` (${openReports})` : ""}`,
+  };
+  const tabs = ["pending", "approved", "hidden", "all", "reports"].map((value) => {
     const active = status === value ? ' class="active"' : "";
-    return `<a${active} href="view?token=${encodeURIComponent(token)}&status=${value}">${label}</a>`;
+    return `<a${active} href="view?token=${encodeURIComponent(token)}&status=${value}">${labels[value]}</a>`;
   }).join("");
   const rows = entries.map((photo) => {
     const imageUrl = `../photos/${encodeURIComponent(photo.id)}?token=${encodeURIComponent(token)}`;
@@ -577,6 +616,39 @@ function renderPhotoPage(entries, token, status) {
         <div class="node"><a href="../../?node=${encodeURIComponent(photo.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(nodeLabel)}</a></div>
         ${photo.author ? `<div class="author">${escapeHtml(photo.author)}</div>` : ""}
         ${photo.caption ? `<p>${escapeHtml(photo.caption)}</p>` : ""}
+        <div class="actions">${actions}</div>
+      </div>
+    </li>`;
+  }).join("");
+  const reportReasons = {
+    inappropriate: "Nevhodný obsah",
+    other: "Jiné",
+    owner: "Moje fotka",
+    privacy: "Soukromí",
+  };
+  const reportRows = reports.map((report) => {
+    const imageUrl = report.photo
+      ? `../photos/${encodeURIComponent(report.photo.id)}?token=${encodeURIComponent(token)}`
+      : null;
+    const node = report.photo ? names.get(report.photo.nodeKey) : null;
+    const nodeLabel = node ? `${node} · ${report.photo.nodeKey.slice(0, 8)}` : (report.photo ? report.photo.nodeKey.slice(0, 16) : report.photoId.slice(0, 16));
+    const actions = [
+      report.photo
+        ? `<a class="delete" href="moderate?token=${encodeURIComponent(token)}&id=${encodeURIComponent(report.photoId)}&action=delete&status=reports">Smazat fotku</a>`
+        : '<span class="missing">Fotka už není dostupná</span>',
+      `<a class="resolve" href="moderate?token=${encodeURIComponent(token)}&report=${encodeURIComponent(report.id)}&action=dismiss&status=reports">Zamítnout</a>`,
+    ].filter(Boolean).join("");
+    return `
+    <li class="photo report">
+      ${imageUrl
+        ? `<a class="thumb" href="${imageUrl}" target="_blank" rel="noreferrer"><img src="${imageUrl}" alt="" loading="lazy" /></a>`
+        : '<div class="thumb missing"></div>'}
+      <div class="body">
+        <div class="meta">${escapeHtml(reportReasons[report.reason] || report.reason)} · ${escapeHtml(new Date(report.createdAt).toLocaleString("cs-CZ"))}</div>
+        ${report.photo ? `<div class="node"><a href="../../?node=${encodeURIComponent(report.photo.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(nodeLabel)}</a></div>` : ""}
+        ${report.photo?.caption ? `<div class="author">${escapeHtml(report.photo.caption)}</div>` : ""}
+        ${report.message ? `<p>${escapeHtml(report.message)}</p>` : ""}
+        ${report.contact ? `<div class="contact">Kontakt: ${escapeHtml(report.contact)}</div>` : ""}
         <div class="actions">${actions}</div>
       </div>
     </li>`;
@@ -604,20 +676,26 @@ li.photo.hidden { opacity:.55; }
 .node { font-weight:700; }
 .node a { color:#182820; text-decoration:none; }
 .author { color:#49665b; font-size:12px; }
+.contact { color:#49665b; font-size:12px; }
 p { margin:4px 0; white-space:pre-wrap; }
 .actions { display:flex; gap:10px; margin-top:6px; }
 .actions a { font-size:12px; text-decoration:none; }
 .approve { color:#078e62; }
+.resolve { color:#078e62; }
 .hide { color:#b27616; }
 .delete { color:#c0392b; }
+.missing { color:#667b70; font-size:12px; }
+.thumb.missing { border:1px dashed rgba(30,65,49,.2); }
 .empty { color:#667b70; }
 </style>
 </head>
 <body>
 <h1>Fotky nodů</h1>
-<div class="count">${entries.length} fotek (nejnovější první)</div>
+<div class="count">${status === "reports" ? `${reports.length} žádostí` : `${entries.length} fotek`} (nejnovější první)</div>
 <nav class="tabs">${tabs}</nav>
-${entries.length ? `<ul>${rows}</ul>` : '<p class="empty">Žádné fotky v této kategorii.</p>'}
+${status === "reports"
+  ? (reports.length ? `<ul>${reportRows}</ul>` : '<p class="empty">Žádné otevřené žádosti.</p>')
+  : (entries.length ? `<ul>${rows}</ul>` : '<p class="empty">Žádné fotky v této kategorii.</p>')}
 </body>
 </html>`;
 }
@@ -1379,17 +1457,64 @@ async function handleRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/photos/report") {
+    if (request.method !== "POST") {
+      response.writeHead(405, { Allow: "POST" }).end("Method Not Allowed");
+      return;
+    }
+    const ip = clientIp(request);
+    const rate = checkPhotoReport(ip);
+    if (!rate.ok) {
+      sendJson(response, 429, { error: rate.message }, { "Retry-After": String(rate.retryAfter) });
+      return;
+    }
+    let payload;
+    try {
+      payload = JSON.parse(await readBody(request, 8192));
+    } catch {
+      sendJson(response, 400, { error: "Neplatný požadavek." });
+      return;
+    }
+    const photoId = String(payload?.photoId || "").toLowerCase();
+    if (!/^[0-9a-f-]{36}$/.test(photoId)) {
+      sendJson(response, 400, { error: "Neplatná fotka." });
+      return;
+    }
+    const reason = String(payload?.reason || "other");
+    if (!["inappropriate", "other", "owner", "privacy"].includes(reason)) {
+      sendJson(response, 400, { error: "Neplatný důvod." });
+      return;
+    }
+    const message = cleanPhotoText(payload?.message, 500);
+    if (message.length < 5) {
+      sendJson(response, 400, { error: "Napište prosím důvod žádosti (alespoň 5 znaků)." });
+      return;
+    }
+    const contact = cleanPhotoText(payload?.contact, 200);
+    photoStore.createReport({
+      contact,
+      ipHash: createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16),
+      message,
+      photoId,
+      reason,
+    });
+    sendJson(response, 200, { ok: true });
+    return;
+  }
+
   if (url.pathname === "/api/photos/view") {
     if (!photoToken || url.searchParams.get("token") !== photoToken) {
       response.writeHead(404).end("Not Found");
       return;
     }
-    const status = ["pending", "approved", "hidden", "all"].includes(url.searchParams.get("status"))
+    const status = ["pending", "approved", "hidden", "all", "reports"].includes(url.searchParams.get("status"))
       ? url.searchParams.get("status")
       : "pending";
-    const entries = photoStore.listAdmin(status, 300);
+    const entries = status === "reports" ? [] : photoStore.listAdmin(status, 300);
+    const reports = status === "reports" ? photoStore.listReports("open", 300) : [];
+    const openReports = photoStore.openReportCount();
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
-    response.end(renderPhotoPage(entries, photoToken, status));
+    response.end(renderPhotoPage(entries, reports, photoToken, status, openReports));
     return;
   }
 
@@ -1399,13 +1524,15 @@ async function handleRequest(request, response) {
       return;
     }
     const id = String(url.searchParams.get("id") || "");
+    const reportId = String(url.searchParams.get("report") || "");
     const action = String(url.searchParams.get("action") || "");
-    const status = ["pending", "approved", "hidden", "all"].includes(url.searchParams.get("status"))
+    const status = ["pending", "approved", "hidden", "all", "reports"].includes(url.searchParams.get("status"))
       ? url.searchParams.get("status")
       : "pending";
     if (action === "delete") photoStore.remove(id);
     else if (action === "approve") photoStore.setStatus(id, "approved");
     else if (action === "hide") photoStore.setStatus(id, "hidden");
+    else if (action === "dismiss") photoStore.resolveReport(reportId);
     response.writeHead(303, {
       Location: `view?token=${encodeURIComponent(photoToken)}&status=${encodeURIComponent(status)}`,
     });

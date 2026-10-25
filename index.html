@@ -302,6 +302,35 @@
         <img id="photo-lightbox-img" alt="" />
         <p id="photo-lightbox-caption"></p>
         <p id="photo-lightbox-author"></p>
+        <button id="photo-report-open" class="photo-report-open" type="button"></button>
+      </dialog>
+
+      <dialog id="photo-report-dialog" class="photo-dialog" aria-labelledby="photo-report-title">
+        <button id="photo-report-close" class="feedback-close" type="button">×</button>
+        <header>
+          <h2 id="photo-report-title"></h2>
+          <p id="photo-report-photo"></p>
+        </header>
+        <form id="photo-report-form">
+          <label>
+            <span id="photo-report-reason-label"></span>
+            <select id="photo-report-reason"></select>
+          </label>
+          <label>
+            <span id="photo-report-message-label"></span>
+            <textarea id="photo-report-message" rows="4" maxlength="500" required></textarea>
+          </label>
+          <label>
+            <span id="photo-report-contact-label"></span>
+            <input id="photo-report-contact" type="text" maxlength="200" />
+          </label>
+          <p id="photo-report-status" class="feedback-status" role="status"></p>
+          <p id="photo-report-note" class="photo-note"></p>
+          <div class="feedback-actions">
+            <button type="button" id="photo-report-cancel"></button>
+            <button type="submit" id="photo-report-submit"></button>
+          </div>
+        </form>
       </dialog>
 
       <dialog id="coverage-dialog" class="coverage-dialog" aria-labelledby="coverage-title">

@@ -241,6 +241,22 @@ const elements = {
   photoNote: document.querySelector("#photo-note"),
   photoPreview: document.querySelector("#photo-preview"),
   photoPreviewWrap: document.querySelector("#photo-preview-wrap"),
+  photoReportCancel: document.querySelector("#photo-report-cancel"),
+  photoReportClose: document.querySelector("#photo-report-close"),
+  photoReportContact: document.querySelector("#photo-report-contact"),
+  photoReportContactLabel: document.querySelector("#photo-report-contact-label"),
+  photoReportDialog: document.querySelector("#photo-report-dialog"),
+  photoReportForm: document.querySelector("#photo-report-form"),
+  photoReportMessage: document.querySelector("#photo-report-message"),
+  photoReportMessageLabel: document.querySelector("#photo-report-message-label"),
+  photoReportNote: document.querySelector("#photo-report-note"),
+  photoReportOpen: document.querySelector("#photo-report-open"),
+  photoReportPhoto: document.querySelector("#photo-report-photo"),
+  photoReportReason: document.querySelector("#photo-report-reason"),
+  photoReportReasonLabel: document.querySelector("#photo-report-reason-label"),
+  photoReportStatus: document.querySelector("#photo-report-status"),
+  photoReportSubmit: document.querySelector("#photo-report-submit"),
+  photoReportTitle: document.querySelector("#photo-report-title"),
   photoStatus: document.querySelector("#photo-status"),
   photoSubmit: document.querySelector("#photo-submit"),
   photoTitle: document.querySelector("#photo-title"),
@@ -369,6 +385,8 @@ const state = {
   photoPreviewUrl: null,
   photoTarget: null,
   photoUploading: false,
+  lightboxPhoto: null,
+  reportPhoto: null,
   showObservers: false,
   prefixCache: new Map(),
   prefixCacheAt: new Map(),
@@ -1753,6 +1771,7 @@ function openPhotoDialog(node) {
 }
 
 function openPhotoLightbox(photo, node) {
+  state.lightboxPhoto = { node, photo };
   elements.photoLightboxImg.src = appPath(`/api/photos/${encodeURIComponent(photo.id)}`);
   elements.photoLightboxImg.alt = t("photos.alt", { name: node.name || t("common.unknownNode") });
   elements.photoLightboxCaption.textContent = photo.caption || "";
@@ -1760,7 +1779,55 @@ function openPhotoLightbox(photo, node) {
   elements.photoLightboxAuthor.textContent = photo.author || "";
   elements.photoLightboxAuthor.hidden = !photo.author;
   elements.photoLightboxClose.setAttribute("aria-label", t("photos.close"));
+  elements.photoReportOpen.textContent = t("photos.report");
   if (!elements.photoLightbox.open) elements.photoLightbox.showModal();
+}
+
+function setPhotoReportStatus(text, isError = false) {
+  elements.photoReportStatus.textContent = text;
+  elements.photoReportStatus.classList.toggle("error", Boolean(isError));
+}
+
+function renderPhotoReportDialog() {
+  elements.photoReportTitle.textContent = t("photos.reportTitle");
+  elements.photoReportClose.setAttribute("aria-label", t("photos.reportClose"));
+  elements.photoReportReasonLabel.textContent = t("photos.reportReason");
+  elements.photoReportMessageLabel.textContent = t("photos.reportMessage");
+  elements.photoReportMessage.placeholder = t("photos.reportMessagePlaceholder");
+  elements.photoReportContactLabel.textContent = t("photos.reportContact");
+  elements.photoReportContact.placeholder = t("photos.reportContactPlaceholder");
+  elements.photoReportNote.textContent = t("photos.reportNote");
+  elements.photoReportSubmit.textContent = t("photos.reportSubmit");
+  elements.photoReportCancel.textContent = t("photos.reportCancel");
+  elements.photoReportReason.replaceChildren(...[
+    ["owner", t("photos.reportReasonOwner")],
+    ["privacy", t("photos.reportReasonPrivacy")],
+    ["inappropriate", t("photos.reportReasonInappropriate")],
+    ["other", t("photos.reportReasonOther")],
+  ].map(([value, label]) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = label;
+    return option;
+  }));
+  const current = state.reportPhoto;
+  if (current) {
+    const name = current.node?.name || t("common.unknownNode");
+    elements.photoReportPhoto.textContent = current.photo.caption
+      ? `${name} · ${current.photo.caption}`
+      : name;
+  }
+}
+
+function openPhotoReport() {
+  if (!state.lightboxPhoto) return;
+  state.reportPhoto = state.lightboxPhoto;
+  if (elements.photoLightbox.open) elements.photoLightbox.close();
+  elements.photoReportForm.reset();
+  setPhotoReportStatus("");
+  elements.photoReportSubmit.disabled = false;
+  renderPhotoReportDialog();
+  if (!elements.photoReportDialog.open) elements.photoReportDialog.showModal();
 }
 
 async function loadPhotoBitmap(file) {
@@ -5559,6 +5626,47 @@ elements.photoLightbox.addEventListener("close", () => {
   elements.photoLightboxImg.removeAttribute("src");
   elements.photoLightboxCaption.textContent = "";
   elements.photoLightboxAuthor.textContent = "";
+  state.lightboxPhoto = null;
+});
+elements.photoReportOpen.addEventListener("click", openPhotoReport);
+elements.photoReportClose.addEventListener("click", () => elements.photoReportDialog.close());
+elements.photoReportCancel.addEventListener("click", () => elements.photoReportDialog.close());
+elements.photoReportDialog.addEventListener("click", (event) => {
+  if (event.target === elements.photoReportDialog) elements.photoReportDialog.close();
+});
+elements.photoReportDialog.addEventListener("close", () => {
+  state.reportPhoto = null;
+  elements.photoReportForm.reset();
+  setPhotoReportStatus("");
+});
+elements.photoReportForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const current = state.reportPhoto;
+  if (!current) return;
+  const message = elements.photoReportMessage.value.trim();
+  if (message.length < 5) {
+    setPhotoReportStatus(t("photos.reportTooShort"), true);
+    return;
+  }
+  elements.photoReportSubmit.disabled = true;
+  setPhotoReportStatus(t("photos.reportSending"));
+  try {
+    await postJson("/api/photos/report", {
+      contact: elements.photoReportContact.value.trim(),
+      message,
+      photoId: current.photo.id,
+      reason: elements.photoReportReason.value,
+    });
+    setPhotoReportStatus(t("photos.reportSent"));
+    elements.photoReportForm.reset();
+    setTimeout(() => {
+      if (elements.photoReportDialog.open) elements.photoReportDialog.close();
+    }, 2_000);
+  } catch (error) {
+    setPhotoReportStatus(error.message || t("photos.reportFailed"), true);
+  } finally {
+    elements.photoReportSubmit.disabled = false;
+  }
 });
 
 elements.mobileSheetClose.addEventListener("click", closeMobileSheet);

@@ -622,6 +622,8 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 .photo-dialog form { display: flex; flex-direction: column; gap: 10px; }
 .photo-dialog label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font: 10px "DM Mono", monospace; }
 .photo-dialog input[type="text"] { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; color: #263b31; background: #fff; font: 12px Manrope, sans-serif; }
+.photo-dialog textarea, .photo-dialog select { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; color: #263b31; background: #fff; font: 12px Manrope, sans-serif; }
+.photo-dialog textarea { min-height: 90px; resize: vertical; }
 .photo-dialog input[type="file"] { padding: 5px 0; color: #3f584e; font: 11px Manrope, sans-serif; }
 .photo-dialog label.feedback-check { flex-direction: row; align-items: flex-start; gap: 7px; color: #3f584e; font: 11px Manrope, sans-serif; }
 .photo-dialog label.feedback-check input { width: 14px; height: 14px; flex: 0 0 auto; margin-top: 1px; padding: 0; accent-color: var(--green); }
@@ -633,6 +635,8 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 .photo-lightbox img { display: block; max-width: 100%; max-height: calc(100dvh - 150px); margin: 0 auto; border-radius: 8px; object-fit: contain; }
 .photo-lightbox p { margin: 8px 12px 0; text-align: center; font-size: 12px; }
 #photo-lightbox-author { margin-top: 2px; color: #9fb0b8; font: 11px "DM Mono", monospace; }
+.photo-report-open { display: block; margin: 8px auto 4px; padding: 5px 10px; border: 1px solid rgba(192, 57, 43, 0.35); border-radius: 6px; color: #ffb3a8; background: rgba(192, 57, 43, 0.14); font: 10px "DM Mono", monospace; cursor: pointer; }
+.photo-report-open:hover { border-color: #c0392b; background: rgba(192, 57, 43, 0.24); }
 .photo-lightbox p[hidden] { display: none; }
 .qr-dialog { width: min(420px, calc(100vw - 28px)); padding: 20px; border: 1px solid rgba(30, 65, 49, 0.2); border-radius: 15px; color: #263b33; background: #fffef9; box-shadow: 0 24px 70px rgba(20, 42, 32, 0.3); text-align: center; }
 .qr-dialog::backdrop { background: rgba(24, 40, 32, 0.55); backdrop-filter: blur(3px); }
@@ -719,6 +723,8 @@ html[data-theme="dark"] .node-photo img { background: #16222c; }
 html[data-theme="dark"] .node-photo-add { color: #5fd0a5; background: rgba(7, 142, 98, 0.16); border-color: rgba(7, 142, 98, 0.4); }
 html[data-theme="dark"] .photo-dialog { color: #e6ecef; background: #161d24; border-color: var(--line); }
 html[data-theme="dark"] .photo-dialog input[type="text"] { color: #e6ecef; background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .photo-dialog textarea,
+html[data-theme="dark"] .photo-dialog select { color: #e6ecef; background: #1b232b; border-color: var(--line); }
 html[data-theme="dark"] .photo-dialog label.feedback-check { color: #cfd9dd; }
 html[data-theme="dark"] .photo-preview-wrap { background: #1b232b; border-color: var(--line); }
 html[data-theme="dark"] .map-actions > button { color: #cdd9de; background: #1b232b; border-color: var(--line); }

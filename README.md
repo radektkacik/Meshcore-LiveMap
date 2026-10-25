@@ -122,6 +122,10 @@ přihlašovací údaje zůstávají pouze na serveru.
   `photos.sqlite` jsou v `uploads/` mimo `data/`, takže se nedostanou do záloh.
   Platí limity: 8 fotek/hodinu na IP, 30/den, 8 fotek na nod, 2 GB celkem
   a max. 2400 px na delší straně (klient posílá max. 1600 px).
+- `POST /api/photos/report` (JSON `photoId`, `reason`, `message`, `contact`)
+  založí žádost o smazání nebo nahlášení fotky. Žádosti se zobrazují v tabu
+  „Žádosti“ v administraci fotek; správce může fotku smazat nebo žádost zamítnout.
+  Limit je 5 žádostí za hodinu na IP.
 - Animace tras je ve výchozím stavu řešená canvas rendererem (jedna kresba,
   posun `lineDashOffset` bez CSS animací). Méně výkonnou SVG variantu s CSS
   animací `stroke-dashoffset` lze zapnout parametrem `?anim=svg`. Animaci lze

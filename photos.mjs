@@ -116,6 +116,7 @@ export function createPhotoStore(rootDir, {
   maxBytes = 5 * 1024 * 1024,
   maxDimension = 2400,
   maxPerNode = 8,
+  maxReports = 10_000,
   maxRows = 10_000,
   maxTotalBytes = 2 * 1024 * 1024 * 1024,
 } = {}) {
@@ -142,6 +143,19 @@ export function createPhotoStore(rootDir, {
     );
     CREATE INDEX IF NOT EXISTS photos_node ON photos (node_key, status, created_at);
     CREATE INDEX IF NOT EXISTS photos_status ON photos (status, created_at);
+    CREATE TABLE IF NOT EXISTS photo_reports (
+      id TEXT PRIMARY KEY,
+      photo_id TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      message TEXT,
+      contact TEXT,
+      ip_hash TEXT,
+      status TEXT NOT NULL DEFAULT 'open',
+      created_at INTEGER NOT NULL,
+      resolved_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS photo_reports_photo ON photo_reports (photo_id, status);
+    CREATE INDEX IF NOT EXISTS photo_reports_status ON photo_reports (status, created_at);
   `);
 
   const insert = db.prepare(`
@@ -168,6 +182,30 @@ export function createPhotoStore(rootDir, {
   const countPending = db.prepare("SELECT COUNT(*) AS total FROM photos WHERE status = 'pending'");
   const updateStatus = db.prepare("UPDATE photos SET status = ?, reviewed_at = ? WHERE id = ?");
   const deleteRow = db.prepare("DELETE FROM photos WHERE id = ?");
+  const insertReport = db.prepare(`
+    INSERT INTO photo_reports (id, photo_id, reason, message, contact, ip_hash, status, created_at)
+    VALUES (@id, @photo_id, @reason, @message, @contact, @ip_hash, 'open', @created_at)
+  `);
+  const selectReports = db.prepare(`
+    SELECT r.id, r.photo_id, r.reason, r.message, r.contact, r.status, r.created_at, r.resolved_at,
+      p.caption, p.node_key, p.status AS photo_status
+    FROM photo_reports r
+    LEFT JOIN photos p ON p.id = r.photo_id
+    WHERE r.status = ?
+    ORDER BY r.created_at DESC
+    LIMIT ?
+  `);
+  const countOpenReports = db.prepare("SELECT COUNT(*) AS total FROM photo_reports WHERE status = 'open'");
+  const resolveReport = db.prepare("UPDATE photo_reports SET status = 'resolved', resolved_at = ? WHERE id = ?");
+  const resolvePhotoReports = db.prepare(`
+    UPDATE photo_reports SET status = 'resolved', resolved_at = ? WHERE photo_id = ? AND status = 'open'
+  `);
+  const countReports = db.prepare("SELECT COUNT(*) AS total FROM photo_reports");
+  const pruneReports = db.prepare(`
+    DELETE FROM photo_reports WHERE id IN (
+      SELECT id FROM photo_reports WHERE status = 'resolved' ORDER BY created_at ASC LIMIT ?
+    )
+  `);
 
   function absolutePath(row) {
     const relative = normalize(String(row?.file || ""));
@@ -223,6 +261,24 @@ export function createPhotoStore(rootDir, {
       });
       return get(id);
     },
+    createReport(entry) {
+      const photoId = String(entry?.photoId || "").toLowerCase();
+      if (!/^[0-9a-f-]{36}$/.test(photoId)) throw new PhotoError("invalid_photo", "Neplatná fotka.");
+      if (!selectById.get(photoId)) return null;
+      const id = randomUUID();
+      insertReport.run({
+        contact: String(entry.contact || "").slice(0, 200),
+        created_at: Date.now(),
+        id,
+        ip_hash: String(entry.ipHash || "").slice(0, 32),
+        message: String(entry.message || "").slice(0, 500),
+        photo_id: photoId,
+        reason: String(entry.reason || "other").slice(0, 40),
+      });
+      const overflow = countReports.get().total - maxReports;
+      if (overflow > 0) pruneReports.run(overflow);
+      return id;
+    },
     filePath: (id) => absolutePath(selectById.get(String(id || ""))),
     get,
     listAdmin(status = "all", limit = 200) {
@@ -237,14 +293,37 @@ export function createPhotoStore(rootDir, {
       if (!/^[0-9a-f]{64}$/.test(key)) return [];
       return selectApproved.all(key, Math.min(Math.max(1, Number(limit) || 12), 30)).map(mapRow);
     },
+    listReports(status = "open", limit = 200) {
+      const safeLimit = Math.min(Math.max(1, Number(limit) || 200), 500);
+      return selectReports.all(status === "resolved" ? "resolved" : "open", safeLimit).map((row) => ({
+        contact: row.contact || "",
+        createdAt: row.created_at,
+        id: row.id,
+        message: row.message || "",
+        photo: row.photo_status ? {
+          caption: row.caption || "",
+          id: row.photo_id,
+          nodeKey: row.node_key,
+          status: row.photo_status,
+        } : null,
+        photoId: row.photo_id,
+        reason: row.reason,
+        resolvedAt: row.resolved_at,
+        status: row.status,
+      }));
+    },
+    openReportCount: () => countOpenReports.get().total,
     remove(id) {
       const row = selectById.get(String(id || ""));
       if (!row) return false;
       deleteRow.run(String(id));
+      resolvePhotoReports.run(Date.now(), String(id));
       const absolute = absolutePath(row);
       if (absolute) rmSync(absolute, { force: true });
       return true;
     },
+    resolvePhotoReports: (photoId) => resolvePhotoReports.run(Date.now(), String(photoId || "")).changes,
+    resolveReport: (id) => resolveReport.run(Date.now(), String(id || "")).changes > 0,
     setStatus(id, status) {
       if (!PHOTO_STATUSES.includes(status)) return false;
       return updateStatus.run(status, Date.now(), String(id || "")).changes > 0;
@@ -252,6 +331,7 @@ export function createPhotoStore(rootDir, {
     stats: () => ({
       bytes: sumBytes.get().total,
       pending: countPending.get().total,
+      reports: countOpenReports.get().total,
       total: countRows.get().total,
     }),
   };

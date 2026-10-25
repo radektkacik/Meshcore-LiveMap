@@ -55,7 +55,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T183328Z`, beta `20261025T183259Z`)
 - Z detailu nodu odstraněn řádek „Stav hashe“
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
 - Rychlé výhry (prod i beta): `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (nody, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export nodů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
-- Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP s potvrzením práv, fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`
+- Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP s potvrzením práv, fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`. V lightboxu lze podat žádost o smazání/nahlášení, která se objeví v tabu „Žádosti“.
 
 ### Mapa a nody
 - Repeater vždy navrchu při překryvu nodů
@@ -116,7 +116,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T183328Z`, beta `20261025T183259Z`)
 - Původní žebříčky nodů podle metrik zůstávají
 
 ### Backend
-- `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/recent`, `/api/packet-history`, `/api/packets`, `/api/nodes`, `/api/stats`, `/api/search`, `/api/health`, `/api/photos`
+- `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/recent`, `/api/packet-history`, `/api/packets`, `/api/nodes`, `/api/stats`, `/api/search`, `/api/health`, `/api/photos`, `/api/photos/report`
 - Cache `/api/nodes` a `/api/resolve-hops` proti výpadkům CoreScope; nody se vydávají z cache okamžitě (SWR, soft TTL 15 min)
 - Start stránky: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE běží s `?replay=0`
 - `/api/stats` cache (24 h) + lokální fallback z `packet_routes` při výpadku Analyzeru; klient zobrazí stale/partial hodnotu oranžově a zkusí obnovu za 60 s
@@ -136,7 +136,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T183328Z`, beta `20261025T183259Z`)
 
 ## 4. Testy a CI
 
-- `npm test`: 96 testů, 93 pass, 3 skip, 0 fail
+- `npm test`: 97 testů, 94 pass, 3 skip, 0 fail
 - `npm audit --omit=dev`: 0 zranitelností
 - GitHub Actions CI: Node 20 a 22, běží `npm ci`, syntax check, testy, build
 - CI nelze z tohoto prostředí číst bez GitHub přihlášení
@@ -189,7 +189,7 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T183328Z'
 - Přibližná poloha observeru je jen IATA oblast, ne přesné letiště.
 - Detail nodu obsahuje galerii fotek; veřejné nahrávání JPEG/PNG/WebP s potvrzením práv, fotka se zobrazí až po schválení správcem. Moderace na `GET /api/photos/view?token=…`.
 - Kanály jsou jen veřejné dešifrované zprávy, soukromé zůstávají šifrované.
-- Fotky jsou veřejné až po schválení; pending/hidden vrací 404. Veřejné nahrávání má limity 8/h a 30/den na IP, 8 fotek na nod, 2 GB celkem a max. 2400 px na delší straně (klient zmenšuje na 1600 px). Soubory i `photos.sqlite` jsou v `uploads/` a nejsou v zálohách, takže po obnově ze zálohy fotky zmizí.
+- Fotky jsou veřejné až po schválení; pending/hidden vrací 404. Veřejné nahrávání má limity 8/h a 30/den na IP, 8 fotek na nod, 2 GB celkem a max. 2400 px na delší straně (klient zmenšuje na 1600 px). Žádosti o smazání jsou omezené 5/h na IP. Soubory i `photos.sqlite` jsou v `uploads/` a nejsou v zálohách, takže po obnově ze zálohy fotky zmizí.
 - OSM dlaždice mají policy riziko při větším provozu („Access blocked“).
 - Firewall/SSH hardening není hotový: ufw inactive, PasswordAuthentication yes, root login povolený.
 - Cloudflare běží Full se self-signed origin certem, ne Full (strict).
