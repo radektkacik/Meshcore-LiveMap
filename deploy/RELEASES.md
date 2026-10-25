@@ -146,6 +146,8 @@
 | 2026-10-25 07:32 | `20261025T073210Z.tar.gz` (stage APP_DIR) | `20261025-0732-cf17c21` | Beta: rychlý start z `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE `?replay=0`; `/api/nodes` stale-while-revalidate (soft TTL 15 min). První trasa ~0,4 s místo 30–42 s | `server.mjs`, `src/main.js`, `test/server.test.mjs`, `README.md`, `CONTEXT.md` |
 | 2026-10-25 07:34 | `20261025T073409Z.tar.gz` (stage APP_DIR) | `20261025-0734-f348abd` | Beta: odebráno přehrávání archivu, heatmapa provozu a trasy A→B (revert `982ed8e`); zachován rychlý start přes `/api/recent` a SWR cache uzlů | `server.mjs`, `packet-store.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-25 07:36 | `20261025T073645Z.tar.gz` | `20261025-0736-1706438` | Prod: rychlý start z `/api/recent?seconds=30` (dávkové vyřešení prefixů, jedno vykreslení), SSE `?replay=0`, `/api/nodes` SWR; ověřeno 34 tras za ~0,5 s | `server.mjs`, `src/main.js`, `test/server.test.mjs`, `README.md`, `CONTEXT.md` |
+| 2026-10-25 07:43 | `20261025T074324Z.tar.gz` (stage APP_DIR) | `20261025-0743-57253a4` | Beta: panel Aktivity lze zvětšovat tažením za levý horní roh, velikost se ukládá do localStorage, dvojklik/Home reset; větší výchozí rozměry | `index.html`, `src/style.css`, `src/main.js`, `src/activity-size.js`, `src/i18n.js`, testy, `README.md`, `CONTEXT.md` |
+| 2026-10-25 07:43 | `20261025T074349Z.tar.gz` | `20261025-0743-57253a4` | Prod: stejné zvětšování panelu Aktivity; ověřeno tažení 340×84 → 430×154 a reset dvojklikem | `index.html`, `src/style.css`, `src/main.js`, `src/activity-size.js`, `src/i18n.js`, testy, `README.md`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
