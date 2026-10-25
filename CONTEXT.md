@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-25 (prod `20261025T092014Z`, beta `20261025T131658Z`)  
+Aktualizováno: 2026-10-25 (prod `20261025T141054Z`, beta `20261025T131658Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -17,12 +17,12 @@ Aktualizováno: 2026-10-25 (prod `20261025T092014Z`, beta `20261025T131658Z`)
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261025T092014Z`
-- Build: `20261025-0920-af3b587`
-- Asset: `index-DfM_BxSp.js`
+- Release: `20261025T141054Z`
+- Build: `20261025-1410-73eff1c`
+- Asset: `index-PQSt5qYF.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T092014Z.tar.gz`
-- Tag: `prod-20261025-0920`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T141054Z.tar.gz`
+- Tag: `prod-20261025-1410`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
@@ -54,7 +54,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T092014Z`, beta `20261025T131658Z`)
 - Zvýraznění uzlů: relativní Top 5 % (červená) a 5–15 % (žlutá) místo pevných Top 25/100; počty v legendě
 - Z detailu uzlu odstraněn řádek „Stav hashe“
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
-- Rychlé výhry na betě: `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (uzly, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export uzlů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
+- Rychlé výhry (prod i beta): `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (uzly, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export uzlů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
 
 ### Mapa a uzly
 - Repeater vždy navrchu při překryvu uzlů
@@ -154,10 +154,10 @@ Aktualizováno: 2026-10-25 (prod `20261025T092014Z`, beta `20261025T131658Z`)
 - Rollback při shodném lockfile ponechá `node_modules`, jinak spustí `npm ci --omit=dev`.
 - Na VPS `/root/rollback-meshcore.sh`, aktualizuje se při deployi.
 - Retence 20 záloh.
-- Rollback aktuální produkce `20261025T092014Z` na předchozí `20261025T090209Z`:
+- Rollback aktuální produkce `20261025T141054Z` na předchozí `20261025T092014Z`:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T090209Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T141054Z'
 ```
 
 ## 7. Deploy konvence
