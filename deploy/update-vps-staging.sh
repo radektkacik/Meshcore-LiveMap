@@ -2,6 +2,11 @@
 set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+if [[ -z "${DEPLOY_HOST:-}" && -f "$ROOT_DIR/.deploy.env" ]]; then
+  set -a
+  . "$ROOT_DIR/.deploy.env"
+  set +a
+fi
 SSH_KEY=${SSH_KEY:-"$ROOT_DIR/cntb"}
 DEPLOY_HOST=${DEPLOY_HOST:?Set DEPLOY_HOST, e.g. root@your-server}
 PUBLIC_URL=${PUBLIC_URL:-"https://2b.meshcore.cz/map/"}

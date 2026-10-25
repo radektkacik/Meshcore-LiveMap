@@ -165,7 +165,7 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T090209Z'
 - Nasadit pouze přes:
   - `DEPLOY_HOST=root@<VPS_HOST> ./deploy/update-vps.sh`
   - `DEPLOY_HOST=root@<VPS_HOST> ./deploy/update-vps-staging.sh`
-- `DEPLOY_HOST` se neukládá do repa, IP se v repu neuvádí.
+- `DEPLOY_HOST` se neukládá do repa, IP se v repu neuvádí. Lze ho mít v gitignorovaném `.deploy.env` v kořeni; oba deploy skripty ho odsud načtou, pokud není v prostředí.
 - Klíč pro VPS: `./cntb`.
 - Před nasazením: `npm test`, `node --check server.mjs`, build.
 - Po nasazení doplnit řádek do `deploy/RELEASES.md`.

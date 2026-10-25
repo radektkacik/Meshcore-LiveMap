@@ -49,6 +49,14 @@ DEPLOY_HOST=root@your-server ./deploy/update-vps.sh
 Hostitel se v repozitáři záměrně neuvádí. Pro beta instanci použijte
 `./deploy/update-vps-staging.sh` se stejným `DEPLOY_HOST`.
 
+Oba deploy skripty načtou `DEPLOY_HOST` také z gitignorovaného souboru
+`.deploy.env` v kořeni repa, pokud proměnná není v prostředí:
+
+```bash
+printf 'DEPLOY_HOST=root@your-server\n' > .deploy.env
+chmod 600 .deploy.env
+```
+
 Backupy jsou v `/opt/meshcore-live-map/backups`; uchovává se posledních 20.
 Zálohy neobsahují `node_modules` – rollback proto při shodném lockfile ponechá
 stávající závislosti a při změně je doinstaluje. Při neúspěšném startu se
