@@ -226,6 +226,7 @@ const elements = {
   nodeLabelsToggle: document.querySelector("#node-labels-toggle"),
   observersToggle: document.querySelector("#observers-toggle"),
   otherTypesToggle: document.querySelector("#other-types-toggle"),
+  packetFocusAnalyzer: document.querySelector("#packet-focus-analyzer"),
   packetFocusBar: document.querySelector("#packet-focus-bar"),
   packetFocusClose: document.querySelector("#packet-focus-close"),
   packetFocusCount: document.querySelector("#packet-focus-count"),
@@ -710,6 +711,7 @@ function showRouteOnMap(route) {
 
 function routeDetailHtml(route) {
   const points = route.points || [];
+  const analyzerUrl = analyzerPacketUrl(route.packetHash);
   let totalMeters = 0;
   const rows = points.map((point, index) => {
     const previous = points[index - 1];
@@ -753,6 +755,7 @@ function routeDetailHtml(route) {
       <ol class="route-hop-list">${rows}</ol>
       <div class="route-popup-actions">
         <button class="route-show-on-map" type="button">${t("route.showOnMap")}</button>
+        ${analyzerUrl ? `<a class="packet-analyzer-link" href="${analyzerUrl}" target="_blank" rel="noreferrer">${t("packet.openAnalyzer")}</a>` : ""}
       </div>
     </section>
   `;
@@ -764,9 +767,15 @@ function packetObserverLabel(route) {
   return t("packet.unknownObserver");
 }
 
+function analyzerPacketUrl(hash) {
+  const value = String(hash || "").trim().toLowerCase();
+  return /^[0-9a-f]{8,64}$/.test(value) ? `https://analyzer.meshcore.cz/#/packets/${value}` : null;
+}
+
 function packetDetailHtml(occurrences) {
   const first = occurrences[0];
   const hash = first.packetHash || String(first.id).split(":")[0];
+  const analyzerUrl = analyzerPacketUrl(hash);
   const observers = new Set(occurrences.map((route) => route.observerId || route.id));
   const rows = occurrences.map((route, index) => {
     const snr = Number.isFinite(route.snr) ? `SNR ${formatDecimal(route.snr, 1)} dB` : null;
@@ -808,6 +817,7 @@ function packetDetailHtml(occurrences) {
       </div>
       <div class="route-popup-actions packet-actions-top">
         <button class="route-show-on-map packet-show-all" type="button">${t("packet.showAll")}</button>
+        ${analyzerUrl ? `<a class="packet-analyzer-link" href="${analyzerUrl}" target="_blank" rel="noreferrer">${t("packet.openAnalyzer")}</a>` : ""}
       </div>
       <h4>${t("packet.observations")}</h4>
       <ol class="packet-occurrence-list">${rows}</ol>
@@ -1041,6 +1051,9 @@ function showPacketFocusBar(hash, count) {
   elements.packetFocusHash.textContent = `${hash.slice(0, 12)}${hash.length > 12 ? "…" : ""}`;
   elements.packetFocusHash.title = hash;
   elements.packetFocusCount.textContent = `${tCount("packet.focusRoutes", count)} · ${t("packet.focusLiveHidden")}`;
+  const analyzerUrl = analyzerPacketUrl(hash);
+  elements.packetFocusAnalyzer.hidden = !analyzerUrl;
+  if (analyzerUrl) elements.packetFocusAnalyzer.href = analyzerUrl;
   elements.packetFocusBar.hidden = false;
 }
 
