@@ -181,6 +181,8 @@
 | 2026-10-25 18:38 | `20261025T183855Z.tar.gz` | `20261025-1838-60d4534` | Prod: stejné žádosti o smazání; test nahrání→schválení→žádost→smazání ověřen, health `ok` | `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `.env.example`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-25 18:50 | `20261025T185020Z.tar.gz` (stage APP_DIR) | `20261025-1850-d0a3337` | Beta: HEIC/HEIF z iPhonu se v prohlížeči převádí přes `libheif-js` (WASM) na WebP; CSP povoluje `wasm-unsafe-eval`; HEIC test 702 kB → 320 kB WebP | `package.json`, `package-lock.json`, `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, `README.md`, `CONTEXT.md` |
 | 2026-10-25 18:51 | `20261025T185125Z.tar.gz` | `20261025-1851-d0a3337` | Prod: stejné HEIC zpracování; testovací HEIC nahrán, převeden a smazán, health `ok` | `package.json`, `package-lock.json`, `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, `README.md`, `CONTEXT.md` |
+| 2026-10-25 18:55 | `20261025T185555Z.tar.gz` (stage APP_DIR) | `20261025-1855-3e81ef4` | Beta: přepínač „Jen nody s fotkami“ a `/api/photos/nodes` s počty schválených fotek | `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, testy, `README.md`, `CONTEXT.md` |
+| 2026-10-25 18:56 | `20261025T185643Z.tar.gz` | `20261025-1856-3e81ef4` | Prod: stejný filtr; `/api/photos/nodes` vrací 1 nod se 4 fotkami, health `ok` | `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, testy, `README.md`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
