@@ -1685,7 +1685,6 @@ function renderNodePhotos(list, photos, node) {
     button.title = photo.caption || t("photos.openAria");
     button.setAttribute("aria-label", t("photos.openAria"));
     const image = document.createElement("img");
-    image.loading = "lazy";
     image.src = appPath(`/api/photos/${encodeURIComponent(photo.id)}`);
     image.alt = t("photos.alt", { name: node.name || t("common.unknownNode") });
     button.appendChild(image);
