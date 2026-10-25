@@ -44,7 +44,20 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
   const directory = mkdtempSync(join(tmpdir(), "meshcore-server-"));
   const tinyPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lK3z1wAAAABJRU5ErkJggg==", "base64");
   let nodesFail = false;
+  const telegramMessages = [];
   const upstream = createServer((req, res) => {
+    if (req.url?.startsWith("/bot")) {
+      let body = "";
+      req.on("data", (chunk) => { body += chunk; });
+      req.on("end", () => {
+        try {
+          const payload = JSON.parse(body);
+          if (payload?.text) telegramMessages.push(payload.text);
+        } catch {}
+        res.writeHead(200, { "Content-Type": "application/json" }).end('{"ok":true}');
+      });
+      return;
+    }
     if (req.url?.startsWith("/terrarium/")) {
       res.writeHead(200, { "Content-Type": "image/png" }).end(tinyPng);
       return;
@@ -87,6 +100,10 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       SCORE_DB_PATH: join(directory, "metrics.sqlite"),
       VISITS_DB_PATH: join(directory, "visits.sqlite"),
       TERRAIN_UPSTREAM: `http://127.0.0.1:${upstreamPort}/terrarium`,
+      TELEGRAM_API_BASE: `http://127.0.0.1:${upstreamPort}`,
+      TELEGRAM_BOT_TOKEN: "test-bot",
+      TELEGRAM_CHAT_ID: "123456",
+      TELEGRAM_NOTIFY_FEEDBACK: "1",
       UPSTREAM_TIMEOUT_MS: "100",
     },
     stdio: ["ignore", "pipe", "pipe"],
@@ -132,6 +149,8 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(upload.status, 202);
     const uploaded = await upload.json();
     assert.equal(uploaded.status, "pending");
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    assert.ok(telegramMessages.some((text) => text.includes("Nová fotka čeká na schválení")));
     const largePng = Buffer.from(tinyPng);
     largePng.writeUInt32BE(3000, 16);
     largePng.writeUInt32BE(2000, 20);
@@ -173,6 +192,8 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     });
     assert.equal(report.status, 200);
     assert.equal((await report.json()).ok, true);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    assert.ok(telegramMessages.some((text) => text.includes("Žádost o smazání fotky")));
     const reportsPage = await fetch(`http://127.0.0.1:${appPort}/api/photos/view?token=photo-token&status=reports`);
     assert.equal(reportsPage.status, 200);
     assert.match(await reportsPage.text(), /Chci tuto fotku smazat/);
@@ -255,6 +276,8 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     });
     assert.equal(feedbackPost.status, 200);
     assert.equal((await feedbackPost.json()).ok, true);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    assert.ok(telegramMessages.some((text) => text.includes("Nová zpráva v knize návštěv")));
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/feedback`)).status, 404);
     const feedbackList = await fetch(`http://127.0.0.1:${appPort}/api/feedback?token=test-token`);
     assert.equal(feedbackList.status, 200);

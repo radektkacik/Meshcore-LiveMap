@@ -130,6 +130,12 @@ přihlašovací údaje zůstávají pouze na serveru.
   založí žádost o smazání nebo nahlášení fotky. Žádosti se zobrazují v tabu
   „Žádosti“ v administraci fotek; správce může fotku smazat nebo žádost zamítnout.
   Limit je 5 žádostí za hodinu na IP.
+- Volitelné Telegram notifikace pro správce: `TELEGRAM_BOT_TOKEN` a
+  `TELEGRAM_CHAT_ID`. Upozornění chodí na novou fotku čekající na schválení,
+  žádost o smazání fotky a volitelně (`TELEGRAM_NOTIFY_FEEDBACK=1`) i na novou
+  zprávu v knize návštěv. Zprávy obsahují počty čekajících položek; přímý odkaz
+  do administrace s tokenem lze zapnout přes `TELEGRAM_ADMIN_LINK=1`.
+  `PUBLIC_BASE_URL` určuje základ odkazu (u bety `https://2b.meshcore.cz/map`).
 - Animace tras je ve výchozím stavu řešená canvas rendererem (jedna kresba,
   posun `lineDashOffset` bez CSS animací). Méně výkonnou SVG variantu s CSS
   animací `stroke-dashoffset` lze zapnout parametrem `?anim=svg`. Animaci lze

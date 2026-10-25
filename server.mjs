@@ -10,6 +10,7 @@ import { createPacketStore } from "./packet-store.mjs";
 import { createVisitStatsStore } from "./visit-stats.mjs";
 import { createFeedbackStore } from "./feedback.mjs";
 import { createPhotoStore, detectImage, PhotoError } from "./photos.mjs";
+import { createTelegramNotifier } from "./notify.mjs";
 
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "0.0.0.0";
@@ -49,6 +50,20 @@ const photoStore = createPhotoStore(photoDir, {
 const photoToken = process.env.PHOTO_TOKEN || feedbackToken;
 if (!photoToken) {
   console.warn("Photo uploads are disabled: set PHOTO_TOKEN or FEEDBACK_TOKEN");
+}
+const publicBaseUrl = (process.env.PUBLIC_BASE_URL || "https://mapa.meshcore.cz").replace(/\/+$/, "");
+const telegramNotifier = createTelegramNotifier({
+  apiBase: process.env.TELEGRAM_API_BASE || "https://api.telegram.org",
+  chatId: process.env.TELEGRAM_CHAT_ID || "",
+  timeoutMs: Math.max(1000, Number(process.env.TELEGRAM_TIMEOUT_MS || 5000)),
+  token: process.env.TELEGRAM_BOT_TOKEN || "",
+});
+const telegramNotifyPhotos = process.env.TELEGRAM_NOTIFY_PHOTOS !== "0";
+const telegramNotifyReports = process.env.TELEGRAM_NOTIFY_REPORTS !== "0";
+const telegramNotifyFeedback = process.env.TELEGRAM_NOTIFY_FEEDBACK === "1";
+const telegramAdminLink = process.env.TELEGRAM_ADMIN_LINK === "1";
+if (telegramNotifier.enabled) {
+  console.log("Telegram admin notifications enabled");
 }
 const elevationUpstream = process.env.ELEVATION_UPSTREAM || "https://api.open-meteo.com/v1/elevation";
 const elevationFallbackUrl = process.env.ELEVATION_FALLBACK_URL || "https://api.open-elevation.com/api/v1/lookup";
@@ -713,6 +728,73 @@ function photoNodeNames() {
   return result;
 }
 
+function notifyTelegram(text) {
+  if (!telegramNotifier.enabled) return;
+  void telegramNotifier.send(text).catch((error) => {
+    console.error(`Telegram notification failed: ${error.message}`);
+  });
+}
+
+function telegramAdminUrl(path) {
+  if (!telegramAdminLink) return null;
+  const token = path.startsWith("/api/photos") ? photoToken : feedbackToken;
+  return token ? `${publicBaseUrl}${path}?token=${encodeURIComponent(token)}` : null;
+}
+
+function notifyNewPhoto(photo) {
+  if (!telegramNotifier.enabled || !telegramNotifyPhotos) return;
+  const name = photoNodeNames().get(photo.nodeKey) || photo.nodeKey.slice(0, 8);
+  const stats = photoStore.stats();
+  const lines = [
+    "📷 Nová fotka čeká na schválení",
+    `Nod: ${name}`,
+  ];
+  if (photo.caption) lines.push(`Popis: ${photo.caption}`);
+  if (photo.author) lines.push(`Autor: ${photo.author}`);
+  lines.push(`Čeká na schválení: ${stats.pending}`);
+  const url = telegramAdminUrl("/api/photos/view");
+  if (url) lines.push(url);
+  notifyTelegram(lines.join("\n"));
+}
+
+const PHOTO_REPORT_REASONS = {
+  inappropriate: "Nevhodný obsah",
+  other: "Jiné",
+  owner: "Moje fotka",
+  privacy: "Soukromí",
+};
+
+function notifyNewReport({ contact, message, photo, reason }) {
+  if (!telegramNotifier.enabled || !telegramNotifyReports || !photo) return;
+  const name = photoNodeNames().get(photo.nodeKey) || photo.nodeKey.slice(0, 8);
+  const lines = [
+    "🚩 Žádost o smazání fotky",
+    `Nod: ${name}`,
+    `Důvod: ${PHOTO_REPORT_REASONS[reason] || reason}`,
+  ];
+  if (message) lines.push(`Zpráva: ${message}`);
+  if (contact) lines.push(`Kontakt: ${contact}`);
+  lines.push(`Otevřené žádosti: ${photoStore.openReportCount()}`);
+  const url = telegramAdminUrl("/api/photos/view");
+  if (url) lines.push(url);
+  notifyTelegram(lines.join("\n"));
+}
+
+function notifyNewFeedback({ category, isPublic, message, name }) {
+  if (!telegramNotifier.enabled || !telegramNotifyFeedback) return;
+  const categoryLabel = { bug: "Chyba", idea: "Návrh", other: "Vzkaz" }[category] || category;
+  const lines = [
+    "💬 Nová zpráva v knize návštěv",
+    `Typ: ${categoryLabel}`,
+    `Zveřejněná: ${isPublic ? "ano" : "ne"}`,
+  ];
+  if (name) lines.push(`Jméno: ${name}`);
+  lines.push(`Zpráva: ${message}`);
+  const url = telegramAdminUrl("/api/feedback/view");
+  if (url) lines.push(url);
+  notifyTelegram(lines.join("\n"));
+}
+
 function clientIp(request) {
   const peer = request.socket?.remoteAddress || "";
   const trustedPeer = peer === "127.0.0.1"
@@ -892,6 +974,7 @@ function healthPayload() {
       stored: packetStore.count(),
     },
     photos: photoStore.stats(),
+    notifications: { telegram: telegramNotifier.enabled },
     databases: {
       feedback: { bytes: statBytes(feedbackDbPath) },
       packets: { bytes: statBytes(packetDbPath) },
@@ -1442,6 +1525,7 @@ async function handleRequest(request, response) {
         ipHash: createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16),
         nodeKey: key,
       });
+      notifyNewPhoto(photo);
       sendJson(response, 202, { id: photo.id, ok: true, status: photo.status });
     } catch (error) {
       if (error instanceof PhotoError) {
@@ -1491,13 +1575,16 @@ async function handleRequest(request, response) {
       return;
     }
     const contact = cleanPhotoText(payload?.contact, 200);
-    photoStore.createReport({
+    const reportId = photoStore.createReport({
       contact,
       ipHash: createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16),
       message,
       photoId,
       reason,
     });
+    if (reportId) {
+      notifyNewReport({ contact, message, photo: photoStore.get(photoId), reason });
+    }
     sendJson(response, 200, { ok: true });
     return;
   }
@@ -1651,6 +1738,7 @@ async function handleRequest(request, response) {
       const ipHash = createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16);
       const id = feedbackStore.record({ category, message, contact, name, isPublic, ipHash, userAgent }, now);
       feedbackStore.pruneTo(feedbackMaxRows);
+      notifyNewFeedback({ category, isPublic, message, name });
       response.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
       response.end(JSON.stringify({ ok: true, id }));
       return;

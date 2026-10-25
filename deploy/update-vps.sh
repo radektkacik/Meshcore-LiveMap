@@ -28,7 +28,7 @@ node --check server.mjs
 
 ssh -i "$SSH_KEY" -o BatchMode=yes "$DEPLOY_HOST" "mkdir -p '$REMOTE_STAGE'"
 rsync -az -e "ssh -i $SSH_KEY -o BatchMode=yes" \
-  server.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs visit-stats.mjs feedback.mjs photos.mjs package.json package-lock.json \
+  server.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs visit-stats.mjs feedback.mjs photos.mjs notify.mjs package.json package-lock.json \
   "$DEPLOY_HOST:$REMOTE_STAGE/"
 rsync -az -e "ssh -i $SSH_KEY -o BatchMode=yes" \
   "$BUILD_DIR/dist/" "$DEPLOY_HOST:$REMOTE_STAGE/dist/"

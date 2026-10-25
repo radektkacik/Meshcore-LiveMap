@@ -56,6 +56,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T191126Z`, beta `20261025T192132Z`)
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
 - Rychlé výhry (prod i beta): `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (nody, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export nodů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
 - Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP + automatický převod HEIC/HEIF z iPhonu přes `libheif-js` (WASM) v prohlížeči, s potvrzením práv; fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`. V lightboxu lze procházet fotky šipkami (i klávesnicí ←/→) a podat žádost o smazání/nahlášení. Přepínač „Jen nody s fotkami“ je skrytý na betě i v produkci, `/api/photos/nodes` zůstává.
+- Telegram notifikace pro správce (beta): nová fotka k schválení, žádost o smazání fotky, volitelně nová zpráva v knize návštěv; konfigurace `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `PUBLIC_BASE_URL`, `TELEGRAM_ADMIN_LINK`.
 
 ### Mapa a nody
 - Repeater vždy navrchu při překryvu nodů
@@ -137,7 +138,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T191126Z`, beta `20261025T192132Z`)
 
 ## 4. Testy a CI
 
-- `npm test`: 98 testů, 95 pass, 3 skip, 0 fail
+- `npm test`: 101 testů, 98 pass, 3 skip, 0 fail
 - `npm audit --omit=dev`: 0 zranitelností
 - GitHub Actions CI: Node 20 a 22, běží `npm ci`, syntax check, testy, build
 - CI nelze z tohoto prostředí číst bez GitHub přihlášení
