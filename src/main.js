@@ -1355,14 +1355,31 @@ function nodeNeighbors(node) {
   const items = [...neighbors.entries()]
     .sort((a, b) => b[1].count - a[1].count || (b[1].lastAt || 0) - (a[1].lastAt || 0))
     .slice(0, 10)
-    .map(([neighborKey, info]) => `
-      <li>
-        <button class="node-neighbor" type="button" data-neighbor-key="${escapeHtml(neighborKey)}">
-          <span>${escapeHtml(info.name || neighborKey.slice(0, 8))}</span>
-          <small>${info.count}×</small>
-        </button>
-      </li>
-    `)
+    .map(([neighborKey, info]) => {
+      const neighborNode = state.nodeByKey.get(neighborKey);
+      const role = neighborNode?.role || null;
+      const distanceKm = neighborNode
+        && validCoords(node.lat, node.lon)
+        && validCoords(neighborNode.lat, neighborNode.lon)
+        ? haversineKm(node.lat, node.lon, neighborNode.lat, neighborNode.lon)
+        : null;
+      const meta = [
+        role ? roleLabel(role) : "",
+        distanceKm == null ? "" : `${formatDecimal(distanceKm, 1)} km`,
+        info.lastAt ? t("node.neighborLastSeen", { time: formatNodeDate(info.lastAt) }) : "",
+      ].filter(Boolean).join(" · ");
+      return `
+        <li>
+          <button class="node-neighbor" type="button" data-neighbor-key="${escapeHtml(neighborKey)}">
+            <span class="node-neighbor-main">
+              <b>${escapeHtml(info.name || neighborKey.slice(0, 8))}</b>
+              ${meta ? `<em>${escapeHtml(meta)}</em>` : ""}
+            </span>
+            <small>${info.count}×</small>
+          </button>
+        </li>
+      `;
+    })
     .join("");
   const connections = [...neighbors.values()].reduce((sum, info) => sum + info.count, 0);
   return `
@@ -1388,13 +1405,28 @@ function nodePopupContent(node, active) {
   const prefix = hashSize && node.public_key
     ? node.public_key.slice(0, hashSize * 2).toUpperCase()
     : null;
+  const multiByteStatus = String(node.multi_byte_status || "");
+  const multiByteEvidence = String(node.multi_byte_evidence || "");
+  const multiByte = multiByteStatus
+    ? [
+      t(`node.multiByteStatus.${multiByteStatus}`),
+      multiByteEvidence ? t(`node.multiByteEvidence.${multiByteEvidence}`) : "",
+    ].filter(Boolean).join(" · ")
+    : null;
+  const region = node.region_placement || {};
+  const regionNames = Array.isArray(region.regions) ? region.regions.join(", ") : "";
+  const regionBasis = region.basis ? t(`node.regionBasis.${region.basis}`) : "";
+  const regionText = [regionNames, regionBasis].filter(Boolean).join(" · ") || null;
   const basicDetails = renderNodeDetails(t("node.basicDetails"), [
     [t("node.lastActivity"), formatNodeDate(lastActivity)],
     [t("node.lastAdvert"), formatNodeDate(node.last_seen || node.last_heard)],
     [t("node.lastRelay"), formatNodeDate(node.last_relayed)],
+    [t("node.firstSeen"), node.first_seen ? formatNodeDate(node.first_seen) : null, t("node.firstSeenHelp")],
     [t("node.coordinates"), `${Number(node.lat).toFixed(6)}, ${Number(node.lon).toFixed(6)}`],
+    [t("node.region"), regionText, t("node.regionHelp")],
     [t("node.prefix"), prefix, t("node.prefixHelp")],
     [t("node.hashMode"), hashSize ? (hashSize >= 2 ? "2B+" : "1B") : null, t("node.hashModeHelp")],
+    [t("node.multiByte"), multiByte, t("node.multiByteHelp")],
     [t("node.inconsistentHash"), node.hash_size_inconsistent ? t("common.yes") : null, t("node.inconsistentHashHelp")],
   ]);
   const trafficDetails = renderNodeDetails(t("node.trafficDetails"), [
@@ -1436,6 +1468,7 @@ function nodePopupContent(node, active) {
     [t("node.bridge7d"), scoredWithRank(nodeMetric(node, "bridge_score"), rankNodes, node, "bridge_score"), t("node.bridgeHelp")],
     [t("node.criticality7d"), scoredWithRank(nodeMetric(node, "redundancy_score"), rankNodes, node, "redundancy_score"), t("node.criticalityHelp")],
     [t("node.defaultScope"), node.default_scope, t("node.defaultScopeHelp")],
+    [t("node.configuredScope"), node.configured_scope, t("node.configuredScopeHelp")],
     [t("node.transportedScopes"), Array.isArray(node.transported_scopes) && node.transported_scopes.length
       ? node.transported_scopes.join(", ") : null, t("node.transportedScopesHelp")],
     [t("node.foreign"), node.foreign ? t("common.yes") : null, t("node.foreignHelp")],
@@ -1460,6 +1493,7 @@ function nodePopupContent(node, active) {
       <div class="node-popup-actions">
         <button class="node-link-copy" type="button">${t("node.copyLink")}</button>
         ${/^[0-9a-f]{64}$/i.test(node.public_key) ? `<button class="node-qr-toggle" type="button">${t("node.showQr")}</button>` : ""}
+        ${/^[0-9a-f]{64}$/i.test(node.public_key) ? `<a class="node-analyzer-link" href="https://analyzer.meshcore.cz/#/nodes/${encodeURIComponent(node.public_key.toLowerCase())}" target="_blank" rel="noreferrer">${t("node.openAnalyzer")}</a>` : ""}
       </div>
     ` : ""}
   `;
