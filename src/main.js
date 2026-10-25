@@ -236,7 +236,10 @@ const elements = {
   photoLightboxAuthor: document.querySelector("#photo-lightbox-author"),
   photoLightboxCaption: document.querySelector("#photo-lightbox-caption"),
   photoLightboxClose: document.querySelector("#photo-lightbox-close"),
+  photoLightboxCounter: document.querySelector("#photo-lightbox-counter"),
   photoLightboxImg: document.querySelector("#photo-lightbox-img"),
+  photoLightboxNext: document.querySelector("#photo-lightbox-next"),
+  photoLightboxPrev: document.querySelector("#photo-lightbox-prev"),
   photoNode: document.querySelector("#photo-node"),
   photoNote: document.querySelector("#photo-note"),
   photoPreview: document.querySelector("#photo-preview"),
@@ -391,6 +394,9 @@ const state = {
   photoTarget: null,
   photoUploading: false,
   lightboxPhoto: null,
+  lightboxPhotos: [],
+  lightboxIndex: 0,
+  lightboxNode: null,
   reportPhoto: null,
   showObservers: false,
   prefixCache: new Map(),
@@ -1724,7 +1730,7 @@ function renderNodePhotos(list, photos, node) {
     list.appendChild(empty);
     return;
   }
-  for (const photo of photos) {
+  photos.forEach((photo, index) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "node-photo";
@@ -1742,10 +1748,10 @@ function renderNodePhotos(list, photos, node) {
     button.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      openPhotoLightbox(photo, node);
+      openPhotoLightbox(photo, node, photos, index);
     });
     list.appendChild(button);
-  }
+  });
 }
 
 function setPhotoStatus(text, isError = false) {
@@ -1798,7 +1804,19 @@ function openPhotoDialog(node) {
   if (!elements.photoDialog.open) elements.photoDialog.showModal();
 }
 
-function openPhotoLightbox(photo, node) {
+function openPhotoLightbox(photo, node, photos = [photo], index = 0) {
+  state.lightboxPhotos = Array.isArray(photos) && photos.length ? photos : [photo];
+  state.lightboxIndex = Math.max(0, Math.min(state.lightboxPhotos.length - 1, Number(index) || 0));
+  state.lightboxNode = node;
+  showPhotoLightbox();
+  if (!elements.photoLightbox.open) elements.photoLightbox.showModal();
+}
+
+function showPhotoLightbox() {
+  const photos = state.lightboxPhotos;
+  const photo = photos[state.lightboxIndex];
+  const node = state.lightboxNode || {};
+  if (!photo) return;
   state.lightboxPhoto = { node, photo };
   elements.photoLightboxImg.src = appPath(`/api/photos/${encodeURIComponent(photo.id)}`);
   elements.photoLightboxImg.alt = t("photos.alt", { name: node.name || t("common.unknownNode") });
@@ -1808,7 +1826,20 @@ function openPhotoLightbox(photo, node) {
   elements.photoLightboxAuthor.hidden = !photo.author;
   elements.photoLightboxClose.setAttribute("aria-label", t("photos.close"));
   elements.photoReportOpen.textContent = t("photos.report");
-  if (!elements.photoLightbox.open) elements.photoLightbox.showModal();
+  elements.photoLightboxPrev.setAttribute("aria-label", t("photos.previous"));
+  elements.photoLightboxNext.setAttribute("aria-label", t("photos.next"));
+  elements.photoLightboxCounter.textContent = `${state.lightboxIndex + 1} / ${photos.length}`;
+  const multiple = photos.length > 1;
+  elements.photoLightboxPrev.hidden = !multiple;
+  elements.photoLightboxNext.hidden = !multiple;
+  elements.photoLightboxCounter.hidden = !multiple;
+}
+
+function stepPhotoLightbox(delta) {
+  const total = state.lightboxPhotos.length;
+  if (total < 2) return;
+  state.lightboxIndex = (state.lightboxIndex + delta + total) % total;
+  showPhotoLightbox();
 }
 
 function setPhotoReportStatus(text, isError = false) {
@@ -5699,6 +5730,17 @@ elements.photoDialog.addEventListener("click", (event) => {
 });
 elements.photoDialog.addEventListener("close", resetPhotoDialog);
 elements.photoLightboxClose.addEventListener("click", () => elements.photoLightbox.close());
+elements.photoLightboxPrev.addEventListener("click", () => stepPhotoLightbox(-1));
+elements.photoLightboxNext.addEventListener("click", () => stepPhotoLightbox(1));
+elements.photoLightbox.addEventListener("keydown", (event) => {
+  if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    stepPhotoLightbox(-1);
+  } else if (event.key === "ArrowRight") {
+    event.preventDefault();
+    stepPhotoLightbox(1);
+  }
+});
 elements.photoLightbox.addEventListener("click", (event) => {
   if (event.target === elements.photoLightbox) elements.photoLightbox.close();
 });
@@ -5707,6 +5749,9 @@ elements.photoLightbox.addEventListener("close", () => {
   elements.photoLightboxCaption.textContent = "";
   elements.photoLightboxAuthor.textContent = "";
   state.lightboxPhoto = null;
+  state.lightboxPhotos = [];
+  state.lightboxIndex = 0;
+  state.lightboxNode = null;
 });
 elements.photoReportOpen.addEventListener("click", openPhotoReport);
 elements.photoReportClose.addEventListener("click", () => elements.photoReportDialog.close());

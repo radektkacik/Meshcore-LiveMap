@@ -327,6 +327,8 @@ const cs = {
   "photos.reportFailed": "Žádost se nepodařilo odeslat.",
   "photos.reportTooShort": "Napište prosím důvod (alespoň 5 znaků).",
   "photos.reportClose": "Zavřít žádost",
+  "photos.previous": "Předchozí fotka",
+  "photos.next": "Další fotka",
 };
 
 const en = {
@@ -654,6 +656,8 @@ const en = {
   "photos.reportFailed": "The request could not be sent.",
   "photos.reportTooShort": "Please describe the reason (at least 5 characters).",
   "photos.reportClose": "Close request",
+  "photos.previous": "Previous photo",
+  "photos.next": "Next photo",
 };
 
 export const TRANSLATIONS = { cs, en };
