@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-25 (prod `20261025T190057Z`, beta `20261025T190035Z`)  
+Aktualizováno: 2026-10-25 (prod `20261025T191126Z`, beta `20261025T190035Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -17,12 +17,12 @@ Aktualizováno: 2026-10-25 (prod `20261025T190057Z`, beta `20261025T190035Z`)
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261025T190057Z`
-- Build: `20261025-1900-39dadf0`
-- Asset: `index-BUAMSlwg.js` + `wasm-bundle-BdpmnZYZ.js`
+- Release: `20261025T191126Z`
+- Build: `20261025-1911-fae5f7e`
+- Asset: `index-Dk_uacah.js` + `wasm-bundle-DCGj2wDK.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T190057Z.tar.gz`
-- Tag: `prod-20261025-1900`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T191126Z.tar.gz`
+- Tag: `prod-20261025-1911`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
@@ -156,10 +156,10 @@ Aktualizováno: 2026-10-25 (prod `20261025T190057Z`, beta `20261025T190035Z`)
 - Rollback při shodném lockfile ponechá `node_modules`, jinak spustí `npm ci --omit=dev`.
 - Na VPS `/root/rollback-meshcore.sh`, aktualizuje se při deployi.
 - Retence 20 záloh.
-- Rollback aktuální produkce `20261025T190057Z` na předchozí `20261025T185643Z`:
+- Rollback aktuální produkce `20261025T191126Z` na předchozí `20261025T190057Z`:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T190057Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T191126Z'
 ```
 
 ## 7. Deploy konvence
