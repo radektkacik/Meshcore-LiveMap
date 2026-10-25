@@ -1926,16 +1926,41 @@ async function loadNodes() {
 }
 
 let statsRefreshActive = false;
+let statsRetryTimer = null;
 async function loadStats() {
   if (statsRefreshActive) return;
   statsRefreshActive = true;
   try {
-    const data = await getJson("/api/stats");
+    const { data, response } = await getJsonWithResponse("/api/stats");
     elements.packetRate.textContent = formatNumber(Number(data.packetsLastHour || 0));
-    state.networkStats = data;
-    if (!elements.statsPanel.hidden) renderNetworkSummary();
+    const stale = response.headers.get("X-Data-Stale") === "1";
+    const partial = data.partial === true;
+    elements.packetRate.classList.toggle("metric-stale", stale || partial);
+    elements.packetRate.title = partial
+      ? t("stats.localValue")
+      : stale ? t("stats.staleValue") : "";
+    if (statsRetryTimer != null) {
+      clearTimeout(statsRetryTimer);
+      statsRetryTimer = null;
+    }
+    if ((partial || stale) && statsRetryTimer == null) {
+      statsRetryTimer = setTimeout(() => {
+        statsRetryTimer = null;
+        void loadStats();
+      }, 60_000);
+    }
+    if (!partial) {
+      state.networkStats = data;
+      if (!elements.statsPanel.hidden) renderNetworkSummary();
+    }
   } catch (error) {
     console.error("Statistiky se nepodařilo načíst", error);
+    if (statsRetryTimer == null) {
+      statsRetryTimer = setTimeout(() => {
+        statsRetryTimer = null;
+        void loadStats();
+      }, 60_000);
+    }
   } finally {
     statsRefreshActive = false;
   }

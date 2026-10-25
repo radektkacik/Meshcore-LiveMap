@@ -94,6 +94,10 @@ export function createPacketStore(dbPath, {
   `);
   const countRows = db.prepare("SELECT COUNT(*) AS total FROM packet_routes");
   const oldestRow = db.prepare("SELECT MIN(observed_at) AS oldest FROM packet_routes");
+  const newestRow = db.prepare("SELECT MAX(observed_at) AS newest FROM packet_routes");
+  const countDistinctSince = db.prepare(`
+    SELECT COUNT(DISTINCT hash) AS total FROM packet_routes WHERE observed_at >= ?
+  `);
 
   const record = db.transaction((rows) => {
     let stored = 0;
@@ -108,6 +112,8 @@ export function createPacketStore(dbPath, {
   return {
     close: () => db.close(),
     count: () => countRows.get().total,
+    countDistinctSince: (sinceMs) => countDistinctSince.get(Math.floor(sinceMs)).total,
+    newest: () => newestRow.get().newest,
     oldest: () => oldestRow.get().oldest,
     prune: (now = Date.now()) => {
       purgeOld.run(now - retentionMs);

@@ -104,6 +104,7 @@ Aktualizováno: 2026-10-25
 - `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/recent`, `/api/packets`, `/api/nodes`, `/api/stats`
 - Cache `/api/nodes` a `/api/resolve-hops` proti výpadkům CoreScope; uzly se vydávají z cache okamžitě (SWR, soft TTL 15 min)
 - Start stránky: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE běží s `?replay=0`
+- `/api/stats` cache (24 h) + lokální fallback z `packet_routes` při výpadku Analyzeru; klient zobrazí stale/partial hodnotu oranžově a zkusí obnovu za 60 s
 - MQTT reconnect/backoff, SSE feed, replay buffer
 - Ukládání TRACE i bez `resolved_path`; cesty se doresolvují na klientu
 - Security headers: CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP
@@ -111,7 +112,7 @@ Aktualizováno: 2026-10-25
 
 ## 4. Testy a CI
 
-- `npm test`: 75 testů, 72 pass, 3 skip, 0 fail
+- `npm test`: 76 testů, 73 pass, 3 skip, 0 fail
 - `npm audit --omit=dev`: 0 zranitelností
 - GitHub Actions CI: Node 20 a 22, běží `npm ci`, syntax check, testy, build
 - CI nelze z tohoto prostředí číst bez GitHub přihlášení

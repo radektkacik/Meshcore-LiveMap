@@ -43,6 +43,25 @@ test("packet store dedupes by hash and observer and returns resolved paths", () 
   }
 });
 
+test("packet store counts distinct packets since a time and exposes the newest row", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-packets-"));
+  const store = createPacketStore(join(directory, "packets.sqlite"), { retentionMs: 60_000 });
+  try {
+    store.record([
+      row({ hash: "a", observer_id: "o1", observed_at: 1_000 }),
+      row({ hash: "a", observer_id: "o2", observed_at: 1_000 }),
+      row({ hash: "b", observer_id: "o1", observed_at: 2_000 }),
+      row({ hash: "c", observer_id: "o1", observed_at: 500 }),
+    ]);
+    assert.equal(store.newest(), 2_000);
+    assert.equal(store.countDistinctSince(900), 2);
+    assert.equal(store.countDistinctSince(0), 3);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("packet store filters by time, orders newest first and honors the limit", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-packets-"));
   const store = createPacketStore(join(directory, "packets.sqlite"), { retentionMs: 60_000 });

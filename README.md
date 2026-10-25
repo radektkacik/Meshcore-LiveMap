@@ -72,6 +72,12 @@ přihlašovací údaje zůstávají pouze na serveru.
   kruhového bufferu (max. 120 s) jako jeden JSON. Klient ho načte paralelně
   s uzly, všechny prefixy vyřeší jedním dávkovým requestem a trasy vykreslí
   najednou, místo aby zpracovával stovky SSE událostí po jednom.
+- `/api/stats` se ukládá do `data/stats-cache.json` (24 h). Při výpadku
+  Analyzeru se vydá poslední známá odpověď s `X-Data-Stale: 1`; pokud cache
+  chybí, server dopočítá `packetsLastHour` z lokální DB (unikátní hashe za
+  poslední hodinu dostupných dat) a odpoví s `partial: true` a
+  `X-Data-Source: local`. Klient stale/partial hodnotu zobrazí oranžově a
+  zkusí obnovu za 60 s.
 - Backend odebírá MQTT topic `meshcore/+/+/packets`, dekóduje raw hlavičku a
   path a posílá pakety prohlížeči přes SSE endpoint `/events/packets`. Nový
   klient se připojuje s `?replay=0` a historii dostane přes `/api/recent`;

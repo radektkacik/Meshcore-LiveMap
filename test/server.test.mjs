@@ -76,6 +76,7 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       MAX_PACKET_STREAMS: "1",
       NODES_CACHE_PATH: join(directory, "nodes-cache.json"),
       PACKET_DB_PATH: join(directory, "packets.sqlite"),
+      STATS_CACHE_PATH: join(directory, "stats-cache.json"),
       FEEDBACK_DB_PATH: join(directory, "feedback.sqlite"),
       FEEDBACK_TOKEN: "test-token",
       PORT: String(appPort),
@@ -120,6 +121,9 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     nodesFail = false;
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/stats`)).status, 200);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/stats?slow=1`)).status, 504);
+    const statsCached = await fetch(`http://127.0.0.1:${appPort}/api/stats`);
+    assert.equal(statsCached.status, 200);
+    assert.equal((await statsCached.json()).packetsLastHour, 1);
     const historyResponse = await fetch(`http://127.0.0.1:${appPort}/api/history?since=0`);
     assert.equal(historyResponse.status, 200);
     const historyBody = await historyResponse.json();

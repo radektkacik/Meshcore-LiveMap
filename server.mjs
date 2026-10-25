@@ -16,6 +16,7 @@ const dist = join(process.cwd(), "dist");
 const upstream = process.env.CORESCOPE_URL || "https://analyzer.meshcore.cz";
 const requestBase = "http://localhost";
 const upstreamTimeoutMs = Math.max(1, Number(process.env.UPSTREAM_TIMEOUT_MS || 15_000));
+const statsTimeoutMs = Math.max(1_000, Number(process.env.STATS_TIMEOUT_MS || 5_000));
 const metricsCollectionMs = 15 * 60 * 1000;
 const metricsStore = createNodeMetricsStore(
   process.env.SCORE_DB_PATH || join(process.cwd(), "data", "node-metrics.sqlite"),
@@ -57,10 +58,17 @@ const nodesCachePath = process.env.NODES_CACHE_PATH || join(process.cwd(), "data
 const nodesCacheTtlMs = Math.max(60_000, Number(process.env.NODES_CACHE_TTL_MS || 7 * 24 * 60 * 60 * 1000));
 const nodesSoftTtlMs = Math.max(60_000, Number(process.env.NODES_SOFT_TTL_MS || 15 * 60 * 1000));
 const nodesCacheWriteMs = Math.max(0, Number(process.env.NODES_CACHE_WRITE_MS || 5 * 60 * 1000));
+const statsCachePath = process.env.STATS_CACHE_PATH || join(process.cwd(), "data", "stats-cache.json");
+const statsCacheTtlMs = Math.max(60_000, Number(process.env.STATS_CACHE_TTL_MS || 24 * 60 * 60 * 1000));
+const statsSoftTtlMs = Math.max(10_000, Number(process.env.STATS_SOFT_TTL_MS || 60_000));
+const statsCacheWriteMs = Math.max(0, Number(process.env.STATS_CACHE_WRITE_MS || 5 * 60 * 1000));
 const resolveCacheTtlMs = Math.max(60_000, Number(process.env.RESOLVE_CACHE_TTL_MS || 6 * 60 * 60 * 1000));
 const resolveCacheLimit = Math.max(1, Number(process.env.RESOLVE_CACHE_LIMIT || 500));
 let nodesCache = null;
 let nodesCacheWrittenAt = 0;
+let statsCache = null;
+let statsCacheWrittenAt = 0;
+let statsRefreshActive = false;
 const resolveCache = new Map();
 const allowedApiPaths = [
   "/api/nodes",
@@ -123,6 +131,13 @@ try {
   nodesCache = null;
 }
 
+try {
+  const cached = JSON.parse(readFileSync(statsCachePath, "utf8"));
+  if (cached && typeof cached.body === "string") statsCache = cached;
+} catch {
+  statsCache = null;
+}
+
 function nodesCacheFresh() {
   return Boolean(nodesCache) && Date.now() - Number(nodesCache.at || 0) <= nodesCacheTtlMs;
 }
@@ -145,6 +160,82 @@ function buildNodesPayload(data) {
   payload.nodes = metricsStore.decorateNodes(Array.isArray(payload.nodes) ? payload.nodes : []);
   payload.scoreHistory = { collectionMinutes: 15, historyDays: 30, windowDays: 7 };
   return payload;
+}
+
+function statsCacheFresh() {
+  return Boolean(statsCache) && Date.now() - Number(statsCache.at || 0) <= statsCacheTtlMs;
+}
+
+function storeStatsCache(body, contentType) {
+  const now = Date.now();
+  statsCache = {
+    at: now,
+    body: Buffer.isBuffer(body) ? body.toString("utf8") : String(body),
+    contentType: contentType || "application/json; charset=utf-8",
+  };
+  if (now - statsCacheWrittenAt < statsCacheWriteMs) return;
+  statsCacheWrittenAt = now;
+  try {
+    mkdirSync(dirname(statsCachePath), { recursive: true });
+    writeFileSync(statsCachePath, JSON.stringify(statsCache));
+  } catch (error) {
+    console.error(`Stats cache write failed: ${error.message}`);
+  }
+}
+
+function sendStatsCache(response, stale) {
+  response.writeHead(200, {
+    "Content-Type": statsCache.contentType || "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    ...(stale ? { "X-Data-Stale": "1" } : {}),
+  });
+  response.end(statsCache.body);
+}
+
+async function refreshStatsCache() {
+  if (statsRefreshActive) return;
+  statsRefreshActive = true;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), upstreamTimeoutMs);
+  timeout.unref();
+  try {
+    const response = await fetch(`${upstream}/api/stats`, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`CoreScope returned HTTP ${response.status}`);
+    const body = Buffer.from(await response.arrayBuffer());
+    storeStatsCache(body, response.headers.get("content-type"));
+  } catch (error) {
+    console.error(`Stats refresh failed: ${error.message}`);
+  } finally {
+    clearTimeout(timeout);
+    statsRefreshActive = false;
+  }
+}
+
+function localPacketsLastHour() {
+  const newest = Number(packetStore.newest()) || 0;
+  if (!newest) return null;
+  const anchor = Math.min(Date.now(), newest);
+  return packetStore.countDistinctSince(anchor - 60 * 60 * 1000);
+}
+
+function sendStatsFallback(response) {
+  const packetsLastHour = localPacketsLastHour();
+  if (packetsLastHour == null) return false;
+  response.writeHead(200, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+    "X-Data-Source": "local",
+    "X-Data-Stale": "1",
+  });
+  response.end(JSON.stringify({
+    generatedAt: new Date().toISOString(),
+    packetsLastHour,
+    partial: true,
+  }));
+  return true;
 }
 
 function sendJson(response, status, payload, headers = {}) {
@@ -1139,12 +1230,13 @@ async function handleRequest(request, response) {
     }
 
     const controller = new AbortController();
+    const isStatsPath = url.pathname === "/api/stats" && !url.search;
     let clientDisconnected = false;
     let timedOut = false;
     const timeout = setTimeout(() => {
       timedOut = true;
       controller.abort();
-    }, upstreamTimeoutMs);
+    }, isStatsPath ? statsTimeoutMs : upstreamTimeoutMs);
     timeout.unref();
     const disconnect = () => {
       if (!response.writableEnded) {
@@ -1156,6 +1248,7 @@ async function handleRequest(request, response) {
 
     const isNodes = url.pathname === "/api/nodes";
     const isResolve = url.pathname === "/api/resolve-hops";
+    const isStats = isStatsPath;
     const cacheKey = `${url.pathname}${url.search}`;
     if (isNodes && nodesCache && nodesCacheFresh()) {
       const stale = Date.now() - Number(nodesCache.at || 0) > nodesSoftTtlMs;
@@ -1167,6 +1260,13 @@ async function handleRequest(request, response) {
         stale ? { "X-Data-Stale": "1" } : {},
       );
       if (stale) void collectNodeMetrics();
+      return;
+    }
+    if (isStats && statsCache && statsCacheFresh()) {
+      const stale = Date.now() - Number(statsCache.at || 0) > statsSoftTtlMs;
+      clearTimeout(timeout);
+      sendStatsCache(response, stale);
+      if (stale) void refreshStatsCache();
       return;
     }
     try {
@@ -1181,11 +1281,21 @@ async function handleRequest(request, response) {
         return;
       }
       const body = Buffer.from(await upstreamResponse.arrayBuffer());
+      if (upstreamResponse.ok && isStats) {
+        storeStatsCache(body, upstreamResponse.headers.get("content-type"));
+      }
       if (upstreamResponse.ok && isResolve) {
         resolveCacheSet(cacheKey, body, upstreamResponse.headers.get("content-type"));
       }
       if (!upstreamResponse.ok && isNodes && nodesCacheFresh()) {
         sendJson(response, 200, buildNodesPayload(JSON.parse(nodesCache.body)), { "X-Data-Stale": "1" });
+        return;
+      }
+      if (!upstreamResponse.ok && isStats && statsCacheFresh()) {
+        sendStatsCache(response, true);
+        return;
+      }
+      if (!upstreamResponse.ok && isStats && sendStatsFallback(response)) {
         return;
       }
       if (!upstreamResponse.ok && isResolve) {
@@ -1209,6 +1319,13 @@ async function handleRequest(request, response) {
       if (clientDisconnected || response.destroyed) return;
       if (isNodes && nodesCacheFresh()) {
         sendJson(response, 200, buildNodesPayload(JSON.parse(nodesCache.body)), { "X-Data-Stale": "1" });
+        return;
+      }
+      if (isStats && statsCacheFresh()) {
+        sendStatsCache(response, true);
+        return;
+      }
+      if (isStats && sendStatsFallback(response)) {
         return;
       }
       if (isResolve) {
