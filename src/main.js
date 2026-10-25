@@ -73,6 +73,11 @@ const PREFIX_CACHE_LIMIT = 5_000;
 const PREFIX_NULL_TTL_MS = 120_000;
 const ARCHIVE_REFRESH_MS = 60_000;
 const ARCHIVE_MAX_ROUTES = 1500;
+const ROUTE_CACHE_KEY = "meshcoreLiveRouteCache";
+const ROUTE_CACHE_VERSION = 1;
+const ROUTE_CACHE_MAX = 200;
+const ROUTE_CACHE_TTL_MS = 15 * 60 * 1000;
+const ROUTE_CACHE_SAVE_MS = 5_000;
 const NODE_CULL_PAD = 0.25;
 const NODE_REFRESH_DEBOUNCE_MS = 300;
 const SNR_GOOD_DB = 5;
@@ -212,6 +217,7 @@ const elements = {
   roleToggles: ["repeater", "companion", "room", "sensor", "unknown"]
     .map((role) => document.querySelector(`#role-toggle-${role}`)),
   routeCount: document.querySelector("#route-count"),
+  routeCacheBadge: document.querySelector("#route-cache-badge"),
   sizeToggles: [1, 2, 3].map((size) => document.querySelector(`#size-toggle-${size}`)),
   statsClose: document.querySelector("#stats-close"),
   networkSummary: document.querySelector("#network-summary"),
@@ -267,6 +273,8 @@ const state = {
   allowedRoles: new Set(ALL_NODE_ROLES),
   archiveRendered: new Map(),
   archiveRoutes: new Map(),
+  cachedRendered: [],
+  cachedRoutes: [],
   lastPacketAt: 0,
   lastRouteByNodeKey: new Map(),
   liveRouteCount: 0,
@@ -2375,6 +2383,98 @@ function renderRoute(route, { archive = false } = {}) {
   return { endpoint, group, line: lines[0], lines, versionId: route.versionId };
 }
 
+let routeCacheSavedAt = 0;
+
+function saveRouteCache(routes) {
+  if (state.routeWindowMs !== 0 || !routes?.length) return;
+  const now = Date.now();
+  if (now - routeCacheSavedAt < ROUTE_CACHE_SAVE_MS) return;
+  routeCacheSavedAt = now;
+  const payload = {
+    savedAt: now,
+    v: ROUTE_CACHE_VERSION,
+    routes: routes.slice(0, ROUTE_CACHE_MAX).map((route) => ({
+      color: route.color,
+      createdAt: route.createdAt,
+      from: route.from,
+      hashBytes: route.hashBytes,
+      id: route.id,
+      nodeCount: route.nodeCount,
+      observerCount: route.observerCount,
+      observerId: route.observerId,
+      observerName: route.observerName,
+      packetHash: route.packetHash,
+      packetType: route.packetType,
+      points: route.points,
+      rssi: route.rssi,
+      scope: route.scope,
+      snr: route.snr,
+      snrValues: route.snrValues,
+      timestamp: route.timestamp,
+      to: route.to,
+      typeLabel: route.typeLabel,
+      versionId: route.versionId,
+    })),
+  };
+  try {
+    localStorage.setItem(ROUTE_CACHE_KEY, JSON.stringify(payload));
+  } catch {
+    try {
+      localStorage.removeItem(ROUTE_CACHE_KEY);
+    } catch {}
+  }
+}
+
+function clearCachedRoutes() {
+  if (!state.cachedRendered.length && !state.cachedRoutes.length) return;
+  for (const rendered of state.cachedRendered) routeLayer.removeLayer(rendered.group);
+  state.cachedRendered = [];
+  state.cachedRoutes = [];
+  elements.routeCacheBadge.hidden = true;
+  updateRouteCount();
+  updateMapStatus();
+}
+
+function restoreRouteCache() {
+  if (state.routeWindowMs !== 0) return;
+  let cache;
+  try {
+    cache = JSON.parse(localStorage.getItem(ROUTE_CACHE_KEY) || "null");
+  } catch {
+    return;
+  }
+  if (!cache || cache.v !== ROUTE_CACHE_VERSION || !Array.isArray(cache.routes) || !cache.routes.length) return;
+  const savedAt = Number(cache.savedAt) || 0;
+  const age = Date.now() - savedAt;
+  if (!(age >= 0 && age <= ROUTE_CACHE_TTL_MS)) {
+    try {
+      localStorage.removeItem(ROUTE_CACHE_KEY);
+    } catch {}
+    return;
+  }
+  const routes = [];
+  const rendered = [];
+  for (const stored of cache.routes.slice(0, ROUTE_CACHE_MAX)) {
+    if (!stored || !Array.isArray(stored.points) || stored.points.length < 2) continue;
+    if (stored.points.some((point) => !validCoords(point.lat, point.lon))) continue;
+    const route = {
+      ...stored,
+      bounds: L.latLngBounds(stored.points.map((point) => [point.lat, point.lon])),
+    };
+    const view = renderRoute(route, { archive: true });
+    if (!view) continue;
+    routes.push(route);
+    rendered.push(view);
+  }
+  if (!routes.length) return;
+  state.cachedRoutes = routes;
+  state.cachedRendered = rendered;
+  elements.routeCacheBadge.textContent = t("cache.routes", { age: formatNodeDate(savedAt) });
+  elements.routeCacheBadge.hidden = false;
+  updateRouteCount();
+  updateMapStatus();
+}
+
 const feedState = {
   autoPaused: false,
   focused: false,
@@ -2800,9 +2900,11 @@ function updateMapStatus() {
     elements.mapStatus.hidden = true;
     return;
   }
-  elements.mapStatus.textContent = state.mqttConnected
-    ? t("map.waiting")
-    : t("map.waitingMqtt");
+  elements.mapStatus.textContent = state.cachedRoutes.length
+    ? t("map.waitingCache")
+    : state.mqttConnected
+      ? t("map.waiting")
+      : t("map.waitingMqtt");
   elements.mapStatus.hidden = false;
 }
 
@@ -2823,7 +2925,9 @@ function scheduleViewportRender() {
 }
 
 function updateRouteCount() {
-  const count = state.routeWindowMs !== 0 ? state.archiveRoutes.size : state.liveRouteCount;
+  const count = state.routeWindowMs !== 0
+    ? state.archiveRoutes.size
+    : (state.liveRouteCount || state.cachedRoutes.length);
   elements.routeCount.textContent = formatNumber(count);
   updateMapStatus();
 }
@@ -2913,6 +3017,7 @@ function renderArchiveViewport() {
 }
 
 async function setRouteWindow(windowMs) {
+  clearCachedRoutes();
   state.routeWindowMs = Number(windowMs);
   for (const button of elements.windowButtons) {
     button.classList.toggle("active", Number(button.dataset.windowMs) === state.routeWindowMs);
@@ -2959,6 +3064,8 @@ function syncRoutePresentationCore(now = nowMs()) {
   if (state.routeWindowMs !== 0) return;
   const visibleRoutes = routeStore.visibleLive(state, now);
   state.liveRouteCount = visibleRoutes.length;
+  if (state.cachedRoutes.length && visibleRoutes.length) clearCachedRoutes();
+  saveRouteCache(visibleRoutes);
   const viewport = map.getBounds().pad(0.25);
   const renderedRoutes = visibleRoutes
     .filter((route) => routeVisibleIn(viewport, route))
@@ -3145,6 +3252,7 @@ async function releasePendingPackets(snapshotPackets = []) {
 }
 
 function refreshAfterFilterChange() {
+  clearCachedRoutes();
   if (state.selectedRouteId
     && !isRouteVisible(state.selectedRoutePacketType, state.selectedRouteHashBytes, state)) clearSelectedRoute();
   if (state.routeWindowMs !== 0) void setRouteWindow(state.routeWindowMs);
@@ -4517,6 +4625,7 @@ const initialLosLink = parseLosLink();
 
 async function start() {
   console.info(`Route animation mode: ${state.animationMode}`);
+  restoreRouteCache();
   connectPacketStream();
   const snapshotPromise = getJson("/api/recent?seconds=30").catch((error) => {
     console.error("Snapshot posledních paketů se nepodařilo načíst", error);
