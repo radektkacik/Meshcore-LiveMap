@@ -55,7 +55,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T191126Z`, beta `20261025T191713Z`)
 - Z detailu nodu odstraněn řádek „Stav hashe“
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
 - Rychlé výhry (prod i beta): `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (nody, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export nodů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
-- Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP + automatický převod HEIC/HEIF z iPhonu přes `libheif-js` (WASM) v prohlížeči, s potvrzením práv; fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`. V lightboxu lze procházet fotky šipkami (i klávesnicí ←/→) a podat žádost o smazání/nahlášení. Přepínač „Jen nody s fotkami“ je zatím jen na betě, v produkci je skrytý.
+- Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP + automatický převod HEIC/HEIF z iPhonu přes `libheif-js` (WASM) v prohlížeči, s potvrzením práv; fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`. V lightboxu lze procházet fotky šipkami (i klávesnicí ←/→) a podat žádost o smazání/nahlášení. Přepínač „Jen nody s fotkami“ je skrytý na betě i v produkci, `/api/photos/nodes` zůstává.
 
 ### Mapa a nody
 - Repeater vždy navrchu při překryvu nodů
