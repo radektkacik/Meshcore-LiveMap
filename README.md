@@ -180,6 +180,11 @@ aktivní během posledních 24 hodin. Server načítá metriky každých 15 minu
 ukládá nejvýše jeden aktualizovaný vzorek za hodinu a historii drží 30 dní v
 `data/node-metrics.sqlite`.
 
+Posledních až 200 zobrazených živých tras se ukládá do `localStorage` (max. 15
+minut). Po refreshi stránky se okamžitě vykreslí přerušovaně s odznakem
+„z cache“ a po příchodu živých tras se nahradí; tím se nečeká na první paket
+s trasou, pokud je feed zrovna tichý nebo je nedostupný Analyzer.
+
 ## Pokrytí terénu
 
 Tlačítko **Pokrytí** zapne režim, ve kterém kliknutí do mapy nebo na uzel spočítá

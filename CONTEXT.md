@@ -53,6 +53,7 @@ Aktualizováno: 2026-10-25
 - Tmavá mapa: OSM dlaždice + CSS filtr
 - Sdílené odkazy: uzel, pozice, filtry, časové okno, jazyk
 - Rychlý start: 30s snapshot živých paketů + uzly z cache (SWR), první trasy ~1 s
+- Cache posledních zobrazených live tras: localStorage, max. 200 tras / 15 min; po refreshi okamžitě jako „z cache“ do příchodu živých dat
 - Detail trasy z feedu i kliknutím na trasu, seznam hopů, vzdálenosti, SNR
 - Mobilní bottom sheet pro detail uzlu/trasy, `?sheet=1`
 - Panel Aktivity: uživatelsky měnitelná velikost tažením za levý horní roh, persistováno; dvojklik/Home reset
