@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-25 (prod `20261025T092014Z`)  
+Aktualizováno: 2026-10-25 (prod `20261025T092014Z`, beta `20261025T131444Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -26,11 +26,11 @@ Aktualizováno: 2026-10-25 (prod `20261025T092014Z`)
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261025T091954Z`
-- Build: `20261025-0919-af3b587`
-- Asset: `index-ChsrRfSk.js`
+- Release: `20261025T131444Z`
+- Build: `20261025-1314-7ec9f13`
+- Asset: `index-C2dO8EmK.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T091954Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T131444Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka
@@ -54,6 +54,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T092014Z`)
 - Zvýraznění uzlů: relativní Top 5 % (červená) a 5–15 % (žlutá) místo pevných Top 25/100; počty v legendě
 - Z detailu uzlu odstraněn řádek „Stav hashe“
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
+- Rychlé výhry na betě: `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (uzly, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export uzlů, observerů a tras do CSV/GeoJSON
 
 ### Mapa a uzly
 - Repeater vždy navrchu při překryvu uzlů
@@ -113,7 +114,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T092014Z`)
 - Původní žebříčky uzlů podle metrik zůstávají
 
 ### Backend
-- `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/recent`, `/api/packet-history`, `/api/packets`, `/api/nodes`, `/api/stats`
+- `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/recent`, `/api/packet-history`, `/api/packets`, `/api/nodes`, `/api/stats`, `/api/search`, `/api/health`
 - Cache `/api/nodes` a `/api/resolve-hops` proti výpadkům CoreScope; uzly se vydávají z cache okamžitě (SWR, soft TTL 15 min)
 - Start stránky: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE běží s `?replay=0`
 - `/api/stats` cache (24 h) + lokální fallback z `packet_routes` při výpadku Analyzeru; klient zobrazí stale/partial hodnotu oranžově a zkusí obnovu za 60 s
@@ -133,7 +134,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T092014Z`)
 
 ## 4. Testy a CI
 
-- `npm test`: 77 testů, 74 pass, 3 skip, 0 fail
+- `npm test`: 91 testů, 88 pass, 3 skip, 0 fail
 - `npm audit --omit=dev`: 0 zranitelností
 - GitHub Actions CI: Node 20 a 22, běží `npm ci`, syntax check, testy, build
 - CI nelze z tohoto prostředí číst bez GitHub přihlášení
@@ -174,7 +175,6 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T090209Z'
 
 ## 8. Známe problémy a rizika
 
-- `/api/health` stále chybí; health check je HTTP 200.
 - MQTT reconnecty přicházejí zhruba 1–2× za hodinu, většinou tiše (Cloudflare/broker zavře WSS); keepalive je 30 s, backoff 3–60 s s jitterem, výpadek obvykle 5–10 s. Feed zůstává online.
 - CoreScope občas selže při sběru tras (`Packet route update failed: fetch failed`); aplikace jede z cache.
 - CoreScope občas odpovídá pomalu (sekundy až desítky sekund); `/api/nodes` se proto vydává z cache okamžitě a obnovuje na pozadí.
@@ -192,11 +192,6 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T090209Z'
 - Chybí obecné rate limity API a E2E testy.
 
 ## 9. Backlog a návrhy do budoucna
-
-### Rychlé výhry
-- `/api/health` + diagnostika: uptime, počet MQTT reconnectů, stáří posledního paketu, stáří cache, velikost DB
-- Globální hledání: uzel, observer, hash paketu, kanál
-- Export CSV/GeoJSON uzlů, observerů a tras
 
 ### Střední
 - Clustering uzlů při oddálení

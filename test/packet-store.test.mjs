@@ -99,6 +99,31 @@ test("packet store returns every observer for a packet hash", () => {
   }
 });
 
+test("packet store searches hash prefixes and groups observers", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-packets-"));
+  const store = createPacketStore(join(directory, "packets.sqlite"), { retentionMs: 60_000 });
+  try {
+    store.record([
+      row({ hash: "ab12cd", observer_id: "o1", observed_at: 1_000 }),
+      row({ hash: "ab12cd", observer_id: "o2", observed_at: 2_000 }),
+      row({ hash: "ab34ef", observer_id: "o1", observed_at: 3_000 }),
+      row({ hash: "cd56aa", observer_id: "o1", observed_at: 4_000 }),
+    ]);
+    const rows = store.searchHashPrefix("AB12");
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].hash, "ab12cd");
+    assert.equal(rows[0].observed_at, 2_000);
+    assert.equal(rows[0].observer_name, "obs");
+    assert.deepEqual(store.searchHashPrefix("ab").map((entry) => entry.hash), ["ab34ef", "ab12cd"]);
+    assert.equal(store.searchHashPrefix("cd56aa").length, 1);
+    assert.deepEqual(store.searchHashPrefix("zz"), []);
+    assert.deepEqual(store.searchHashPrefix("a"), []);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("packet store prunes expired rows and overflow beyond the cap", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-packets-"));
   const store = createPacketStore(join(directory, "packets.sqlite"), { retentionMs: 5_000, maxRows: 2 });

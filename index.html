@@ -59,7 +59,7 @@
             </div>
 
             <div class="node-search">
-              <input id="node-search" type="search" autocomplete="off" placeholder="Hledat uzel podle názvu nebo prefixu…" />
+              <input id="node-search" type="search" autocomplete="off" placeholder="Hledat uzel, observer, paket nebo kanál…" aria-controls="search-results" aria-expanded="false" />
               <ol id="search-results" class="search-results" hidden></ol>
             </div>
 
@@ -68,6 +68,7 @@
               <button id="stats-toggle" type="button" aria-pressed="false">Statistiky</button>
               <button id="los-toggle" type="button" aria-pressed="false" title="Změřit přímou viditelnost mezi dvěma body">LOS</button>
               <button id="coverage-toggle" type="button" aria-pressed="false" title="Simulovat pokrytí terénu z jednoho bodu">Pokrytí</button>
+              <button id="export-toggle" type="button" class="wide" title="Stáhnout uzly, observery nebo trasy jako CSV či GeoJSON">Export</button>
               <button id="feedback-toggle" type="button" class="wide">Kniha návštěv</button>
             </div>
 
@@ -407,6 +408,31 @@
           <h3>Veřejné vzkazy</h3>
           <ul id="feedback-list" class="feedback-list"></ul>
         </section>
+      </dialog>
+
+      <dialog id="export-dialog" class="export-dialog" aria-labelledby="export-title">
+        <button id="export-close" class="qr-dialog-close" type="button">×</button>
+        <header>
+          <h2 id="export-title"></h2>
+          <p id="export-note"></p>
+        </header>
+        <div class="export-controls">
+          <label>
+            <span id="export-dataset-label"></span>
+            <select id="export-dataset"></select>
+          </label>
+          <label>
+            <span id="export-format-label"></span>
+            <select id="export-format">
+              <option value="geojson">GeoJSON</option>
+              <option value="csv">CSV</option>
+            </select>
+          </label>
+        </div>
+        <p id="export-summary" class="export-summary" role="status"></p>
+        <div class="export-actions">
+          <button id="export-download" type="button"></button>
+        </div>
       </dialog>
     </div>
     <script type="module" src="/src/main.js"></script>

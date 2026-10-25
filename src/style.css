@@ -99,10 +99,13 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .node-search input:focus { border-color: rgba(7, 142, 98, 0.55); box-shadow: 0 0 0 3px rgba(7, 142, 98, 0.09); }
 .node-search input::placeholder { color: #899990; }
 .search-results { position: absolute; z-index: 5; top: 37px; right: 0; left: 0; overflow: hidden; margin: 0; padding: 4px; list-style: none; border: 1px solid var(--line); border-radius: 9px; background: #fff; box-shadow: 0 12px 30px rgba(32, 54, 44, 0.16); }
+.search-results:not([hidden]) { max-height: min(60vh, 420px); overflow-y: auto; overscroll-behavior: contain; }
+.search-results .search-group-title { padding: 6px 8px 2px; color: var(--muted); font: 9px "DM Mono", monospace; letter-spacing: 0.09em; text-transform: uppercase; }
+.search-results .search-group-title:first-child { padding-top: 2px; }
 .search-results button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; text-align: left; }
-.search-results button:hover { background: #edf5f0; }
+.search-results button:hover, .search-results button.active { background: #edf5f0; }
 .search-results strong { overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.search-results small { color: var(--muted); font: 10px "DM Mono", monospace; text-transform: uppercase; }
+.search-results small { max-width: 48%; overflow: hidden; color: var(--muted); font: 10px "DM Mono", monospace; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
 
 .map-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 9px; }
 .map-actions > button { height: 36px; border: 1px solid var(--line); border-radius: 7px; background: #fff; font-size: 11px; cursor: pointer; }
@@ -575,6 +578,18 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 .feedback-list .fb-name { color: #263b33; font-weight: 700; }
 .feedback-list p { margin: 4px 0 0; font-size: 12px; white-space: pre-wrap; }
 .feedback-list .fb-empty { padding: 8px 0; color: var(--muted); font-size: 11px; }
+.export-dialog { width: min(430px, calc(100vw - 28px)); padding: 20px; border: 1px solid rgba(30, 65, 49, 0.2); border-radius: 15px; color: #263b33; background: #fffef9; box-shadow: 0 24px 70px rgba(20, 42, 32, 0.3); }
+.export-dialog::backdrop { background: rgba(24, 40, 32, 0.55); backdrop-filter: blur(3px); }
+.export-dialog header { padding: 0 30px 12px 0; }
+.export-dialog h2 { margin: 0 0 4px; font-size: 16px; }
+.export-dialog header p { margin: 0; color: var(--muted); font-size: 11px; }
+.export-controls { display: flex; gap: 10px; }
+.export-controls label { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 4px; color: var(--muted); font: 10px "DM Mono", monospace; }
+.export-controls select { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; color: #263b31; background: #fff; font: 12px Manrope, sans-serif; }
+.export-summary { min-height: 16px; margin: 12px 0; color: #40574c; font: 11px "DM Mono", monospace; }
+.export-actions { display: flex; justify-content: flex-end; }
+.export-actions button { padding: 8px 16px; border: 1px solid var(--green); border-radius: 7px; color: #fff; background: var(--green); font-size: 12px; cursor: pointer; }
+.export-actions button:disabled { opacity: 0.55; cursor: default; }
 .qr-dialog { width: min(420px, calc(100vw - 28px)); padding: 20px; border: 1px solid rgba(30, 65, 49, 0.2); border-radius: 15px; color: #263b33; background: #fffef9; box-shadow: 0 24px 70px rgba(20, 42, 32, 0.3); text-align: center; }
 .qr-dialog::backdrop { background: rgba(24, 40, 32, 0.55); backdrop-filter: blur(3px); }
 .qr-dialog-close { position: absolute; top: 9px; right: 9px; width: 29px; height: 29px; padding: 0; border: 0; border-radius: 8px; color: #fff; background: #899990; font-size: 20px; line-height: 29px; cursor: pointer; }
@@ -650,7 +665,11 @@ html[data-theme="dark"] .metrics strong.metric-stale { color: #ffc46b; }
 html[data-theme="dark"] .node-search input { color: #e6ecef; background: #1b232b; border-color: var(--line); }
 html[data-theme="dark"] .node-search input::placeholder { color: #7f9098; }
 html[data-theme="dark"] .search-results { background: #161d24; }
-html[data-theme="dark"] .search-results button:hover { background: rgba(255, 255, 255, 0.08); }
+html[data-theme="dark"] .search-results button:hover,
+html[data-theme="dark"] .search-results button.active { background: rgba(255, 255, 255, 0.08); }
+html[data-theme="dark"] .export-dialog { color: #e6ecef; background: #161d24; border-color: var(--line); }
+html[data-theme="dark"] .export-controls select { color: #e6ecef; background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .export-summary { color: #b9c7cd; }
 html[data-theme="dark"] .map-actions > button { color: #cdd9de; background: #1b232b; border-color: var(--line); }
 html[data-theme="dark"] .filter-block,
 html[data-theme="dark"] .packet-filter,

@@ -14,6 +14,13 @@ import { analyzePath, interpolatePath, nearestOnPath, profilePointAt } from "./l
 import { clampActivitySize } from "./activity-size.js";
 import { CLEAR, PARTIAL } from "./coverage.js";
 import { createElevationService, ElevationError } from "./elevation.js";
+import {
+  buildCsv,
+  exportFileName,
+  featureCollection,
+  multiLineFeature,
+  pointFeature,
+} from "./export-model.js";
 import { createPerfMonitor } from "./perf.js";
 import { observerAnchor } from "./observer-locations.js";
 import {
@@ -30,6 +37,10 @@ import {
   validCoords,
 } from "./node-model.js";
 import { buildNeighborIndex, RouteStore, RouteVersionState, routeTimestamp } from "./route-model.js";
+import {
+  countSearchResults,
+  searchEntities,
+} from "./search-model.js";
 import {
   applyStaticTranslations,
   formatDate,
@@ -198,6 +209,17 @@ const elements = {
   coverageStatus: document.querySelector("#coverage-status"),
   coverageSummary: document.querySelector("#coverage-summary"),
   coverageToggle: document.querySelector("#coverage-toggle"),
+  exportClose: document.querySelector("#export-close"),
+  exportDataset: document.querySelector("#export-dataset"),
+  exportDatasetLabel: document.querySelector("#export-dataset-label"),
+  exportDialog: document.querySelector("#export-dialog"),
+  exportDownload: document.querySelector("#export-download"),
+  exportFormat: document.querySelector("#export-format"),
+  exportFormatLabel: document.querySelector("#export-format-label"),
+  exportNote: document.querySelector("#export-note"),
+  exportSummary: document.querySelector("#export-summary"),
+  exportTitle: document.querySelector("#export-title"),
+  exportToggle: document.querySelector("#export-toggle"),
   mobileSheet: document.querySelector("#mobile-sheet"),
   mobileSheetClose: document.querySelector("#mobile-sheet-close"),
   mobileSheetContent: document.querySelector("#mobile-sheet-content"),
@@ -1073,11 +1095,14 @@ function mergePacketOccurrences(primary, extra) {
   return [...byRouteId.values()].sort((a, b) => b.timestamp - a.timestamp);
 }
 
-async function openPacketByHash(hash) {
+async function openPacketByHash(hash, { showOnMap = false } = {}) {
   try {
     const data = await getJson(`/api/packet-routes?hash=${encodeURIComponent(hash)}`);
     const routes = await historyRoutesFromPackets(data.packets || []);
-    if (routes.length) await openPacketDetail(routes[0]);
+    if (routes.length) {
+      if (showOnMap) showPacketOnMap(routes);
+      await openPacketDetail(routes[0]);
+    }
   } catch (error) {
     console.error("Paket se nepodařilo otevřít", error);
   }
@@ -2688,6 +2713,7 @@ const feedState = {
   historyRoutes: [],
   channelMessages: [],
   channelFilter: "",
+  channelsFailedAt: 0,
   channelsLoadedAt: 0,
   channelsLoading: false,
   pendingVersions: new Set(),
@@ -2939,14 +2965,12 @@ function renderChannelFeed() {
   }));
 }
 
-async function loadChannels(force = false) {
-  if (feedState.channelsLoading) return;
+async function fetchChannelMessages(force = false) {
   if (!force && feedState.channelsLoadedAt && Date.now() - feedState.channelsLoadedAt < 60_000) {
-    renderChannelFeed();
-    return;
+    return feedState.channelMessages;
   }
+  if (feedState.channelsLoading) return null;
   feedState.channelsLoading = true;
-  renderFeedNow([], t("activity.channelsLoading"), { history: true });
   try {
     const since = Date.now() - 24 * 60 * 60 * 1000;
     const data = await getJson(`/api/history?since=${since}&limit=4000`);
@@ -2978,13 +3002,22 @@ async function loadChannels(force = false) {
     }
     feedState.channelMessages = [...byHash.values()].sort((a, b) => b.timestamp - a.timestamp);
     feedState.channelsLoadedAt = Date.now();
-    renderChannelFeed();
+    return feedState.channelMessages;
   } catch (error) {
     console.error("Kanály se nepodařilo načíst", error);
-    renderFeedNow([], t("activity.channelsFailed"), { history: true });
+    feedState.channelsFailedAt = Date.now();
+    return null;
   } finally {
     feedState.channelsLoading = false;
   }
+}
+
+async function loadChannels(force = false) {
+  if (feedState.channelsLoading) return;
+  renderFeedNow([], t("activity.channelsLoading"), { history: true });
+  const messages = await fetchChannelMessages(force);
+  if (messages) renderChannelFeed();
+  else renderFeedNow([], t("activity.channelsFailed"), { history: true });
 }
 
 function setFeedMode(mode) {
@@ -4703,42 +4736,494 @@ for (const button of elements.statsCounts.querySelectorAll("button")) {
   });
 }
 
-nodeSearch.addEventListener("input", () => {
-  const { query, hexQuery } = parseNodeQuery(nodeSearch.value);
+const SEARCH_LIMIT_PER_TYPE = 4;
+let searchActiveIndex = -1;
+let searchRemotePrefix = "";
+let searchRemoteResults = [];
+let searchRemoteRequestId = 0;
+let searchRemoteTimer = null;
+
+function shortNodePrefix(node) {
+  const size = Math.max(Number(node.multi_byte_max_hash_size) || 0, Number(node.hash_size) || 0) || 2;
+  return String(node.public_key || "").slice(0, size * 2).toUpperCase();
+}
+
+function searchPacketCandidates() {
+  const byHash = new Map();
+  const add = (route) => {
+    const hash = String(route.packetHash || "").toUpperCase();
+    if (!hash) return;
+    const previous = byHash.get(hash);
+    if (!previous || (route.timestamp || 0) > (previous.timestamp || 0)) byHash.set(hash, route);
+  };
+  for (const route of routeStore.history) add(route);
+  for (const route of routeStore.liveByVersion.values()) add(route);
+  return [...byHash.values()];
+}
+
+function searchResultTitle(kind, item) {
+  if (kind === "node") return item.name || t("common.unknownNode");
+  if (kind === "observer") return item.name || t("packet.unknownObserver");
+  if (kind === "packet") return `#${String(item.hash || "").toUpperCase()}`;
+  const text = String(item.text || "");
+  return `${item.channel} · ${text.length > 54 ? `${text.slice(0, 54)}…` : text}`;
+}
+
+function searchResultMeta(kind, item) {
+  if (kind === "node") return [roleLabel(item.role), shortNodePrefix(item)].filter(Boolean).join(" · ");
+  if (kind === "observer") return [item.iata, t(`network.${observerHealth(item)}`)].filter(Boolean).join(" · ");
+  if (kind === "packet") return [item.typeLabel, searchFormatTime(item.timestamp)].filter(Boolean).join(" · ");
+  return [item.sender, searchFormatTime(item.timestamp)].filter(Boolean).join(" · ");
+}
+
+function searchFormatTime(value) {
+  const timestamp = Number(value);
+  return Number.isFinite(timestamp) && timestamp > 0 ? formatDateTimeShort(timestamp) : "";
+}
+
+function searchResultButtons() {
+  return [...searchResults.querySelectorAll("button")];
+}
+
+function highlightSearchResult(index) {
+  const buttons = searchResultButtons();
+  if (!buttons.length) return;
+  searchActiveIndex = (index + buttons.length) % buttons.length;
+  buttons.forEach((button, position) => button.classList.toggle("active", position === searchActiveIndex));
+  buttons[searchActiveIndex].scrollIntoView({ block: "nearest" });
+}
+
+function revealSearchNode(node) {
+  if (!validCoords(node.lat, node.lon)) return;
+  const entry = state.nodeMarkerByKey.get(String(node.public_key || "").toUpperCase());
+  map.flyTo([node.lat, node.lon], Math.max(map.getZoom(), 11), { duration: 0.7 });
+  if (entry) revealNodeMarker(entry);
+  setTimeout(() => {
+    if (entry) openNodeEntry(entry);
+  }, 350);
+}
+
+async function revealSearchObserver(observer) {
+  if (!state.showObservers) await setObserversVisible(true);
+  const position = observerPosition(observer);
+  if (!position) return;
+  map.flyTo([position.lat, position.lon], Math.max(map.getZoom(), 11), { duration: 0.7 });
+  L.popup({ className: "observer-popup", maxWidth: 300, minWidth: 220, autoPan: true })
+    .setLatLng([position.lat, position.lon])
+    .setContent(observerPopupHtml(observer, position))
+    .openOn(map);
+}
+
+async function revealSearchPacket(hash) {
+  const occurrences = routeStore.packetOccurrences(String(hash || "").toUpperCase(), state, nowMs());
+  if (occurrences.length) {
+    showPacketOnMap(occurrences);
+    await openPacketDetail(occurrences[0]);
+    return;
+  }
+  await openPacketByHash(hash, { showOnMap: true });
+}
+
+function selectSearchResult(kind, item) {
+  searchResults.hidden = true;
+  nodeSearch.setAttribute("aria-expanded", "false");
+  searchActiveIndex = -1;
+  if (kind === "node") nodeSearch.value = item.name || "";
+  nodeSearch.blur();
+  if (kind === "node") revealSearchNode(item);
+  else if (kind === "observer") void revealSearchObserver(item);
+  else if (kind === "packet") void revealSearchPacket(item.hash);
+  else if (kind === "channel") void revealSearchPacket(item.hash);
+}
+
+function renderSearchResults() {
+  searchActiveIndex = -1;
+  const parsed = parseNodeQuery(nodeSearch.value);
+  const packets = searchPacketCandidates();
+  if (searchRemotePrefix && parsed.hexQuery === searchRemotePrefix) {
+    packets.push(...searchRemoteResults);
+  }
+  const result = searchEntities({
+    channels: feedState.channelMessages,
+    limit: SEARCH_LIMIT_PER_TYPE,
+    nodes: state.nodeMarkers.map(({ node }) => node),
+    observers: state.observers,
+    packets,
+    query: nodeSearch.value,
+  });
+  const groups = [
+    ["node", t("search.nodes"), result.nodes],
+    ["observer", t("search.observers"), result.observers],
+    ["packet", t("search.packets"), result.packets],
+    ["channel", t("search.channels"), result.channels],
+  ].filter(([, , items]) => items.length);
+
   searchResults.replaceChildren();
-  if (query.length < 2) {
+  nodeSearch.setAttribute("aria-expanded", String(groups.length > 0));
+  if (!groups.length) {
     searchResults.hidden = true;
     return;
   }
 
-  const matches = state.nodeMarkers
-    .filter(({ node }) => nodeMatchesQuery(node, query, hexQuery))
-    .slice(0, 6);
-  for (const { marker, node } of matches) {
-    const item = document.createElement("li");
-    const button = document.createElement("button");
-    button.type = "button";
-    const hashSize = Math.max(Number(node.multi_byte_max_hash_size) || 0, Number(node.hash_size) || 0) || 2;
-    const prefix = node.public_key ? node.public_key.slice(0, hashSize * 2).toUpperCase() : "";
-    const meta = [roleLabel(node.role), prefix].filter(Boolean).join(" · ");
-    button.innerHTML = `<strong>${escapeHtml(node.name || t("common.unknownNode"))}</strong><small>${escapeHtml(meta)}</small>`;
-    button.addEventListener("click", () => {
-      const entry = state.nodeMarkerByKey.get(node.public_key?.toUpperCase());
-      if (entry) revealNodeMarker(entry);
-      map.flyTo(marker.getLatLng(), 11, { duration: 0.7 });
-      if (entry) openNodeEntry(entry);
-      else marker.openPopup();
-      nodeSearch.value = node.name || "";
-      searchResults.hidden = true;
-    });
-    item.appendChild(button);
-    searchResults.appendChild(item);
+  for (const [kind, label, items] of groups) {
+    const heading = document.createElement("li");
+    heading.className = "search-group-title";
+    heading.textContent = label;
+    searchResults.appendChild(heading);
+    for (const item of items) {
+      const row = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.innerHTML = `<strong>${escapeHtml(searchResultTitle(kind, item))}</strong><small>${escapeHtml(searchResultMeta(kind, item))}</small>`;
+      button.addEventListener("click", () => selectSearchResult(kind, item));
+      row.appendChild(button);
+      searchResults.appendChild(row);
+    }
   }
-  searchResults.hidden = matches.length === 0;
+  searchResults.hidden = false;
+}
+
+function refreshSearchIfActive() {
+  if (nodeSearch.value.trim().length >= 2) renderSearchResults();
+}
+
+function scheduleRemotePacketSearch() {
+  if (searchRemoteTimer) clearTimeout(searchRemoteTimer);
+  const { hexQuery } = parseNodeQuery(nodeSearch.value);
+  if (!hexQuery || hexQuery.length < 2) {
+    searchRemotePrefix = "";
+    searchRemoteResults = [];
+    return;
+  }
+  searchRemoteTimer = setTimeout(() => {
+    void loadRemotePacketSearch(hexQuery);
+  }, 180);
+}
+
+async function loadRemotePacketSearch(prefix) {
+  const requestId = ++searchRemoteRequestId;
+  try {
+    const data = await getJson(`/api/search?hash=${encodeURIComponent(prefix)}`);
+    if (requestId !== searchRemoteRequestId) return;
+    searchRemotePrefix = prefix;
+    searchRemoteResults = (data.hashes || []).map((row) => ({
+      hash: String(row.hash || "").toUpperCase(),
+      timestamp: Number(row.observed_at) || 0,
+      typeLabel: TYPE_LABELS[Number(row.payload_type)] || "?",
+    }));
+    if (parseNodeQuery(nodeSearch.value).hexQuery === prefix) renderSearchResults();
+  } catch (error) {
+    console.error("Hledání paketů se nepodařilo", error);
+  }
+}
+
+function ensureSearchData() {
+  if (!state.observersLoadedAt && !state.observersLoading) {
+    void loadObservers().then(refreshSearchIfActive);
+  }
+  if (nodeSearch.value.trim().length >= 2 && !feedState.channelsLoadedAt && !feedState.channelsLoading
+    && Date.now() - feedState.channelsFailedAt > 60_000) {
+    void fetchChannelMessages().then((messages) => {
+      if (messages) refreshSearchIfActive();
+    });
+  }
+}
+
+nodeSearch.addEventListener("input", () => {
+  ensureSearchData();
+  scheduleRemotePacketSearch();
+  renderSearchResults();
+});
+
+nodeSearch.addEventListener("focus", () => {
+  ensureSearchData();
+  scheduleRemotePacketSearch();
+  if (nodeSearch.value.trim()) renderSearchResults();
+});
+
+nodeSearch.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    searchResults.hidden = true;
+    nodeSearch.setAttribute("aria-expanded", "false");
+    nodeSearch.blur();
+    return;
+  }
+  const buttons = searchResultButtons();
+  if (!buttons.length) return;
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    highlightSearchResult(searchActiveIndex + 1);
+  } else if (event.key === "ArrowUp") {
+    event.preventDefault();
+    highlightSearchResult(searchActiveIndex - 1);
+  } else if (event.key === "Enter") {
+    event.preventDefault();
+    buttons[searchActiveIndex >= 0 ? searchActiveIndex : 0].click();
+  }
 });
 
 document.addEventListener("click", (event) => {
-  if (!event.target.closest(".node-search")) searchResults.hidden = true;
+  if (!event.target.closest(".node-search")) {
+    searchResults.hidden = true;
+    nodeSearch.setAttribute("aria-expanded", "false");
+  }
+});
+
+const EXPORT_DATASETS = ["nodes", "observers", "routes"];
+const NODE_EXPORT_COLUMNS = [
+  "name", "role", "public_key", "prefix", "lat", "lon", "last_seen",
+  "relay_24h", "advert_count", "usefulness_score", "coverage_score",
+  "bridge_score", "redundancy_score", "traffic_share_score",
+];
+const OBSERVER_EXPORT_COLUMNS = [
+  "name", "id", "iata", "status", "lat", "lon", "approx", "last_seen",
+  "packets", "packets_per_hour", "noise_floor", "battery_mv", "uptime_secs",
+  "clock_skew_seconds", "model", "firmware",
+];
+const ROUTE_EXPORT_COLUMNS = [
+  "hash", "type", "type_code", "observer", "observed_at", "from", "to",
+  "hops", "distance_km", "snr_db", "scope",
+];
+
+function exportableNodes() {
+  return [...state.nodeByKey.values()].filter((node) => validCoords(node.lat, node.lon));
+}
+
+function exportableRouteList() {
+  if (state.routeWindowMs !== 0) {
+    return [...state.archiveRoutes.values()].sort((a, b) => b.timestamp - a.timestamp);
+  }
+  return routeStore.visibleLive(state, nowMs());
+}
+
+function observerExportPairs() {
+  return state.observers
+    .map((observer) => ({ observer, position: observerPosition(observer) }))
+    .filter(({ position }) => position);
+}
+
+function routeDistanceKm(route) {
+  let total = 0;
+  let previous = null;
+  for (const point of route.points || []) {
+    if (previous && !point.breakBefore) {
+      total += haversineKm(previous.lat, previous.lon, point.lat, point.lon);
+    }
+    previous = point;
+  }
+  return total;
+}
+
+function routeLines(route) {
+  const lines = [];
+  let line = [];
+  for (const point of route.points || []) {
+    if (point.breakBefore && line.length) {
+      lines.push(line);
+      line = [];
+    }
+    line.push([point.lon, point.lat]);
+  }
+  if (line.length) lines.push(line);
+  return lines;
+}
+
+function nodeExportRow(node) {
+  return {
+    advert_count: node.advert_count ?? "",
+    bridge_score: node.bridge_score ?? "",
+    coverage_score: node.coverage_score ?? "",
+    last_seen: node.last_seen || "",
+    lat: node.lat,
+    lon: node.lon,
+    name: node.name || "",
+    prefix: shortNodePrefix(node),
+    public_key: node.public_key || "",
+    redundancy_score: node.redundancy_score ?? "",
+    relay_24h: node.relay_count_24h ?? "",
+    role: node.role || "unknown",
+    traffic_share_score: node.traffic_share_score ?? "",
+    usefulness_score: node.usefulness_score ?? "",
+  };
+}
+
+function observerExportRow(observer, position) {
+  return {
+    approx: position ? (position.approx ? "yes" : "no") : "",
+    battery_mv: observer.battery_mv ?? "",
+    clock_skew_seconds: observer.clock_skew_seconds ?? "",
+    firmware: observer.firmware || "",
+    iata: observer.iata || "",
+    id: observer.id || "",
+    last_seen: observer.last_seen || "",
+    lat: position?.lat ?? "",
+    lon: position?.lon ?? "",
+    model: observer.model || "",
+    name: observer.name || "",
+    noise_floor: observer.noise_floor ?? "",
+    packets: observer.packet_count ?? "",
+    packets_per_hour: observer.packetsLastHour ?? "",
+    status: observerHealth(observer),
+    uptime_secs: observer.uptime_secs ?? "",
+  };
+}
+
+function routeExportRow(route) {
+  return {
+    distance_km: Number(routeDistanceKm(route).toFixed(1)),
+    from: route.from || "",
+    hash: route.packetHash || "",
+    hops: route.nodeCount ?? (route.points || []).length,
+    observer: route.observerName || route.observerId || "",
+    observed_at: route.timestamp ? new Date(route.timestamp).toISOString() : "",
+    scope: route.scope || "",
+    snr_db: route.snr ?? "",
+    to: route.to || "",
+    type: route.typeLabel || "",
+    type_code: route.packetType ?? "",
+  };
+}
+
+function buildExportPayload(dataset, format) {
+  if (format !== "csv") {
+    let features = [];
+    if (dataset === "nodes") {
+      features = exportableNodes().map((node) => pointFeature(node.lon, node.lat, {
+        active: isNodeActive(node, nowMs(), NODE_ACTIVE_MS),
+        name: node.name || "",
+        public_key: node.public_key || "",
+        role: node.role || "unknown",
+        usefulness_score: node.usefulness_score ?? null,
+      }));
+    } else if (dataset === "observers") {
+      features = observerExportPairs().map(({ observer, position }) => pointFeature(position.lon, position.lat, {
+        approx: Boolean(position.approx),
+        id: observer.id || "",
+        iata: observer.iata || "",
+        name: observer.name || "",
+        status: observerHealth(observer),
+      }));
+    } else {
+      features = exportableRouteList().map((route) => multiLineFeature(routeLines(route), {
+        from: route.from || "",
+        hash: route.packetHash || "",
+        hops: route.nodeCount ?? (route.points || []).length,
+        observer: route.observerName || route.observerId || "",
+        observed_at: route.timestamp ? new Date(route.timestamp).toISOString() : "",
+        snr_db: route.snr ?? null,
+        to: route.to || "",
+        type: route.typeLabel || "",
+      }));
+    }
+    return {
+      mime: "application/geo+json",
+      name: exportFileName(dataset, "geojson"),
+      text: JSON.stringify(featureCollection(features), null, 2),
+    };
+  }
+
+  if (dataset === "nodes") {
+    return {
+      mime: "text/csv;charset=utf-8",
+      name: exportFileName("nodes", "csv"),
+      text: buildCsv(NODE_EXPORT_COLUMNS, exportableNodes().map(nodeExportRow)),
+    };
+  }
+  if (dataset === "observers") {
+    return {
+      mime: "text/csv;charset=utf-8",
+      name: exportFileName("observers", "csv"),
+      text: buildCsv(OBSERVER_EXPORT_COLUMNS, state.observers.map((observer) => {
+        const position = observerPosition(observer);
+        return observerExportRow(observer, position);
+      })),
+    };
+  }
+  return {
+    mime: "text/csv;charset=utf-8",
+    name: exportFileName("routes", "csv"),
+    text: buildCsv(ROUTE_EXPORT_COLUMNS, exportableRouteList().map(routeExportRow)),
+  };
+}
+
+function exportRecordCount(dataset, format) {
+  if (dataset === "nodes") return exportableNodes().length;
+  if (dataset === "observers") {
+    return format === "csv" ? state.observers.length : observerExportPairs().length;
+  }
+  return exportableRouteList().length;
+}
+
+function updateExportSummary() {
+  const dataset = elements.exportDataset.value || "nodes";
+  const format = elements.exportFormat.value || "geojson";
+  if (dataset === "observers" && state.observersLoading) {
+    elements.exportSummary.textContent = t("export.observersLoading");
+    elements.exportDownload.disabled = true;
+    return;
+  }
+  const count = exportRecordCount(dataset, format);
+  elements.exportSummary.textContent = count ? tCount("export.count", count) : t("export.empty");
+  elements.exportDownload.disabled = count === 0;
+}
+
+function renderExportDialog() {
+  elements.exportTitle.textContent = t("export.title");
+  elements.exportNote.textContent = t("export.note");
+  elements.exportClose.setAttribute("aria-label", t("export.close"));
+  elements.exportDatasetLabel.textContent = t("export.dataset");
+  elements.exportFormatLabel.textContent = t("export.format");
+  elements.exportDownload.textContent = t("export.download");
+  const selected = elements.exportDataset.value || "nodes";
+  elements.exportDataset.replaceChildren(...EXPORT_DATASETS.map((value) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = t(`export.${value}`);
+    return option;
+  }));
+  elements.exportDataset.value = selected;
+  updateExportSummary();
+}
+
+function downloadTextFile(name, text, mime) {
+  const url = URL.createObjectURL(new Blob([text], { type: mime }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1_000);
+}
+
+elements.exportToggle.addEventListener("click", () => {
+  renderExportDialog();
+  if (!state.observersLoadedAt && !state.observersLoading) {
+    void loadObservers().finally(() => {
+      if (elements.exportDialog.open) updateExportSummary();
+    });
+  }
+  if (!elements.exportDialog.open) elements.exportDialog.showModal();
+});
+
+elements.exportClose.addEventListener("click", () => elements.exportDialog.close());
+elements.exportDialog.addEventListener("click", (event) => {
+  if (event.target === elements.exportDialog) elements.exportDialog.close();
+});
+elements.exportDataset.addEventListener("change", updateExportSummary);
+elements.exportFormat.addEventListener("change", updateExportSummary);
+elements.exportDownload.addEventListener("click", () => {
+  try {
+    const payload = buildExportPayload(elements.exportDataset.value, elements.exportFormat.value);
+    if (!payload.text) {
+      elements.exportSummary.textContent = t("export.empty");
+      return;
+    }
+    downloadTextFile(payload.name, payload.text, payload.mime);
+  } catch (error) {
+    console.error("Export se nepodařilo vytvořit", error);
+    elements.exportSummary.textContent = t("export.failed");
+  }
 });
 
 elements.mobileSheetClose.addEventListener("click", closeMobileSheet);

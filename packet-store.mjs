@@ -86,6 +86,14 @@ export function createPacketStore(dbPath, {
     WHERE hash = ?
     ORDER BY observed_at DESC
   `);
+  const searchHashPrefix = db.prepare(`
+    SELECT hash, MAX(observed_at) AS observed_at, payload_type, observer_id, observer_name
+    FROM packet_routes
+    WHERE hash >= ? AND hash < ?
+    GROUP BY hash
+    ORDER BY observed_at DESC
+    LIMIT ?
+  `);
   const purgeOld = db.prepare("DELETE FROM packet_routes WHERE observed_at < ?");
   const purgeOverflow = db.prepare(`
     DELETE FROM packet_routes WHERE rowid IN (
@@ -128,6 +136,11 @@ export function createPacketStore(dbPath, {
       ...row,
       resolved_path: safeArray(row.resolved_path),
     })),
+    searchHashPrefix: (prefix, limit = 20) => {
+      const value = String(prefix || "").toLowerCase();
+      if (!/^[0-9a-f]{2,64}$/.test(value)) return [];
+      return searchHashPrefix.all(value, `${value}g`, Math.max(1, Math.min(100, Number(limit) || 20)));
+    },
     record: (rows) => record(rows),
   };
 }

@@ -20,27 +20,21 @@ const statsTimeoutMs = Math.max(1_000, Number(process.env.STATS_TIMEOUT_MS || 5_
 const statsCollectMs = Math.max(0, Number(process.env.STATS_COLLECT_MS ?? 5 * 60 * 1000));
 const statsHistoryDays = Math.max(1, Number(process.env.STATS_HISTORY_DAYS || 30));
 const metricsCollectionMs = 15 * 60 * 1000;
-const metricsStore = createNodeMetricsStore(
-  process.env.SCORE_DB_PATH || join(process.cwd(), "data", "node-metrics.sqlite"),
-  {
-    statsBucketMs: statsCollectMs || 5 * 60 * 1000,
-    statsHistoryDays,
-  },
-);
-const packetStore = createPacketStore(
-  process.env.PACKET_DB_PATH || join(process.cwd(), "data", "packets.sqlite"),
-  {
-    retentionMs: Math.max(1, Number(process.env.PACKET_RETENTION_MS || 7 * 24 * 60 * 60 * 1000)),
-    maxRows: Math.max(1, Number(process.env.PACKET_MAX_ROWS || 500_000)),
-  },
-);
+const scoreDbPath = process.env.SCORE_DB_PATH || join(process.cwd(), "data", "node-metrics.sqlite");
+const metricsStore = createNodeMetricsStore(scoreDbPath, {
+  statsBucketMs: statsCollectMs || 5 * 60 * 1000,
+  statsHistoryDays,
+});
+const packetDbPath = process.env.PACKET_DB_PATH || join(process.cwd(), "data", "packets.sqlite");
+const packetStore = createPacketStore(packetDbPath, {
+  retentionMs: Math.max(1, Number(process.env.PACKET_RETENTION_MS || 7 * 24 * 60 * 60 * 1000)),
+  maxRows: Math.max(1, Number(process.env.PACKET_MAX_ROWS || 500_000)),
+});
 const packetCollectionMs = Math.max(30_000, Number(process.env.PACKET_COLLECT_MS || 5 * 60 * 1000));
-const visitStore = createVisitStatsStore(
-  process.env.VISITS_DB_PATH || join(process.cwd(), "data", "visits.sqlite"),
-);
-const feedbackStore = createFeedbackStore(
-  process.env.FEEDBACK_DB_PATH || join(process.cwd(), "data", "feedback.sqlite"),
-);
+const visitsDbPath = process.env.VISITS_DB_PATH || join(process.cwd(), "data", "visits.sqlite");
+const visitStore = createVisitStatsStore(visitsDbPath);
+const feedbackDbPath = process.env.FEEDBACK_DB_PATH || join(process.cwd(), "data", "feedback.sqlite");
+const feedbackStore = createFeedbackStore(feedbackDbPath);
 const feedbackToken = process.env.FEEDBACK_TOKEN || "";
 const elevationUpstream = process.env.ELEVATION_UPSTREAM || "https://api.open-meteo.com/v1/elevation";
 const elevationFallbackUrl = process.env.ELEVATION_FALLBACK_URL || "https://api.open-elevation.com/api/v1/lookup";
@@ -94,6 +88,10 @@ const recentPackets = new TimeBoundRingBuffer({
 const maxPacketStreams = Math.max(1, Number(process.env.MAX_PACKET_STREAMS || 100));
 const maxStreamBufferBytes = Math.max(1024, Number(process.env.MAX_STREAM_BUFFER_BYTES || 256 * 1024));
 let mqttConnected = false;
+let mqttReconnects = 0;
+let mqttConnectedSince = 0;
+let lastMqttPacketAt = 0;
+const serverStartedAt = Date.now();
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -575,12 +573,73 @@ function statusPayload() {
   return { connected: mqttConnected, time: Date.now(), viewers: packetStreams.size };
 }
 
+function statBytes(path) {
+  let total = 0;
+  for (const suffix of ["", "-wal", "-shm"]) {
+    try {
+      total += statSync(`${path}${suffix}`).size;
+    } catch {}
+  }
+  return total;
+}
+
+function cacheHealth(entry, softTtlMs) {
+  if (!entry) return { ageSec: null, present: false, stale: true };
+  const at = Number(entry.at || 0);
+  const ageMs = Math.max(0, Date.now() - at);
+  return {
+    ageSec: Math.round(ageMs / 1000),
+    present: true,
+    stale: !at || ageMs > softTtlMs,
+  };
+}
+
+function healthPayload() {
+  const now = Date.now();
+  const nodes = cacheHealth(nodesCache, nodesSoftTtlMs);
+  const stats = cacheHealth(statsCache, statsSoftTtlMs);
+  const degraded = (mqttEnabled && !mqttConnected) || nodes.stale;
+  return {
+    status: degraded ? "degraded" : "ok",
+    time: now,
+    uptimeSec: Math.floor((now - serverStartedAt) / 1000),
+    upstream,
+    mqtt: {
+      enabled: mqttEnabled,
+      connected: mqttConnected,
+      connectedForSec: mqttConnectedSince ? Math.floor((now - mqttConnectedSince) / 1000) : null,
+      reconnects: mqttReconnects,
+      lastPacketAgeSec: lastMqttPacketAt ? Math.floor((now - lastMqttPacketAt) / 1000) : null,
+    },
+    streams: packetStreams.size,
+    caches: {
+      elevation: elevationCache.size,
+      nodes,
+      resolve: resolveCache.size,
+      stats,
+      terrain: terrainCache.size,
+    },
+    packets: {
+      bufferedRecent: recentPackets.values(now).length,
+      distinct24h: packetStore.countDistinctSince(now - 24 * 60 * 60 * 1000),
+      stored: packetStore.count(),
+    },
+    databases: {
+      feedback: { bytes: statBytes(feedbackDbPath) },
+      packets: { bytes: statBytes(packetDbPath) },
+      scores: { bytes: statBytes(scoreDbPath) },
+      visits: { bytes: statBytes(visitsDbPath) },
+    },
+  };
+}
+
 function broadcastStatus() {
   broadcast("status", statusPayload());
 }
 
 const mqttUrl = process.env.MQTT_URL;
-if (mqttUrl && process.env.MQTT_USERNAME && process.env.MQTT_PASSWORD) {
+const mqttEnabled = Boolean(mqttUrl && process.env.MQTT_USERNAME && process.env.MQTT_PASSWORD);
+if (mqttEnabled) {
   const MQTT_KEEPALIVE_S = Math.min(300, Math.max(10, Number(process.env.MQTT_KEEPALIVE || 30)));
   const MQTT_RECONNECT_MS = Math.max(1_000, Number(process.env.MQTT_RECONNECT_MS || 3_000));
   const MQTT_RECONNECT_MAX_MS = Math.max(MQTT_RECONNECT_MS, Number(process.env.MQTT_RECONNECT_MAX_MS || 60_000));
@@ -591,6 +650,7 @@ if (mqttUrl && process.env.MQTT_USERNAME && process.env.MQTT_PASSWORD) {
   let mqttConnectedAt = 0;
   const scheduleMqttReconnect = () => {
     if (mqttReconnectTimer) return;
+    mqttReconnects += 1;
     const jitter = 1 - MQTT_JITTER + Math.random() * MQTT_JITTER * 2;
     const delay = Math.round(mqttReconnectDelay * jitter);
     console.log(`MQTT reconnect in ${delay} ms`);
@@ -613,6 +673,7 @@ if (mqttUrl && process.env.MQTT_USERNAME && process.env.MQTT_PASSWORD) {
   mqttClient.on("connect", () => {
     console.log("MQTT connected");
     mqttConnectedAt = Date.now();
+    mqttConnectedSince = mqttConnectedAt;
     mqttReconnectDelay = MQTT_RECONNECT_MS;
     mqttConnected = true;
     const topic = process.env.MQTT_TOPIC || "meshcore/+/+/packets";
@@ -624,6 +685,7 @@ if (mqttUrl && process.env.MQTT_USERNAME && process.env.MQTT_PASSWORD) {
   });
   mqttClient.on("close", () => {
     mqttConnected = false;
+    mqttConnectedSince = 0;
     if (mqttConnectedAt && Date.now() - mqttConnectedAt >= MQTT_STABLE_MS) {
       mqttReconnectDelay = MQTT_RECONNECT_MS;
     }
@@ -645,6 +707,7 @@ if (mqttUrl && process.env.MQTT_USERNAME && process.env.MQTT_PASSWORD) {
     try {
       const packet = parseMqttPacket(topic, message);
       if (packet?.hash) {
+        lastMqttPacketAt = Date.now();
         recentPackets.add(packet);
         broadcast("packet", packet);
       }
@@ -1005,6 +1068,41 @@ async function handleRequest(request, response) {
       visitStore.updatePeak(packetStreams.size);
       broadcastStatus();
     });
+    return;
+  }
+
+  if (url.pathname === "/api/health") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      return;
+    }
+    const body = JSON.stringify(healthPayload());
+    response.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+    });
+    response.end(request.method === "HEAD" ? undefined : body);
+    return;
+  }
+
+  if (url.pathname === "/api/search") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      return;
+    }
+    const prefix = String(url.searchParams.get("hash") || "").trim();
+    if (!/^[0-9a-fA-F]{2,64}$/.test(prefix)) {
+      response.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
+      response.end(JSON.stringify({ error: "Neplatný prefix hashe." }));
+      return;
+    }
+    const limit = Math.min(Math.max(1, Number(url.searchParams.get("limit")) || 20), 50);
+    const body = JSON.stringify({ hashes: packetStore.searchHashPrefix(prefix, limit), prefix });
+    response.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+    });
+    response.end(body);
     return;
   }
 

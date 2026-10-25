@@ -120,6 +120,16 @@ přihlašovací údaje zůstávají pouze na serveru.
 - `/api/packet-routes?hash=<hash>` vrací všechny observery, kteří daný paket
   zaznamenali, z `data/packets.sqlite` (bez ohledu na to, zda jsou v aktuálním
   feedu). Klik na položku Aktivity zobrazí seznam výskytů a všechny trasy.
+- `/api/search?hash=<prefix>` hledá v `data/packets.sqlite` hashe začínající
+  zadaným hex prefixem (2–64 znaků) a vrací nejnovější výskyt každého z nich.
+  Používá ho globální hledání v HUD.
+- `/api/health` vrací diagnostiku: uptime, stav MQTT, počet reconnectů a stáří
+  posledního paketu, stáří cache uzlů a statistik, počet SSE streamů a velikosti
+  SQLite databází. Vrací vždy HTTP 200; `status` je `ok`, nebo `degraded`.
+- Hledání v HUD prohledává uzly, observery, hashe paketů (živé trasy i lokální
+  archiv) a veřejné kanály; výsledek se otevře přímo na mapě. Tlačítko Export
+  stáhne uzly, observery nebo právě zobrazené trasy jako CSV (UTF-8, středník)
+  nebo GeoJSON.
 - Režim Live zobrazuje výhradně živé pakety z MQTT (SSE). Při výpadku MQTT se
   tedy nevykreslují žádné trasy — žádná zastaralá cache se nepoužívá.
 - Proti nereálným trasám: u přímých tras (`Direct`, `TransportDirect`) se
