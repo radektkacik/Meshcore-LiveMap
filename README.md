@@ -241,6 +241,31 @@ Analyzeru. Server je ukládá každých 5 minut do `node-metrics.sqlite` (retenc
 30 dní); mezery znamenají výpadek nebo dobu před začátkem sběru. Aktuální hodina
 je neúplná.
 
+## Telegram notifikace
+
+Volitelná upozornění správci na novou fotku čekající na schválení, žádost
+o smazání fotky a případně novou zprávu v knize návštěv.
+
+1. V Telegramu vytvořte bota přes `@BotFather` (`/newbot`) a získejte token.
+2. Botovi napište `/start`, potom načtěte `chat.id` z
+   `https://api.telegram.org/bot<TOKEN>/getUpdates`.
+3. Do `.env` doplňte:
+
+```bash
+TELEGRAM_BOT_TOKEN=123456:ABC...
+TELEGRAM_CHAT_ID=123456789
+PUBLIC_BASE_URL=https://mapa.meshcore.cz
+TELEGRAM_NOTIFY_PHOTOS=1
+TELEGRAM_NOTIFY_REPORTS=1
+TELEGRAM_NOTIFY_FEEDBACK=0
+TELEGRAM_ADMIN_LINK=0
+```
+
+`TELEGRAM_ADMIN_LINK=1` přidá do zprávy přímý odkaz do administrace včetně
+tokenu; nechte `0`, pokud nechcete token posílat do Telegramu. Po změně `.env`
+restartujte službu. Stav je vidět v `/api/health` v poli
+`notifications.telegram`.
+
 ## Pokrytí terénu
 
 Tlačítko **Pokrytí** zapne režim, ve kterém kliknutí do mapy nebo na nod spočítá
