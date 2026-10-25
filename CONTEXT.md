@@ -54,6 +54,7 @@ Aktualizováno: 2026-10-25
 - Rychlý start: 30s snapshot živých paketů + uzly z cache (SWR), první trasy ~1 s
 - Detail trasy z feedu i kliknutím na trasu, seznam hopů, vzdálenosti, SNR
 - Mobilní bottom sheet pro detail uzlu/trasy, `?sheet=1`
+- Panel Aktivity: uživatelsky měnitelná velikost tažením za levý horní roh, persistováno; dvojklik/Home reset
 
 ### LOS
 - Dialog se otevře po zapnutí LOS
@@ -108,7 +109,7 @@ Aktualizováno: 2026-10-25
 
 ## 4. Testy a CI
 
-- `npm test`: 73 testů, 70 pass, 3 skip, 0 fail
+- `npm test`: 75 testů, 72 pass, 3 skip, 0 fail
 - `npm audit --omit=dev`: 0 zranitelností
 - GitHub Actions CI: Node 20 a 22, běží `npm ci`, syntax check, testy, build
 - CI nelze z tohoto prostředí číst bez GitHub přihlášení

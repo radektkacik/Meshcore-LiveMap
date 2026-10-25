@@ -11,6 +11,7 @@ import {
   resolveCandidateChain,
 } from "./route-utils.js";
 import { analyzePath, interpolatePath, nearestOnPath, profilePointAt } from "./los.js";
+import { clampActivitySize } from "./activity-size.js";
 import { CLEAR, PARTIAL } from "./coverage.js";
 import { createElevationService, ElevationError } from "./elevation.js";
 import { createPerfMonitor } from "./perf.js";
@@ -132,6 +133,7 @@ const elements = {
   activityTitle: document.querySelector("#activity-title"),
   activityTitleText: document.querySelector("#activity-title-text"),
   activityPanel: document.querySelector("#activity-panel"),
+  activityResize: document.querySelector("#activity-resize"),
   activityPause: document.querySelector("#activity-pause"),
   animationToggle: document.querySelector("#animation-toggle"),
   baseLayerButtons: [...document.querySelectorAll("#base-layer-buttons button")],
@@ -4047,6 +4049,132 @@ const hud = document.querySelector("#hud");
 const hudToggle = document.querySelector("#hud-toggle");
 const activityToggle = document.querySelector("#activity-toggle");
 const activityPanel = document.querySelector(".activity-panel");
+const ACTIVITY_SIZE_KEY = "meshcoreActivitySize";
+
+function activitySizeLimits() {
+  return {
+    fullWidth: window.matchMedia("(max-width: 430px)").matches,
+    maxHeight: Math.max(200, Math.min(680, window.innerHeight - 90)),
+    maxWidth: Math.max(280, Math.min(620, window.innerWidth - 32)),
+    minHeight: 150,
+    minWidth: 240,
+  };
+}
+
+function storedActivitySize() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(ACTIVITY_SIZE_KEY) || "null");
+    if (!parsed || !Number.isFinite(Number(parsed.width)) || !Number.isFinite(Number(parsed.height))) return null;
+    return { h: Number(parsed.height), w: Number(parsed.width) };
+  } catch {
+    return null;
+  }
+}
+
+function saveActivitySize(width, height) {
+  try {
+    localStorage.setItem(ACTIVITY_SIZE_KEY, JSON.stringify({
+      height: Math.round(height),
+      width: Math.round(width),
+    }));
+  } catch {}
+}
+
+function applyActivitySize(size, { persist = false } = {}) {
+  const limits = activitySizeLimits();
+  const clamped = clampActivitySize(size, limits);
+  activityPanel.classList.add("resized");
+  activityPanel.style.width = limits.fullWidth ? "" : `${clamped.width}px`;
+  activityPanel.style.height = `${clamped.height}px`;
+  if (persist) saveActivitySize(clamped.width, clamped.height);
+}
+
+function resetActivitySize() {
+  activityPanel.classList.remove("resized");
+  activityPanel.style.width = "";
+  activityPanel.style.height = "";
+  try {
+    localStorage.removeItem(ACTIVITY_SIZE_KEY);
+  } catch {}
+}
+
+const initialActivitySize = storedActivitySize();
+if (initialActivitySize) applyActivitySize(initialActivitySize);
+
+let activityDrag = null;
+
+function moveActivityResize(event) {
+  if (!activityDrag) return;
+  const fullWidth = window.matchMedia("(max-width: 430px)").matches;
+  applyActivitySize({
+    h: activityDrag.h + (activityDrag.y - event.clientY),
+    w: fullWidth ? activityDrag.w : activityDrag.w + (activityDrag.x - event.clientX),
+  });
+}
+
+function endActivityResize() {
+  if (!activityDrag) return;
+  const rect = activityPanel.getBoundingClientRect();
+  const limits = activitySizeLimits();
+  const previous = storedActivitySize();
+  const width = limits.fullWidth ? (previous?.w ?? 340) : rect.width;
+  activityDrag = null;
+  document.body.classList.remove("resizing-activity");
+  window.removeEventListener("pointermove", moveActivityResize);
+  window.removeEventListener("pointerup", endActivityResize);
+  window.removeEventListener("pointercancel", endActivityResize);
+  saveActivitySize(width, rect.height);
+}
+
+elements.activityResize.addEventListener("pointerdown", (event) => {
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const rect = activityPanel.getBoundingClientRect();
+  activityDrag = { h: rect.height, w: rect.width, x: event.clientX, y: event.clientY };
+  document.body.classList.add("resizing-activity");
+  try {
+    elements.activityResize.setPointerCapture(event.pointerId);
+  } catch {}
+  window.addEventListener("pointermove", moveActivityResize);
+  window.addEventListener("pointerup", endActivityResize);
+  window.addEventListener("pointercancel", endActivityResize);
+});
+
+elements.activityResize.addEventListener("dblclick", (event) => {
+  event.preventDefault();
+  resetActivitySize();
+});
+
+elements.activityResize.addEventListener("keydown", (event) => {
+  if (event.key === "Home") {
+    event.preventDefault();
+    resetActivitySize();
+    return;
+  }
+  const rect = activityPanel.getBoundingClientRect();
+  const step = event.shiftKey ? 48 : 16;
+  let height = rect.height;
+  let width = rect.width;
+  if (event.key === "ArrowLeft") width += step;
+  else if (event.key === "ArrowRight") width -= step;
+  else if (event.key === "ArrowUp") height += step;
+  else if (event.key === "ArrowDown") height -= step;
+  else return;
+  event.preventDefault();
+  applyActivitySize({ h: height, w: width }, { persist: true });
+});
+
+window.addEventListener("resize", () => {
+  if (!activityPanel.classList.contains("resized")) return;
+  const size = storedActivitySize();
+  const rect = activityPanel.getBoundingClientRect();
+  applyActivitySize(size || { h: rect.height, w: rect.width });
+});
+
+elements.activityResize.setAttribute("aria-label", t("activity.resize"));
+elements.activityResize.title = t("activity.resizeHint");
+
 const nodeSearch = document.querySelector("#node-search");
 const searchResults = document.querySelector("#search-results");
 

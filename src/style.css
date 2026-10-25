@@ -145,8 +145,10 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
   z-index: 550;
   right: 16px;
   bottom: 24px;
-  width: min(280px, calc(100vw - 32px));
-  max-height: 286px;
+  display: flex;
+  flex-direction: column;
+  width: min(340px, calc(100vw - 32px));
+  max-height: 360px;
   overflow: hidden;
   border: 1px solid rgba(30, 65, 49, 0.18);
   border-radius: 12px;
@@ -154,7 +156,13 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
   box-shadow: var(--shadow);
   backdrop-filter: blur(14px);
 }
-.activity-panel header { height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 13px; border-bottom: 1px solid var(--line); }
+.activity-panel.resized { max-height: none; }
+.activity-panel.resized .route-feed { flex: 1 1 auto; min-height: 0; max-height: none; }
+.activity-resize { position: absolute; z-index: 3; top: 2px; left: 2px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 5px; color: rgba(38, 59, 51, 0.38); cursor: nwse-resize; touch-action: none; }
+.activity-resize:hover, .activity-resize:focus-visible { color: var(--green); background: rgba(7, 142, 98, 0.08); outline: none; }
+.activity-resize svg { width: 12px; height: 12px; pointer-events: none; }
+body.resizing-activity, body.resizing-activity * { cursor: nwse-resize !important; user-select: none; }
+.activity-panel header { height: 40px; flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; padding: 0 13px 0 26px; border-bottom: 1px solid var(--line); }
 .activity-head-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
 .activity-pause, .activity-new { padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; color: #49665b; background: #fff; font: 9px "DM Mono", monospace; cursor: pointer; white-space: nowrap; }
 .activity-history { padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; color: #49665b; background: #fff; font: 9px "DM Mono", monospace; cursor: pointer; white-space: nowrap; }
@@ -177,7 +185,7 @@ html[data-theme="dark"] .activity-history.active { color: #fff; background: #2f6
 .activity-panel header span { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; }
 .activity-panel header i { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 7px rgba(7, 142, 98, 0.6); animation: live-pulse 1.6s ease-in-out infinite; }
 .activity-panel header small { color: var(--muted); font: 10px "DM Mono", monospace; text-transform: uppercase; }
-.route-feed { max-height: 246px; overflow: auto; list-style: none; margin: 0; padding: 0 12px 5px; }
+.route-feed { flex: 1 1 auto; min-height: 0; max-height: 320px; overflow: auto; list-style: none; margin: 0; padding: 0 12px 5px; }
 .route-feed li { position: relative; padding: 10px 0 10px 12px; border-bottom: 1px solid var(--line); animation: feed-in 220ms ease-out; cursor: pointer; }
 .route-feed li:hover { background: rgba(7, 142, 98, 0.06); }
 .route-feed li:focus-visible { outline: 2px solid var(--green); outline-offset: -2px; }
@@ -566,9 +574,9 @@ html[data-theme="dark"] .route-show-on-map { color: #5fd0a5; background: rgba(7,
 @media (max-width: 700px) {
   .hud { top: 9px; left: 9px; width: min(330px, calc(100vw - 18px)); max-height: calc(100vh - 18px); max-height: calc(100dvh - 18px); }
   .hud-body { max-height: none; overflow-y: auto; }
-  .activity-panel { right: 9px; bottom: 21px; width: min(250px, calc(100vw - 18px)); max-height: 180px; }
+  .activity-panel { right: 9px; bottom: 21px; width: min(300px, calc(100vw - 18px)); max-height: 260px; }
   .stats-panel { top: 9px; right: 9px; width: min(300px, calc(100vw - 18px)); max-height: calc(100dvh - 18px); }
-  .route-feed { max-height: 140px; }
+  .route-feed { max-height: 220px; }
   .leaflet-control-zoom { display: none; }
   .los-controls { flex-wrap: wrap; }
   .los-pickers { grid-template-columns: 1fr; }
@@ -599,6 +607,9 @@ html[data-theme="dark"] .leaflet-tile-pane .satellite-layer img.leaflet-tile { f
 html[data-theme="dark"] .hud,
 html[data-theme="dark"] .activity-panel,
 html[data-theme="dark"] .stats-panel { background: var(--paper); border-color: rgba(255, 255, 255, 0.14); color: #e6ecef; }
+html[data-theme="dark"] .activity-resize { color: rgba(230, 236, 239, 0.4); }
+html[data-theme="dark"] .activity-resize:hover,
+html[data-theme="dark"] .activity-resize:focus-visible { color: #5fd0a5; background: rgba(95, 208, 165, 0.12); }
 html[data-theme="dark"] .hud-body { border-color: var(--line); }
 html[data-theme="dark"] .logo-button { background: #1b232b; }
 html[data-theme="dark"] .external-link { color: #c3d0d6; }

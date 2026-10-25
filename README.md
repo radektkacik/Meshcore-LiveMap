@@ -157,7 +157,9 @@ paketu a observeru.
 skrytém tabu.
 
 Rozhraní používá kompaktní plovoucí HUD nad mapou, vyhledávání uzlů a samostatný
-panel posledních tras. Kliknutí na uzel otevře popup se stavem, časy pozorování,
+panel posledních tras. Panel Aktivity lze zvětšit tažením za levý horní roh
+(nebo klávesami se šipkami po fokusu na roh); velikost se ukládá do
+`localStorage`, dvojklik nebo Home ji vrátí na výchozí. Kliknutí na uzel otevře popup se stavem, časy pozorování,
 relay statistikami, dostupnou telemetrií a veřejným klíčem. HUD lze kliknutím na
 symbol sbalit.
 
