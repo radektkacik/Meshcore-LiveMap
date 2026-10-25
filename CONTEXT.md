@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-25 (prod `20261025T141054Z`, beta `20261025T131658Z`)  
+Aktualizováno: 2026-10-25 (prod `20261025T141054Z`, beta `20261025T142606Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -26,11 +26,11 @@ Aktualizováno: 2026-10-25 (prod `20261025T141054Z`, beta `20261025T131658Z`)
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261025T131658Z`
-- Build: `20261025-1316-af1f8fd`
-- Asset: `index-CP-ssGU8.js`
+- Release: `20261025T142606Z`
+- Build: `20261025-1426-1834cc6`
+- Asset: `index-BI0Yd_kC.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T131658Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T142606Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka
@@ -59,7 +59,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T141054Z`, beta `20261025T131658Z`)
 ### Mapa a uzly
 - Repeater vždy navrchu při překryvu uzlů
 - Stack uzlů na stejných souřadnicích
-- Detail uzlu: role v hlavičce, relativní časy (`teď`, `12 min`, `3 h`, `2 d`)
+- Detail uzlu: role v hlavičce, relativní časy (`teď`, `12 min`, `3 h`, `2 d`), V síti od, region, multi-byte status, obohacení sousedů (role, vzdálenost, naposledy), odkaz do Analyzeru
 - Historie užitečnosti: 7 dní hodinových vzorků, hover tooltip; bez průměrování
 - Zvýraznění užitečnosti: relativní Top 5 % (červená) a 5–15 % (žlutá) z aktivních uzlů se skóre za 24 h; počty v legendě
 - Tmavá mapa: OSM dlaždice + CSS filtr
@@ -194,6 +194,7 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T141054Z'
 ## 9. Backlog a návrhy do budoucna
 
 ### Střední
+- Přenést další data z Analyzeru do detailu uzlu: total packets, packets today, avg hops, heard-by observeři s SNR/RSSI, recent adverts, paths through node, clock skew (proxy per-node endpointů s cache)
 - Clustering uzlů při oddálení
 - Playback archivu s časovou osou (dříve zkoušeno na betě, revertováno)
 - Heatmapa provozu (dříve zkoušeno na betě, revertováno)
