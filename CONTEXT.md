@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-25 (prod `20261025T191126Z`, beta `20261025T194143Z`)  
+Aktualizováno: 2026-10-25 (prod `20261025T194431Z`, beta `20261025T194143Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -17,12 +17,12 @@ Aktualizováno: 2026-10-25 (prod `20261025T191126Z`, beta `20261025T194143Z`)
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261025T191126Z`
-- Build: `20261025-1911-fae5f7e`
-- Asset: `index-Dk_uacah.js` + `wasm-bundle-DCGj2wDK.js`
+- Release: `20261025T194431Z`
+- Build: `20261025-1944-9780605`
+- Asset: `index-B9Bu3XEd.js` + `wasm-bundle-Rli0Nbio.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T191126Z.tar.gz`
-- Tag: `prod-20261025-1911`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T194431Z.tar.gz`
+- Tag: `prod-20261025-1944`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
@@ -56,12 +56,12 @@ Aktualizováno: 2026-10-25 (prod `20261025T191126Z`, beta `20261025T194143Z`)
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
 - Rychlé výhry (prod i beta): `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (nody, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export nodů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
 - Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP + automatický převod HEIC/HEIF z iPhonu přes `libheif-js` (WASM) v prohlížeči, s potvrzením práv; fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`. V lightboxu lze procházet fotky šipkami (i klávesnicí ←/→) a podat žádost o smazání/nahlášení. Přepínač „Jen nody s fotkami“ je skrytý na betě i v produkci, `/api/photos/nodes` zůstává.
-- Telegram notifikace pro správce (beta): nová fotka k schválení, žádost o smazání fotky, volitelně nová zpráva v knize návštěv; konfigurace `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `PUBLIC_BASE_URL`, `TELEGRAM_ADMIN_LINK`.
+- Telegram notifikace pro správce (prod i beta): nová fotka k schválení, žádost o smazání fotky, volitelně nová zpráva v knize návštěv; konfigurace `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `PUBLIC_BASE_URL`, `TELEGRAM_ADMIN_LINK`.
 
 ### Mapa a nody
 - Repeater vždy navrchu při překryvu nodů
 - Stack nodů na stejných souřadnicích
-- Sousedé na mapě (beta): z detailu nodu vykreslí čáry ke všem sousedům s dosažitelnými souřadnicemi, tloušťka podle četnosti, štítky `N×`, lišta se souhrnem a zrušením; klik na spojnici otevře sousední nod.
+- Sousedé na mapě (prod i beta): z detailu nodu vykreslí čáry ke všem sousedům s dosažitelnými souřadnicemi, tloušťka podle četnosti, štítky `N×`, lišta se souhrnem a zrušením; klik na spojnici otevře sousední nod.
 - Detail nodu: role v hlavičce, relativní časy (`teď`, `12 min`, `3 h`, `2 d`), V síti od, region, obohacení sousedů (role, vzdálenost, naposledy), odkaz do Analyzeru
 - Historie užitečnosti: 7 dní hodinových vzorků, hover tooltip; bez průměrování
 - Zvýraznění užitečnosti: relativní Top 5 % (červená) a 5–15 % (žlutá) z aktivních nodů se skóre za 24 h; počty v legendě
@@ -158,10 +158,10 @@ Aktualizováno: 2026-10-25 (prod `20261025T191126Z`, beta `20261025T194143Z`)
 - Rollback při shodném lockfile ponechá `node_modules`, jinak spustí `npm ci --omit=dev`.
 - Na VPS `/root/rollback-meshcore.sh`, aktualizuje se při deployi.
 - Retence 20 záloh.
-- Rollback aktuální produkce `20261025T191126Z` na předchozí `20261025T190057Z`:
+- Rollback aktuální produkce `20261025T194431Z` na předchozí `20261025T191126Z`:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T191126Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T194431Z'
 ```
 
 ## 7. Deploy konvence
