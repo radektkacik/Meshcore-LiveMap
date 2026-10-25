@@ -7,7 +7,7 @@ export function createTelegramNotifier({
 } = {}) {
   const enabled = Boolean(token && chatId);
 
-  async function send(text, { silent = true } = {}) {
+  async function send(text, { silent = false } = {}) {
     if (!enabled || !String(text || "").trim()) return false;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);

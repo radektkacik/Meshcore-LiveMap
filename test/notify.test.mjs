@@ -34,7 +34,7 @@ test("telegram notifier posts a message to the bot API", async () => {
   const body = JSON.parse(request.options.body);
   assert.equal(body.chat_id, "12345");
   assert.equal(body.text, "Nová fotka");
-  assert.equal(body.disable_notification, true);
+  assert.equal(body.disable_notification, false);
   assert.equal(body.disable_web_page_preview, true);
 });
 

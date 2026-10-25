@@ -62,6 +62,7 @@ const telegramNotifyPhotos = process.env.TELEGRAM_NOTIFY_PHOTOS !== "0";
 const telegramNotifyReports = process.env.TELEGRAM_NOTIFY_REPORTS !== "0";
 const telegramNotifyFeedback = process.env.TELEGRAM_NOTIFY_FEEDBACK === "1";
 const telegramAdminLink = process.env.TELEGRAM_ADMIN_LINK === "1";
+const telegramSilent = process.env.TELEGRAM_SILENT === "1";
 if (telegramNotifier.enabled) {
   console.log("Telegram admin notifications enabled");
 }
@@ -730,7 +731,7 @@ function photoNodeNames() {
 
 function notifyTelegram(text) {
   if (!telegramNotifier.enabled) return;
-  void telegramNotifier.send(text).catch((error) => {
+  void telegramNotifier.send(text, { silent: telegramSilent }).catch((error) => {
     console.error(`Telegram notification failed: ${error.message}`);
   });
 }
