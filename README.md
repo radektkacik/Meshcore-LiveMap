@@ -120,7 +120,8 @@ přihlašovací údaje zůstávají pouze na serveru.
 - Moderace fotek je na `GET /api/photos/view?token=<PHOTO_TOKEN>` (fallback
   `FEEDBACK_TOKEN`), odkud lze fotky schválit, skrýt nebo smazat. Soubory i
   `photos.sqlite` jsou v `uploads/` mimo `data/`, takže se nedostanou do záloh.
-  Platí limity: 8 fotek/hodinu na IP, 30/den, 8 fotek na nod a 2 GB celkem.
+  Platí limity: 8 fotek/hodinu na IP, 30/den, 8 fotek na nod, 2 GB celkem
+  a max. 2400 px na delší straně (klient posílá max. 1600 px).
 - Animace tras je ve výchozím stavu řešená canvas rendererem (jedna kresba,
   posun `lineDashOffset` bez CSS animací). Méně výkonnou SVG variantu s CSS
   animací `stroke-dashoffset` lze zapnout parametrem `?anim=svg`. Animaci lze

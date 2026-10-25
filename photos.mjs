@@ -114,6 +114,7 @@ function mapRow(row) {
 
 export function createPhotoStore(rootDir, {
   maxBytes = 5 * 1024 * 1024,
+  maxDimension = 2400,
   maxPerNode = 8,
   maxRows = 10_000,
   maxTotalBytes = 2 * 1024 * 1024 * 1024,
@@ -191,6 +192,9 @@ export function createPhotoStore(rootDir, {
       if (buffer.length > maxBytes) throw new PhotoError("too_large", "Fotka je příliš velká.");
       const image = detectImage(buffer);
       if (!image) throw new PhotoError("invalid_image", "Nepodporovaný formát fotky.");
+      if (image.width > maxDimension || image.height > maxDimension) {
+        throw new PhotoError("too_large_dimensions", `Fotka má příliš velké rozlišení (max. ${maxDimension} px).`);
+      }
       if (countRows.get().total >= maxRows) throw new PhotoError("store_full", "Úložiště fotek je plné.");
       if (sumBytes.get().total + buffer.length > maxTotalBytes) {
         throw new PhotoError("store_full", "Úložiště fotek je plné.");

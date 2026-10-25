@@ -41,6 +41,7 @@ const photoDir = process.env.PHOTO_DIR || join(process.cwd(), "uploads");
 const photoMaxBytes = Math.max(1024, Number(process.env.PHOTO_MAX_BYTES || 5 * 1024 * 1024));
 const photoStore = createPhotoStore(photoDir, {
   maxBytes: photoMaxBytes,
+  maxDimension: Math.max(100, Number(process.env.PHOTO_MAX_DIMENSION || 2400)),
   maxPerNode: Math.max(1, Number(process.env.PHOTO_MAX_PER_NODE || 8)),
   maxRows: Math.max(10, Number(process.env.PHOTO_MAX_ROWS || 10_000)),
   maxTotalBytes: Math.max(1024 * 1024, Number(process.env.PHOTO_MAX_TOTAL_BYTES || 2 * 1024 * 1024 * 1024)),
@@ -1366,7 +1367,7 @@ async function handleRequest(request, response) {
       sendJson(response, 202, { id: photo.id, ok: true, status: photo.status });
     } catch (error) {
       if (error instanceof PhotoError) {
-        const status = error.code === "too_large" ? 413
+        const status = error.code === "too_large" || error.code === "too_large_dimensions" ? 413
           : error.code === "store_full" ? 507
             : error.code === "node_limit" ? 409
               : error.code === "invalid_image" ? 415 : 400;

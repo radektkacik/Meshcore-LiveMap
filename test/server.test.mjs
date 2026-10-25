@@ -77,6 +77,7 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       NODES_CACHE_PATH: join(directory, "nodes-cache.json"),
       PACKET_DB_PATH: join(directory, "packets.sqlite"),
       PHOTO_DIR: join(directory, "uploads"),
+      PHOTO_COOLDOWN_MS: "0",
       PHOTO_TOKEN: "photo-token",
       STATS_CACHE_PATH: join(directory, "stats-cache.json"),
       STATS_COLLECT_MS: "0",
@@ -131,6 +132,19 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(upload.status, 202);
     const uploaded = await upload.json();
     assert.equal(uploaded.status, "pending");
+    const largePng = Buffer.from(tinyPng);
+    largePng.writeUInt32BE(3000, 16);
+    largePng.writeUInt32BE(2000, 20);
+    const oversized = await fetch(`http://127.0.0.1:${appPort}/api/photos`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "image/png",
+        "X-Photo-Consent": "1",
+        "X-Photo-Key": photoKey,
+      },
+      body: largePng,
+    });
+    assert.equal(oversized.status, 413);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos?key=${photoKey}`)).status, 200);
     assert.equal((await (await fetch(`http://127.0.0.1:${appPort}/api/photos?key=${photoKey}`)).json()).photos.length, 0);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos/${uploaded.id}`)).status, 404);

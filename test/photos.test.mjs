@@ -105,6 +105,21 @@ test("photo store rejects invalid input and enforces the per-node limit", () => 
   }
 });
 
+test("photo store rejects images above the configured resolution", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
+  const store = createPhotoStore(directory, { maxDimension: 500 });
+  try {
+    assert.throws(
+      () => store.create({ buffer: pngBuffer(640, 480), nodeKey: "d".repeat(64) }),
+      (error) => error instanceof PhotoError && error.code === "too_large_dimensions",
+    );
+    assert.equal(store.create({ buffer: pngBuffer(500, 400), nodeKey: "d".repeat(64) }).width, 500);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("photo store removes metadata and the file", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
   const store = createPhotoStore(directory);
