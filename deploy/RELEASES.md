@@ -189,6 +189,7 @@
 | 2026-10-25 19:17 | `20261025T191713Z.tar.gz` (stage APP_DIR) | `20261025-1917-a606dc8` | Beta: sousedé nodu na mapě – spojnice s četnostmi, štítky `N×`, souhrnná lišta a zrušení; klik na spojnici otevře souseda | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
 | 2026-10-25 19:21 | `20261025T192132Z.tar.gz` (stage APP_DIR) | `20261025-1921-cab7166` | Beta: přepínač „Jen nody s fotkami“ skrytý i na betě | `src/main.js`, `CONTEXT.md` |
 | 2026-10-25 19:34 | `20261025T193409Z.tar.gz` (stage APP_DIR) | `20261025-1934-1e94ce8` | Beta: Telegram notifikace správci na novou fotku, žádost o smazání a volitelně knihu návštěv; bez tokenu vypnuto | `notify.mjs`, `server.mjs`, `.env.example`, `deploy/*`, `test/notify.test.mjs`, `test/server.test.mjs`, `README.md`, `CONTEXT.md` |
+| 2026-10-25 19:41 | `20261025T194143Z.tar.gz` (stage APP_DIR) | `20261025-1941-aea995d` | Beta: Telegram notifikace ve výchozím stavu se zvukem (`TELEGRAM_SILENT=0`); token a chat ID nastaveny jen v serverovém `.env`, testovací notifikace ověřena | `notify.mjs`, `server.mjs`, `.env.example`, `test/notify.test.mjs`, `README.md`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
