@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-25  
+Aktualizováno: 2026-10-25 (prod `20261025T092014Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -43,6 +43,17 @@ Aktualizováno: 2026-10-25
 - Nginx pro 2b je zjednodušený: `/map/` proxy na 4174, ostatní cesty 410.
 
 ## 3. Co je hotové
+
+### Poslední změny (2026-10-25)
+- MQTT: keepalive 30 s, vlastní reconnect s backoffem 3–60 s a jitterem ±20 %, reset až po 30 s stabilního spojení; log `MQTT reconnect in … ms`
+- Rychlý start: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE `?replay=0`
+- Cache posledních 200 live tras v `localStorage` (15 min) – po refreshi okamžitě, odznak „z cache“
+- `/api/nodes` SWR (soft TTL 15 min), `/api/stats` cache 24 h + lokální fallback z DB
+- Průběžný sběr `/api/stats` každých 5 min do `stats_samples` v `node-metrics.sqlite` (retence 30 dní); graf Paketů/h z reálných vzorků, chybějící hodiny jsou mezery
+- Panel Aktivity: zvětšování tažením za roh, persistované rozměry, dvojklik/Home reset; oprava skrývání (`display:flex` přebíjel `[hidden]`)
+- Zvýraznění uzlů: relativní Top 5 % (červená) a 5–15 % (žlutá) místo pevných Top 25/100; počty v legendě
+- Z detailu uzlu odstraněn řádek „Stav hashe“
+- Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
 
 ### Mapa a uzly
 - Repeater vždy navrchu při překryvu uzlů
@@ -112,6 +123,14 @@ Aktualizováno: 2026-10-25
 - Security headers: CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP
 - CSP povoluje Google Fonts, OSM, OpenTopoMap, Esri
 
+### Komunikace s backendem
+- Klient je same-origin (žádné CORS); nginx/Cloudflare jen proxují na Node server.
+- Živý provoz: MQTT → server → SSE `/events/packets` (`packet`, `status`); klient poslouchá jedno `EventSource`.
+- Start stránky: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkový `/api/resolve-hops`, jedno vykreslení; SSE `?replay=0`.
+- Archiv: `/api/history`, `/api/packet-routes`; statistiky `/api/stats`, `/api/packet-history`.
+- CoreScope proxy: `/api/nodes`, `/api/stats`, `/api/observers`, `/api/packets`, `/api/resolve-hops`; server drží cache a stale fallbacky.
+- SQLite: `packets.sqlite` (archiv tras), `node-metrics.sqlite` (skóre uzlů + `stats_samples`), `visits.sqlite`, `feedback.sqlite`.
+
 ## 4. Testy a CI
 
 - `npm test`: 77 testů, 74 pass, 3 skip, 0 fail
@@ -134,10 +153,10 @@ Aktualizováno: 2026-10-25
 - Rollback při shodném lockfile ponechá `node_modules`, jinak spustí `npm ci --omit=dev`.
 - Na VPS `/root/rollback-meshcore.sh`, aktualizuje se při deployi.
 - Retence 20 záloh.
-- Rollback aktuální produkce `20261024T190206Z`:
+- Rollback aktuální produkce `20261025T092014Z` na předchozí `20261025T090209Z`:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261024T190206Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T090209Z'
 ```
 
 ## 7. Deploy konvence
@@ -152,7 +171,6 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261024T190206Z'
 - Nový top-level `*.mjs` přidat do obou deploy skriptů a `apply-release.sh`.
 - Bez komentářů v kódu.
 - Nekommitovat `node_modules`, `dist`, `data`, `.env`, `cntb`, `cntb.pub`.
-- V pracovním stromu je untracked `hmi-manual-template/`; nesouvisí s mapou, necommitovat.
 
 ## 8. Známe problémy a rizika
 
@@ -160,6 +178,10 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261024T190206Z'
 - MQTT reconnecty přicházejí zhruba 1–2× za hodinu, většinou tiše (Cloudflare/broker zavře WSS); keepalive je 30 s, backoff 3–60 s s jitterem, výpadek obvykle 5–10 s. Feed zůstává online.
 - CoreScope občas selže při sběru tras (`Packet route update failed: fetch failed`); aplikace jede z cache.
 - CoreScope občas odpovídá pomalu (sekundy až desítky sekund); `/api/nodes` se proto vydává z cache okamžitě a obnovuje na pozadí.
+- Historie Paketů/h se začala sbírat 2026-10-25 09:20 UTC; do naplnění 24 h / 7 dní budou v grafu mezery. HUD a poslední bod grafu se mohou lišit až o 5 min (vzorkovací interval).
+- SSE replay (120 s) je legacy a při backpressure se zkracuje; klient používá `/api/recent` a `?replay=0`.
+- Cache posledních live tras v `localStorage` může po refreshi ukázat až 15 min staré trasy; je označená „z cache“ a nahradí se živými daty.
+- Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly na betě vyzkoušeny a revertovány; v produkci nejsou.
 - 1B prefixy jsou nejednoznačné; názvy uzlů se mohou lišit od Analyzeru.
 - Pakety bez path se nekreslí; PATH (typ 11) se záměrně ignoruje.
 - Přibližná poloha observeru je jen IATA oblast, ne přesné letiště.
@@ -168,20 +190,36 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261024T190206Z'
 - Firewall/SSH hardening není hotový: ufw inactive, PasswordAuthentication yes, root login povolený.
 - Cloudflare běží Full se self-signed origin certem, ne Full (strict).
 - Chybí obecné rate limity API a E2E testy.
-- `hmi-manual-template/` je nesouvisející untracked adresář.
 
-## 9. Backlog
+## 9. Backlog a návrhy do budoucna
 
+### Rychlé výhry
+- `/api/health` + diagnostika: uptime, počet MQTT reconnectů, stáří posledního paketu, stáří cache, velikost DB
+- Globální hledání: uzel, observer, hash paketu, kanál
+- Export CSV/GeoJSON uzlů, observerů a tras
+
+### Střední
+- Clustering uzlů při oddálení
+- Playback archivu s časovou osou (dříve zkoušeno na betě, revertováno)
+- Heatmapa provozu (dříve zkoušeno na betě, revertováno)
+- Trasy A→B / route explorer (dříve zkoušeno na betě, revertováno)
+- Watchlist a notifikace při offline uzlu/anomálii
+- Grafy trendů v detailu uzlu/observeru (SNR, baterie, uptime)
+- PWA / offline režim
+- Refaktor `src/main.js` (cca 4 400 řádků) do modulů
+- Přístupnost/klávesnice a další mobilní doladění
+
+### Ops a bezpečnost
 - Firewall a SSH hardening
 - Cloudflare Full (strict) – Origin CA nebo Let’s Encrypt
-- `/api/health`
-- Playwright E2E: mapa, LOS, pokrytí, feed, mobilní sheet
 - Rate limity API
-- Clustering uzlů při oddálení
-- Playback archivu s časovou osou, heatmapa pokrytí
-- Přístupnost/klávesnice, další mobilní doladění
+- Playwright E2E: mapa, LOS, pokrytí, feed, mobilní sheet
 - Vlastní tile provider / OSM policy
-- Případné odstranění DNS záznamu pro 2b, pokud má být web nedostupný i zvenčí
+- Případné odstranění DNS záznamu pro 2b
+
+### Data
+- Historie Paketů/h je hotová (5 min vzorky, retence 30 dní); případně zkrátit interval na 1 min nebo přidat 5min rozlišení grafu
+- Backfill starších hodin není možný – Analyzer historii neposkytuje, mezery jsou záměrné
 
 ## 10. Rychlé příkazy
 
