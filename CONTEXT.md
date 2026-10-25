@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-25 (prod `20261025T194431Z`, beta `20261025T194143Z`)  
+Aktualizováno: 2026-10-25 (prod `20261025T201025Z`, beta `20261025T201002Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -17,20 +17,20 @@ Aktualizováno: 2026-10-25 (prod `20261025T194431Z`, beta `20261025T194143Z`)
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261025T194431Z`
-- Build: `20261025-1944-9780605`
-- Asset: `index-B9Bu3XEd.js` + `wasm-bundle-Rli0Nbio.js`
+- Release: `20261025T201025Z`
+- Build: `20261025-2010-6259cd6`
+- Asset: `index-CGybu74f.js` + `wasm-bundle-SfdgGZ4d.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T194431Z.tar.gz`
-- Tag: `prod-20261025-1944`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T201025Z.tar.gz`
+- Tag: `prod-20261025-2010`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261025T194143Z`
-- Build: `20261025-1941-aea995d`
-- Asset: `index-DrREO7dg.js` + `wasm-bundle-BES5LumW.js`
+- Release: `20261025T201002Z`
+- Build: `20261025-2010-6259cd6`
+- Asset: `index-BMkvNSTF.js` + `wasm-bundle-Dwn75E7P.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T194143Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T201002Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka
@@ -59,6 +59,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T194431Z`, beta `20261025T194143Z`)
 - Telegram notifikace pro správce (prod i beta): nová fotka k schválení, žádost o smazání fotky, volitelně nová zpráva v knize návštěv; konfigurace `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `PUBLIC_BASE_URL`, `TELEGRAM_ADMIN_LINK`.
 
 ### Mapa a nody
+- Přepínač „Skrýt trasy“ (bez nápovědy) skryje všechny trasy včetně animací a vybrané trasy; volba se pamatuje v localStorage.
 - Repeater vždy navrchu při překryvu nodů
 - Stack nodů na stejných souřadnicích
 - Sousedé na mapě (prod i beta): z detailu nodu vykreslí čáry ke všem sousedům s dosažitelnými souřadnicemi, tloušťka podle četnosti, štítky `N×`, lišta se souhrnem a zrušením; klik na spojnici otevře sousední nod.
@@ -158,10 +159,10 @@ Aktualizováno: 2026-10-25 (prod `20261025T194431Z`, beta `20261025T194143Z`)
 - Rollback při shodném lockfile ponechá `node_modules`, jinak spustí `npm ci --omit=dev`.
 - Na VPS `/root/rollback-meshcore.sh`, aktualizuje se při deployi.
 - Retence 20 záloh.
-- Rollback aktuální produkce `20261025T194431Z` na předchozí `20261025T191126Z`:
+- Rollback aktuální produkce `20261025T201025Z` na předchozí `20261025T194431Z`:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T194431Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T201025Z'
 ```
 
 ## 7. Deploy konvence

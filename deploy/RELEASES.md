@@ -191,6 +191,10 @@
 | 2026-10-25 19:34 | `20261025T193409Z.tar.gz` (stage APP_DIR) | `20261025-1934-1e94ce8` | Beta: Telegram notifikace správci na novou fotku, žádost o smazání a volitelně knihu návštěv; bez tokenu vypnuto | `notify.mjs`, `server.mjs`, `.env.example`, `deploy/*`, `test/notify.test.mjs`, `test/server.test.mjs`, `README.md`, `CONTEXT.md` |
 | 2026-10-25 19:41 | `20261025T194143Z.tar.gz` (stage APP_DIR) | `20261025-1941-aea995d` | Beta: Telegram notifikace ve výchozím stavu se zvukem (`TELEGRAM_SILENT=0`); token a chat ID nastaveny jen v serverovém `.env`, testovací notifikace ověřena | `notify.mjs`, `server.mjs`, `.env.example`, `test/notify.test.mjs`, `README.md`, `CONTEXT.md` |
 | 2026-10-25 19:44 | `20261025T194431Z.tar.gz` | `20261025-1944-9780605` | Prod: sousedé nodu na mapě + Telegram notifikace (fotky, žádosti, kniha návštěv); token/chat jen v serverovém `.env`, testovací notifikace ověřena | `notify.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `.env.example`, `deploy/*`, testy, `README.md`, `CONTEXT.md` |
+| 2026-10-25 20:08 | `20261025T200849Z.tar.gz` (stage APP_DIR) | `20261025-2008-d76dfcd` | Beta: přepínač „Skrýt trasy“ – skryje všechny trasy včetně animací a vybrané trasy, volba v localStorage | `index.html`, `src/main.js`, `src/i18n.js`, `CONTEXT.md` |
+| 2026-10-25 20:09 | `20261025T200925Z.tar.gz` | `20261025-2009-d76dfcd` | Prod: stejný přepínač „Skrýt trasy“ | `index.html`, `src/main.js`, `src/i18n.js`, `CONTEXT.md` |
+| 2026-10-25 20:10 | `20261025T201002Z.tar.gz` (stage APP_DIR) | `20261025-2010-6259cd6` | Beta: odebrána nápověda pod „Skrýt trasy“ (šetří místo) | `index.html`, `src/i18n.js` |
+| 2026-10-25 20:10 | `20261025T201025Z.tar.gz` | `20261025-2010-6259cd6` | Prod: stejné odebrání nápovědy; výška přepínače 33 px | `index.html`, `src/i18n.js` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
