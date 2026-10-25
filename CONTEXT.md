@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-25 (prod `20261025T185643Z`, beta `20261025T185555Z`)  
+Aktualizováno: 2026-10-25 (prod `20261025T190057Z`, beta `20261025T190035Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -17,20 +17,20 @@ Aktualizováno: 2026-10-25 (prod `20261025T185643Z`, beta `20261025T185555Z`)
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261025T185643Z`
-- Build: `20261025-1856-3e81ef4`
-- Asset: `index-C0Tq71rn.js` + `wasm-bundle-BC6hmJOG.js`
+- Release: `20261025T190057Z`
+- Build: `20261025-1900-39dadf0`
+- Asset: `index-BUAMSlwg.js` + `wasm-bundle-BdpmnZYZ.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T185643Z.tar.gz`
-- Tag: `prod-20261025-1856`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T190057Z.tar.gz`
+- Tag: `prod-20261025-1900`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261025T185555Z`
-- Build: `20261025-1855-3e81ef4`
-- Asset: `index-1IgytPF1.js` + `wasm-bundle-DQ5T4Abo.js`
+- Release: `20261025T190035Z`
+- Build: `20261025-1900-39dadf0`
+- Asset: `index-BIRlznji.js` + `wasm-bundle-CJw2oklK.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T185555Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T190035Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka
@@ -55,7 +55,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T185643Z`, beta `20261025T185555Z`)
 - Z detailu nodu odstraněn řádek „Stav hashe“
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
 - Rychlé výhry (prod i beta): `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (nody, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export nodů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
-- Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP + automatický převod HEIC/HEIF z iPhonu přes `libheif-js` (WASM) v prohlížeči, s potvrzením práv; fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`. V lightboxu lze podat žádost o smazání/nahlášení, která se objeví v tabu „Žádosti“. Přepínač „Jen nody s fotkami“ filtruje mapu podle `/api/photos/nodes`.
+- Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP + automatický převod HEIC/HEIF z iPhonu přes `libheif-js` (WASM) v prohlížeči, s potvrzením práv; fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`. V lightboxu lze procházet fotky šipkami (i klávesnicí ←/→), podat žádost o smazání/nahlášení a přepínač „Jen nody s fotkami“ filtruje mapu podle `/api/photos/nodes`.
 
 ### Mapa a nody
 - Repeater vždy navrchu při překryvu nodů
@@ -156,10 +156,10 @@ Aktualizováno: 2026-10-25 (prod `20261025T185643Z`, beta `20261025T185555Z`)
 - Rollback při shodném lockfile ponechá `node_modules`, jinak spustí `npm ci --omit=dev`.
 - Na VPS `/root/rollback-meshcore.sh`, aktualizuje se při deployi.
 - Retence 20 záloh.
-- Rollback aktuální produkce `20261025T185643Z` na předchozí `20261025T185125Z`:
+- Rollback aktuální produkce `20261025T190057Z` na předchozí `20261025T185643Z`:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T185643Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T190057Z'
 ```
 
 ## 7. Deploy konvence

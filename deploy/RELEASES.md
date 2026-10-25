@@ -183,6 +183,8 @@
 | 2026-10-25 18:51 | `20261025T185125Z.tar.gz` | `20261025-1851-d0a3337` | Prod: stejné HEIC zpracování; testovací HEIC nahrán, převeden a smazán, health `ok` | `package.json`, `package-lock.json`, `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, `README.md`, `CONTEXT.md` |
 | 2026-10-25 18:55 | `20261025T185555Z.tar.gz` (stage APP_DIR) | `20261025-1855-3e81ef4` | Beta: přepínač „Jen nody s fotkami“ a `/api/photos/nodes` s počty schválených fotek | `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-25 18:56 | `20261025T185643Z.tar.gz` | `20261025-1856-3e81ef4` | Prod: stejný filtr; `/api/photos/nodes` vrací 1 nod se 4 fotkami, health `ok` | `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, testy, `README.md`, `CONTEXT.md` |
+| 2026-10-25 19:00 | `20261025T190035Z.tar.gz` (stage APP_DIR) | `20261025-1900-39dadf0` | Beta: šipky vlevo/vpravo a klávesy ←/→ pro procházení fotek v lightboxu, počítadlo 1/4 | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
+| 2026-10-25 19:00 | `20261025T190057Z.tar.gz` | `20261025-1900-39dadf0` | Prod: stejné procházení fotek; ověřeno 4 fotky, počítadlo 1/4→2/4→3/4 a zpět | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
