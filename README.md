@@ -72,6 +72,10 @@ přihlašovací údaje zůstávají pouze na serveru.
   kruhového bufferu (max. 120 s) jako jeden JSON. Klient ho načte paralelně
   s uzly, všechny prefixy vyřeší jedním dávkovým requestem a trasy vykreslí
   najednou, místo aby zpracovával stovky SSE událostí po jednom.
+- `/api/packet-history?hours=24|168` vrací hodinové počty unikátních paketů a
+  pozorování z `packet_routes`; podklad pro graf po kliknutí na „Paketů/h“.
+  Jde o lokální data s rozřešenou trasou, zatímco celkový údaj v HUD pochází
+  z Analyzeru.
 - `/api/stats` se ukládá do `data/stats-cache.json` (24 h). Při výpadku
   Analyzeru se vydá poslední známá odpověď s `X-Data-Stale: 1`; pokud cache
   chybí, server dopočítá `packetsLastHour` z lokální DB (unikátní hashe za
@@ -190,6 +194,11 @@ Posledních až 200 zobrazených živých tras se ukládá do `localStorage` (ma
 minut). Po refreshi stránky se okamžitě vykreslí přerušovaně s odznakem
 „z cache“ a po příchodu živých tras se nahradí; tím se nečeká na první paket
 s trasou, pokud je feed zrovna tichý nebo je nedostupný Analyzer.
+
+Kliknutí na metriku „Paketů/h“ otevře graf 24 h / 7 dní z lokální databáze tras:
+hodinové hodnoty, hover s počtem paketů a pozorování, průměr a maximum. Hodnota
+v HUD je celkový počet paketů z Analyzeru, zatímco graf zobrazuje jen pakety
+s rozřešenou trasou.
 
 ## Pokrytí terénu
 

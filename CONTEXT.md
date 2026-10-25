@@ -17,20 +17,20 @@ Aktualizováno: 2026-10-25
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261025T083245Z`
-- Build: `20261025-0832-978b9a2`
-- Asset: `index-DRGL6DVX.js`
+- Release: `20261025T085409Z`
+- Build: `20261025-0854-c439e57`
+- Asset: `index-CdAdhhoC.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T083245Z.tar.gz`
-- Tag: `prod-20261025-0832`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T085409Z.tar.gz`
+- Tag: `prod-20261025-0854`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261025T083230Z`
-- Build: `20261025-0832-978b9a2`
-- Asset: `index-Cm7mxhTc.js`
+- Release: `20261025T085352Z`
+- Build: `20261025-0853-c439e57`
+- Asset: `index-DzaI1z8_.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T083230Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T085352Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka
@@ -54,6 +54,7 @@ Aktualizováno: 2026-10-25
 - Sdílené odkazy: uzel, pozice, filtry, časové okno, jazyk
 - Rychlý start: 30s snapshot živých paketů + uzly z cache (SWR), první trasy ~1 s
 - Cache posledních zobrazených live tras: localStorage, max. 200 tras / 15 min; po refreshi okamžitě jako „z cache“ do příchodu živých dat
+- Klik na „Paketů/h“: SVG graf 24 h / 7 dní z lokální DB tras, hover, průměr a maximum
 - Detail trasy z feedu i kliknutím na trasu, seznam hopů, vzdálenosti, SNR
 - Mobilní bottom sheet pro detail uzlu/trasy, `?sheet=1`
 - Panel Aktivity: uživatelsky měnitelná velikost tažením za levý horní roh, persistováno; dvojklik/Home reset
@@ -101,7 +102,7 @@ Aktualizováno: 2026-10-25
 - Původní žebříčky uzlů podle metrik zůstávají
 
 ### Backend
-- `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/recent`, `/api/packets`, `/api/nodes`, `/api/stats`
+- `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/recent`, `/api/packet-history`, `/api/packets`, `/api/nodes`, `/api/stats`
 - Cache `/api/nodes` a `/api/resolve-hops` proti výpadkům CoreScope; uzly se vydávají z cache okamžitě (SWR, soft TTL 15 min)
 - Start stránky: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE běží s `?replay=0`
 - `/api/stats` cache (24 h) + lokální fallback z `packet_routes` při výpadku Analyzeru; klient zobrazí stale/partial hodnotu oranžově a zkusí obnovu za 60 s
@@ -112,7 +113,7 @@ Aktualizováno: 2026-10-25
 
 ## 4. Testy a CI
 
-- `npm test`: 76 testů, 73 pass, 3 skip, 0 fail
+- `npm test`: 77 testů, 74 pass, 3 skip, 0 fail
 - `npm audit --omit=dev`: 0 zranitelností
 - GitHub Actions CI: Node 20 a 22, běží `npm ci`, syntax check, testy, build
 - CI nelze z tohoto prostředí číst bez GitHub přihlášení
