@@ -17,20 +17,20 @@ Aktualizováno: 2026-10-25
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261025T082244Z`
-- Build: `20261025-0822-7e5b7b6`
-- Asset: `index-BfAAQVq7.js`
+- Release: `20261025T083245Z`
+- Build: `20261025-0832-978b9a2`
+- Asset: `index-DRGL6DVX.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T082244Z.tar.gz`
-- Tag: `prod-20261025-0822`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T083245Z.tar.gz`
+- Tag: `prod-20261025-0832`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261025T081855Z`
-- Build: `20261025-0818-dbfc172`
-- Asset: `index-CxCFb_C3.js`
+- Release: `20261025T083230Z`
+- Build: `20261025-0832-978b9a2`
+- Asset: `index-Cm7mxhTc.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T081855Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T083230Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka

@@ -152,6 +152,8 @@
 | 2026-10-25 07:47 | `20261025T074719Z.tar.gz` | `20261025-0747-4a860fd` | Prod: stejná oprava skrývání panelu Aktivity; ověřeno v prohlížeči | `src/style.css` |
 | 2026-10-25 08:18 | `20261025T081855Z.tar.gz` (stage APP_DIR) | `20261025-0818-dbfc172` | Beta: relativní zvýraznění užitečnosti – Top 5 % červeně, 5–15 % žlutě; počty uzlů v legendě; prod beze změny | `src/node-model.js`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `test/node-model.test.mjs`, `README.md`, `CONTEXT.md` |
 | 2026-10-25 08:22 | `20261025T082244Z.tar.gz` | `20261025-0822-7e5b7b6` | Prod: relativní zvýraznění užitečnosti – Top 5 % červeně, 5–15 % žlutě; ověřeno 41 / 82 uzlů v legendě | `src/node-model.js`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `test/node-model.test.mjs`, `README.md`, `CONTEXT.md` |
+| 2026-10-25 08:32 | `20261025T083230Z.tar.gz` (stage APP_DIR) | `20261025-0832-978b9a2` | Beta: cache posledních zobrazených live tras (localStorage, 15 min, max 200) a odebrán „Stav hashe“ z detailu nodu; ověřeno | `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `README.md`, `CONTEXT.md` |
+| 2026-10-25 08:32 | `20261025T083245Z.tar.gz` | `20261025-0832-978b9a2` | Prod: stejná cache + odebrání „Stav hashe“; ověřeno 42 tras z cache za 0,3 s, live 52 za 0,7 s. Předchozí cache-only nasazení `20261025T083051Z` / `20261025T083106Z` | `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `README.md`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
