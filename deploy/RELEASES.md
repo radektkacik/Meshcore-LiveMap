@@ -167,6 +167,7 @@
 | 2026-10-25 14:10 | `20261025T141054Z.tar.gz` | `20261025-1410-73eff1c` | Prod: rychlé výhry – `/api/health`, `/api/search?hash=`, globální hledání; tlačítko Export je v produkci skryté (zůstává jen na betě). Health `ok`, MQTT online, hledání ověřeno, žádné chyby v konzoli | `server.mjs`, `packet-store.mjs`, `src/main.js`, `src/search-model.js`, `src/export-model.js`, `src/i18n.js`, `src/style.css`, `index.html`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-25 14:26 | `20261025T142606Z.tar.gz` (stage APP_DIR) | `20261025-1426-1834cc6` | Beta: detail uzlu – V síti od, region, multi-byte status, obohacení sousedů (role, vzdálenost, naposledy), odkaz do Analyzeru | `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
 | 2026-10-25 15:32 | `20261025T153241Z.tar.gz` (stage APP_DIR) | `20261025-1532-f460a32` | Beta: odkaz „Otevřít v Analyzeru“ v detailu paketu a trasy (`#/packets/<hash>`), včetně lišty vybraného paketu | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
+| 2026-10-25 15:34 | `20261025T153456Z.tar.gz` | `20261025-1534-6f8c3c6` | Prod: obohacený detail uzlu (V síti od, region, multi-byte, sousedé s role/vzdáleností/časem, odkaz do Analyzeru) + odkazy na paket v Analyzeru v detailu paketu/trasy a v liště fokusu; export zůstává skrytý | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
