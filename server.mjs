@@ -1112,17 +1112,45 @@ async function handleRequest(request, response) {
     const end = Math.floor(Date.now() / bucketMs) * bucketMs;
     const since = end - (hours - 1) * bucketMs;
     const rows = new Map(packetStore.hourlySeries(since).map((row) => [row.hour, row]));
+    let analyzer = null;
+    if (statsCache && statsCacheFresh()) {
+      try {
+        analyzer = JSON.parse(statsCache.body);
+      } catch {
+        analyzer = null;
+      }
+    }
+    const dayStart = end - 23 * bucketMs;
+    const localDayTotal = packetStore.hourlySeries(dayStart)
+      .reduce((sum, row) => sum + row.packets, 0);
+    const analyzer24h = Number(analyzer?.packetsLast24h) || 0;
+    const analyzerHour = Number(analyzer?.packetsLastHour) || 0;
+    const factor = analyzer24h > 0 && localDayTotal > 0 ? analyzer24h / localDayTotal : 1;
     const series = [];
     for (let index = 0; index < hours; index += 1) {
       const hour = since + index * bucketMs;
       const row = rows.get(hour);
+      const localPackets = row?.packets || 0;
+      const current = index === hours - 1;
+      const packets = current && analyzerHour > 0 && localPackets > 0
+        ? analyzerHour
+        : Math.round(localPackets * factor);
       series.push({
+        estimated: factor !== 1 && !(current && analyzerHour > 0),
         hour,
         observations: row?.observations || 0,
-        packets: row?.packets || 0,
+        packets,
       });
     }
-    sendJson(response, 200, { bucketMs, hours, series, since });
+    sendJson(response, 200, {
+      analyzer: { packetsLast24h: analyzer24h, packetsLastHour: analyzerHour },
+      bucketMs,
+      estimated: factor !== 1,
+      factor: Math.round(factor * 1000) / 1000,
+      hours,
+      series,
+      since,
+    });
     return;
   }
 

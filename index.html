@@ -292,7 +292,7 @@
       <dialog id="packet-history-dialog" class="los-dialog packet-history-dialog" aria-labelledby="packet-history-title">
         <button id="packet-history-close" class="los-close" type="button" aria-label="Zavřít graf">×</button>
         <header>
-          <h2 id="packet-history-title">Pakety s trasou za hodinu</h2>
+          <h2 id="packet-history-title">Pakety za hodinu</h2>
           <p id="packet-history-summary"></p>
           <div class="packet-history-windows" id="packet-history-windows" role="group" aria-label="Období grafu">
             <button type="button" data-hours="24" class="active">24 h</button>
@@ -301,7 +301,7 @@
         </header>
         <div id="packet-history-chart" class="packet-history-chart"></div>
         <p id="packet-history-hover" class="los-hover"></p>
-        <p class="los-note">Z lokální databáze tras (unikátní pakety s rozřešenou trasou); celkové „Paketů/h“ v HUD pochází z Analyzeru. Sběr každých 5 minut, poslední hodina je neúplná.</p>
+        <p id="packet-history-note" class="los-note">Z lokální databáze tras (unikátní pakety s rozřešenou trasou); celkové „Paketů/h“ v HUD pochází z Analyzeru. Sběr každých 5 minut, poslední hodina je neúplná.</p>
       </dialog>
 
       <dialog id="los-dialog" class="los-dialog" aria-labelledby="los-title">

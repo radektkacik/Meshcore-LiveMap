@@ -230,9 +230,9 @@ const cs = {
   "anomaly.manyHops": "mnoho hopů ({count})",
   "observers.model": "Model",
   "observers.firmware": "Firmware",
-  "packetHistory.openAria": "Zobrazit graf paketů s trasou za hodinu",
+  "packetHistory.openAria": "Zobrazit graf paketů za hodinu",
   "packetHistory.openTitle": "Zobrazit graf 24 h / 7 dní",
-  "packetHistory.title": "Pakety s trasou za hodinu",
+  "packetHistory.title": "Pakety za hodinu",
   "packetHistory.close": "Zavřít graf",
   "packetHistory.period": "Období grafu",
   "packetHistory.window24": "24 h",
@@ -240,9 +240,10 @@ const cs = {
   "packetHistory.loading": "Načítám historii…",
   "packetHistory.failed": "Historii se nepodařilo načíst.",
   "packetHistory.empty": "Žádná data v tomto období.",
-  "packetHistory.summary": "celkem {total} paketů s trasou · průměr {avg}/h · maximum {peak}/h",
-  "packetHistory.hover": "{time} · {packets} paketů · {observations} pozorování",
-  "packetHistory.note": "Z lokální databáze tras (unikátní pakety s rozřešenou trasou); celkové „Paketů/h“ v HUD pochází z Analyzeru. Sběr každých 5 minut, poslední hodina je neúplná.",
+  "packetHistory.summary": "celkem {total} · průměr {avg}/h · maximum {peak}/h",
+  "packetHistory.hover": "{time} · {packets} paketů",
+  "packetHistory.noteLocal": "Z lokální databáze tras (unikátní pakety s rozřešenou trasou); celkové „Paketů/h“ v HUD pochází z Analyzeru. Sběr každých 5 minut, poslední hodina je neúplná.",
+  "packetHistory.noteEstimated": "Odhad celkových paketů/h: tvar z lokální DB tras, měřítko z aktuálního poměru k Analyzeru. Poslední hodina je přímo z Analyzeru.",
 };
 
 const en = {
@@ -473,9 +474,9 @@ const en = {
   "anomaly.manyHops": "many hops ({count})",
   "observers.model": "Model",
   "observers.firmware": "Firmware",
-  "packetHistory.openAria": "Show the routed-packets-per-hour chart",
+  "packetHistory.openAria": "Show the packets-per-hour chart",
   "packetHistory.openTitle": "Show the 24 h / 7 day chart",
-  "packetHistory.title": "Routed packets per hour",
+  "packetHistory.title": "Packets per hour",
   "packetHistory.close": "Close chart",
   "packetHistory.period": "Chart period",
   "packetHistory.window24": "24 h",
@@ -483,9 +484,10 @@ const en = {
   "packetHistory.loading": "Loading history…",
   "packetHistory.failed": "History could not be loaded.",
   "packetHistory.empty": "No data in this period.",
-  "packetHistory.summary": "total {total} routed packets · average {avg}/h · peak {peak}/h",
-  "packetHistory.hover": "{time} · {packets} packets · {observations} observations",
-  "packetHistory.note": "From the local route database (unique packets with a resolved route); the overall “Packets/h” in the HUD comes from the Analyzer. Collected every 5 minutes, the current hour is incomplete.",
+  "packetHistory.summary": "total {total} · average {avg}/h · peak {peak}/h",
+  "packetHistory.hover": "{time} · {packets} packets",
+  "packetHistory.noteLocal": "From the local route database (unique packets with a resolved route); the overall “Packets/h” in the HUD comes from the Analyzer. Collected every 5 minutes, the current hour is incomplete.",
+  "packetHistory.noteEstimated": "Estimated total packets/h: shape from the local route database, scale from the current Analyzer ratio. The current hour is taken directly from the Analyzer.",
 };
 
 export const TRANSLATIONS = { cs, en };
@@ -617,11 +619,11 @@ export const STATIC_EN = {
   "Zavřít": "Close",
   "Odeslat": "Send",
   "Veřejné vzkazy": "Public messages",
-  "Pakety s trasou za hodinu": "Routed packets per hour",
+  "Pakety za hodinu": "Packets per hour",
   "Zavřít graf": "Close chart",
   "Období grafu": "Chart period",
   "Zobrazit graf 24 h / 7 dní": "Show the 24 h / 7 day chart",
-  "Zobrazit graf paketů s trasou za hodinu": "Show the routed-packets-per-hour chart",
+  "Zobrazit graf paketů za hodinu": "Show the packets-per-hour chart",
   "Z lokální databáze tras (unikátní pakety s rozřešenou trasou); celkové „Paketů/h“ v HUD pochází z Analyzeru. Sběr každých 5 minut, poslední hodina je neúplná.": "From the local route database (unique packets with a resolved route); the overall “Packets/h” in the HUD comes from the Analyzer. Collected every 5 minutes, the current hour is incomplete.",
 };
 

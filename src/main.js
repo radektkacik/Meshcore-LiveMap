@@ -214,6 +214,7 @@ const elements = {
   packetHistoryClose: document.querySelector("#packet-history-close"),
   packetHistoryDialog: document.querySelector("#packet-history-dialog"),
   packetHistoryHover: document.querySelector("#packet-history-hover"),
+  packetHistoryNote: document.querySelector("#packet-history-note"),
   packetHistorySummary: document.querySelector("#packet-history-summary"),
   packetHistoryWindows: [...document.querySelectorAll("#packet-history-windows button")],
   qrCanvas: document.querySelector("#node-qr-canvas"),
@@ -1981,9 +1982,12 @@ function svgNode(name, attributes = {}) {
   return node;
 }
 
-function renderPacketHistory(series, hours) {
+function renderPacketHistory(series, hours, meta = {}) {
   elements.packetHistoryChart.replaceChildren();
   elements.packetHistoryHover.textContent = "";
+  elements.packetHistoryNote.textContent = meta.estimated === true
+    ? t("packetHistory.noteEstimated")
+    : t("packetHistory.noteLocal");
   const points = Array.isArray(series) ? series : [];
   if (!points.length) {
     const empty = document.createElement("div");
@@ -2088,7 +2092,6 @@ function renderPacketHistory(series, hours) {
     const index = Math.min(points.length - 1, Math.max(0, Math.round(ratio * (points.length - 1))));
     const point = points[index];
     elements.packetHistoryHover.textContent = t("packetHistory.hover", {
-      observations: formatNumber(Number(point.observations) || 0),
       packets: formatNumber(Number(point.packets) || 0),
       time: formatDateTimeShort(point.hour),
     });
@@ -2116,7 +2119,7 @@ async function loadPacketHistory(hours) {
   try {
     const data = await getJson(`/api/packet-history?hours=${nextHours}`);
     if (requestId !== state.packetHistoryRequestId) return;
-    renderPacketHistory(data.series || [], nextHours);
+    renderPacketHistory(data.series || [], nextHours, data);
   } catch (error) {
     if (requestId !== state.packetHistoryRequestId) return;
     console.error("Historii paketů se nepodařilo načíst", error);
@@ -4329,7 +4332,7 @@ for (const button of elements.packetHistoryWindows) {
     ? t("packetHistory.window7d")
     : t("packetHistory.window24");
 }
-document.querySelector("#packet-history-dialog .los-note").textContent = t("packetHistory.note");
+document.querySelector("#packet-history-dialog .los-note").textContent = t("packetHistory.noteLocal");
 
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
