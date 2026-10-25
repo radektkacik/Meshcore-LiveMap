@@ -17,12 +17,12 @@ Aktualizováno: 2026-10-25
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261024T191818Z`
-- Build: `20261024-1918-fb41936`
-- Asset: `index-D-J-klmW.js`
+- Release: `20261025T073645Z`
+- Build: `20261025-0736-1706438`
+- Asset: `index-lZXsOyxr.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261024T191818Z.tar.gz`
-- Tag: `prod-20261024-1918`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T073645Z.tar.gz`
+- Tag: `prod-20261025-0736`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/

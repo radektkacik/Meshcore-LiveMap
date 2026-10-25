@@ -145,6 +145,7 @@
 | 2026-10-24 20:29 | `20261024T202923Z.tar.gz` (stage APP_DIR) | `20261024-2029-982ed8e` | Beta: přehrávání archivu s časovou osou (1 h / 24 h / 7 dní, 1–4×, stopa 2 min–6 h), heatmapa hustoty tras, trasy A→B přes `/api/route-explorer`; ověřeno v prohlížeči. Předchozí testovací nasazení `20261024T202115Z` a `20261024T202524Z` | `server.mjs`, `packet-store.mjs`, `src/main.js`, `src/playback.js`, `src/heatmap.js`, `src/i18n.js`, `src/style.css`, `index.html`, testy |
 | 2026-10-25 07:32 | `20261025T073210Z.tar.gz` (stage APP_DIR) | `20261025-0732-cf17c21` | Beta: rychlý start z `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE `?replay=0`; `/api/nodes` stale-while-revalidate (soft TTL 15 min). První trasa ~0,4 s místo 30–42 s | `server.mjs`, `src/main.js`, `test/server.test.mjs`, `README.md`, `CONTEXT.md` |
 | 2026-10-25 07:34 | `20261025T073409Z.tar.gz` (stage APP_DIR) | `20261025-0734-f348abd` | Beta: odebráno přehrávání archivu, heatmapa provozu a trasy A→B (revert `982ed8e`); zachován rychlý start přes `/api/recent` a SWR cache uzlů | `server.mjs`, `packet-store.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, testy, `README.md`, `CONTEXT.md` |
+| 2026-10-25 07:36 | `20261025T073645Z.tar.gz` | `20261025-0736-1706438` | Prod: rychlý start z `/api/recent?seconds=30` (dávkové vyřešení prefixů, jedno vykreslení), SSE `?replay=0`, `/api/nodes` SWR; ověřeno 34 tras za ~0,5 s | `server.mjs`, `src/main.js`, `test/server.test.mjs`, `README.md`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
