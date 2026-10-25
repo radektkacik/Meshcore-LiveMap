@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-25 (prod `20261025T141054Z`, beta `20261025T142606Z`)  
+Aktualizováno: 2026-10-25 (prod `20261025T141054Z`, beta `20261025T153241Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -26,11 +26,11 @@ Aktualizováno: 2026-10-25 (prod `20261025T141054Z`, beta `20261025T142606Z`)
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261025T142606Z`
-- Build: `20261025-1426-1834cc6`
-- Asset: `index-BI0Yd_kC.js`
+- Release: `20261025T153241Z`
+- Build: `20261025-1532-f460a32`
+- Asset: `index-qqB-Sh-f.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T142606Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T153241Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka
@@ -90,6 +90,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T141054Z`, beta `20261025T142606Z`)
 ### Pakety, trasy a Aktivita
 - Aktivita seskupuje podle hashe paketu, `×N` = počet observerů
 - Detail paketu: všichni observery, čas, hopy, SNR, trasa
+- Detail paketu i trasy má odkaz „Otevřít v Analyzeru“ (`#/packets/<hash>`); při výběru paketu je odkaz i v liště fokusu
 - Klik na řádek observeru otevře detail trasy; `↗` zobrazí trasu na mapě
 - Focus režim: jen vybraný paket, živý provoz skrytý, trvá do „Zrušit výběr“/Escape
 - Deep link `?packet=<hash>`
