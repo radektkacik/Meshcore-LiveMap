@@ -9,6 +9,7 @@ import { createNodeMetricsStore } from "./node-metrics.mjs";
 import { createPacketStore } from "./packet-store.mjs";
 import { createVisitStatsStore } from "./visit-stats.mjs";
 import { createFeedbackStore } from "./feedback.mjs";
+import { createPhotoStore, detectImage, PhotoError } from "./photos.mjs";
 
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "0.0.0.0";
@@ -36,6 +37,18 @@ const visitStore = createVisitStatsStore(visitsDbPath);
 const feedbackDbPath = process.env.FEEDBACK_DB_PATH || join(process.cwd(), "data", "feedback.sqlite");
 const feedbackStore = createFeedbackStore(feedbackDbPath);
 const feedbackToken = process.env.FEEDBACK_TOKEN || "";
+const photoDir = process.env.PHOTO_DIR || join(process.cwd(), "uploads");
+const photoMaxBytes = Math.max(1024, Number(process.env.PHOTO_MAX_BYTES || 5 * 1024 * 1024));
+const photoStore = createPhotoStore(photoDir, {
+  maxBytes: photoMaxBytes,
+  maxPerNode: Math.max(1, Number(process.env.PHOTO_MAX_PER_NODE || 8)),
+  maxRows: Math.max(10, Number(process.env.PHOTO_MAX_ROWS || 10_000)),
+  maxTotalBytes: Math.max(1024 * 1024, Number(process.env.PHOTO_MAX_TOTAL_BYTES || 2 * 1024 * 1024 * 1024)),
+});
+const photoToken = process.env.PHOTO_TOKEN || feedbackToken;
+if (!photoToken) {
+  console.warn("Photo uploads are disabled: set PHOTO_TOKEN or FEEDBACK_TOKEN");
+}
 const elevationUpstream = process.env.ELEVATION_UPSTREAM || "https://api.open-meteo.com/v1/elevation";
 const elevationFallbackUrl = process.env.ELEVATION_FALLBACK_URL || "https://api.open-elevation.com/api/v1/lookup";
 const elevationCacheLimit = Math.max(1, Number(process.env.ELEVATION_CACHE_LIMIT || 50_000));
@@ -390,6 +403,95 @@ function readBody(request, limit = 16_384) {
   });
 }
 
+function readBodyBuffer(request, limit) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    let failed = false;
+    request.on("data", (chunk) => {
+      if (failed) return;
+      size += chunk.length;
+      if (size > limit) {
+        failed = true;
+        chunks.length = 0;
+        request.resume();
+        reject(Object.assign(new Error("Payload too large"), { code: "too_large" }));
+        return;
+      }
+      chunks.push(chunk);
+    });
+    request.on("end", () => {
+      if (!failed) resolve(Buffer.concat(chunks));
+    });
+    request.on("error", (error) => {
+      if (failed) return;
+      failed = true;
+      reject(error);
+    });
+  });
+}
+
+function decodeHeaderValue(value) {
+  if (typeof value !== "string" || !value) return "";
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return "";
+  }
+}
+
+function cleanPhotoText(value, limit) {
+  return String(value || "")
+    .replace(/[\u0000-\u001f\u007f]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, limit);
+}
+
+const photoRate = new Map();
+const photoRateLimit = Math.max(1, Number(process.env.PHOTO_RATE_LIMIT || 8));
+const photoDailyLimit = Math.max(1, Number(process.env.PHOTO_DAILY_LIMIT || 30));
+const photoCooldownMs = Math.max(0, Number(process.env.PHOTO_COOLDOWN_MS || 10_000));
+
+function checkPhotoUpload(ip, now = Date.now()) {
+  const hourStart = now - 60 * 60 * 1000;
+  const dayStart = now - 24 * 60 * 60 * 1000;
+  const stamps = (photoRate.get(ip) || []).filter((stamp) => stamp > dayStart);
+  const last = stamps[stamps.length - 1];
+  if (last != null && now - last < photoCooldownMs) {
+    photoRate.set(ip, stamps);
+    return {
+      message: "Mezi nahráním fotek je krátká pauza, zkuste to prosím za chvíli.",
+      ok: false,
+      retryAfter: Math.max(1, Math.ceil((photoCooldownMs - (now - last)) / 1000)),
+    };
+  }
+  if (stamps.filter((stamp) => stamp > hourStart).length >= photoRateLimit) {
+    photoRate.set(ip, stamps);
+    return {
+      message: "Příliš mnoho nahraných fotek za hodinu, zkuste to později.",
+      ok: false,
+      retryAfter: 3600,
+    };
+  }
+  if (stamps.length >= photoDailyLimit) {
+    photoRate.set(ip, stamps);
+    return {
+      message: "Denní limit nahrávání fotek byl vyčerpán.",
+      ok: false,
+      retryAfter: 3600,
+    };
+  }
+  stamps.push(now);
+  photoRate.set(ip, stamps);
+  if (photoRate.size > 5000) {
+    for (const [key, value] of photoRate) {
+      if (!value.some((stamp) => stamp > dayStart)) photoRate.delete(key);
+    }
+  }
+  return { ok: true };
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -444,6 +546,92 @@ p { margin:0 0 6px; white-space:pre-wrap; }
 ${entries.length ? `<ul>${rows}</ul>` : '<p class="empty">Zatím žádné zprávy.</p>'}
 </body>
 </html>`;
+}
+
+function renderPhotoPage(entries, token, status) {
+  const names = photoNodeNames();
+  const tabs = ["pending", "approved", "hidden", "all"].map((value) => {
+    const label = { pending: "Čekající", approved: "Schválené", hidden: "Skryté", all: "Vše" }[value];
+    const active = status === value ? ' class="active"' : "";
+    return `<a${active} href="view?token=${encodeURIComponent(token)}&status=${value}">${label}</a>`;
+  }).join("");
+  const rows = entries.map((photo) => {
+    const imageUrl = `../photos/${encodeURIComponent(photo.id)}?token=${encodeURIComponent(token)}`;
+    const node = names.get(photo.nodeKey);
+    const nodeLabel = node ? `${node} · ${photo.nodeKey.slice(0, 8)}` : photo.nodeKey.slice(0, 16);
+    const actions = [
+      photo.status !== "approved"
+        ? `<a class="approve" href="moderate?token=${encodeURIComponent(token)}&id=${encodeURIComponent(photo.id)}&action=approve&status=${encodeURIComponent(status)}">Schválit</a>`
+        : "",
+      photo.status !== "hidden"
+        ? `<a class="hide" href="moderate?token=${encodeURIComponent(token)}&id=${encodeURIComponent(photo.id)}&action=hide&status=${encodeURIComponent(status)}">Skrýt</a>`
+        : "",
+      `<a class="delete" href="moderate?token=${encodeURIComponent(token)}&id=${encodeURIComponent(photo.id)}&action=delete&status=${encodeURIComponent(status)}">Smazat</a>`,
+    ].filter(Boolean).join("");
+    return `
+    <li class="photo ${escapeHtml(photo.status)}">
+      <a class="thumb" href="${imageUrl}" target="_blank" rel="noreferrer"><img src="${imageUrl}" alt="" loading="lazy" /></a>
+      <div class="body">
+        <div class="meta">${escapeHtml(photo.status)} · ${escapeHtml(new Date(photo.createdAt).toLocaleString("cs-CZ"))} · ${escapeHtml(photo.bytes)} B · ${photo.width || "?"}×${photo.height || "?"}</div>
+        <div class="node"><a href="../../?node=${encodeURIComponent(photo.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(nodeLabel)}</a></div>
+        ${photo.author ? `<div class="author">${escapeHtml(photo.author)}</div>` : ""}
+        ${photo.caption ? `<p>${escapeHtml(photo.caption)}</p>` : ""}
+        <div class="actions">${actions}</div>
+      </div>
+    </li>`;
+  }).join("");
+  return `<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fotky nodů</title>
+<style>
+body { margin:0; padding:24px; background:#e9e8e1; color:#182820; font:14px/1.5 Manrope, system-ui, sans-serif; }
+h1 { font-size:18px; margin:0 0 4px; }
+.count { color:#667b70; font-size:12px; margin-bottom:12px; }
+.tabs { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+.tabs a { padding:5px 10px; border:1px solid rgba(30,65,49,.2); border-radius:6px; color:#49665b; text-decoration:none; font-size:12px; }
+.tabs a.active { color:#fff; background:#078e62; border-color:#078e62; }
+ul { list-style:none; margin:0; padding:0; display:grid; gap:12px; }
+li.photo { display:flex; gap:12px; background:#fff; border:1px solid rgba(30,65,49,.16); border-radius:10px; padding:10px; }
+li.photo.hidden { opacity:.55; }
+.thumb { flex:0 0 150px; width:150px; height:110px; display:block; border-radius:8px; overflow:hidden; background:#f1f5f3; }
+.thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+.body { min-width:0; flex:1; }
+.meta { color:#667b70; font:11px "DM Mono", monospace; margin-bottom:4px; }
+.node { font-weight:700; }
+.node a { color:#182820; text-decoration:none; }
+.author { color:#49665b; font-size:12px; }
+p { margin:4px 0; white-space:pre-wrap; }
+.actions { display:flex; gap:10px; margin-top:6px; }
+.actions a { font-size:12px; text-decoration:none; }
+.approve { color:#078e62; }
+.hide { color:#b27616; }
+.delete { color:#c0392b; }
+.empty { color:#667b70; }
+</style>
+</head>
+<body>
+<h1>Fotky nodů</h1>
+<div class="count">${entries.length} fotek (nejnovější první)</div>
+<nav class="tabs">${tabs}</nav>
+${entries.length ? `<ul>${rows}</ul>` : '<p class="empty">Žádné fotky v této kategorii.</p>'}
+</body>
+</html>`;
+}
+
+function photoNodeNames() {
+  const result = new Map();
+  if (!nodesCache?.body) return result;
+  try {
+    const data = JSON.parse(nodesCache.body);
+    for (const node of data.nodes || []) {
+      const key = String(node.public_key || "").toLowerCase();
+      if (key) result.set(key, node.name || key.slice(0, 8));
+    }
+  } catch {}
+  return result;
 }
 
 function clientIp(request) {
@@ -624,6 +812,7 @@ function healthPayload() {
       distinct24h: packetStore.countDistinctSince(now - 24 * 60 * 60 * 1000),
       stored: packetStore.count(),
     },
+    photos: photoStore.stats(),
     databases: {
       feedback: { bytes: statBytes(feedbackDbPath) },
       packets: { bytes: statBytes(packetDbPath) },
@@ -1103,6 +1292,155 @@ async function handleRequest(request, response) {
       "Cache-Control": "no-store",
     });
     response.end(body);
+    return;
+  }
+
+  if (url.pathname === "/api/photos") {
+    if (request.method === "GET" || request.method === "HEAD") {
+      const key = String(url.searchParams.get("key") || "").trim().toLowerCase();
+      if (!/^[0-9a-f]{64}$/.test(key)) {
+        sendJson(response, 400, { error: "Neplatný klíč nodu." });
+        return;
+      }
+      const photos = photoStore.listApproved(key, 12).map((photo) => ({
+        author: photo.author,
+        bytes: photo.bytes,
+        caption: photo.caption,
+        createdAt: photo.createdAt,
+        height: photo.height,
+        id: photo.id,
+        width: photo.width,
+      }));
+      sendJson(response, 200, { photos });
+      return;
+    }
+    if (request.method !== "POST") {
+      response.writeHead(405, { Allow: "GET, HEAD, POST" }).end("Method Not Allowed");
+      return;
+    }
+    const key = String(request.headers["x-photo-key"] || "").trim().toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(key)) {
+      sendJson(response, 400, { error: "Neplatný klíč nodu." });
+      return;
+    }
+    if (request.headers["x-photo-consent"] !== "1") {
+      sendJson(response, 400, { error: "Je potřeba potvrdit právo fotku zveřejnit." });
+      return;
+    }
+    if (!photoToken) {
+      sendJson(response, 503, { error: "Nahrávání fotek není nakonfigurované." });
+      return;
+    }
+    const ip = clientIp(request);
+    const rate = checkPhotoUpload(ip);
+    if (!rate.ok) {
+      sendJson(response, 429, { error: rate.message }, { "Retry-After": String(rate.retryAfter) });
+      return;
+    }
+    const declared = Number(request.headers["content-length"]);
+    if (Number.isFinite(declared) && declared > photoMaxBytes) {
+      sendJson(response, 413, { error: "Fotka je příliš velká." });
+      return;
+    }
+    let buffer;
+    try {
+      buffer = await readBodyBuffer(request, photoMaxBytes);
+    } catch (error) {
+      sendJson(response, error.code === "too_large" ? 413 : 400, {
+        error: error.code === "too_large" ? "Fotka je příliš velká." : "Fotku se nepodařilo načíst.",
+      });
+      return;
+    }
+    if (!detectImage(buffer)) {
+      sendJson(response, 415, { error: "Nepodporovaný formát fotky. Použijte JPEG, PNG nebo WebP." });
+      return;
+    }
+    try {
+      const photo = photoStore.create({
+        author: cleanPhotoText(decodeHeaderValue(request.headers["x-photo-author"]), 60),
+        buffer,
+        caption: cleanPhotoText(decodeHeaderValue(request.headers["x-photo-caption"]), 240),
+        ipHash: createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16),
+        nodeKey: key,
+      });
+      sendJson(response, 202, { id: photo.id, ok: true, status: photo.status });
+    } catch (error) {
+      if (error instanceof PhotoError) {
+        const status = error.code === "too_large" ? 413
+          : error.code === "store_full" ? 507
+            : error.code === "node_limit" ? 409
+              : error.code === "invalid_image" ? 415 : 400;
+        sendJson(response, status, { error: error.message });
+        return;
+      }
+      throw error;
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/photos/view") {
+    if (!photoToken || url.searchParams.get("token") !== photoToken) {
+      response.writeHead(404).end("Not Found");
+      return;
+    }
+    const status = ["pending", "approved", "hidden", "all"].includes(url.searchParams.get("status"))
+      ? url.searchParams.get("status")
+      : "pending";
+    const entries = photoStore.listAdmin(status, 300);
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+    response.end(renderPhotoPage(entries, photoToken, status));
+    return;
+  }
+
+  if (url.pathname === "/api/photos/moderate") {
+    if (!photoToken || url.searchParams.get("token") !== photoToken) {
+      response.writeHead(404).end("Not Found");
+      return;
+    }
+    const id = String(url.searchParams.get("id") || "");
+    const action = String(url.searchParams.get("action") || "");
+    const status = ["pending", "approved", "hidden", "all"].includes(url.searchParams.get("status"))
+      ? url.searchParams.get("status")
+      : "pending";
+    if (action === "delete") photoStore.remove(id);
+    else if (action === "approve") photoStore.setStatus(id, "approved");
+    else if (action === "hide") photoStore.setStatus(id, "hidden");
+    response.writeHead(303, {
+      Location: `view?token=${encodeURIComponent(photoToken)}&status=${encodeURIComponent(status)}`,
+    });
+    response.end();
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/photos/")) {
+    const id = decodeURIComponent(url.pathname.slice("/api/photos/".length)).toLowerCase();
+    if (!/^[0-9a-f-]{36}$/.test(id)) {
+      response.writeHead(404).end("Not Found");
+      return;
+    }
+    const photo = photoStore.get(id);
+    const token = url.searchParams.get("token") || "";
+    if (!photo || (photo.status !== "approved" && (!photoToken || token !== photoToken))) {
+      response.writeHead(404).end("Not Found");
+      return;
+    }
+    const filePath = photoStore.filePath(id);
+    if (!filePath || !existsSync(filePath)) {
+      response.writeHead(404).end("Not Found");
+      return;
+    }
+    response.writeHead(200, {
+      "Cache-Control": photo.status === "approved" ? "public, max-age=31536000, immutable" : "no-store",
+      "Content-Length": photo.bytes,
+      "Content-Type": photo.mime,
+    });
+    if (request.method === "HEAD") {
+      response.end();
+      return;
+    }
+    createReadStream(filePath).on("error", () => {
+      if (!response.writableEnded) response.destroy();
+    }).pipe(response);
     return;
   }
 

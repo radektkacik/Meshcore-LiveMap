@@ -1,0 +1,123 @@
+import assert from "node:assert/strict";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import test from "node:test";
+import { createPhotoStore, detectImage, PhotoError } from "../photos.mjs";
+
+function pngBuffer(width = 640, height = 480) {
+  const buffer = Buffer.alloc(24);
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(buffer, 0);
+  buffer.writeUInt32BE(13, 8);
+  buffer.write("IHDR", 12, "ascii");
+  buffer.writeUInt32BE(width, 16);
+  buffer.writeUInt32BE(height, 20);
+  return buffer;
+}
+
+function jpegBuffer(width = 800, height = 600) {
+  const buffer = Buffer.alloc(32, 0);
+  buffer[0] = 0xff;
+  buffer[1] = 0xd8;
+  buffer[2] = 0xff;
+  buffer[3] = 0xc0;
+  buffer.writeUInt16BE(17, 4);
+  buffer[6] = 0x08;
+  buffer.writeUInt16BE(height, 7);
+  buffer.writeUInt16BE(width, 9);
+  return buffer;
+}
+
+function webpBuffer(width = 1024, height = 768) {
+  const buffer = Buffer.alloc(30);
+  buffer.write("RIFF", 0, "ascii");
+  buffer.writeUInt32LE(22, 4);
+  buffer.write("WEBP", 8, "ascii");
+  buffer.write("VP8X", 12, "ascii");
+  buffer.writeUInt32LE(10, 16);
+  buffer.writeUIntLE(width - 1, 24, 3);
+  buffer.writeUIntLE(height - 1, 27, 3);
+  return buffer;
+}
+
+test("detectImage recognises PNG, JPEG and WebP dimensions", () => {
+  assert.deepEqual(detectImage(pngBuffer(640, 480)), { mime: "image/png", ext: "png", width: 640, height: 480 });
+  assert.deepEqual(detectImage(jpegBuffer(800, 600)), { mime: "image/jpeg", ext: "jpg", width: 800, height: 600 });
+  assert.deepEqual(detectImage(webpBuffer(1024, 768)), { mime: "image/webp", ext: "webp", width: 1024, height: 768 });
+  assert.equal(detectImage(Buffer.from("not an image")), null);
+  assert.equal(detectImage(Buffer.alloc(0)), null);
+});
+
+test("photo store creates a pending photo, hides it until approval and serves the file", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
+  const store = createPhotoStore(directory);
+  const nodeKey = "a".repeat(64);
+  try {
+    const photo = store.create({
+      buffer: pngBuffer(),
+      caption: "Anténa",
+      author: "Petr",
+      ipHash: "abc",
+      nodeKey,
+    });
+    assert.equal(photo.status, "pending");
+    assert.equal(photo.caption, "Anténa");
+    assert.equal(photo.width, 640);
+    assert.deepEqual(store.listApproved(nodeKey), []);
+    assert.equal(store.stats().pending, 1);
+
+    assert.equal(store.setStatus(photo.id, "approved"), true);
+    const approved = store.listApproved(nodeKey);
+    assert.equal(approved.length, 1);
+    assert.equal(approved[0].id, photo.id);
+    assert.ok(existsSync(store.filePath(photo.id)));
+
+    store.setStatus(photo.id, "hidden");
+    assert.deepEqual(store.listApproved(nodeKey), []);
+    assert.equal(store.listAdmin("hidden").length, 1);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("photo store rejects invalid input and enforces the per-node limit", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
+  const store = createPhotoStore(directory, { maxPerNode: 1 });
+  const nodeKey = "b".repeat(64);
+  try {
+    assert.throws(
+      () => store.create({ buffer: Buffer.from("nope"), nodeKey }),
+      (error) => error instanceof PhotoError && error.code === "invalid_image",
+    );
+    assert.throws(
+      () => store.create({ buffer: pngBuffer(), nodeKey: "short" }),
+      (error) => error instanceof PhotoError && error.code === "invalid_key",
+    );
+    store.create({ buffer: pngBuffer(), nodeKey });
+    assert.throws(
+      () => store.create({ buffer: pngBuffer(), nodeKey }),
+      (error) => error instanceof PhotoError && error.code === "node_limit",
+    );
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("photo store removes metadata and the file", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
+  const store = createPhotoStore(directory);
+  try {
+    const photo = store.create({ buffer: jpegBuffer(), nodeKey: "c".repeat(64) });
+    const path = store.filePath(photo.id);
+    assert.ok(existsSync(path));
+    assert.equal(store.remove(photo.id), true);
+    assert.equal(existsSync(path), false);
+    assert.equal(store.get(photo.id), null);
+    assert.equal(store.remove(photo.id), false);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

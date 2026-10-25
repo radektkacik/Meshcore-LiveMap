@@ -76,6 +76,8 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       MAX_PACKET_STREAMS: "1",
       NODES_CACHE_PATH: join(directory, "nodes-cache.json"),
       PACKET_DB_PATH: join(directory, "packets.sqlite"),
+      PHOTO_DIR: join(directory, "uploads"),
+      PHOTO_TOKEN: "photo-token",
       STATS_CACHE_PATH: join(directory, "stats-cache.json"),
       STATS_COLLECT_MS: "0",
       FEEDBACK_DB_PATH: join(directory, "feedback.sqlite"),
@@ -114,6 +116,38 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.ok(health.databases.packets.bytes >= 0);
     assert.ok(health.packets.stored >= 0);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/health`, { method: "POST" })).status, 405);
+    const photoKey = "a".repeat(64);
+    const upload = await fetch(`http://127.0.0.1:${appPort}/api/photos`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "image/png",
+        "X-Photo-Author": encodeURIComponent("Tester"),
+        "X-Photo-Caption": encodeURIComponent("Testovací anténa"),
+        "X-Photo-Consent": "1",
+        "X-Photo-Key": photoKey,
+      },
+      body: tinyPng,
+    });
+    assert.equal(upload.status, 202);
+    const uploaded = await upload.json();
+    assert.equal(uploaded.status, "pending");
+    assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos?key=${photoKey}`)).status, 200);
+    assert.equal((await (await fetch(`http://127.0.0.1:${appPort}/api/photos?key=${photoKey}`)).json()).photos.length, 0);
+    assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos/${uploaded.id}`)).status, 404);
+    assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos/${uploaded.id}?token=photo-token`)).status, 200);
+    assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos/view?token=photo-token&status=pending`)).status, 200);
+    const approve = await fetch(`http://127.0.0.1:${appPort}/api/photos/moderate?token=photo-token&id=${uploaded.id}&action=approve&status=pending`, { redirect: "manual" });
+    assert.equal(approve.status, 303);
+    const photoList = await (await fetch(`http://127.0.0.1:${appPort}/api/photos?key=${photoKey}`)).json();
+    assert.equal(photoList.photos.length, 1);
+    const photoFile = await fetch(`http://127.0.0.1:${appPort}/api/photos/${uploaded.id}`);
+    assert.equal(photoFile.status, 200);
+    assert.equal(photoFile.headers.get("content-type"), "image/png");
+    assert.ok((await photoFile.arrayBuffer()).byteLength > 0);
+    const hidden = await fetch(`http://127.0.0.1:${appPort}/api/photos/moderate?token=photo-token&id=${uploaded.id}&action=hide&status=approved`, { redirect: "manual" });
+    assert.equal(hidden.status, 303);
+    assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos/${uploaded.id}`)).status, 404);
+    assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos/view?token=wrong`)).status, 404);
     const terrainTile = await fetch(`http://127.0.0.1:${appPort}/api/terrain/11/1/1.png`);
     assert.equal(terrainTile.status, 200);
     assert.equal(terrainTile.headers.get("content-type"), "image/png");

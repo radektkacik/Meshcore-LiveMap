@@ -61,8 +61,8 @@ Backupy jsou v `/opt/meshcore-live-map/backups`; uchovává se posledních 20.
 Zálohy neobsahují `node_modules` – rollback proto při shodném lockfile ponechá
 stávající závislosti a při změně je doinstaluje. Při neúspěšném startu se
 předchozí verze obnoví automaticky. Soubor `.env` není součástí balíčku ani
-backupu a aktualizace jej nemění. Konfigurace systemd a Nginx se tímto běžným
-updatem také nemění.
+backupu a aktualizace jej nemění. Fotky nodů v `uploads/` se do záloh
+nezahrnují. Konfigurace systemd a Nginx se tímto běžným updatem také nemění.
 
 Aplikace bude dostupná na `http://localhost:4173`. Proměnná `PORT` mění port
 produkčního serveru. MQTT připojení se nastavuje v `.env` podle `.env.example`;
@@ -113,6 +113,14 @@ přihlašovací údaje zůstávají pouze na serveru.
   limit nedal obejít podvrženou hlavičkou. Administrace je na
   `GET /api/feedback/view?token=<FEEDBACK_TOKEN>` (HTML) nebo
   `GET /api/feedback?token=<FEEDBACK_TOKEN>` (JSON). Bez správného tokenu vrací 404.
+- `GET /api/photos?key=<public_key>` vrací schválené fotky nodu. `POST /api/photos`
+  přijímá binární JPEG/PNG/WebP (max 5 MB) s hlavičkami `X-Photo-Key`,
+  `X-Photo-Caption`, `X-Photo-Author` a `X-Photo-Consent: 1`; fotka se uloží
+  jako `pending` a zobrazí se až po schválení.
+- Moderace fotek je na `GET /api/photos/view?token=<PHOTO_TOKEN>` (fallback
+  `FEEDBACK_TOKEN`), odkud lze fotky schválit, skrýt nebo smazat. Soubory i
+  `photos.sqlite` jsou v `uploads/` mimo `data/`, takže se nedostanou do záloh.
+  Platí limity: 8 fotek/hodinu na IP, 30/den, 8 fotek na nod a 2 GB celkem.
 - Animace tras je ve výchozím stavu řešená canvas rendererem (jedna kresba,
   posun `lineDashOffset` bez CSS animací). Méně výkonnou SVG variantu s CSS
   animací `stroke-dashoffset` lze zapnout parametrem `?anim=svg`. Animaci lze

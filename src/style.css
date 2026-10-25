@@ -347,6 +347,17 @@ html[data-theme="dark"] .node-history-tip { color: #17271f; background: #e6ecef;
 .node-neighbor-main em { overflow: hidden; color: var(--muted); font: 9px "DM Mono", monospace; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
 .node-neighbor small { flex: 0 0 auto; color: var(--muted); font: 10px "DM Mono", monospace; }
 .node-neighbors > small { display: block; margin-top: 6px; color: var(--muted); font: 10px "DM Mono", monospace; }
+.node-photos { padding: 10px 15px; border-top: 1px solid var(--line); }
+.node-photos-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.node-photos-head span { color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: 0.09em; text-transform: uppercase; }
+.node-photo-add { padding: 4px 7px; border: 1px solid rgba(7, 142, 98, 0.32); border-radius: 6px; color: #087a57; background: #edf7f1; font: 10px "DM Mono", monospace; cursor: pointer; }
+.node-photo-add:hover { border-color: var(--green); background: #e4f3ea; }
+.node-photos-list { display: flex; gap: 6px; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: 2px; }
+.node-photo { flex: 0 0 96px; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: #fff; cursor: pointer; text-align: left; }
+.node-photo:hover { border-color: rgba(7, 142, 98, 0.4); }
+.node-photo img { display: block; width: 96px; height: 72px; object-fit: cover; background: #eef2ef; }
+.node-photo small { display: block; overflow: hidden; padding: 4px 5px; color: var(--muted); font: 9px "DM Mono", monospace; text-overflow: ellipsis; white-space: nowrap; }
+.node-photos-empty { margin: 0; color: var(--muted); font-size: 11px; }
 .node-public-key { padding: 10px 15px 13px; border-top: 1px solid var(--line); }
 .node-public-key > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .node-key-copy { padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; color: #49665b; background: #fff; font: 10px "DM Mono", monospace; cursor: pointer; }
@@ -603,6 +614,26 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 .export-actions { display: flex; justify-content: flex-end; }
 .export-actions button { padding: 8px 16px; border: 1px solid var(--green); border-radius: 7px; color: #fff; background: var(--green); font-size: 12px; cursor: pointer; }
 .export-actions button:disabled { opacity: 0.55; cursor: default; }
+.photo-dialog { width: min(460px, calc(100vw - 28px)); padding: 20px; border: 1px solid rgba(30, 65, 49, 0.2); border-radius: 15px; color: #263b33; background: #fffef9; box-shadow: 0 24px 70px rgba(20, 42, 32, 0.3); }
+.photo-dialog::backdrop { background: rgba(24, 40, 32, 0.55); backdrop-filter: blur(3px); }
+.photo-dialog header { padding: 0 30px 12px 0; }
+.photo-dialog h2 { margin: 0 0 4px; font-size: 16px; }
+.photo-dialog header p { margin: 0; color: var(--muted); font: 11px "DM Mono", monospace; }
+.photo-dialog form { display: flex; flex-direction: column; gap: 10px; }
+.photo-dialog label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font: 10px "DM Mono", monospace; }
+.photo-dialog input[type="text"] { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; color: #263b31; background: #fff; font: 12px Manrope, sans-serif; }
+.photo-dialog input[type="file"] { padding: 5px 0; color: #3f584e; font: 11px Manrope, sans-serif; }
+.photo-dialog label.feedback-check { flex-direction: row; align-items: flex-start; gap: 7px; color: #3f584e; font: 11px Manrope, sans-serif; }
+.photo-dialog label.feedback-check input { width: 14px; height: 14px; flex: 0 0 auto; margin-top: 1px; padding: 0; accent-color: var(--green); }
+.photo-preview-wrap { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #f1f5f3; }
+.photo-preview-wrap img { display: block; width: 100%; max-height: 220px; object-fit: contain; }
+.photo-note { margin: 0; color: var(--muted); font: 10px/1.45 "DM Mono", monospace; }
+.photo-lightbox { width: min(900px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 12px; border: 1px solid rgba(30, 65, 49, 0.2); border-radius: 14px; color: #fff; background: #161d24; box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5); }
+.photo-lightbox::backdrop { background: rgba(8, 14, 11, 0.8); backdrop-filter: blur(3px); }
+.photo-lightbox img { display: block; max-width: 100%; max-height: calc(100dvh - 150px); margin: 0 auto; border-radius: 8px; object-fit: contain; }
+.photo-lightbox p { margin: 8px 12px 0; text-align: center; font-size: 12px; }
+#photo-lightbox-author { margin-top: 2px; color: #9fb0b8; font: 11px "DM Mono", monospace; }
+.photo-lightbox p[hidden] { display: none; }
 .qr-dialog { width: min(420px, calc(100vw - 28px)); padding: 20px; border: 1px solid rgba(30, 65, 49, 0.2); border-radius: 15px; color: #263b33; background: #fffef9; box-shadow: 0 24px 70px rgba(20, 42, 32, 0.3); text-align: center; }
 .qr-dialog::backdrop { background: rgba(24, 40, 32, 0.55); backdrop-filter: blur(3px); }
 .qr-dialog-close { position: absolute; top: 9px; right: 9px; width: 29px; height: 29px; padding: 0; border: 0; border-radius: 8px; color: #fff; background: #899990; font-size: 20px; line-height: 29px; cursor: pointer; }
@@ -683,6 +714,13 @@ html[data-theme="dark"] .search-results button.active { background: rgba(255, 25
 html[data-theme="dark"] .export-dialog { color: #e6ecef; background: #161d24; border-color: var(--line); }
 html[data-theme="dark"] .export-controls select { color: #e6ecef; background: #1b232b; border-color: var(--line); }
 html[data-theme="dark"] .export-summary { color: #b9c7cd; }
+html[data-theme="dark"] .node-photo { background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .node-photo img { background: #16222c; }
+html[data-theme="dark"] .node-photo-add { color: #5fd0a5; background: rgba(7, 142, 98, 0.16); border-color: rgba(7, 142, 98, 0.4); }
+html[data-theme="dark"] .photo-dialog { color: #e6ecef; background: #161d24; border-color: var(--line); }
+html[data-theme="dark"] .photo-dialog input[type="text"] { color: #e6ecef; background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .photo-dialog label.feedback-check { color: #cfd9dd; }
+html[data-theme="dark"] .photo-preview-wrap { background: #1b232b; border-color: var(--line); }
 html[data-theme="dark"] .map-actions > button { color: #cdd9de; background: #1b232b; border-color: var(--line); }
 html[data-theme="dark"] .filter-block,
 html[data-theme="dark"] .packet-filter,

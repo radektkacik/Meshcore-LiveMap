@@ -264,6 +264,46 @@
         <p>Naskenujte v mobilní aplikaci MeshCore</p>
       </dialog>
 
+      <dialog id="photo-dialog" class="photo-dialog" aria-labelledby="photo-title">
+        <button id="photo-close" class="feedback-close" type="button">×</button>
+        <header>
+          <h2 id="photo-title"></h2>
+          <p id="photo-node"></p>
+        </header>
+        <form id="photo-form">
+          <label>
+            <span id="photo-file-label"></span>
+            <input id="photo-file" type="file" accept="image/jpeg,image/png,image/webp" required />
+          </label>
+          <div id="photo-preview-wrap" class="photo-preview-wrap" hidden><img id="photo-preview" alt="" /></div>
+          <label>
+            <span id="photo-caption-label"></span>
+            <input id="photo-caption" type="text" maxlength="240" />
+          </label>
+          <label>
+            <span id="photo-author-label"></span>
+            <input id="photo-author" type="text" maxlength="60" />
+          </label>
+          <label class="feedback-check">
+            <input id="photo-consent" type="checkbox" />
+            <span id="photo-consent-label"></span>
+          </label>
+          <p id="photo-status" class="feedback-status" role="status"></p>
+          <p id="photo-note" class="photo-note"></p>
+          <div class="feedback-actions">
+            <button type="button" id="photo-cancel"></button>
+            <button type="submit" id="photo-submit"></button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="photo-lightbox" class="photo-lightbox" aria-label="Fotka nodu">
+        <button id="photo-lightbox-close" class="qr-dialog-close" type="button">×</button>
+        <img id="photo-lightbox-img" alt="" />
+        <p id="photo-lightbox-caption"></p>
+        <p id="photo-lightbox-author"></p>
+      </dialog>
+
       <dialog id="coverage-dialog" class="coverage-dialog" aria-labelledby="coverage-title">
         <button id="coverage-close" class="los-close" type="button" aria-label="Zavřít pokrytí">×</button>
         <header>

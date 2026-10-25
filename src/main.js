@@ -220,6 +220,30 @@ const elements = {
   exportSummary: document.querySelector("#export-summary"),
   exportTitle: document.querySelector("#export-title"),
   exportToggle: document.querySelector("#export-toggle"),
+  photoAuthor: document.querySelector("#photo-author"),
+  photoAuthorLabel: document.querySelector("#photo-author-label"),
+  photoCancel: document.querySelector("#photo-cancel"),
+  photoCaption: document.querySelector("#photo-caption"),
+  photoCaptionLabel: document.querySelector("#photo-caption-label"),
+  photoClose: document.querySelector("#photo-close"),
+  photoConsent: document.querySelector("#photo-consent"),
+  photoConsentLabel: document.querySelector("#photo-consent-label"),
+  photoDialog: document.querySelector("#photo-dialog"),
+  photoFile: document.querySelector("#photo-file"),
+  photoFileLabel: document.querySelector("#photo-file-label"),
+  photoForm: document.querySelector("#photo-form"),
+  photoLightbox: document.querySelector("#photo-lightbox"),
+  photoLightboxAuthor: document.querySelector("#photo-lightbox-author"),
+  photoLightboxCaption: document.querySelector("#photo-lightbox-caption"),
+  photoLightboxClose: document.querySelector("#photo-lightbox-close"),
+  photoLightboxImg: document.querySelector("#photo-lightbox-img"),
+  photoNode: document.querySelector("#photo-node"),
+  photoNote: document.querySelector("#photo-note"),
+  photoPreview: document.querySelector("#photo-preview"),
+  photoPreviewWrap: document.querySelector("#photo-preview-wrap"),
+  photoStatus: document.querySelector("#photo-status"),
+  photoSubmit: document.querySelector("#photo-submit"),
+  photoTitle: document.querySelector("#photo-title"),
   mobileSheet: document.querySelector("#mobile-sheet"),
   mobileSheetClose: document.querySelector("#mobile-sheet-close"),
   mobileSheetContent: document.querySelector("#mobile-sheet-content"),
@@ -341,6 +365,10 @@ const state = {
   observers: [],
   observersLoadedAt: 0,
   observersLoading: false,
+  photoCache: new Map(),
+  photoPreviewUrl: null,
+  photoTarget: null,
+  photoUploading: false,
   showObservers: false,
   prefixCache: new Map(),
   prefixCacheAt: new Map(),
@@ -1306,6 +1334,11 @@ function setupNodePopup(popup, node) {
 
   bindNodeRouteButton(routeButton, node);
   root.querySelectorAll(".node-neighbor").forEach(bindNodeNeighborButton);
+  root.querySelector(".node-photo-add")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openPhotoDialog(node);
+  });
 
   copyButton?.addEventListener("click", async (event) => {
     event.preventDefault();
@@ -1334,6 +1367,7 @@ function setupNodePopup(popup, node) {
   });
 
   void loadNodeHistory(root, node);
+  void loadNodePhotos(root, node);
 }
 
 function nodeLastRoute(node) {
@@ -1403,6 +1437,19 @@ function nodeNeighbors(node) {
         neighbors: tCount("units.neighbors", neighbors.size),
         connections: tCount("units.links", connections),
       })}</small>
+    </div>
+  `;
+}
+
+function nodePhotos(node) {
+  if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
+  return `
+    <div class="node-photos" data-node-key="${escapeHtml(node.public_key.toLowerCase())}">
+      <div class="node-photos-head">
+        <span>${t("photos.title")}</span>
+        <button class="node-photo-add" type="button">${t("photos.add")}</button>
+      </div>
+      <div class="node-photos-list"><p class="node-photos-empty">${t("photos.loading")}</p></div>
     </div>
   `;
 }
@@ -1488,6 +1535,7 @@ function nodePopupContent(node, active) {
     ${networkDetails}
     ${nodeLastRoute(node)}
     ${nodeNeighbors(node)}
+    ${nodePhotos(node)}
     ${node.public_key ? `<div class="node-history" data-node-key="${escapeHtml(node.public_key.toUpperCase())}">
       <div class="node-history-head"><span>${t("node.historyTitle")}</span><small>${t("node.historyLoading")}</small></div>
       <div class="node-history-chart"></div>
@@ -1599,6 +1647,168 @@ async function loadNodeHistory(root, node) {
     const summary = root.querySelector(".node-history-head small");
     if (summary) summary.textContent = "";
   }
+}
+
+async function loadNodePhotos(root, node) {
+  const list = root.querySelector(".node-photos-list");
+  if (!list) return;
+  const key = String(node.public_key || "").toLowerCase();
+  const cached = state.photoCache.get(key);
+  if (cached && Date.now() - cached.at < 60_000) {
+    renderNodePhotos(list, cached.photos, node);
+    return;
+  }
+  try {
+    const data = await getJson(`/api/photos?key=${encodeURIComponent(key)}`);
+    const photos = Array.isArray(data.photos) ? data.photos : [];
+    state.photoCache.set(key, { at: Date.now(), photos });
+    if (list.isConnected) renderNodePhotos(list, photos, node);
+  } catch (error) {
+    console.error("Fotky nodu se nepodařilo načíst", error);
+    if (list.isConnected) list.textContent = t("photos.loadFailed");
+  }
+}
+
+function renderNodePhotos(list, photos, node) {
+  list.replaceChildren();
+  if (!photos.length) {
+    const empty = document.createElement("p");
+    empty.className = "node-photos-empty";
+    empty.textContent = t("photos.empty");
+    list.appendChild(empty);
+    return;
+  }
+  for (const photo of photos) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "node-photo";
+    button.title = photo.caption || t("photos.openAria");
+    button.setAttribute("aria-label", t("photos.openAria"));
+    const image = document.createElement("img");
+    image.loading = "lazy";
+    image.src = appPath(`/api/photos/${encodeURIComponent(photo.id)}`);
+    image.alt = t("photos.alt", { name: node.name || t("common.unknownNode") });
+    button.appendChild(image);
+    if (photo.caption) {
+      const caption = document.createElement("small");
+      caption.textContent = photo.caption;
+      button.appendChild(caption);
+    }
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openPhotoLightbox(photo, node);
+    });
+    list.appendChild(button);
+  }
+}
+
+function setPhotoStatus(text, isError = false) {
+  elements.photoStatus.textContent = text;
+  elements.photoStatus.classList.toggle("error", Boolean(isError));
+}
+
+function resetPhotoPreview() {
+  if (state.photoPreviewUrl) {
+    URL.revokeObjectURL(state.photoPreviewUrl);
+    state.photoPreviewUrl = null;
+  }
+  elements.photoPreview.removeAttribute("src");
+  elements.photoPreviewWrap.hidden = true;
+}
+
+function resetPhotoDialog() {
+  elements.photoForm.reset();
+  setPhotoStatus("");
+  resetPhotoPreview();
+  elements.photoSubmit.disabled = false;
+  state.photoUploading = false;
+}
+
+function renderPhotoDialog() {
+  elements.photoTitle.textContent = t("photos.addTitle");
+  elements.photoClose.setAttribute("aria-label", t("photos.cancel"));
+  elements.photoFileLabel.textContent = t("photos.file");
+  elements.photoCaptionLabel.textContent = t("photos.caption");
+  elements.photoCaption.placeholder = t("photos.captionPlaceholder");
+  elements.photoAuthorLabel.textContent = t("photos.author");
+  elements.photoAuthor.placeholder = t("photos.authorPlaceholder");
+  elements.photoConsentLabel.textContent = t("photos.consent");
+  elements.photoNote.textContent = t("photos.note");
+  elements.photoSubmit.textContent = t("photos.submit");
+  elements.photoCancel.textContent = t("photos.cancel");
+  elements.photoPreview.alt = t("photos.previewAlt");
+  const target = state.photoTarget;
+  elements.photoNode.textContent = target
+    ? `${target.name || t("common.unknownNode")} · ${target.key.slice(0, 8).toUpperCase()}`
+    : "";
+}
+
+function openPhotoDialog(node) {
+  const key = String(node.public_key || "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(key)) return;
+  state.photoTarget = { key, name: node.name || t("common.unknownNode") };
+  resetPhotoDialog();
+  renderPhotoDialog();
+  if (!elements.photoDialog.open) elements.photoDialog.showModal();
+}
+
+function openPhotoLightbox(photo, node) {
+  elements.photoLightboxImg.src = appPath(`/api/photos/${encodeURIComponent(photo.id)}`);
+  elements.photoLightboxImg.alt = t("photos.alt", { name: node.name || t("common.unknownNode") });
+  elements.photoLightboxCaption.textContent = photo.caption || "";
+  elements.photoLightboxCaption.hidden = !photo.caption;
+  elements.photoLightboxAuthor.textContent = photo.author || "";
+  elements.photoLightboxAuthor.hidden = !photo.author;
+  elements.photoLightboxClose.setAttribute("aria-label", t("photos.close"));
+  if (!elements.photoLightbox.open) elements.photoLightbox.showModal();
+}
+
+async function loadPhotoBitmap(file) {
+  if (typeof createImageBitmap === "function") {
+    try {
+      return await createImageBitmap(file);
+    } catch {}
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("Image decode timed out")), 10_000);
+      image.onload = () => {
+        clearTimeout(timer);
+        resolve();
+      };
+      image.onerror = () => {
+        clearTimeout(timer);
+        reject(new Error("Image decode failed"));
+      };
+      image.src = url;
+    });
+    return image;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function preparePhotoBlob(file) {
+  const bitmap = await loadPhotoBitmap(file);
+  const max = 1600;
+  const width = Number(bitmap.width) || 0;
+  const height = Number(bitmap.height) || 0;
+  if (!width || !height) throw new Error("Invalid image");
+  const scale = Math.min(1, max / Math.max(width, height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Canvas unavailable");
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  if (typeof bitmap.close === "function") bitmap.close();
+  const type = canvas.toDataURL("image/webp").startsWith("data:image/webp") ? "image/webp" : "image/jpeg";
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, type, 0.85));
+  if (!blob) throw new Error("Canvas export failed");
+  return blob;
 }
 
 async function getJsonWithResponse(path) {
@@ -5264,6 +5474,92 @@ elements.exportDownload.addEventListener("click", () => {
     console.error("Export se nepodařilo vytvořit", error);
     elements.exportSummary.textContent = t("export.failed");
   }
+});
+
+elements.photoFile.addEventListener("change", () => {
+  resetPhotoPreview();
+  const file = elements.photoFile.files?.[0];
+  if (!file) return;
+  state.photoPreviewUrl = URL.createObjectURL(file);
+  elements.photoPreview.src = state.photoPreviewUrl;
+  elements.photoPreviewWrap.hidden = false;
+  setPhotoStatus("");
+});
+
+elements.photoForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (state.photoUploading) return;
+  const file = elements.photoFile.files?.[0];
+  const target = state.photoTarget;
+  if (!file || !target) {
+    setPhotoStatus(t("photos.invalid"), true);
+    return;
+  }
+  if (!elements.photoConsent.checked) {
+    setPhotoStatus(t("photos.consentRequired"), true);
+    return;
+  }
+  state.photoUploading = true;
+  elements.photoSubmit.disabled = true;
+  setPhotoStatus(t("photos.uploading"));
+  let blob;
+  try {
+    blob = await preparePhotoBlob(file);
+  } catch {
+    setPhotoStatus(t("photos.invalid"), true);
+    state.photoUploading = false;
+    elements.photoSubmit.disabled = false;
+    return;
+  }
+  if (blob.size > 5 * 1024 * 1024) {
+    setPhotoStatus(t("photos.tooLarge"), true);
+    state.photoUploading = false;
+    elements.photoSubmit.disabled = false;
+    return;
+  }
+  try {
+    const response = await fetch(appPath("/api/photos"), {
+      method: "POST",
+      headers: {
+        "Content-Type": blob.type,
+        "X-Photo-Author": encodeURIComponent(elements.photoAuthor.value.trim()),
+        "X-Photo-Caption": encodeURIComponent(elements.photoCaption.value.trim()),
+        "X-Photo-Consent": "1",
+        "X-Photo-Key": target.key,
+      },
+      body: blob,
+      signal: AbortSignal.timeout(60_000),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || t("photos.failed"));
+    setPhotoStatus(t("photos.pending"), false);
+    elements.photoForm.reset();
+    resetPhotoPreview();
+    setTimeout(() => {
+      if (elements.photoDialog.open) elements.photoDialog.close();
+    }, 1_800);
+  } catch (error) {
+    setPhotoStatus(error.message || t("photos.failed"), true);
+  } finally {
+    state.photoUploading = false;
+    elements.photoSubmit.disabled = false;
+  }
+});
+
+elements.photoClose.addEventListener("click", () => elements.photoDialog.close());
+elements.photoCancel.addEventListener("click", () => elements.photoDialog.close());
+elements.photoDialog.addEventListener("click", (event) => {
+  if (event.target === elements.photoDialog) elements.photoDialog.close();
+});
+elements.photoDialog.addEventListener("close", resetPhotoDialog);
+elements.photoLightboxClose.addEventListener("click", () => elements.photoLightbox.close());
+elements.photoLightbox.addEventListener("click", (event) => {
+  if (event.target === elements.photoLightbox) elements.photoLightbox.close();
+});
+elements.photoLightbox.addEventListener("close", () => {
+  elements.photoLightboxImg.removeAttribute("src");
+  elements.photoLightboxCaption.textContent = "";
+  elements.photoLightboxAuthor.textContent = "";
 });
 
 elements.mobileSheetClose.addEventListener("click", closeMobileSheet);
