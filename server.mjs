@@ -55,6 +55,7 @@ const terrainInFlight = new Map();
 const terrainRate = new Map();
 const nodesCachePath = process.env.NODES_CACHE_PATH || join(process.cwd(), "data", "nodes-cache.json");
 const nodesCacheTtlMs = Math.max(60_000, Number(process.env.NODES_CACHE_TTL_MS || 7 * 24 * 60 * 60 * 1000));
+const nodesSoftTtlMs = Math.max(60_000, Number(process.env.NODES_SOFT_TTL_MS || 15 * 60 * 1000));
 const nodesCacheWriteMs = Math.max(0, Number(process.env.NODES_CACHE_WRITE_MS || 5 * 60 * 1000));
 const resolveCacheTtlMs = Math.max(60_000, Number(process.env.RESOLVE_CACHE_TTL_MS || 6 * 60 * 60 * 1000));
 const resolveCacheLimit = Math.max(1, Number(process.env.RESOLVE_CACHE_LIMIT || 500));
@@ -866,8 +867,10 @@ async function handleRequest(request, response) {
     visitStore.recordVisit(clientIp(request));
     visitStore.updatePeak(packetStreams.size);
     broadcastStatus();
-    for (const packet of recentPackets.values()) {
-      if (!sendStreamEvent(client, "packet", packet)) break;
+    if (url.searchParams.get("replay") !== "0") {
+      for (const packet of recentPackets.values()) {
+        if (!sendStreamEvent(client, "packet", packet)) break;
+      }
     }
     response.once("close", () => {
       packetStreams.delete(client);
@@ -1035,6 +1038,26 @@ async function handleRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/recent") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      return;
+    }
+    const secondsParam = url.searchParams.has("seconds") ? Number(url.searchParams.get("seconds")) : NaN;
+    const seconds = Number.isFinite(secondsParam) ? Math.min(Math.max(1, secondsParam), 120) : 30;
+    const limitParam = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : NaN;
+    const limit = Number.isFinite(limitParam) ? Math.min(Math.max(1, limitParam), 5_000) : 5_000;
+    const cutoff = Date.now() - seconds * 1000;
+    const packets = recentPackets.values()
+      .filter((packet) => {
+        const observedAt = Date.parse(packet.latest);
+        return Number.isFinite(observedAt) && observedAt >= cutoff;
+      })
+      .slice(-limit);
+    sendJson(response, 200, { count: packets.length, packets, seconds });
+    return;
+  }
+
   if (url.pathname === "/api/node-history") {
     if (request.method !== "GET") {
       response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
@@ -1163,6 +1186,18 @@ async function handleRequest(request, response) {
     const isNodes = url.pathname === "/api/nodes";
     const isResolve = url.pathname === "/api/resolve-hops";
     const cacheKey = `${url.pathname}${url.search}`;
+    if (isNodes && nodesCache && nodesCacheFresh()) {
+      const stale = Date.now() - Number(nodesCache.at || 0) > nodesSoftTtlMs;
+      clearTimeout(timeout);
+      sendJson(
+        response,
+        200,
+        buildNodesPayload(JSON.parse(nodesCache.body)),
+        stale ? { "X-Data-Stale": "1" } : {},
+      );
+      if (stale) void collectNodeMetrics();
+      return;
+    }
     try {
       const upstreamResponse = await fetch(`${upstream}${url.pathname}${url.search}`, {
         headers: { Accept: "application/json" },

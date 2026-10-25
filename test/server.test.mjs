@@ -116,7 +116,6 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     nodesFail = true;
     const nodesStale = await fetch(`http://127.0.0.1:${appPort}/api/nodes?limit=2000`);
     assert.equal(nodesStale.status, 200);
-    assert.equal(nodesStale.headers.get("x-data-stale"), "1");
     assert.ok(Array.isArray((await nodesStale.json()).nodes));
     nodesFail = false;
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/stats`)).status, 200);
@@ -137,6 +136,13 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.deepEqual(explorerEmptyBody.routes, []);
     assert.equal(explorerEmptyBody.scanned, 0);
     assert.ok(explorerEmptyBody.since > Date.now() - 2 * 24 * 60 * 60 * 1000);
+    const recent = await fetch(`http://127.0.0.1:${appPort}/api/recent?seconds=30`);
+    assert.equal(recent.status, 200);
+    const recentBody = await recent.json();
+    assert.ok(Array.isArray(recentBody.packets));
+    assert.equal(recentBody.seconds, 30);
+    const recentDefault = await fetch(`http://127.0.0.1:${appPort}/api/recent`);
+    assert.equal((await recentDefault.json()).seconds, 30);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/node-history?key=short`)).status, 400);
     const nodeHistory = await fetch(`http://127.0.0.1:${appPort}/api/node-history?key=${"a".repeat(64)}&days=7`);
     assert.equal(nodeHistory.status, 200);

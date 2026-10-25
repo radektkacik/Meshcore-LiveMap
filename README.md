@@ -64,14 +64,21 @@ přihlašovací údaje zůstávají pouze na serveru.
 
 - `/api/nodes?limit=2000` načte všechny známé uzly a jejich souřadnice. Bez
   explicitního limitu CoreScope vrací pouze prvních 50 položek. Uzly a souhrnné
-  statistiky se obnovují nezávisle každých 15 minut.
+  statistiky se obnovují nezávisle každých 15 minut. Server drží uzlovou cache
+  (7 dní) a vydává ji okamžitě (stale-while-revalidate); při cache starší než
+  15 minut odpoví s `X-Data-Stale: 1` a obnovení běží na pozadí. Start stránky
+  tak nečeká na pomalý CoreScope.
+- `/api/recent?seconds=30` vrací posledních N sekund živých paketů z paměťového
+  kruhového bufferu (max. 120 s) jako jeden JSON. Klient ho načte paralelně
+  s uzly, všechny prefixy vyřeší jedním dávkovým requestem a trasy vykreslí
+  najednou, místo aby zpracovával stovky SSE událostí po jednom.
 - Backend odebírá MQTT topic `meshcore/+/+/packets`, dekóduje raw hlavičku a
-  path a posílá pakety prohlížeči přes SSE endpoint `/events/packets`. Novému
-  klientovi endpoint přehraje také pakety přijaté během posledních 120 sekund.
-  Replay buffer má nejvýše 5 000 paketů a SSE endpoint chrání limity klientů a
-  odpojením pomalých příjemců. MQTT spojení používá keepalive 30 s; po výpadku
-  se reconnectuje s backoffem 3–60 s a jitterem, takže výpadek brokeru
-  nezpůsobí smyčku stovek připojení.
+  path a posílá pakety prohlížeči přes SSE endpoint `/events/packets`. Nový
+  klient se připojuje s `?replay=0` a historii dostane přes `/api/recent`;
+  po reconnectu si snapshot znovu načte. Replay buffer má nejvýše 5 000 paketů
+  a SSE endpoint chrání limity klientů a odpojením pomalých příjemců. MQTT
+  spojení používá keepalive 30 s; po výpadku se reconnectuje s backoffem
+  3–60 s a jitterem, takže výpadek brokeru nezpůsobí smyčku stovek připojení.
 - `/api/resolve-hops` převádí path prefixy na repeatery a souřadnice.
 - Backend každých 5 minut stahuje z CoreScope poslední rozřešené trasy a ukládá
   je do SQLite (`data/packets.sqlite`). Deduplikuje se podle dvojice hash paketu

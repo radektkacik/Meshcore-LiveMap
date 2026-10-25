@@ -51,6 +51,7 @@ Aktualizováno: 2026-10-24
 - Historie užitečnosti: 7 dní hodinových vzorků, hover tooltip; bez průměrování
 - Tmavá mapa: OSM dlaždice + CSS filtr
 - Sdílené odkazy: uzel, pozice, filtry, časové okno, jazyk
+- Rychlý start: 30s snapshot živých paketů + uzly z cache (SWR), první trasy ~1 s
 - Detail trasy z feedu i kliknutím na trasu, seznam hopů, vzdálenosti, SNR
 - Mobilní bottom sheet pro detail uzlu/trasy, `?sheet=1`
 
@@ -102,8 +103,9 @@ Aktualizováno: 2026-10-24
 - Původní žebříčky uzlů podle metrik zůstávají
 
 ### Backend
-- `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/route-explorer`, `/api/packets`, `/api/nodes`, `/api/stats`
-- Cache `/api/nodes` a `/api/resolve-hops` proti výpadkům CoreScope
+- `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/route-explorer`, `/api/recent`, `/api/packets`, `/api/nodes`, `/api/stats`
+- Cache `/api/nodes` a `/api/resolve-hops` proti výpadkům CoreScope; uzly se vydávají z cache okamžitě (SWR, soft TTL 15 min)
+- Start stránky: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE běží s `?replay=0`
 - MQTT reconnect/backoff, SSE feed, replay buffer
 - Ukládání TRACE i bez `resolved_path`; cesty se doresolvují na klientu
 - Security headers: CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP
@@ -156,6 +158,7 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261024T190206Z'
 - `/api/health` stále chybí; health check je HTTP 200.
 - MQTT reconnecty přicházejí zhruba 1–2× za hodinu, většinou tiše (Cloudflare/broker zavře WSS); keepalive je 30 s, backoff 3–60 s s jitterem, výpadek obvykle 5–10 s. Feed zůstává online.
 - CoreScope občas selže při sběru tras (`Packet route update failed: fetch failed`); aplikace jede z cache.
+- CoreScope občas odpovídá pomalu (sekundy až desítky sekund); `/api/nodes` se proto vydává z cache okamžitě a obnovuje na pozadí.
 - 1B prefixy jsou nejednoznačné; názvy uzlů se mohou lišit od Analyzeru.
 - Pakety bez path se nekreslí; PATH (typ 11) se záměrně ignoruje.
 - Přibližná poloha observeru je jen IATA oblast, ne přesné letiště.

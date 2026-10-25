@@ -1953,7 +1953,7 @@ async function loadNodes() {
     setDataFreshness(response.headers.get("X-Data-Stale") === "1");
     syncNodes(data.nodes || []);
     applyInitialNode();
-    if (!state.routeHistoryLoaded) void loadRouteHistory();
+    if (!state.routeHistoryLoaded && packetHandlingReady) void loadRouteHistory();
     return true;
   } catch (error) {
     console.error("Uzly se nepodařilo načíst", error);
@@ -3307,7 +3307,7 @@ async function handlePacket(packet) {
       const points = packetPoints(packet, path);
       if (!routeSegments(points).length) return false;
       routeStore.addLive(routeRecord(packet, points, hashBytes, routeId, versionId, createdAt));
-      syncRoutePresentation();
+      if (!suppressRoutePresentation) syncRoutePresentation();
       return true;
     });
   } catch (error) {
@@ -3320,7 +3320,7 @@ function connectPacketStream() {
     state.packetSource.close();
     state.packetSource = null;
   }
-  const source = new EventSource(appPath("/events/packets"));
+  const source = new EventSource(appPath("/events/packets?replay=0"));
   state.packetSource = source;
   source.addEventListener("status", (event) => {
     const status = JSON.parse(event.data);
@@ -3340,15 +3340,26 @@ function connectPacketStream() {
 }
 
 const STREAM_STALL_MS = 300_000;
+async function refreshRecentSnapshot() {
+  try {
+    const data = await getJson("/api/recent?seconds=30");
+    await processPacketBatch(data.packets || []);
+  } catch (error) {
+    console.error("Snapshot posledních paketů se nepodařilo načíst", error);
+  }
+}
+
 function watchPacketStream() {
   if (!state.mqttConnected) return;
   if (state.lastPacketAt && Date.now() - state.lastPacketAt < STREAM_STALL_MS) return;
   console.warn("SSE stream se zasekl, obnovuji připojení");
   state.lastPacketAt = Date.now();
   connectPacketStream();
+  void refreshRecentSnapshot();
 }
 
 let packetHandlingReady = false;
+let suppressRoutePresentation = false;
 const pendingPackets = [];
 
 function dispatchPacket(packet) {
@@ -3360,14 +3371,25 @@ function dispatchPacket(packet) {
   pendingPackets.push(packet);
 }
 
-async function releasePendingPackets() {
-  const replay = pendingPackets.splice(0);
+async function processPacketBatch(packets) {
+  if (!packets.length) return;
+  suppressRoutePresentation = true;
   try {
-    await resolvePrefixes(replay.flatMap((packet) => parsePath(packet)));
+    await resolvePrefixes(packets.flatMap((packet) => parsePath(packet)));
   } catch (error) {
     console.error("Cache tras se nepodařilo připravit", error);
   }
-  for (const packet of replay) await handlePacket(packet);
+  try {
+    for (const packet of packets) await handlePacket(packet);
+  } finally {
+    suppressRoutePresentation = false;
+  }
+  syncRoutePresentation();
+}
+
+async function releasePendingPackets(snapshotPackets = []) {
+  const packets = [...snapshotPackets, ...pendingPackets.splice(0)];
+  await processPacketBatch(packets);
   packetHandlingReady = true;
   for (const packet of pendingPackets.splice(0)) void handlePacket(packet);
 }
@@ -4954,6 +4976,10 @@ const initialLosLink = parseLosLink();
 async function start() {
   console.info(`Route animation mode: ${state.animationMode}`);
   connectPacketStream();
+  const snapshotPromise = getJson("/api/recent?seconds=30").catch((error) => {
+    console.error("Snapshot posledních paketů se nepodařilo načíst", error);
+    return null;
+  });
   const nodesPromise = loadNodes();
   void loadStats();
   setInterval(() => loadBaseData().catch((error) => console.error("Obnova dat selhala", error)), BASE_DATA_REFRESH_MS);
@@ -4972,7 +4998,9 @@ async function start() {
   }, 60_000);
   updateRouteAnimation();
   const nodesLoaded = await nodesPromise;
-  await releasePendingPackets();
+  const snapshot = await snapshotPromise;
+  await releasePendingPackets(snapshot?.packets || []);
+  void loadRouteHistory();
   if (!nodesLoaded) setConnection(false, t("connection.nodesFailed"));
   if (initialLosLink) initSharedLos(initialLosLink);
   if (INITIAL_PACKET_HASH) void openPacketByHash(INITIAL_PACKET_HASH);
