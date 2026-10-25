@@ -702,7 +702,6 @@ export const STATIC_EN = {
   "Jen nody s fotkami": "Nodes with photos only",
   "Zobrazí pouze nody se schválenou fotkou.": "Show only nodes with an approved photo.",
   "Skrýt trasy": "Hide routes",
-  "Nebudou se kreslit žádné trasy ani animace.": "No routes or animations will be drawn.",
   "Legenda": "Legend",
   "Top 5 % Užitečnost": "Top 5% usefulness",
   "Top 5–15 % Užitečnost": "Top 5–15% usefulness",
