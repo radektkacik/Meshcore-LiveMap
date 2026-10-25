@@ -321,6 +321,7 @@ if (IS_BETA) {
   elements.betaBadge.after(prodLink);
 } else {
   elements.exportToggle.hidden = true;
+  elements.photosOnlyToggle.closest("label").hidden = true;
 }
 
 const nextLocale = getLocale() === "cs" ? "en" : "cs";
