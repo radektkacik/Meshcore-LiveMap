@@ -1418,14 +1418,6 @@ function nodePopupContent(node, active) {
   const prefix = hashSize && node.public_key
     ? node.public_key.slice(0, hashSize * 2).toUpperCase()
     : null;
-  const multiByteStatus = String(node.multi_byte_status || "");
-  const multiByteEvidence = String(node.multi_byte_evidence || "");
-  const multiByte = multiByteStatus
-    ? [
-      t(`node.multiByteStatus.${multiByteStatus}`),
-      multiByteEvidence ? t(`node.multiByteEvidence.${multiByteEvidence}`) : "",
-    ].filter(Boolean).join(" · ")
-    : null;
   const region = node.region_placement || {};
   const regionNames = Array.isArray(region.regions) ? region.regions.join(", ") : "";
   const regionBasis = region.basis ? t(`node.regionBasis.${region.basis}`) : "";
@@ -1439,7 +1431,6 @@ function nodePopupContent(node, active) {
     [t("node.region"), regionText, t("node.regionHelp")],
     [t("node.prefix"), prefix, t("node.prefixHelp")],
     [t("node.hashMode"), hashSize ? (hashSize >= 2 ? "2B+" : "1B") : null, t("node.hashModeHelp")],
-    [t("node.multiByte"), multiByte, t("node.multiByteHelp")],
     [t("node.inconsistentHash"), node.hash_size_inconsistent ? t("common.yes") : null, t("node.inconsistentHashHelp")],
   ]);
   const trafficDetails = renderNodeDetails(t("node.trafficDetails"), [

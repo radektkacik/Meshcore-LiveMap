@@ -59,7 +59,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T153456Z`, beta `20261025T153241Z`)
 ### Mapa a uzly
 - Repeater vždy navrchu při překryvu uzlů
 - Stack uzlů na stejných souřadnicích
-- Detail uzlu: role v hlavičce, relativní časy (`teď`, `12 min`, `3 h`, `2 d`), V síti od, region, multi-byte status, obohacení sousedů (role, vzdálenost, naposledy), odkaz do Analyzeru
+- Detail uzlu: role v hlavičce, relativní časy (`teď`, `12 min`, `3 h`, `2 d`), V síti od, region, obohacení sousedů (role, vzdálenost, naposledy), odkaz do Analyzeru
 - Historie užitečnosti: 7 dní hodinových vzorků, hover tooltip; bez průměrování
 - Zvýraznění užitečnosti: relativní Top 5 % (červená) a 5–15 % (žlutá) z aktivních uzlů se skóre za 24 h; počty v legendě
 - Tmavá mapa: OSM dlaždice + CSS filtr
