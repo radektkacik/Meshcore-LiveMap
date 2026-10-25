@@ -156,6 +156,7 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
   box-shadow: var(--shadow);
   backdrop-filter: blur(14px);
 }
+.activity-panel[hidden] { display: none; }
 .activity-panel.resized { max-height: none; }
 .activity-panel.resized .route-feed { flex: 1 1 auto; min-height: 0; max-height: none; }
 .activity-resize { position: absolute; z-index: 3; top: 2px; left: 2px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 5px; color: rgba(38, 59, 51, 0.38); cursor: nwse-resize; touch-action: none; }
