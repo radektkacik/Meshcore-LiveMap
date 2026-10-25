@@ -179,6 +179,8 @@
 | 2026-10-25 18:33 | `20261025T183328Z.tar.gz` | `20261025-1833-82e9bbd` | Prod: stejný limit rozlišení; 3000px test vrací 413, health `ok` | `photos.mjs`, `server.mjs`, `.env.example`, `README.md`, `CONTEXT.md`, testy |
 | 2026-10-25 18:38 | `20261025T183827Z.tar.gz` (stage APP_DIR) | `20261025-1838-60d4534` | Beta: žádosti o smazání/nahlášení fotky z lightboxu, tab „Žádosti“ v administraci, mazání fotky vyřizuje žádosti | `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `.env.example`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-25 18:38 | `20261025T183855Z.tar.gz` | `20261025-1838-60d4534` | Prod: stejné žádosti o smazání; test nahrání→schválení→žádost→smazání ověřen, health `ok` | `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `.env.example`, testy, `README.md`, `CONTEXT.md` |
+| 2026-10-25 18:50 | `20261025T185020Z.tar.gz` (stage APP_DIR) | `20261025-1850-d0a3337` | Beta: HEIC/HEIF z iPhonu se v prohlížeči převádí přes `libheif-js` (WASM) na WebP; CSP povoluje `wasm-unsafe-eval`; HEIC test 702 kB → 320 kB WebP | `package.json`, `package-lock.json`, `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, `README.md`, `CONTEXT.md` |
+| 2026-10-25 18:51 | `20261025T185125Z.tar.gz` | `20261025-1851-d0a3337` | Prod: stejné HEIC zpracování; testovací HEIC nahrán, převeden a smazán, health `ok` | `package.json`, `package-lock.json`, `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, `README.md`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 
