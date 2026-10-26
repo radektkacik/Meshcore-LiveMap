@@ -1700,13 +1700,13 @@ function nodePopupContent(node, active) {
       <div><small>${escapeHtml(roleLabel(node.role))}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
+    ${nodePhotos(node)}
     ${basicDetails}
     ${trafficDetails}
     ${networkDetails}
     ${nodeAnalytics(node)}
     ${nodeLastRoute(node)}
     ${nodeNeighbors(node)}
-    ${nodePhotos(node)}
     ${node.public_key ? `<div class="node-history" data-node-key="${escapeHtml(node.public_key.toUpperCase())}">
       <div class="node-history-head"><span>${t("node.historyTitle")}</span><small>${t("node.historyLoading")}</small></div>
       <div class="node-history-chart"></div>
