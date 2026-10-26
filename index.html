@@ -315,13 +315,20 @@
 
       <dialog id="photo-lightbox" class="photo-lightbox" aria-label="Fotka nodu">
         <button id="photo-lightbox-close" class="qr-dialog-close" type="button">×</button>
-        <button id="photo-lightbox-fullscreen" class="photo-lightbox-fullscreen" type="button">⛶</button>
         <button id="photo-lightbox-prev" class="photo-lightbox-nav prev" type="button">‹</button>
         <button id="photo-lightbox-next" class="photo-lightbox-nav next" type="button">›</button>
-        <img id="photo-lightbox-img" alt="" />
+        <div id="photo-lightbox-stage" class="photo-lightbox-stage">
+          <img id="photo-lightbox-img" alt="" />
+        </div>
         <p id="photo-lightbox-caption"></p>
         <p id="photo-lightbox-author"></p>
         <div id="photo-lightbox-counter" class="photo-lightbox-counter"></div>
+        <div class="photo-lightbox-zoom" role="group" aria-label="Přiblížení fotky">
+          <button id="photo-lightbox-zoom-out" type="button" aria-label="Oddálit">−</button>
+          <span id="photo-lightbox-zoom-label">100 %</span>
+          <button id="photo-lightbox-zoom-in" type="button" aria-label="Přiblížit">+</button>
+          <button id="photo-lightbox-zoom-reset" type="button" aria-label="Zobrazit v plném rozlišení">1:1</button>
+        </div>
         <button id="photo-report-open" class="photo-report-open" type="button"></button>
       </dialog>
 

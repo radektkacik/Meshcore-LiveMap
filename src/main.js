@@ -239,10 +239,14 @@ const elements = {
   photoLightboxCaption: document.querySelector("#photo-lightbox-caption"),
   photoLightboxClose: document.querySelector("#photo-lightbox-close"),
   photoLightboxCounter: document.querySelector("#photo-lightbox-counter"),
-  photoLightboxFullscreen: document.querySelector("#photo-lightbox-fullscreen"),
   photoLightboxImg: document.querySelector("#photo-lightbox-img"),
   photoLightboxNext: document.querySelector("#photo-lightbox-next"),
   photoLightboxPrev: document.querySelector("#photo-lightbox-prev"),
+  photoLightboxStage: document.querySelector("#photo-lightbox-stage"),
+  photoLightboxZoomIn: document.querySelector("#photo-lightbox-zoom-in"),
+  photoLightboxZoomLabel: document.querySelector("#photo-lightbox-zoom-label"),
+  photoLightboxZoomOut: document.querySelector("#photo-lightbox-zoom-out"),
+  photoLightboxZoomReset: document.querySelector("#photo-lightbox-zoom-reset"),
   photoNode: document.querySelector("#photo-node"),
   photoNote: document.querySelector("#photo-note"),
   photoPreview: document.querySelector("#photo-preview"),
@@ -401,6 +405,11 @@ const state = {
   photoNodesLoadedAt: 0,
   photoNodesLoading: false,
   photosOnly: false,
+  photoZoom: 1,
+  photoZoomFit: 1,
+  photoPanX: 0,
+  photoPanY: 0,
+  photoDrag: null,
   photoPreviewUrl: null,
   photoTarget: null,
   photoUploading: false,
@@ -1945,6 +1954,7 @@ function openPhotoLightbox(photo, node, photos = [photo], index = 0) {
   state.lightboxNode = node;
   showPhotoLightbox();
   if (!elements.photoLightbox.open) elements.photoLightbox.showModal();
+  requestAnimationFrame(resetPhotoZoom);
 }
 
 function showPhotoLightbox() {
@@ -1953,6 +1963,7 @@ function showPhotoLightbox() {
   const node = state.lightboxNode || {};
   if (!photo) return;
   state.lightboxPhoto = { node, photo };
+  elements.photoLightboxImg.style.transform = "";
   elements.photoLightboxImg.src = appPath(`/api/photos/${encodeURIComponent(photo.id)}`);
   elements.photoLightboxImg.alt = t("photos.alt", { name: node.name || t("common.unknownNode") });
   elements.photoLightboxCaption.textContent = photo.caption || "";
@@ -1968,28 +1979,89 @@ function showPhotoLightbox() {
   elements.photoLightboxPrev.hidden = !multiple;
   elements.photoLightboxNext.hidden = !multiple;
   elements.photoLightboxCounter.hidden = !multiple;
-  updatePhotoFullscreenButton();
+  elements.photoLightboxZoomIn.title = t("photos.zoomIn");
+  elements.photoLightboxZoomIn.setAttribute("aria-label", t("photos.zoomIn"));
+  elements.photoLightboxZoomOut.title = t("photos.zoomOut");
+  elements.photoLightboxZoomOut.setAttribute("aria-label", t("photos.zoomOut"));
+  elements.photoLightboxZoomReset.title = t("photos.zoomReset");
+  elements.photoLightboxZoomReset.setAttribute("aria-label", t("photos.zoomReset"));
+  schedulePhotoZoomReset();
 }
 
-function updatePhotoFullscreenButton() {
-  const active = elements.photoLightbox.classList.contains("immersive")
-    || document.fullscreenElement === elements.photoLightbox;
-  elements.photoLightboxFullscreen.textContent = active ? "⤢" : "⛶";
-  elements.photoLightboxFullscreen.setAttribute("aria-label", t(active ? "photos.fullscreenExit" : "photos.fullscreen"));
+function photoZoomBounds() {
+  const img = elements.photoLightboxImg;
+  const stage = elements.photoLightboxStage.getBoundingClientRect();
+  const width = img.naturalWidth;
+  const height = img.naturalHeight;
+  if (!width || !height || !stage.width || !stage.height) return null;
+  const fit = Math.min(stage.width / width, stage.height / height, 1);
+  const max = Math.max(1, Math.min(4, fit * 6));
+  return { fit, height, max, stage, width };
 }
 
-async function togglePhotoFullscreen() {
-  const next = !elements.photoLightbox.classList.contains("immersive");
-  elements.photoLightbox.classList.toggle("immersive", next);
-  updatePhotoFullscreenButton();
-  try {
-    if (next && !document.fullscreenElement && document.documentElement.requestFullscreen) {
-      await document.documentElement.requestFullscreen();
-    } else if (!next && document.fullscreenElement) {
-      await document.exitFullscreen();
-    }
-  } catch {}
-  updatePhotoFullscreenButton();
+function applyPhotoZoom() {
+  const bounds = photoZoomBounds();
+  if (!bounds) return;
+  const { height, stage, width } = bounds;
+  const zoomedWidth = width * state.photoZoom;
+  const zoomedHeight = height * state.photoZoom;
+  state.photoPanX = zoomedWidth <= stage.width
+    ? (stage.width - zoomedWidth) / 2
+    : Math.max(stage.width - zoomedWidth, Math.min(0, state.photoPanX));
+  state.photoPanY = zoomedHeight <= stage.height
+    ? (stage.height - zoomedHeight) / 2
+    : Math.max(stage.height - zoomedHeight, Math.min(0, state.photoPanY));
+  elements.photoLightboxImg.style.transform = `translate(${state.photoPanX}px, ${state.photoPanY}px) scale(${state.photoZoom})`;
+  elements.photoLightboxZoomLabel.textContent = `${Math.round(state.photoZoom * 100)} %`;
+}
+
+function resetPhotoZoom() {
+  const bounds = photoZoomBounds();
+  if (!bounds) return;
+  state.photoZoomFit = bounds.fit;
+  state.photoZoom = bounds.fit;
+  state.photoPanX = 0;
+  state.photoPanY = 0;
+  applyPhotoZoom();
+}
+
+function schedulePhotoZoomReset() {
+  const img = elements.photoLightboxImg;
+  if (typeof img.decode === "function") {
+    img.decode()
+      .then(() => requestAnimationFrame(() => {
+        resetPhotoZoom();
+        setTimeout(resetPhotoZoom, 100);
+      }))
+      .catch(() => {});
+  }
+  if (img.complete && img.naturalWidth) {
+    requestAnimationFrame(resetPhotoZoom);
+    setTimeout(resetPhotoZoom, 100);
+    return;
+  }
+  img.addEventListener("load", () => {
+    requestAnimationFrame(resetPhotoZoom);
+    setTimeout(resetPhotoZoom, 100);
+  }, { once: true });
+}
+
+function zoomPhotoAt(nextZoom, clientX, clientY) {
+  const bounds = photoZoomBounds();
+  if (!bounds) return;
+  const rect = bounds.stage;
+  const anchorX = clientX == null ? rect.width / 2 : clientX - rect.left;
+  const anchorY = clientY == null ? rect.height / 2 : clientY - rect.top;
+  const previous = state.photoZoom || bounds.fit;
+  const target = Math.max(bounds.fit, Math.min(bounds.max, nextZoom));
+  state.photoPanX = anchorX - (anchorX - state.photoPanX) * (target / previous);
+  state.photoPanY = anchorY - (anchorY - state.photoPanY) * (target / previous);
+  state.photoZoom = target;
+  applyPhotoZoom();
+}
+
+function zoomPhotoBy(factor, clientX, clientY) {
+  zoomPhotoAt((state.photoZoom || state.photoZoomFit) * factor, clientX, clientY);
 }
 
 function stepPhotoLightbox(delta) {
@@ -6031,19 +6103,55 @@ elements.photoDialog.addEventListener("click", (event) => {
 });
 elements.photoDialog.addEventListener("close", resetPhotoDialog);
 elements.photoLightboxClose.addEventListener("click", () => elements.photoLightbox.close());
-elements.photoLightboxFullscreen.addEventListener("click", togglePhotoFullscreen);
-document.addEventListener("fullscreenchange", () => {
-  if (!elements.photoLightbox.open) return;
-  if (!document.fullscreenElement) elements.photoLightbox.classList.remove("immersive");
-  updatePhotoFullscreenButton();
-});
-elements.photoLightbox.addEventListener("cancel", (event) => {
-  if (!elements.photoLightbox.classList.contains("immersive")) return;
-  event.preventDefault();
-  void togglePhotoFullscreen();
-});
 elements.photoLightboxPrev.addEventListener("click", () => stepPhotoLightbox(-1));
 elements.photoLightboxNext.addEventListener("click", () => stepPhotoLightbox(1));
+elements.photoLightboxZoomIn.addEventListener("click", () => zoomPhotoBy(1.4));
+elements.photoLightboxZoomOut.addEventListener("click", () => zoomPhotoBy(1 / 1.4));
+elements.photoLightboxZoomReset.addEventListener("click", () => {
+  zoomPhotoAt(1, null, null);
+});
+elements.photoLightboxStage.addEventListener("wheel", (event) => {
+  if (!elements.photoLightbox.open) return;
+  event.preventDefault();
+  zoomPhotoBy(Math.exp(-event.deltaY * 0.0015), event.clientX, event.clientY);
+}, { passive: false });
+elements.photoLightboxStage.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0 || state.photoZoom <= state.photoZoomFit + 0.001) return;
+  event.preventDefault();
+  state.photoDrag = {
+    id: event.pointerId,
+    panX: state.photoPanX,
+    panY: state.photoPanY,
+    x: event.clientX,
+    y: event.clientY,
+  };
+  elements.photoLightboxStage.classList.add("dragging");
+  elements.photoLightboxStage.setPointerCapture(event.pointerId);
+});
+elements.photoLightboxStage.addEventListener("pointermove", (event) => {
+  const drag = state.photoDrag;
+  if (!drag || drag.id !== event.pointerId) return;
+  state.photoPanX = drag.panX + (event.clientX - drag.x);
+  state.photoPanY = drag.panY + (event.clientY - drag.y);
+  applyPhotoZoom();
+});
+const endPhotoDrag = (event) => {
+  if (!state.photoDrag || state.photoDrag.id !== event.pointerId) return;
+  state.photoDrag = null;
+  elements.photoLightboxStage.classList.remove("dragging");
+  if (elements.photoLightboxStage.hasPointerCapture(event.pointerId)) {
+    elements.photoLightboxStage.releasePointerCapture(event.pointerId);
+  }
+};
+elements.photoLightboxStage.addEventListener("pointerup", endPhotoDrag);
+elements.photoLightboxStage.addEventListener("pointercancel", endPhotoDrag);
+elements.photoLightboxStage.addEventListener("dblclick", (event) => {
+  if (state.photoZoom > state.photoZoomFit * 1.1) resetPhotoZoom();
+  else zoomPhotoAt(1, event.clientX, event.clientY);
+});
+window.addEventListener("resize", () => {
+  if (elements.photoLightbox.open) resetPhotoZoom();
+});
 elements.photoLightbox.addEventListener("keydown", (event) => {
   if (event.key === "ArrowLeft") {
     event.preventDefault();
@@ -6057,13 +6165,15 @@ elements.photoLightbox.addEventListener("click", (event) => {
   if (event.target === elements.photoLightbox) elements.photoLightbox.close();
 });
 elements.photoLightbox.addEventListener("close", () => {
-  if (document.fullscreenElement === elements.photoLightbox) {
-    document.exitFullscreen().catch(() => {});
-  }
-  elements.photoLightbox.classList.remove("immersive");
+  elements.photoLightboxImg.style.transform = "";
   elements.photoLightboxImg.removeAttribute("src");
   elements.photoLightboxCaption.textContent = "";
   elements.photoLightboxAuthor.textContent = "";
+  state.photoDrag = null;
+  state.photoZoom = 1;
+  state.photoZoomFit = 1;
+  state.photoPanX = 0;
+  state.photoPanY = 0;
   state.lightboxPhoto = null;
   state.lightboxPhotos = [];
   state.lightboxIndex = 0;

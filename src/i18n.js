@@ -335,8 +335,10 @@ const cs = {
   "photos.reportClose": "Zavřít žádost",
   "photos.previous": "Předchozí fotka",
   "photos.next": "Další fotka",
-  "photos.fullscreen": "Celá obrazovka",
-  "photos.fullscreenExit": "Ukončit celou obrazovku",
+  "photos.zoomIn": "Přiblížit",
+  "photos.zoomOut": "Oddálit",
+  "photos.zoomReset": "Zobrazit v plném rozlišení",
+  "photos.zoomGroup": "Přiblížení fotky",
 };
 
 const en = {
@@ -672,8 +674,10 @@ const en = {
   "photos.reportClose": "Close request",
   "photos.previous": "Previous photo",
   "photos.next": "Next photo",
-  "photos.fullscreen": "Fullscreen",
-  "photos.fullscreenExit": "Exit fullscreen",
+  "photos.zoomIn": "Zoom in",
+  "photos.zoomOut": "Zoom out",
+  "photos.zoomReset": "Show at full resolution",
+  "photos.zoomGroup": "Photo zoom",
 };
 
 export const TRANSLATIONS = { cs, en };
