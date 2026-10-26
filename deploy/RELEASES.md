@@ -204,6 +204,9 @@
 | 2026-10-26 12:20 | `20261026T122044Z.tar.gz` | `20261026-1220-6925b3c` | Prod: stejná oprava SNR hodnot u TRACE | `src/route-model.js`, `src/main.js`, testy, `CONTEXT.md` |
 | 2026-10-26 12:29 | `20261026T122924Z.tar.gz` (stage APP_DIR) | `20261026-1229-79e5e36` | Beta: SNR štítky u TRACE i v archivních oknech 5 min / 1 h / 24 h; archivní TRACE se seskupují podle `tag` | `src/main.js`, `src/route-model.js`, `CONTEXT.md` |
 | 2026-10-26 12:29 | `20261026T122946Z.tar.gz` | `20261026-1229-79e5e36` | Prod: stejné SNR štítky v archivech | `src/main.js`, `src/route-model.js`, `CONTEXT.md` |
+| 2026-10-26 17:50 | `20261026T175053Z.tar.gz` (stage APP_DIR) | `20261026-1750-31cbaa8` | Beta: celoobrazovkový lightbox, tlačítko browser fullscreenu, klient nahrává 2000 px / kvalita 0,9 | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `README.md`, `CONTEXT.md` |
+| 2026-10-26 17:51 | `20261026T175156Z.tar.gz` (stage APP_DIR) | `20261026-1751-6f66730` | Beta: zvětšený prostor pro fotku v lightboxu (max. výška `100dvh - 120px`) | `src/style.css` |
+| 2026-10-26 17:52 | `20261026T175235Z.tar.gz` | `20261026-1752-6f66730` | Prod: celoobrazovkový lightbox, fullscreen tlačítko a kvalitnější upload | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `README.md`, `CONTEXT.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
