@@ -207,6 +207,8 @@
 | 2026-10-26 17:50 | `20261026T175053Z.tar.gz` (stage APP_DIR) | `20261026-1750-31cbaa8` | Beta: celoobrazovkový lightbox, tlačítko browser fullscreenu, klient nahrává 2000 px / kvalita 0,9 | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `README.md`, `CONTEXT.md` |
 | 2026-10-26 17:51 | `20261026T175156Z.tar.gz` (stage APP_DIR) | `20261026-1751-6f66730` | Beta: zvětšený prostor pro fotku v lightboxu (max. výška `100dvh - 120px`) | `src/style.css` |
 | 2026-10-26 17:52 | `20261026T175235Z.tar.gz` | `20261026-1752-6f66730` | Prod: celoobrazovkový lightbox, fullscreen tlačítko a kvalitnější upload | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `README.md`, `CONTEXT.md` |
+| 2026-10-26 17:58 | `20261026T175837Z.tar.gz` (stage APP_DIR) | `20261026-1758-e8b0ece` | Beta: fullscreen tlačítko funguje i bez Fullscreen API přes CSS immersive režim; dialog už neposílá neplatný request | `src/main.js`, `src/style.css` |
+| 2026-10-26 17:59 | `20261026T175914Z.tar.gz` | `20261026-1759-e8b0ece` | Prod: stejný fullscreen fallback | `src/main.js`, `src/style.css` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):

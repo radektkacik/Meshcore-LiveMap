@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-26 (prod `20261026T175235Z`, beta `20261026T175156Z`)  
+Aktualizováno: 2026-10-26 (prod `20261026T175914Z`, beta `20261026T175837Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -17,20 +17,20 @@ Aktualizováno: 2026-10-26 (prod `20261026T175235Z`, beta `20261026T175156Z`)
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261026T175235Z`
-- Build: `20261026-1752-6f66730`
-- Asset: `index-BTQxTt7R.js` + `wasm-bundle-CewmHNeZ.js`
+- Release: `20261026T175914Z`
+- Build: `20261026-1759-e8b0ece`
+- Asset: `index-C3ehNw6n.js` + `wasm-bundle-Dc3DoMsx.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261026T175235Z.tar.gz`
-- Tag: `prod-20261026-1752`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261026T175914Z.tar.gz`
+- Tag: `prod-20261026-1759`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261026T175156Z`
-- Build: `20261026-1751-6f66730`
-- Asset: `index-B-2S7DJ8.js` + `wasm-bundle-Bv_YG9mM.js`
+- Release: `20261026T175837Z`
+- Build: `20261026-1758-e8b0ece`
+- Asset: `index-CtafsFTm.js` + `wasm-bundle-zMSsZ7YQ.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261026T175156Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261026T175837Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka
@@ -55,7 +55,7 @@ Aktualizováno: 2026-10-26 (prod `20261026T175235Z`, beta `20261026T175156Z`)
 - Z detailu nodu odstraněn řádek „Stav hashe“
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
 - Rychlé výhry (prod i beta): `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (nody, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export nodů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
-- Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP + automatický převod HEIC/HEIF z iPhonu přes `libheif-js` (WASM) v prohlížeči, s potvrzením práv; fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`. Klient zmenšuje na 2000 px, server povolí max. 2400 px. Lightbox je celoobrazovkový (100vw/100dvh), s volitelným browser fullscreenem, šipkami, počítadlem a žádostí o smazání. Přepínač „Jen nody s fotkami“ je skrytý na betě i v produkci.
+- Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP + automatický převod HEIC/HEIF z iPhonu přes `libheif-js` (WASM) v prohlížeči, s potvrzením práv; fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`. Klient zmenšuje na 2000 px, server povolí max. 2400 px. Lightbox je celoobrazovkový (100vw/100dvh), s tlačítkem fullscreenu (browser fullscreen + CSS fallback), šipkami, počítadlem a žádostí o smazání. Přepínač „Jen nody s fotkami“ je skrytý na betě i v produkci.
 - Telegram notifikace pro správce (prod i beta): nová fotka k schválení, žádost o smazání fotky, volitelně nová zpráva v knize návštěv; konfigurace `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `PUBLIC_BASE_URL`, `TELEGRAM_ADMIN_LINK`.
 
 ### Mapa a nody
@@ -161,10 +161,10 @@ Aktualizováno: 2026-10-26 (prod `20261026T175235Z`, beta `20261026T175156Z`)
 - Rollback při shodném lockfile ponechá `node_modules`, jinak spustí `npm ci --omit=dev`.
 - Na VPS `/root/rollback-meshcore.sh`, aktualizuje se při deployi.
 - Retence 20 záloh.
-- Rollback aktuální produkce `20261026T175235Z` na předchozí `20261026T122946Z`:
+- Rollback aktuální produkce `20261026T175914Z` na předchozí `20261026T175235Z`:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261026T175235Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261026T175914Z'
 ```
 
 ## 7. Deploy konvence
