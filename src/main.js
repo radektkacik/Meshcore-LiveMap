@@ -139,6 +139,7 @@ document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) === "da
 const elements = {
   activityNew: document.querySelector("#activity-new"),
   activityChannels: document.querySelector("#activity-channels"),
+  activityClose: document.querySelector("#activity-close"),
   activityHistory: document.querySelector("#activity-history"),
   channelTabs: document.querySelector("#channel-tabs"),
   historyFilters: document.querySelector("#history-filters"),
@@ -834,6 +835,7 @@ function routeDetailHtml(route) {
       <div class="route-popup-actions">
         <button class="route-show-on-map" type="button">${t("route.showOnMap")}</button>
         ${analyzerUrl ? `<a class="packet-analyzer-link" href="${analyzerUrl}" target="_blank" rel="noreferrer">${t("packet.openAnalyzer")}</a>` : ""}
+        <button class="route-popup-close popup-close-button" type="button">${t("common.close")}</button>
       </div>
     </section>
   `;
@@ -896,6 +898,7 @@ function packetDetailHtml(occurrences) {
       <div class="route-popup-actions packet-actions-top">
         <button class="route-show-on-map packet-show-all" type="button">${t("packet.showAll")}</button>
         ${analyzerUrl ? `<a class="packet-analyzer-link" href="${analyzerUrl}" target="_blank" rel="noreferrer">${t("packet.openAnalyzer")}</a>` : ""}
+        <button class="packet-popup-close popup-close-button" type="button">${t("common.close")}</button>
       </div>
       <h4>${t("packet.observations")}</h4>
       <ol class="packet-occurrence-list">${rows}</ol>
@@ -929,6 +932,11 @@ function bindPacketActions(root, occurrences, close) {
     event.stopPropagation();
     close();
     showPacketOnMap(occurrences);
+  });
+  root.querySelector(".packet-popup-close")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    close();
   });
 }
 
@@ -1255,6 +1263,11 @@ function openNodeEntry(entry) {
 
 function openRouteSheet(route) {
   showMobileSheet(routeDetailHtml(route));
+  elements.mobileSheetContent.querySelector(".route-popup-close")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeMobileSheet();
+  });
   elements.mobileSheetContent.querySelector(".route-show-on-map")?.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -1319,6 +1332,11 @@ function openRouteDetail(route, latlng = null) {
       popup.close();
       showRouteOnMap(route);
     }, 0);
+  });
+  content.querySelector(".route-popup-close")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    popup.close();
   });
 }
 
@@ -1390,6 +1408,12 @@ function setupNodePopup(popup, node) {
     event.preventDefault();
     event.stopPropagation();
     openPhotoDialog(node);
+  });
+  root.querySelector(".node-popup-close")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (isMobileSheet()) closeMobileSheet();
+    else popup.close();
   });
 
   copyButton?.addEventListener("click", async (event) => {
@@ -1664,6 +1688,7 @@ function nodePopupContent(node, active) {
         <button class="node-link-copy" type="button">${t("node.copyLink")}</button>
         ${/^[0-9a-f]{64}$/i.test(node.public_key) ? `<button class="node-qr-toggle" type="button">${t("node.showQr")}</button>` : ""}
         ${/^[0-9a-f]{64}$/i.test(node.public_key) ? `<a class="node-analyzer-link" href="https://analyzer.meshcore.cz/#/nodes/${encodeURIComponent(node.public_key.toLowerCase())}" target="_blank" rel="noreferrer">${t("node.openAnalyzer")}</a>` : ""}
+        <button class="node-popup-close popup-close-button" type="button">${t("common.close")}</button>
       </div>
     ` : ""}
   `;
@@ -5209,8 +5234,7 @@ hudToggle.addEventListener("click", () => {
   localStorage.setItem(HUD_COLLAPSED_KEY, String(collapsed));
 });
 
-activityToggle.addEventListener("click", () => {
-  const show = activityPanel.hidden;
+function setActivityVisible(show) {
   activityPanel.hidden = !show;
   activityToggle.textContent = show ? t("activity.hide") : t("activity.show");
   activityToggle.setAttribute("aria-pressed", String(show));
@@ -5218,6 +5242,14 @@ activityToggle.addEventListener("click", () => {
     feedState.autoPaused = false;
     flushFeed(true);
   }
+}
+
+elements.activityClose.setAttribute("aria-label", t("activity.close"));
+activityToggle.addEventListener("click", () => {
+  setActivityVisible(activityPanel.hidden);
+});
+elements.activityClose.addEventListener("click", () => {
+  setActivityVisible(false);
 });
 
 const STATS_ROLES = new Set(["repeater", "room", "sensor"]);
