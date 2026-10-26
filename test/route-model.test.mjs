@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildNeighborIndex, RouteStore, RouteVersionState, routeTimestamp } from "../src/route-model.js";
+import { buildNeighborIndex, groupTraceObservations, RouteStore, RouteVersionState, routeTimestamp } from "../src/route-model.js";
 
 const allRoutes = { showOneByteRoutes: true, showOtherPacketTypes: true };
 const primaryTwoByte = { showOneByteRoutes: false, showOtherPacketTypes: false };
@@ -139,6 +139,39 @@ test("neighbor index counts undirected adjacencies and keeps newest name and tim
   assert.equal(index.get("BBBB").get("CCCC").count, 1);
   assert.equal(index.get("AAAA").get("BBBB").lastAt, 200);
   assert.deepEqual([...index.get("CCCC").keys()], ["BBBB"]);
+});
+
+test("trace observations are grouped by tag and the most complete route wins", () => {
+  const short = route({
+    createdAt: 100_000,
+    id: "trace-a:obs-a",
+    observerId: "obs-a",
+    packetHash: "AAAA",
+    packetType: 9,
+    points: [{ publicKey: "A" }, { publicKey: "B" }],
+    snrValues: [10],
+    traceTag: "12345",
+    versionId: "v-a",
+  });
+  const full = route({
+    createdAt: 100_001,
+    id: "trace-b:obs-b",
+    observerId: "obs-b",
+    packetHash: "BBBB",
+    packetType: 9,
+    points: [{ publicKey: "A" }, { publicKey: "B" }, { publicKey: "C" }],
+    snrValues: [10, -8, 4],
+    traceTag: "12345",
+    versionId: "v-b",
+  });
+  const ordinary = route({ id: "ordinary", packetType: 4, versionId: "v-c" });
+  const grouped = groupTraceObservations([short, full, ordinary]);
+  assert.equal(grouped.length, 2);
+  assert.equal(grouped[0].id, full.id);
+  assert.equal(grouped[0].traceObservations, 2);
+  assert.equal(grouped[0].traceObserverCount, 2);
+  assert.equal(grouped[0].traceRoutes.length, 2);
+  assert.equal(grouped[1].id, ordinary.id);
 });
 
 test("route version state coalesces in-flight work and retries failures", async () => {

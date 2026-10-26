@@ -27,6 +27,56 @@ function newestFirst(a, b) {
   return b.createdAt - a.createdAt || b.sequence - a.sequence;
 }
 
+function traceObservationScore(route) {
+  const points = Array.isArray(route.points) ? route.points.length : 0;
+  const snr = Array.isArray(route.snrValues) ? route.snrValues.length : 0;
+  return points * 100 + snr;
+}
+
+export function groupTraceObservations(routes) {
+  const groups = new Map();
+  const result = [];
+  for (const route of routes) {
+    const tag = route.packetType === 9 && route.traceTag != null && route.traceTag !== ""
+      ? String(route.traceTag)
+      : "";
+    if (!tag) {
+      result.push(route);
+      continue;
+    }
+    const key = `trace:${tag}`;
+    const existing = groups.get(key);
+    if (!existing) {
+      const grouped = {
+        ...route,
+        traceObservations: 1,
+        traceObserverCount: 1,
+        traceRoutes: [route],
+      };
+      groups.set(key, grouped);
+      result.push(grouped);
+      continue;
+    }
+    existing.traceObservations += 1;
+    existing.traceRoutes.push(route);
+    const observers = new Set(existing.traceRoutes.map((item) => item.observerId || item.id));
+    existing.traceObserverCount = observers.size;
+    if (traceObservationScore(route) > traceObservationScore(existing)
+      || (traceObservationScore(route) === traceObservationScore(existing)
+        && route.timestamp > existing.timestamp)) {
+      const observations = existing.traceObservations;
+      const observerCount = existing.traceObserverCount;
+      const traceRoutes = existing.traceRoutes;
+      Object.assign(existing, route, {
+        traceObservations: observations,
+        traceObserverCount: observerCount,
+        traceRoutes,
+      });
+    }
+  }
+  return result;
+}
+
 export class RouteStore {
   constructor({ retentionMs, feedLimit, capacity = Number.POSITIVE_INFINITY }) {
     this.retentionMs = retentionMs;
@@ -70,15 +120,14 @@ export class RouteStore {
       const previous = byRouteId.get(route.id);
       if (!previous || newestFirst(route, previous) < 0) byRouteId.set(route.id, route);
     }
-    return [...byRouteId.values()].sort(newestFirst);
+    return groupTraceObservations([...byRouteId.values()].sort(newestFirst));
   }
 
   visibleFeed(filters, now = Date.now()) {
     const cutoff = now - this.retentionMs;
-    return [...this.liveByVersion.values()]
+    return groupTraceObservations([...this.liveByVersion.values()]
       .filter((route) => route.createdAt > cutoff && isRouteVisible(route.packetType, route.hashBytes, filters))
-      .sort(newestFirst)
-      .slice(0, this.feedLimit);
+      .sort(newestFirst)).slice(0, this.feedLimit);
   }
 
   packetOccurrences(packetHash, filters, now = Date.now()) {
@@ -102,7 +151,7 @@ export class RouteStore {
 
   lastRoutesByNode(filters) {
     const result = new Map();
-    const routes = [...this.history, ...this.liveByVersion.values()]
+    const routes = groupTraceObservations([...this.history, ...this.liveByVersion.values()])
       .filter((route) => isRouteVisible(route.packetType, route.hashBytes, filters))
       .sort(newestFirst);
     for (const route of routes) {

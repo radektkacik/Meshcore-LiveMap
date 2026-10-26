@@ -1213,7 +1213,9 @@ async function openPacketByHash(hash, { showOnMap = false } = {}) {
 async function openPacketDetail(route, latlng = null) {
   if (!route) return;
   const hash = route.packetHash || String(route.id || "").split(":")[0];
-  let occurrences = routeStore.packetOccurrences(hash, state, nowMs());
+  let occurrences = Array.isArray(route.traceRoutes) && route.traceRoutes.length
+    ? [...route.traceRoutes]
+    : routeStore.packetOccurrences(hash, state, nowMs());
   if (!occurrences.length) occurrences = [route];
   try {
     const data = await getJson(`/api/packet-routes?hash=${encodeURIComponent(hash)}`);
@@ -2997,6 +2999,8 @@ function routeRecord(packet, points, hashBytes, id, versionId, createdAt, timest
   const color = routeColor(packet.payload_type);
   const snr = Number(packet.snr);
   const rssi = Number(packet.rssi);
+  const decoded = parseDecoded(packet);
+  const traceTag = Number(packet.payload_type) === 9 && decoded.tag != null ? String(decoded.tag) : null;
   return {
     bounds: L.latLngBounds(points.map((point) => [point.lat, point.lon])),
     color,
@@ -3023,6 +3027,7 @@ function routeRecord(packet, points, hashBytes, id, versionId, createdAt, timest
     snrValues: packetSnrValues(packet),
     timestamp,
     to: points.at(-1).name || t("common.unknownShort"),
+    traceTag,
     typeLabel,
     versionId,
   };
@@ -3291,6 +3296,9 @@ function saveRouteCache(routes) {
       snrValues: route.snrValues,
       timestamp: route.timestamp,
       to: route.to,
+      traceObserverCount: route.traceObserverCount,
+      traceObservations: route.traceObservations,
+      traceTag: route.traceTag,
       typeLabel: route.typeLabel,
       versionId: route.versionId,
     })),
@@ -3432,6 +3440,8 @@ function renderFeedNow(groups, emptyText, { history = false } = {}) {
   }
   elements.feed.replaceChildren(...groups.map(({ route, count }) => {
     const item = document.createElement("li");
+    const observations = Math.max(count, Number(route.traceObservations) || 1);
+    const observers = Math.max(count, Number(route.traceObserverCount) || 1);
     item.dataset.hashBytes = String(route.hashBytes);
     item.dataset.packetHash = route.packetHash || "";
     item.dataset.packetType = String(route.packetType);
@@ -3440,11 +3450,11 @@ function renderFeedNow(groups, emptyText, { history = false } = {}) {
     item.innerHTML = `
       <div>
         <b>${escapeHtml(route.typeLabel)}</b>
-        ${count > 1 ? `<span class="feed-count">×${count}</span>` : ""}
+        ${observations > 1 ? `<span class="feed-count">×${observations}</span>` : ""}
         <time>${escapeHtml(when)}</time>
       </div>
       <p>${escapeHtml(route.from)} <span>→</span> ${escapeHtml(route.to)}</p>
-      <small>${route.scope?.trim() ? `${escapeHtml(route.scope.trim())} · ` : ""}${formatHops(Math.max(1, route.points.length - 1))} · ${route.hashBytes}B · ${formatObservers(count)}</small>
+      <small>${route.scope?.trim() ? `${escapeHtml(route.scope.trim())} · ` : ""}${formatHops(Math.max(1, route.points.length - 1))} · ${route.hashBytes}B · ${formatObservers(observers)}${observations > 1 ? ` · ${tCount("units.observations", observations)}` : ""}</small>
     `;
     item.tabIndex = 0;
     item.setAttribute("role", "button");
@@ -3474,7 +3484,7 @@ function flushFeed(force = false) {
   }
   if (elements.activityPanel.hidden) return;
   const groups = groupFeedRoutes(feedState.latestRoutes);
-  const signature = `${feedState.latestEmptyText}|${groups.map(({ route, count }) => `${route.versionId || route.id}:${count}`).join("|")}`;
+  const signature = `${feedState.latestEmptyText}|${groups.map(({ route, count }) => `${route.versionId || route.id}:${count}:${route.traceObservations || 1}`).join("|")}`;
   feedState.lastRenderAt = Date.now();
   feedState.lastRenderedVersions = new Set(feedState.latestRoutes.map((route) => route.versionId || route.id));
   feedState.pendingVersions.clear();
