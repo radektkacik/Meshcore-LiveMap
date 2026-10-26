@@ -217,6 +217,8 @@
 | 2026-10-26 18:24 | `20261026T182400Z.tar.gz` | `20261026-1824-294b033` | Prod: stejná analytika nodu | `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `.env.example`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-26 18:30 | `20261026T183024Z.tar.gz` (stage APP_DIR) | `20261026-1830-53bdf7e` | Beta: fotky přesunuty nahoru do detailu nodu (hned pod hlavičku) | `src/main.js`, `src/style.css` |
 | 2026-10-26 18:31 | `20261026T183103Z.tar.gz` | `20261026-1831-53bdf7e` | Prod: stejné přesunutí fotek nahoru | `src/main.js`, `src/style.css` |
+| 2026-10-26 18:46 | `20261026T184639Z.tar.gz` (stage APP_DIR) | `20261026-1846-03fb01d` | Beta: delší historie Paketů/h – 30 dní a 1 rok z denních agregátů (místní půlnoc), surová data 30 dní, hodinové agregáty 730 dní, denní 1825 dní | `node-metrics.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, `.env.example`, testy, `README.md`, `CONTEXT.md` |
+| 2026-10-26 18:47 | `20261026T184735Z.tar.gz` | `20261026-1847-03fb01d` | Prod: stejná delší historie Paketů/h | `node-metrics.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, `.env.example`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
