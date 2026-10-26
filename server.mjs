@@ -94,6 +94,10 @@ const statsSoftTtlMs = Math.max(10_000, Number(process.env.STATS_SOFT_TTL_MS || 
 const statsCacheWriteMs = Math.max(0, Number(process.env.STATS_CACHE_WRITE_MS || 5 * 60 * 1000));
 const resolveCacheTtlMs = Math.max(60_000, Number(process.env.RESOLVE_CACHE_TTL_MS || 6 * 60 * 60 * 1000));
 const resolveCacheLimit = Math.max(1, Number(process.env.RESOLVE_CACHE_LIMIT || 500));
+const nodeDetailTtlMs = Math.max(60_000, Number(process.env.NODE_DETAIL_TTL_MS || 5 * 60 * 1000));
+const nodeDetailCacheLimit = Math.max(10, Number(process.env.NODE_DETAIL_CACHE_LIMIT || 500));
+const nodeDetailTimeoutMs = Math.max(1_000, Number(process.env.NODE_DETAIL_TIMEOUT_MS || 8_000));
+const nodeDetailCache = new Map();
 let nodesCache = null;
 let nodesCacheWrittenAt = 0;
 let statsCache = null;
@@ -297,6 +301,57 @@ function resolveCacheSet(key, body, contentType) {
   resolveCache.set(key, { at: Date.now(), body, contentType });
   while (resolveCache.size > resolveCacheLimit) {
     resolveCache.delete(resolveCache.keys().next().value);
+  }
+}
+
+const NODE_DETAIL_PARTS = {
+  clockSkew: "/clock-skew",
+  detail: "",
+  health: "/health",
+  neighbors: "/neighbors",
+  paths: "/paths",
+};
+
+async function fetchNodeDetail(key) {
+  const cached = nodeDetailCache.get(key);
+  if (cached && Date.now() - cached.at <= cached.ttlMs) {
+    return { data: cached.data, stale: false };
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), nodeDetailTimeoutMs);
+  timeout.unref();
+  try {
+    const results = await Promise.allSettled(Object.entries(NODE_DETAIL_PARTS).map(async ([field, suffix]) => {
+      const response = await fetch(`${upstream}/api/nodes/${key}${suffix}`, {
+        headers: { Accept: "application/json" },
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error(`node ${suffix || "detail"} HTTP ${response.status}`);
+      return [field, await response.json()];
+    }));
+    const data = { fetchedAt: Date.now(), key, partial: false };
+    let loaded = 0;
+    for (const result of results) {
+      if (result.status === "fulfilled") {
+        data[result.value[0]] = result.value[1];
+        loaded += 1;
+      } else {
+        data.partial = true;
+      }
+    }
+    if (!loaded) throw new Error("node detail unavailable");
+    const ttlMs = data.partial ? Math.min(nodeDetailTtlMs, 60_000) : nodeDetailTtlMs;
+    nodeDetailCache.delete(key);
+    nodeDetailCache.set(key, { at: Date.now(), data, ttlMs });
+    while (nodeDetailCache.size > nodeDetailCacheLimit) {
+      nodeDetailCache.delete(nodeDetailCache.keys().next().value);
+    }
+    return { data, stale: false };
+  } catch (error) {
+    if (cached) return { data: cached.data, stale: true };
+    throw error;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -1671,6 +1726,25 @@ async function handleRequest(request, response) {
     createReadStream(filePath).on("error", () => {
       if (!response.writableEnded) response.destroy();
     }).pipe(response);
+    return;
+  }
+
+  if (url.pathname === "/api/node-detail") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      return;
+    }
+    const key = String(url.searchParams.get("key") || "").trim().toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(key)) {
+      sendJson(response, 400, { error: "Neplatný klíč nodu." });
+      return;
+    }
+    try {
+      const { data, stale } = await fetchNodeDetail(key);
+      sendJson(response, 200, data, stale ? { "X-Data-Stale": "1" } : {});
+    } catch {
+      sendJson(response, 502, { error: "Detail nodu není dostupný." });
+    }
     return;
   }
 

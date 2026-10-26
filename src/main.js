@@ -67,6 +67,7 @@ const FEED_RENDER_INTERVAL_MS = 2_000;
 const FEED_AUTO_RESUME_MS = 2_500;
 const FEED_SCROLL_RESUME_MS = 6_000;
 const NODE_HISTORY_TTL_MS = 5 * 60 * 1000;
+const NODE_ANALYTICS_TTL_MS = 5 * 60 * 1000;
 const MAX_LIVE_RENDERED = 350;
 const MAX_LIVE_STORED = 3000;
 const MAX_ROUTE_HOP_KM = 170;
@@ -393,6 +394,7 @@ const state = {
   neighborFocusKey: null,
   nodeByKey: new Map(),
   nodeHistoryCache: new Map(),
+  nodeAnalyticsCache: new Map(),
   nodeMarkerByKey: new Map(),
   nodeMarkers: [],
   observerByKey: new Map(),
@@ -1456,6 +1458,7 @@ function setupNodePopup(popup, node) {
 
   void loadNodeHistory(root, node);
   void loadNodePhotos(root, node);
+  void loadNodeAnalytics(root, node);
 }
 
 function nodeLastRoute(node) {
@@ -1608,6 +1611,19 @@ function showNodeNeighborsOnMap(node) {
   elements.neighborFocusBar.hidden = false;
 }
 
+function nodeAnalytics(node) {
+  if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
+  return `
+    <section class="node-analytics" data-node-key="${escapeHtml(node.public_key.toLowerCase())}">
+      <div class="node-analytics-head">
+        <h4>${t("analytics.title")}</h4>
+        <small>${t("analytics.loading")}</small>
+      </div>
+      <div class="node-analytics-body"></div>
+    </section>
+  `;
+}
+
 function nodePopupContent(node, active) {
   const lastActivity = nodeLastActivity(node);
   const rankNodes = [...state.nodeByKey.values()];
@@ -1687,6 +1703,7 @@ function nodePopupContent(node, active) {
     ${basicDetails}
     ${trafficDetails}
     ${networkDetails}
+    ${nodeAnalytics(node)}
     ${nodeLastRoute(node)}
     ${nodeNeighbors(node)}
     ${nodePhotos(node)}
@@ -1896,6 +1913,123 @@ function renderNodePhotos(list, photos, node) {
     });
     list.appendChild(button);
   });
+}
+
+function analyticsNumber(value, suffix = "") {
+  const number = Number(value);
+  return Number.isFinite(number) ? `${formatDecimal(number, 1)}${suffix}` : "—";
+}
+
+function analyticsCount(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? formatNumber(number) : "—";
+}
+
+function renderNodeAnalytics(section, data) {
+  const body = section.querySelector(".node-analytics-body");
+  const status = section.querySelector(".node-analytics-head small");
+  if (!body) return;
+  if (status) status.textContent = data.partial ? t("analytics.partial") : "";
+  const stats = data.health?.stats || {};
+  const clock = data.clockSkew || {};
+  const observers = Array.isArray(data.health?.observers) ? data.health.observers : [];
+  const adverts = Array.isArray(data.detail?.recentAdverts) ? data.detail.recentAdverts : [];
+  const paths = Array.isArray(data.paths?.paths) ? data.paths.paths : [];
+  const skew = clock.recentMedianSkewSec ?? clock.medianSkewSec;
+  const metrics = [
+    [t("analytics.totalPackets"), analyticsCount(stats.totalPackets)],
+    [t("analytics.packetsToday"), analyticsCount(stats.packetsToday)],
+    [t("analytics.totalObservations"), analyticsCount(stats.totalObservations)],
+    [t("analytics.avgHops"), analyticsNumber(stats.avgHops)],
+    [t("analytics.avgSnr"), analyticsNumber(stats.avgSnr, " dB")],
+    [t("analytics.relayObservers"), analyticsCount(data.health?.relayObserverCount)],
+    [t("analytics.clockSkew"), analyticsNumber(skew, " s")],
+  ];
+  const analyticsDetails = [
+    observers.length ? `
+      <details class="node-analytics-details">
+        <summary>${t("analytics.directObservers")} (${observers.length})</summary>
+        <ul>${observers.map((observer) => `
+          <li>
+            <span>${escapeHtml(observer.observer_name || t("packet.unknownObserver"))}</span>
+            <small>${escapeHtml(t("analytics.observerLine", {
+              packets: analyticsCount(observer.packetCount),
+              snr: analyticsNumber(observer.avgSnr, " dB"),
+              rssi: analyticsNumber(observer.avgRssi, " dBm"),
+            }))}</small>
+          </li>
+        `).join("")}</ul>
+      </details>
+    ` : "",
+    adverts.length ? `
+      <details class="node-analytics-details">
+        <summary>${t("analytics.recentAdverts")} (${adverts.length})</summary>
+        <ul>${adverts.slice(0, 20).map((advert) => {
+          const kind = advert.advert_kind === "flood" ? t("analytics.flood") : t("analytics.direct");
+          const observer = advert.observer_name || advert.observations?.[0]?.observer_name || t("packet.unknownObserver");
+          const time = formatNodeDate(advert.timestamp || advert.first_seen);
+          return `
+            <li>
+              <b>${escapeHtml(kind)}</b> <span>${escapeHtml(observer)}</span>
+              <small>${escapeHtml(time)} · SNR ${analyticsNumber(advert.snr, " dB")} · RSSI ${analyticsNumber(advert.rssi, " dBm")}</small>
+            </li>
+          `;
+        }).join("")}</ul>
+      </details>
+    ` : "",
+    paths.length ? `
+      <details class="node-analytics-details">
+        <summary>${t("analytics.paths")} (${paths.length})</summary>
+        <p class="node-analytics-note">${escapeHtml(t("analytics.pathsSummary", {
+          paths: analyticsCount(data.paths?.totalPaths ?? paths.length),
+          transmissions: analyticsCount(data.paths?.totalTransmissions ?? 0),
+        }))}</p>
+        <ul>${paths.map((path) => {
+          const chain = path.hops.map((hop) => hop.name || hop.prefix || "?").join(" → ");
+          return `
+            <li>
+              <span title="${escapeHtml(chain)}">${escapeHtml(chain)}</span>
+              <small>${path.count}× · ${escapeHtml(formatNodeDate(path.lastSeen))}</small>
+            </li>
+          `;
+        }).join("")}</ul>
+      </details>
+    ` : "",
+  ].filter(Boolean);
+
+  if (!metrics.length && !analyticsDetails.length) {
+    body.textContent = t("analytics.noData");
+    return;
+  }
+  body.innerHTML = `
+    <div class="node-analytics-grid">${metrics.map(([label, value]) => `
+      <div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>
+    `).join("")}</div>
+    ${analyticsDetails.join("")}
+  `;
+}
+
+async function loadNodeAnalytics(root, node) {
+  const section = root.querySelector(".node-analytics");
+  if (!section) return;
+  const key = String(node.public_key || "").toLowerCase();
+  const cached = state.nodeAnalyticsCache.get(key);
+  if (cached && Date.now() - cached.at < NODE_ANALYTICS_TTL_MS) {
+    renderNodeAnalytics(section, cached.data);
+    return;
+  }
+  try {
+    const data = await getJson(`/api/node-detail?key=${encodeURIComponent(key)}`);
+    state.nodeAnalyticsCache.set(key, { at: Date.now(), data });
+    if (section.isConnected) renderNodeAnalytics(section, data);
+  } catch (error) {
+    console.error("Analytiku nodu se nepodařilo načíst", error);
+    if (!section.isConnected) return;
+    const status = section.querySelector(".node-analytics-head small");
+    if (status) status.textContent = t("analytics.failed");
+    const body = section.querySelector(".node-analytics-body");
+    if (body) body.textContent = t("analytics.failed");
+  }
 }
 
 function setPhotoStatus(text, isError = false) {

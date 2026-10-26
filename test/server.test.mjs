@@ -62,6 +62,22 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       res.writeHead(200, { "Content-Type": "image/png" }).end(tinyPng);
       return;
     }
+    if (req.url?.startsWith("/api/nodes/")) {
+      const suffix = req.url.split("?")[0].replace(/^\/api\/nodes\/[0-9a-f]+/i, "");
+      const payload = {
+        "": { node: { name: "Test node" }, recentAdverts: [] },
+        "/health": {
+          observers: [{ avgRssi: -80, avgSnr: 5, observer_name: "Tester", packetCount: 3 }],
+          relayObserverCount: 2,
+          stats: { avgHops: 3, avgSnr: 6.5, packetsToday: 4, totalObservations: 20, totalPackets: 12 },
+        },
+        "/neighbors": { neighbors: [] },
+        "/paths": { paths: [], totalPaths: 0, totalTransmissions: 0 },
+        "/clock-skew": { medianSkewSec: 3, recentMedianSkewSec: 2 },
+      }[suffix] || {};
+      res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify(payload));
+      return;
+    }
     if (req.url?.startsWith("/api/nodes")) {
       if (nodesFail) {
         res.writeHead(502, { "Content-Type": "application/json" }).end('{"error":"down"}');
@@ -134,6 +150,15 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.ok(health.databases.packets.bytes >= 0);
     assert.ok(health.packets.stored >= 0);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/health`, { method: "POST" })).status, 405);
+    const nodeDetailKey = "a".repeat(64);
+    const nodeDetail = await fetch(`http://127.0.0.1:${appPort}/api/node-detail?key=${nodeDetailKey}`);
+    assert.equal(nodeDetail.status, 200);
+    const nodeDetailBody = await nodeDetail.json();
+    assert.equal(nodeDetailBody.detail.node.name, "Test node");
+    assert.equal(nodeDetailBody.health.stats.totalPackets, 12);
+    assert.equal(nodeDetailBody.health.observers[0].observer_name, "Tester");
+    assert.equal(nodeDetailBody.clockSkew.recentMedianSkewSec, 2);
+    assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/node-detail?key=short`)).status, 400);
     const photoKey = "a".repeat(64);
     const upload = await fetch(`http://127.0.0.1:${appPort}/api/photos`, {
       method: "POST",

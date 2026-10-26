@@ -76,6 +76,12 @@ přihlašovací údaje zůstávají pouze na serveru.
   (7 dní) a vydává ji okamžitě (stale-while-revalidate); při cache starší než
   15 minut odpoví s `X-Data-Stale: 1` a obnovení běží na pozadí. Start stránky
   tak nečeká na pomalý CoreScope.
+- `/api/node-detail?key=<public_key>` sloučí detail z Analyzeru
+  (`/api/nodes/<key>`, `/health`, `/neighbors`, `/paths`, `/clock-skew`) do
+  jedné odpovědi s cache 5 minut. Klient z něj v detailu nodu zobrazuje total
+  packets, packets today, avg hops/SNR, přímé observery, poslední adverty,
+  trasy přes nod a clock skew. Při výpadku vrátí poslední cache s
+  `X-Data-Stale: 1`.
 - `/api/recent?seconds=30` vrací posledních N sekund živých paketů z paměťového
   kruhového bufferu (max. 120 s) jako jeden JSON. Klient ho načte paralelně
   s nody, všechny prefixy vyřeší jedním dávkovým requestem a trasy vykreslí

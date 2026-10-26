@@ -66,6 +66,7 @@ Aktualizováno: 2026-10-26 (prod `20261026T181418Z`, beta `20261026T181338Z`)
 - Trasy: přerušení kvůli neznámému hopu nebo skoku >170 km je označené žlutým `?` s tooltipem; TRACE dostává barvy podle SNR i při více segmentech.
 - TRACE při zoomu ≥ 9 zobrazuje u každého hopu štítek se SNR (`12,5 dB`), barva podle kvality; max. 150 štítků. Funguje i v archivních oknech 5 min / 1 h / 24 h.
 - Detail nodu: role v hlavičce, relativní časy (`teď`, `12 min`, `3 h`, `2 d`), V síti od, region, obohacení sousedů (role, vzdálenost, naposledy), odkaz do Analyzeru
+- Analytika z Analyzeru v detailu nodu: total packets, packets today, pozorování, Ø hopů/SNR, přímí observeři s SNR/RSSI, poslední adverty, trasy přes nod, clock skew; serverový `/api/node-detail` s 5min cache a stale fallbackem
 - Historie užitečnosti: 7 dní hodinových vzorků, hover tooltip; bez průměrování
 - Zvýraznění užitečnosti: relativní Top 5 % (červená) a 5–15 % (žlutá) z aktivních nodů se skóre za 24 h; počty v legendě
 - Tmavá mapa: OSM dlaždice + CSS filtr
@@ -121,7 +122,7 @@ Aktualizováno: 2026-10-26 (prod `20261026T181418Z`, beta `20261026T181338Z`)
 - Původní žebříčky nodů podle metrik zůstávají
 
 ### Backend
-- `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/recent`, `/api/packet-history`, `/api/packets`, `/api/nodes`, `/api/stats`, `/api/search`, `/api/health`, `/api/photos`, `/api/photos/nodes`, `/api/photos/report`
+- `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/recent`, `/api/packet-history`, `/api/packets`, `/api/nodes`, `/api/stats`, `/api/search`, `/api/health`, `/api/node-detail`, `/api/photos`, `/api/photos/nodes`, `/api/photos/report`
 - Cache `/api/nodes` a `/api/resolve-hops` proti výpadkům CoreScope; nody se vydávají z cache okamžitě (SWR, soft TTL 15 min)
 - Start stránky: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE běží s `?replay=0`
 - `/api/stats` cache (24 h) + lokální fallback z `packet_routes` při výpadku Analyzeru; klient zobrazí stale/partial hodnotu oranžově a zkusí obnovu za 60 s
