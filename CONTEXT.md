@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-26 (prod `20261026T115757Z`, beta `20261026T115625Z`)  
+Aktualizováno: 2026-10-26 (prod `20261026T122044Z`, beta `20261026T122015Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -17,20 +17,20 @@ Aktualizováno: 2026-10-26 (prod `20261026T115757Z`, beta `20261026T115625Z`)
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261026T115757Z`
-- Build: `20261026-1157-c8c217f`
-- Asset: `index-DTtduBRv.js` + `wasm-bundle-IuFT_ChJ.js`
+- Release: `20261026T122044Z`
+- Build: `20261026-1220-6925b3c`
+- Asset: `index-YWscxRAD.js` + `wasm-bundle-3yQ0O8wL.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261026T115757Z.tar.gz`
-- Tag: `prod-20261026-1157`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261026T122044Z.tar.gz`
+- Tag: `prod-20261026-1220`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261026T115625Z`
-- Build: `20261026-1156-c8c217f`
-- Asset: `index-DA2TSkJb.js` + `wasm-bundle-CZt5TAj-.js`
+- Release: `20261026T122015Z`
+- Build: `20261026-1220-6925b3c`
+- Asset: `index-ClvA-VNO.js` + `wasm-bundle-DDwA7fJ2.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261026T115625Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261026T122015Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka
@@ -161,10 +161,10 @@ Aktualizováno: 2026-10-26 (prod `20261026T115757Z`, beta `20261026T115625Z`)
 - Rollback při shodném lockfile ponechá `node_modules`, jinak spustí `npm ci --omit=dev`.
 - Na VPS `/root/rollback-meshcore.sh`, aktualizuje se při deployi.
 - Retence 20 záloh.
-- Rollback aktuální produkce `20261026T115757Z` na předchozí `20261026T110623Z`:
+- Rollback aktuální produkce `20261026T122044Z` na předchozí `20261026T115757Z`:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261026T115757Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261026T122044Z'
 ```
 
 ## 7. Deploy konvence
