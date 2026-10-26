@@ -658,8 +658,9 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 .photo-lightbox-nav.next { right: 10px; }
 .photo-lightbox-nav:hover { border-color: var(--green); background: rgba(7, 142, 98, 0.72); }
 .photo-lightbox-nav[hidden] { display: none; }
-.photo-lightbox-counter { position: absolute; top: 12px; left: 50%; padding: 3px 8px; transform: translateX(-50%); border-radius: 6px; color: #d7e3e8; background: rgba(10, 16, 20, 0.7); font: 10px "DM Mono", monospace; }
+.photo-lightbox-counter { position: absolute; top: 12px; left: 50%; z-index: 3; padding: 3px 8px; transform: translateX(-50%); border-radius: 6px; color: #d7e3e8; background: rgba(10, 16, 20, 0.7); font: 10px "DM Mono", monospace; }
 .photo-lightbox-counter[hidden] { display: none; }
+.photo-lightbox .qr-dialog-close { z-index: 5; }
 .photo-lightbox-zoom { position: absolute; top: 9px; left: 9px; z-index: 3; display: flex; align-items: center; gap: 3px; padding: 3px; border-radius: 8px; color: #d7e3e8; background: rgba(10, 16, 20, 0.72); font: 10px "DM Mono", monospace; }
 .photo-lightbox-zoom button { height: 24px; min-width: 24px; padding: 0 5px; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 6px; color: #fff; background: rgba(10, 16, 20, 0.7); font: 12px/22px "DM Mono", monospace; cursor: pointer; }
 .photo-lightbox-zoom button:hover { border-color: var(--green); background: rgba(7, 142, 98, 0.72); }
