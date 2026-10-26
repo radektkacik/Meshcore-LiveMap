@@ -219,6 +219,8 @@
 | 2026-10-26 18:31 | `20261026T183103Z.tar.gz` | `20261026-1831-53bdf7e` | Prod: stejné přesunutí fotek nahoru | `src/main.js`, `src/style.css` |
 | 2026-10-26 18:46 | `20261026T184639Z.tar.gz` (stage APP_DIR) | `20261026-1846-03fb01d` | Beta: delší historie Paketů/h – 30 dní a 1 rok z denních agregátů (místní půlnoc), surová data 30 dní, hodinové agregáty 730 dní, denní 1825 dní | `node-metrics.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, `.env.example`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-26 18:47 | `20261026T184735Z.tar.gz` | `20261026-1847-03fb01d` | Prod: stejná delší historie Paketů/h | `node-metrics.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `index.html`, `.env.example`, testy, `README.md`, `CONTEXT.md` |
+| 2026-10-26 19:18 | `20261026T191818Z.tar.gz` (stage APP_DIR) | `20261026-1918-4f42d90` | Beta: nahrání až 5 fotek nodu najednou, bez popisu; mřížka náhledů, průběh nahrávání, dávkové hlavičky bez 10s pauzy a jedna Telegram notifikace za dávku | `index.html`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `README.md`, `CONTEXT.md` |
+| 2026-10-26 19:20 | `20261026T192013Z.tar.gz` | `20261026-1920-4f42d90` | Prod: stejné nahrávání až 5 fotek najednou | `index.html`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `README.md`, `CONTEXT.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
