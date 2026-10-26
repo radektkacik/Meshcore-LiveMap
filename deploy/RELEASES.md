@@ -213,6 +213,8 @@
 | 2026-10-26 18:09 | `20261026T180903Z.tar.gz` | `20261026-1809-2a26c82` | Prod: stejný zoomovatelný lightbox | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
 | 2026-10-26 18:13 | `20261026T181338Z.tar.gz` (stage APP_DIR) | `20261026-1813-ac54f31` | Beta: oprava vrstvy tlačítka zavření lightboxu (z-index 5), aby ho nepřekrýval zoomovací stage | `src/style.css` |
 | 2026-10-26 18:14 | `20261026T181418Z.tar.gz` | `20261026-1814-ac54f31` | Prod: stejná oprava zavírání fotky | `src/style.css` |
+| 2026-10-26 18:23 | `20261026T182306Z.tar.gz` (stage APP_DIR) | `20261026-1823-294b033` | Beta: analytika z Analyzeru v detailu nodu – souhrnné statistiky, slyšeno přímo, adverty, trasy přes nod, clock skew; `/api/node-detail` s 5min cache | `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `.env.example`, testy, `README.md`, `CONTEXT.md` |
+| 2026-10-26 18:24 | `20261026T182400Z.tar.gz` | `20261026-1824-294b033` | Prod: stejná analytika nodu | `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `.env.example`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
