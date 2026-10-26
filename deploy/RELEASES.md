@@ -195,6 +195,8 @@
 | 2026-10-25 20:09 | `20261025T200925Z.tar.gz` | `20261025-2009-d76dfcd` | Prod: stejný přepínač „Skrýt trasy“ | `index.html`, `src/main.js`, `src/i18n.js`, `CONTEXT.md` |
 | 2026-10-25 20:10 | `20261025T201002Z.tar.gz` (stage APP_DIR) | `20261025-2010-6259cd6` | Beta: odebrána nápověda pod „Skrýt trasy“ (šetří místo) | `index.html`, `src/i18n.js` |
 | 2026-10-25 20:10 | `20261025T201025Z.tar.gz` | `20261025-2010-6259cd6` | Prod: stejné odebrání nápovědy; výška přepínače 33 px | `index.html`, `src/i18n.js` |
+| 2026-10-26 09:03 | `20261026T090347Z.tar.gz` (stage APP_DIR) | `20261026-0903-60feb7c` | Beta: označení přerušení trasy žlutým `?` a barvy TRACE podle SNR i u segmentované trasy | `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
+| 2026-10-26 09:04 | `20261026T090430Z.tar.gz` | `20261026-0904-60feb7c` | Prod: stejné označení přerušení a SNR barvy pro segmentované TRACE | `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
 

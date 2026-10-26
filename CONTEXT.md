@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-25 (prod `20261025T201025Z`, beta `20261025T201002Z`)  
+Aktualizováno: 2026-10-26 (prod `20261026T090430Z`, beta `20261026T090347Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -17,20 +17,20 @@ Aktualizováno: 2026-10-25 (prod `20261025T201025Z`, beta `20261025T201002Z`)
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261025T201025Z`
-- Build: `20261025-2010-6259cd6`
-- Asset: `index-CGybu74f.js` + `wasm-bundle-SfdgGZ4d.js`
+- Release: `20261026T090430Z`
+- Build: `20261026-0904-60feb7c`
+- Asset: `index-B4iVTIzV.js` + `wasm-bundle-BVBiwkW_.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261025T201025Z.tar.gz`
-- Tag: `prod-20261025-2010`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261026T090430Z.tar.gz`
+- Tag: `prod-20261026-0904`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261025T201002Z`
-- Build: `20261025-2010-6259cd6`
-- Asset: `index-BMkvNSTF.js` + `wasm-bundle-Dwn75E7P.js`
+- Release: `20261026T090347Z`
+- Build: `20261026-0903-60feb7c`
+- Asset: `index-CdunehU3.js` + `wasm-bundle-CLbR8bI2.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261025T201002Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261026T090347Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka
@@ -63,6 +63,7 @@ Aktualizováno: 2026-10-25 (prod `20261025T201025Z`, beta `20261025T201002Z`)
 - Repeater vždy navrchu při překryvu nodů
 - Stack nodů na stejných souřadnicích
 - Sousedé na mapě (prod i beta): z detailu nodu vykreslí čáry ke všem sousedům s dosažitelnými souřadnicemi, tloušťka podle četnosti, štítky `N×`, lišta se souhrnem a zrušením; klik na spojnici otevře sousední nod.
+- Trasy: přerušení kvůli neznámému hopu nebo skoku >170 km je označené žlutým `?` s tooltipem; TRACE dostává barvy podle SNR i při více segmentech.
 - Detail nodu: role v hlavičce, relativní časy (`teď`, `12 min`, `3 h`, `2 d`), V síti od, region, obohacení sousedů (role, vzdálenost, naposledy), odkaz do Analyzeru
 - Historie užitečnosti: 7 dní hodinových vzorků, hover tooltip; bez průměrování
 - Zvýraznění užitečnosti: relativní Top 5 % (červená) a 5–15 % (žlutá) z aktivních nodů se skóre za 24 h; počty v legendě
@@ -159,10 +160,10 @@ Aktualizováno: 2026-10-25 (prod `20261025T201025Z`, beta `20261025T201002Z`)
 - Rollback při shodném lockfile ponechá `node_modules`, jinak spustí `npm ci --omit=dev`.
 - Na VPS `/root/rollback-meshcore.sh`, aktualizuje se při deployi.
 - Retence 20 záloh.
-- Rollback aktuální produkce `20261025T201025Z` na předchozí `20261025T194431Z`:
+- Rollback aktuální produkce `20261026T090430Z` na předchozí `20261025T201025Z`:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261025T201025Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261026T090430Z'
 ```
 
 ## 7. Deploy konvence
