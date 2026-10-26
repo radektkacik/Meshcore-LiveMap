@@ -211,6 +211,8 @@
 | 2026-10-26 17:59 | `20261026T175914Z.tar.gz` | `20261026-1759-e8b0ece` | Prod: stejný fullscreen fallback | `src/main.js`, `src/style.css` |
 | 2026-10-26 18:08 | `20261026T180822Z.tar.gz` (stage APP_DIR) | `20261026-1808-2a26c82` | Beta: zoomovatelný lightbox – kolečko myši, tažení, +/- a 1:1 plné rozlišení; tlačítko fullscreenu nahrazeno zoomem | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
 | 2026-10-26 18:09 | `20261026T180903Z.tar.gz` | `20261026-1809-2a26c82` | Prod: stejný zoomovatelný lightbox | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
+| 2026-10-26 18:13 | `20261026T181338Z.tar.gz` (stage APP_DIR) | `20261026-1813-ac54f31` | Beta: oprava vrstvy tlačítka zavření lightboxu (z-index 5), aby ho nepřekrýval zoomovací stage | `src/style.css` |
+| 2026-10-26 18:14 | `20261026T181418Z.tar.gz` | `20261026-1814-ac54f31` | Prod: stejná oprava zavírání fotky | `src/style.css` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
