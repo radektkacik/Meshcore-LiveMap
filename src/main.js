@@ -36,7 +36,7 @@ import {
   resolveStatsField,
   validCoords,
 } from "./node-model.js";
-import { buildNeighborIndex, RouteStore, RouteVersionState, routeTimestamp } from "./route-model.js";
+import { buildNeighborIndex, groupTraceObservations, RouteStore, RouteVersionState, routeTimestamp } from "./route-model.js";
 import {
   countSearchResults,
   searchEntities,
@@ -3095,20 +3095,23 @@ function scheduleSnrLabels(delay = 250) {
 }
 
 function rebuildSnrLabels() {
-  if (state.hideRoutes || state.routeWindowMs !== 0 || map.getZoom() < LABEL_MIN_ZOOM) {
+  if (state.hideRoutes || map.getZoom() < LABEL_MIN_ZOOM) {
     snrLabelLayer.clearLayers();
     snrLabelSignature = "";
     return;
   }
   const viewport = map.getBounds().pad(0.05);
-  const routes = routeStore.visibleLive(state, nowMs())
+  const source = state.routeWindowMs === 0
+    ? routeStore.visibleLive(state, nowMs())
+    : [...state.archiveRoutes.values()];
+  const routes = source
     .filter((route) => Number(route.packetType) === 9 && route.snrValues?.length >= 1)
     .filter((route) => routeVisibleIn(viewport, route));
   const signature = routes
     .map((route) => `${route.id}:${route.versionId}`)
     .sort()
     .join("|")
-    + `|${map.getZoom()}|${map.getCenter().lat.toFixed(3)},${map.getCenter().lng.toFixed(3)}`;
+    + `|${state.routeWindowMs}|${map.getZoom()}|${map.getCenter().lat.toFixed(3)},${map.getCenter().lng.toFixed(3)}`;
   if (signature === snrLabelSignature) return;
   snrLabelSignature = signature;
   snrLabelLayer.clearLayers();
@@ -3857,7 +3860,7 @@ async function loadArchiveWindow(windowMs) {
   const requestId = ++state.windowRequestId;
   const data = await getJson(`/api/history?${archiveQuery(windowMs, nowMs())}`);
   if (requestId !== state.windowRequestId || state.routeWindowMs !== windowMs) return;
-  state.archiveRoutes.clear();
+  const routes = new Map();
   for (const parent of data.packets || []) {
     const observations = parent.observations?.length ? parent.observations : [parent];
     for (const observation of observations) {
@@ -3870,10 +3873,15 @@ async function loadArchiveWindow(windowMs) {
       if (!routeSegments(points).length) continue;
       const observedAt = routeTimestamp(packet, 0);
       const id = `${packet.hash || "archive"}:${packet.observer_id || "archive"}`;
-      state.archiveRoutes.set(id, routeRecord(packet, points, hashBytes, id, `archive:${id}`, observedAt));
+      routes.set(id, routeRecord(packet, points, hashBytes, id, `archive:${id}`, observedAt));
     }
   }
+  state.archiveRoutes.clear();
+  for (const route of groupTraceObservations([...routes.values()])) {
+    state.archiveRoutes.set(route.id, route);
+  }
   renderArchive();
+  scheduleSnrLabels(150);
 }
 
 function updateArchiveLayers(routes) {
