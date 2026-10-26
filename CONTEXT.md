@@ -194,7 +194,7 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261026T122946Z'
 - Přibližná poloha observeru je jen IATA oblast, ne přesné letiště.
 - Detail nodu obsahuje galerii fotek; veřejné nahrávání JPEG/PNG/WebP s potvrzením práv, fotka se zobrazí až po schválení správcem. Moderace na `GET /api/photos/view?token=…`.
 - Kanály jsou jen veřejné dešifrované zprávy, soukromé zůstávají šifrované.
-- Fotky jsou veřejné až po schválení; pending/hidden vrací 404. Veřejné nahrávání má limity 8/h a 30/den na IP, 8 fotek na nod, 2 GB celkem a max. 2400 px na delší straně (klient zmenšuje na 1600 px). Žádosti o smazání jsou omezené 5/h na IP. Soubory i `photos.sqlite` jsou v `uploads/` a nejsou v zálohách, takže po obnově ze zálohy fotky zmizí.
+- Fotky jsou veřejné až po schválení; pending/hidden vrací 404. Veřejné nahrávání má limity 8/h a 30/den na IP, 8 fotek na nod, 2 GB celkem a max. 2400 px na delší straně (klient zmenšuje na 2000 px). Žádosti o smazání jsou omezené 5/h na IP. Soubory i `photos.sqlite` jsou v `uploads/` a nejsou v zálohách, takže po obnově ze zálohy fotky zmizí.
 - OSM dlaždice mají policy riziko při větším provozu („Access blocked“).
 - Firewall/SSH hardening není hotový: ufw inactive, PasswordAuthentication yes, root login povolený.
 - Cloudflare běží Full se self-signed origin certem, ne Full (strict).

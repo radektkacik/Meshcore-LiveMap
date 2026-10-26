@@ -239,6 +239,7 @@ const elements = {
   photoLightboxCaption: document.querySelector("#photo-lightbox-caption"),
   photoLightboxClose: document.querySelector("#photo-lightbox-close"),
   photoLightboxCounter: document.querySelector("#photo-lightbox-counter"),
+  photoLightboxFullscreen: document.querySelector("#photo-lightbox-fullscreen"),
   photoLightboxImg: document.querySelector("#photo-lightbox-img"),
   photoLightboxNext: document.querySelector("#photo-lightbox-next"),
   photoLightboxPrev: document.querySelector("#photo-lightbox-prev"),
@@ -1967,6 +1968,27 @@ function showPhotoLightbox() {
   elements.photoLightboxPrev.hidden = !multiple;
   elements.photoLightboxNext.hidden = !multiple;
   elements.photoLightboxCounter.hidden = !multiple;
+  updatePhotoFullscreenButton();
+}
+
+function updatePhotoFullscreenButton() {
+  const active = document.fullscreenElement === elements.photoLightbox;
+  elements.photoLightboxFullscreen.textContent = active ? "⤢" : "⛶";
+  elements.photoLightboxFullscreen.setAttribute("aria-label", t(active ? "photos.fullscreenExit" : "photos.fullscreen"));
+}
+
+async function togglePhotoFullscreen() {
+  try {
+    if (document.fullscreenElement === elements.photoLightbox) {
+      await document.exitFullscreen();
+    } else if (elements.photoLightbox.requestFullscreen) {
+      await elements.photoLightbox.requestFullscreen();
+    }
+  } catch (error) {
+    console.error("Celou obrazovku se nepodařilo přepnout", error);
+  } finally {
+    updatePhotoFullscreenButton();
+  }
 }
 
 function stepPhotoLightbox(delta) {
@@ -2098,7 +2120,7 @@ async function loadPhotoBitmap(file) {
 
 async function preparePhotoBlob(file) {
   const bitmap = await loadPhotoBitmap(file);
-  const max = 1600;
+  const max = 2000;
   const width = Number(bitmap.width) || 0;
   const height = Number(bitmap.height) || 0;
   if (!width || !height) throw new Error("Invalid image");
@@ -2111,7 +2133,7 @@ async function preparePhotoBlob(file) {
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   if (typeof bitmap.close === "function") bitmap.close();
   const type = canvas.toDataURL("image/webp").startsWith("data:image/webp") ? "image/webp" : "image/jpeg";
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, type, 0.85));
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, type, 0.9));
   if (!blob) throw new Error("Canvas export failed");
   return blob;
 }
@@ -6008,6 +6030,13 @@ elements.photoDialog.addEventListener("click", (event) => {
 });
 elements.photoDialog.addEventListener("close", resetPhotoDialog);
 elements.photoLightboxClose.addEventListener("click", () => elements.photoLightbox.close());
+elements.photoLightboxFullscreen.addEventListener("click", togglePhotoFullscreen);
+if (typeof elements.photoLightbox.requestFullscreen !== "function") {
+  elements.photoLightboxFullscreen.hidden = true;
+}
+document.addEventListener("fullscreenchange", () => {
+  if (elements.photoLightbox.open) updatePhotoFullscreenButton();
+});
 elements.photoLightboxPrev.addEventListener("click", () => stepPhotoLightbox(-1));
 elements.photoLightboxNext.addEventListener("click", () => stepPhotoLightbox(1));
 elements.photoLightbox.addEventListener("keydown", (event) => {
@@ -6023,6 +6052,9 @@ elements.photoLightbox.addEventListener("click", (event) => {
   if (event.target === elements.photoLightbox) elements.photoLightbox.close();
 });
 elements.photoLightbox.addEventListener("close", () => {
+  if (document.fullscreenElement === elements.photoLightbox) {
+    document.exitFullscreen().catch(() => {});
+  }
   elements.photoLightboxImg.removeAttribute("src");
   elements.photoLightboxCaption.textContent = "";
   elements.photoLightboxAuthor.textContent = "";

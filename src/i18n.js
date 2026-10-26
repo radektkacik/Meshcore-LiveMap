@@ -335,6 +335,8 @@ const cs = {
   "photos.reportClose": "Zavřít žádost",
   "photos.previous": "Předchozí fotka",
   "photos.next": "Další fotka",
+  "photos.fullscreen": "Celá obrazovka",
+  "photos.fullscreenExit": "Ukončit celou obrazovku",
 };
 
 const en = {
@@ -670,6 +672,8 @@ const en = {
   "photos.reportClose": "Close request",
   "photos.previous": "Previous photo",
   "photos.next": "Next photo",
+  "photos.fullscreen": "Fullscreen",
+  "photos.fullscreenExit": "Exit fullscreen",
 };
 
 export const TRANSLATIONS = { cs, en };

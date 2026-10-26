@@ -123,7 +123,7 @@ přihlašovací údaje zůstávají pouze na serveru.
   `FEEDBACK_TOKEN`), odkud lze fotky schválit, skrýt nebo smazat. Soubory i
   `photos.sqlite` jsou v `uploads/` mimo `data/`, takže se nedostanou do záloh.
   Platí limity: 8 fotek/hodinu na IP, 30/den, 8 fotek na nod, 2 GB celkem
-  a max. 2400 px na delší straně (klient posílá max. 1600 px).
+  a max. 2400 px na delší straně (klient posílá max. 2000 px).
   HEIC/HEIF z iPhonu prohlížeč převede přes `libheif-js` (WASM) na WebP,
   takže se nemusí ručně exportovat jako JPEG.
 - `POST /api/photos/report` (JSON `photoId`, `reason`, `message`, `contact`)
