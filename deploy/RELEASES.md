@@ -198,6 +198,8 @@
 | 2026-10-26 09:03 | `20261026T090347Z.tar.gz` (stage APP_DIR) | `20261026-0903-60feb7c` | Beta: označení přerušení trasy žlutým `?` a barvy TRACE podle SNR i u segmentované trasy | `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
 | 2026-10-26 09:04 | `20261026T090430Z.tar.gz` | `20261026-0904-60feb7c` | Prod: stejné označení přerušení a SNR barvy pro segmentované TRACE | `src/main.js`, `src/i18n.js`, `src/style.css`, `CONTEXT.md` |
 | 2026-10-26 11:06 | `20261026T110623Z.tar.gz` | `20261026-1106-8861f31` | Prod: štítky SNR u TRACE při zoomu ≥ 9, max. 150, barvy podle SNR | `src/main.js`, `src/style.css`, `CONTEXT.md` |
+| 2026-10-26 11:56 | `20261026T115625Z.tar.gz` (stage APP_DIR) | `20261026-1156-c8c217f` | Beta: TRACE pozorování se seskupují podle `tag` – jeden řádek `×N`, na mapě nejúplnější trasa, detail obsahuje všechna pozorování | `src/route-model.js`, `src/main.js`, `src/i18n.js`, testy, `CONTEXT.md` |
+| 2026-10-26 11:57 | `20261026T115757Z.tar.gz` | `20261026-1157-c8c217f` | Prod: stejné seskupování TRACE podle `tag` | `src/route-model.js`, `src/main.js`, `src/i18n.js`, testy, `CONTEXT.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
