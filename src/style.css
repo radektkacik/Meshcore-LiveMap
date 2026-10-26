@@ -661,6 +661,11 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 .photo-lightbox-fullscreen { position: absolute; top: 9px; right: 44px; z-index: 3; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; color: #fff; background: #899990; font: 18px/30px "DM Mono", monospace; cursor: pointer; }
 .photo-lightbox-fullscreen:hover { background: #078e62; }
 .photo-lightbox-fullscreen[hidden] { display: none; }
+.photo-lightbox.immersive { padding: 0; background: #000; }
+.photo-lightbox.immersive img { max-width: 100vw; max-height: 100dvh; border-radius: 0; }
+.photo-lightbox.immersive p,
+.photo-lightbox.immersive .photo-report-open,
+.photo-lightbox.immersive .photo-lightbox-counter { display: none; }
 .photo-lightbox p { margin: 8px 12px 0; text-align: center; font-size: 12px; }
 #photo-lightbox-author { margin-top: 2px; color: #9fb0b8; font: 11px "DM Mono", monospace; }
 .photo-report-open { display: block; margin: 8px auto 4px; padding: 5px 10px; border: 1px solid rgba(192, 57, 43, 0.35); border-radius: 6px; color: #ffb3a8; background: rgba(192, 57, 43, 0.14); font: 10px "DM Mono", monospace; cursor: pointer; }

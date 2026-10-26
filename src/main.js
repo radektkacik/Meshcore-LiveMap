@@ -1972,23 +1972,24 @@ function showPhotoLightbox() {
 }
 
 function updatePhotoFullscreenButton() {
-  const active = document.fullscreenElement === elements.photoLightbox;
+  const active = elements.photoLightbox.classList.contains("immersive")
+    || document.fullscreenElement === elements.photoLightbox;
   elements.photoLightboxFullscreen.textContent = active ? "⤢" : "⛶";
   elements.photoLightboxFullscreen.setAttribute("aria-label", t(active ? "photos.fullscreenExit" : "photos.fullscreen"));
 }
 
 async function togglePhotoFullscreen() {
+  const next = !elements.photoLightbox.classList.contains("immersive");
+  elements.photoLightbox.classList.toggle("immersive", next);
+  updatePhotoFullscreenButton();
   try {
-    if (document.fullscreenElement === elements.photoLightbox) {
+    if (next && !document.fullscreenElement && document.documentElement.requestFullscreen) {
+      await document.documentElement.requestFullscreen();
+    } else if (!next && document.fullscreenElement) {
       await document.exitFullscreen();
-    } else if (elements.photoLightbox.requestFullscreen) {
-      await elements.photoLightbox.requestFullscreen();
     }
-  } catch (error) {
-    console.error("Celou obrazovku se nepodařilo přepnout", error);
-  } finally {
-    updatePhotoFullscreenButton();
-  }
+  } catch {}
+  updatePhotoFullscreenButton();
 }
 
 function stepPhotoLightbox(delta) {
@@ -6031,11 +6032,15 @@ elements.photoDialog.addEventListener("click", (event) => {
 elements.photoDialog.addEventListener("close", resetPhotoDialog);
 elements.photoLightboxClose.addEventListener("click", () => elements.photoLightbox.close());
 elements.photoLightboxFullscreen.addEventListener("click", togglePhotoFullscreen);
-if (typeof elements.photoLightbox.requestFullscreen !== "function") {
-  elements.photoLightboxFullscreen.hidden = true;
-}
 document.addEventListener("fullscreenchange", () => {
-  if (elements.photoLightbox.open) updatePhotoFullscreenButton();
+  if (!elements.photoLightbox.open) return;
+  if (!document.fullscreenElement) elements.photoLightbox.classList.remove("immersive");
+  updatePhotoFullscreenButton();
+});
+elements.photoLightbox.addEventListener("cancel", (event) => {
+  if (!elements.photoLightbox.classList.contains("immersive")) return;
+  event.preventDefault();
+  void togglePhotoFullscreen();
 });
 elements.photoLightboxPrev.addEventListener("click", () => stepPhotoLightbox(-1));
 elements.photoLightboxNext.addEventListener("click", () => stepPhotoLightbox(1));
@@ -6055,6 +6060,7 @@ elements.photoLightbox.addEventListener("close", () => {
   if (document.fullscreenElement === elements.photoLightbox) {
     document.exitFullscreen().catch(() => {});
   }
+  elements.photoLightbox.classList.remove("immersive");
   elements.photoLightboxImg.removeAttribute("src");
   elements.photoLightboxCaption.textContent = "";
   elements.photoLightboxAuthor.textContent = "";
