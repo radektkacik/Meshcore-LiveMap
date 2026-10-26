@@ -544,12 +544,12 @@ const photoReportRate = new Map();
 const photoReportLimit = Math.max(1, Number(process.env.PHOTO_REPORT_RATE_LIMIT || 5));
 const photoReportCooldownMs = Math.max(0, Number(process.env.PHOTO_REPORT_COOLDOWN_MS || 10_000));
 
-function checkPhotoUpload(ip, now = Date.now()) {
+function checkPhotoUpload(ip, now = Date.now(), { skipCooldown = false } = {}) {
   const hourStart = now - 60 * 60 * 1000;
   const dayStart = now - 24 * 60 * 60 * 1000;
   const stamps = (photoRate.get(ip) || []).filter((stamp) => stamp > dayStart);
   const last = stamps[stamps.length - 1];
-  if (last != null && now - last < photoCooldownMs) {
+  if (!skipCooldown && last != null && now - last < photoCooldownMs) {
     photoRate.set(ip, stamps);
     return {
       message: "Mezi nahráním fotek je krátká pauza, zkuste to prosím za chvíli.",
@@ -813,20 +813,59 @@ function telegramAdminUrl(path) {
   return token ? `${publicBaseUrl}${path}?token=${encodeURIComponent(token)}` : null;
 }
 
-function notifyNewPhoto(photo) {
-  if (!telegramNotifier.enabled || !telegramNotifyPhotos) return;
-  const name = photoNodeNames().get(photo.nodeKey) || photo.nodeKey.slice(0, 8);
+const photoNotificationBatches = new Map();
+
+function notifyNewPhotos(photos) {
+  if (!telegramNotifier.enabled || !telegramNotifyPhotos || !photos?.length) return;
+  const photosToNotify = photos.slice(0, 5);
+  const first = photosToNotify[0];
+  const name = photoNodeNames().get(first.nodeKey) || first.nodeKey.slice(0, 8);
   const stats = photoStore.stats();
   const lines = [
-    "📷 Nová fotka čeká na schválení",
+    photosToNotify.length === 1 ? "📷 Nová fotka čeká na schválení" : "📷 Nové fotky čekají na schválení",
     `Nod: ${name}`,
   ];
-  if (photo.caption) lines.push(`Popis: ${photo.caption}`);
-  if (photo.author) lines.push(`Autor: ${photo.author}`);
+  if (photosToNotify.length > 1) lines.push(`Počet: ${photosToNotify.length}`);
+  if (first.caption) lines.push(`Popis: ${first.caption}`);
+  const author = photosToNotify.find((photo) => photo.author)?.author;
+  if (author) lines.push(`Autor: ${author}`);
   lines.push(`Čeká na schválení: ${stats.pending}`);
   const url = telegramAdminUrl("/api/photos/view");
   if (url) lines.push(url);
   notifyTelegram(lines.join("\n"));
+}
+
+function notifyNewPhoto(photo) {
+  notifyNewPhotos([photo]);
+}
+
+function flushPhotoNotificationBatch(batchId) {
+  const batch = photoNotificationBatches.get(batchId);
+  if (!batch) return;
+  clearTimeout(batch.timer);
+  photoNotificationBatches.delete(batchId);
+  notifyNewPhotos(batch.photos);
+}
+
+function queueNewPhotoNotification(photo, batchId, batchSize) {
+  if (!telegramNotifier.enabled || !telegramNotifyPhotos) return;
+  if (!batchId || batchSize <= 1 || photoNotificationBatches.size >= 100) {
+    notifyNewPhoto(photo);
+    return;
+  }
+  let batch = photoNotificationBatches.get(batchId);
+  if (!batch) {
+    batch = { photos: [], size: Math.min(5, batchSize), timer: null };
+    photoNotificationBatches.set(batchId, batch);
+  }
+  batch.photos.push(photo);
+  if (batch.photos.length >= batch.size) {
+    flushPhotoNotificationBatch(batchId);
+    return;
+  }
+  clearTimeout(batch.timer);
+  batch.timer = setTimeout(() => flushPhotoNotificationBatch(batchId), 3_000);
+  batch.timer.unref?.();
 }
 
 const PHOTO_REPORT_REASONS = {
@@ -1566,7 +1605,11 @@ async function handleRequest(request, response) {
       return;
     }
     const ip = clientIp(request);
-    const rate = checkPhotoUpload(ip);
+    const batchSize = Number(request.headers["x-photo-batch-size"]);
+    const batchIndex = Number(request.headers["x-photo-batch-index"]);
+    const batch = Number.isInteger(batchSize) && batchSize > 0 && batchSize <= 5
+      && Number.isInteger(batchIndex) && batchIndex >= 0 && batchIndex < batchSize;
+    const rate = checkPhotoUpload(ip, Date.now(), { skipCooldown: batch && batchIndex > 0 });
     if (!rate.ok) {
       sendJson(response, 429, { error: rate.message }, { "Retry-After": String(rate.retryAfter) });
       return;
@@ -1597,7 +1640,11 @@ async function handleRequest(request, response) {
         ipHash: createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16),
         nodeKey: key,
       });
-      notifyNewPhoto(photo);
+      queueNewPhotoNotification(
+        photo,
+        String(request.headers["x-photo-batch-id"] || "").slice(0, 64),
+        batch ? batchSize : 1,
+      );
       sendJson(response, 202, { id: photo.id, ok: true, status: photo.status });
     } catch (error) {
       if (error instanceof PhotoError) {

@@ -128,8 +128,12 @@ přihlašovací údaje zůstávají pouze na serveru.
   /api/photos/nodes` vrací počty schválených fotek podle nodů pro přepínač
   „Jen nody s fotkami“ v HUD. `POST /api/photos`
   přijímá binární JPEG/PNG/WebP (max 5 MB) s hlavičkami `X-Photo-Key`,
-  `X-Photo-Caption`, `X-Photo-Author` a `X-Photo-Consent: 1`; fotka se uloží
-  jako `pending` a zobrazí se až po schválení.
+  `X-Photo-Author` a `X-Photo-Consent: 1`; volitelný `X-Photo-Caption` API
+  stále přijímá, ale UI popis už nezadává. Klient umožní vybrat až 5 fotek
+  najednou a posílá je postupně s `X-Photo-Batch-Size`, `X-Photo-Batch-Index`
+  a `X-Photo-Batch-Id`; server mezi fotkami stejné dávky přeskočí 10s pauzu
+  a Telegram notifikaci pošle jednou za dávku. Fotka se uloží jako `pending`
+  a zobrazí se až po schválení.
 - Moderace fotek je na `GET /api/photos/view?token=<PHOTO_TOKEN>` (fallback
   `FEEDBACK_TOKEN`), odkud lze fotky schválit, skrýt nebo smazat. Soubory i
   `photos.sqlite` jsou v `uploads/` mimo `data/`, takže se nedostanou do záloh.

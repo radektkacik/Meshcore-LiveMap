@@ -55,7 +55,7 @@ Aktualizováno: 2026-10-26 (prod `20261026T184735Z`, beta `20261026T184639Z`)
 - Z detailu nodu odstraněn řádek „Stav hashe“
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
 - Rychlé výhry (prod i beta): `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (nody, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export nodů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
-- Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP + automatický převod HEIC/HEIF z iPhonu přes `libheif-js` (WASM) v prohlížeči, s potvrzením práv; fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`. Klient zmenšuje na 2000 px, server povolí max. 2400 px. Lightbox je celoobrazovkový (100vw/100dvh) s zoomem kolečkem myši, tažením, tlačítky +/- a režimem 1:1 (plné rozlišení); dvojklik přepíná fit ↔ 1:1. Přepínač „Jen nody s fotkami“ je skrytý na betě i v produkci.
+- Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP + automatický převod HEIC/HEIF z iPhonu přes `libheif-js` (WASM) v prohlížeči, s potvrzením práv; fotka se zobrazí až po schválení správcem; soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…`. Klient zmenšuje na 2000 px, server povolí max. 2400 px. Najednou lze vybrat až 5 fotek (bez popisu); klient je nahrává postupně s batch hlavičkami, server přeskočí 10s pauzu mezi fotkami dávky a pošle jednu Telegram notifikaci za dávku. Lightbox je celoobrazovkový (100vw/100dvh) s zoomem kolečkem myši, tažením, tlačítky +/- a režimem 1:1 (plné rozlišení); dvojklik přepíná fit ↔ 1:1. Přepínač „Jen nody s fotkami“ je skrytý na betě i v produkci.
 - Telegram notifikace pro správce (prod i beta): nová fotka k schválení, žádost o smazání fotky, volitelně nová zpráva v knize návštěv; konfigurace `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `PUBLIC_BASE_URL`, `TELEGRAM_ADMIN_LINK`.
 
 ### Mapa a nody
@@ -195,7 +195,7 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261026T184735Z'
 - Přibližná poloha observeru je jen IATA oblast, ne přesné letiště.
 - Detail nodu obsahuje galerii fotek; veřejné nahrávání JPEG/PNG/WebP s potvrzením práv, fotka se zobrazí až po schválení správcem. Moderace na `GET /api/photos/view?token=…`.
 - Kanály jsou jen veřejné dešifrované zprávy, soukromé zůstávají šifrované.
-- Fotky jsou veřejné až po schválení; pending/hidden vrací 404. Veřejné nahrávání má limity 8/h a 30/den na IP, 8 fotek na nod, 2 GB celkem a max. 2400 px na delší straně (klient zmenšuje na 2000 px). Žádosti o smazání jsou omezené 5/h na IP. Soubory i `photos.sqlite` jsou v `uploads/` a nejsou v zálohách, takže po obnově ze zálohy fotky zmizí.
+- Fotky jsou veřejné až po schválení; pending/hidden vrací 404. Veřejné nahrávání má limity 8/h a 30/den na IP (dávka 5 fotek se počítá jako 5), 8 fotek na nod, 2 GB celkem a max. 2400 px na delší straně (klient zmenšuje na 2000 px). Žádosti o smazání jsou omezené 5/h na IP. Soubory i `photos.sqlite` jsou v `uploads/` a nejsou v zálohách, takže po obnově ze zálohy fotky zmizí.
 - OSM dlaždice mají policy riziko při větším provozu („Access blocked“).
 - Firewall/SSH hardening není hotový: ufw inactive, PasswordAuthentication yes, root login povolený.
 - Cloudflare běží Full se self-signed origin certem, ne Full (strict).

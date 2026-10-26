@@ -226,8 +226,6 @@ const elements = {
   photoAuthor: document.querySelector("#photo-author"),
   photoAuthorLabel: document.querySelector("#photo-author-label"),
   photoCancel: document.querySelector("#photo-cancel"),
-  photoCaption: document.querySelector("#photo-caption"),
-  photoCaptionLabel: document.querySelector("#photo-caption-label"),
   photoClose: document.querySelector("#photo-close"),
   photoConsent: document.querySelector("#photo-consent"),
   photoConsentLabel: document.querySelector("#photo-consent-label"),
@@ -250,7 +248,6 @@ const elements = {
   photoLightboxZoomReset: document.querySelector("#photo-lightbox-zoom-reset"),
   photoNode: document.querySelector("#photo-node"),
   photoNote: document.querySelector("#photo-note"),
-  photoPreview: document.querySelector("#photo-preview"),
   photoPreviewWrap: document.querySelector("#photo-preview-wrap"),
   photoReportCancel: document.querySelector("#photo-report-cancel"),
   photoReportClose: document.querySelector("#photo-report-close"),
@@ -412,7 +409,7 @@ const state = {
   photoPanX: 0,
   photoPanY: 0,
   photoDrag: null,
-  photoPreviewUrl: null,
+  photoPreviewUrls: [],
   photoTarget: null,
   photoUploading: false,
   lightboxPhoto: null,
@@ -2038,12 +2035,24 @@ function setPhotoStatus(text, isError = false) {
 }
 
 function resetPhotoPreview() {
-  if (state.photoPreviewUrl) {
-    URL.revokeObjectURL(state.photoPreviewUrl);
-    state.photoPreviewUrl = null;
-  }
-  elements.photoPreview.removeAttribute("src");
+  for (const url of state.photoPreviewUrls) URL.revokeObjectURL(url);
+  state.photoPreviewUrls = [];
+  elements.photoPreviewWrap.replaceChildren();
   elements.photoPreviewWrap.hidden = true;
+}
+
+function renderPhotoPreviews(files) {
+  resetPhotoPreview();
+  if (!files.length) return;
+  elements.photoPreviewWrap.hidden = false;
+  for (const file of files) {
+    const url = URL.createObjectURL(file);
+    state.photoPreviewUrls.push(url);
+    const image = document.createElement("img");
+    image.alt = t("photos.previewAlt");
+    image.src = url;
+    elements.photoPreviewWrap.appendChild(image);
+  }
 }
 
 function resetPhotoDialog() {
@@ -2057,16 +2066,13 @@ function resetPhotoDialog() {
 function renderPhotoDialog() {
   elements.photoTitle.textContent = t("photos.addTitle");
   elements.photoClose.setAttribute("aria-label", t("photos.cancel"));
-  elements.photoFileLabel.textContent = t("photos.file");
-  elements.photoCaptionLabel.textContent = t("photos.caption");
-  elements.photoCaption.placeholder = t("photos.captionPlaceholder");
+  elements.photoFileLabel.textContent = t("photos.files");
   elements.photoAuthorLabel.textContent = t("photos.author");
   elements.photoAuthor.placeholder = t("photos.authorPlaceholder");
   elements.photoConsentLabel.textContent = t("photos.consent");
   elements.photoNote.textContent = t("photos.note");
   elements.photoSubmit.textContent = t("photos.submit");
   elements.photoCancel.textContent = t("photos.cancel");
-  elements.photoPreview.alt = t("photos.previewAlt");
   const target = state.photoTarget;
   elements.photoNode.textContent = target
     ? `${target.name || t("common.unknownNode")} · ${target.key.slice(0, 8).toUpperCase()}`
@@ -6178,21 +6184,17 @@ elements.exportDownload.addEventListener("click", () => {
 });
 
 elements.photoFile.addEventListener("change", () => {
-  resetPhotoPreview();
-  const file = elements.photoFile.files?.[0];
-  if (!file) return;
-  state.photoPreviewUrl = URL.createObjectURL(file);
-  elements.photoPreview.src = state.photoPreviewUrl;
-  elements.photoPreviewWrap.hidden = false;
-  setPhotoStatus("");
+  const files = [...(elements.photoFile.files || [])];
+  renderPhotoPreviews(files.slice(0, 5));
+  setPhotoStatus(files.length > 5 ? t("photos.tooMany") : "");
 });
 
 elements.photoForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (state.photoUploading) return;
-  const file = elements.photoFile.files?.[0];
+  const files = [...(elements.photoFile.files || [])].slice(0, 5);
   const target = state.photoTarget;
-  if (!file || !target) {
+  if (!files.length || !target) {
     setPhotoStatus(t("photos.invalid"), true);
     return;
   }
@@ -6202,45 +6204,74 @@ elements.photoForm.addEventListener("submit", async (event) => {
   }
   state.photoUploading = true;
   elements.photoSubmit.disabled = true;
-  setPhotoStatus(t("photos.uploading"));
-  let blob;
+  let created = 0;
+  let failed = 0;
+  let lastError = "";
+  const batchId = files.length > 1
+    ? (globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`)
+    : "";
   try {
-    blob = await preparePhotoBlob(file);
-  } catch (error) {
-    setPhotoStatus(error?.message === "heic" ? t("photos.heicFailed") : t("photos.invalid"), true);
-    state.photoUploading = false;
-    elements.photoSubmit.disabled = false;
-    return;
-  }
-  if (blob.size > 5 * 1024 * 1024) {
-    setPhotoStatus(t("photos.tooLarge"), true);
-    state.photoUploading = false;
-    elements.photoSubmit.disabled = false;
-    return;
-  }
-  try {
-    const response = await fetch(appPath("/api/photos"), {
-      method: "POST",
-      headers: {
-        "Content-Type": blob.type,
-        "X-Photo-Author": encodeURIComponent(elements.photoAuthor.value.trim()),
-        "X-Photo-Caption": encodeURIComponent(elements.photoCaption.value.trim()),
-        "X-Photo-Consent": "1",
-        "X-Photo-Key": target.key,
-      },
-      body: blob,
-      signal: AbortSignal.timeout(60_000),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || t("photos.failed"));
-    setPhotoStatus(t("photos.pending"), false);
-    elements.photoForm.reset();
-    resetPhotoPreview();
-    setTimeout(() => {
-      if (elements.photoDialog.open) elements.photoDialog.close();
-    }, 1_800);
-  } catch (error) {
-    setPhotoStatus(error.message || t("photos.failed"), true);
+    for (let index = 0; index < files.length; index += 1) {
+      setPhotoStatus(t("photos.uploadingFile", { current: index + 1, total: files.length }));
+      let blob;
+      try {
+        blob = await preparePhotoBlob(files[index]);
+      } catch (error) {
+        failed += 1;
+        lastError = error?.message === "heic" ? t("photos.heicFailed") : t("photos.invalid");
+        continue;
+      }
+      if (blob.size > 5 * 1024 * 1024) {
+        failed += 1;
+        lastError = t("photos.tooLarge");
+        continue;
+      }
+      try {
+        const headers = {
+          "Content-Type": blob.type,
+          "X-Photo-Author": encodeURIComponent(elements.photoAuthor.value.trim()),
+          "X-Photo-Batch-Index": String(index),
+          "X-Photo-Batch-Size": String(files.length),
+          "X-Photo-Consent": "1",
+          "X-Photo-Key": target.key,
+        };
+        if (batchId) headers["X-Photo-Batch-Id"] = batchId;
+        const response = await fetch(appPath("/api/photos"), {
+          method: "POST",
+          headers,
+          body: blob,
+          signal: AbortSignal.timeout(60_000),
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          lastError = data.error || t("photos.failed");
+          if (response.status === 429) {
+            failed += files.length - index;
+            break;
+          }
+          failed += 1;
+          continue;
+        }
+        created += 1;
+      } catch (error) {
+        failed += 1;
+        lastError = error?.message || t("photos.failed");
+      }
+    }
+    if (created > 0) {
+      setPhotoStatus(failed > 0
+        ? t("photos.partial", { created, failed, total: files.length })
+        : tCount("photos.pendingCount", created), failed > 0);
+      elements.photoForm.reset();
+      resetPhotoPreview();
+      if (failed === 0) {
+        setTimeout(() => {
+          if (elements.photoDialog.open) elements.photoDialog.close();
+        }, 1_800);
+      }
+    } else {
+      setPhotoStatus(lastError || t("photos.failed"), true);
+    }
   } finally {
     state.photoUploading = false;
     elements.photoSubmit.disabled = false;
