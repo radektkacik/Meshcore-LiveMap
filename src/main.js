@@ -3059,12 +3059,35 @@ function renderRoute(route, { archive = false } = {}) {
   const dashArray = archive ? "4 8" : "6 10";
   const snrValues = route.snrValues || [];
   const lines = [];
+  const breakMarkers = [];
+  const traceWithSnr = Number(route.packetType) === 9 && snrValues.length >= 2;
 
-  if (snrValues.length >= 2 && segments.length === 1) {
-    const segment = segments[0];
-    for (let index = 0; index < segment.length - 1; index += 1) {
-      const snr = snrValues[Math.min(index, snrValues.length - 1)];
-      lines.push(L.polyline([segment[index], segment[index + 1]], {
+  if (traceWithSnr) {
+    for (let index = 1; index < route.points.length; index += 1) {
+      const previous = route.points[index - 1];
+      const point = route.points[index];
+      if (point.breakBefore) {
+        if (!archive) {
+          const marker = L.marker(
+            [(previous.lat + point.lat) / 2, (previous.lon + point.lon) / 2],
+            {
+              icon: L.divIcon({
+                className: "route-break-marker",
+                html: "?",
+                iconAnchor: [8, 8],
+                iconSize: [16, 16],
+              }),
+            },
+          ).bindTooltip(t("route.breakUnknown"), {
+            className: "node-tooltip",
+            direction: "top",
+          }).addTo(group);
+          breakMarkers.push(marker);
+        }
+        continue;
+      }
+      const snr = snrValues[Math.min(index - 1, snrValues.length - 1)];
+      lines.push(L.polyline([[previous.lat, previous.lon], [point.lat, point.lon]], {
         renderer: layerRenderer,
         color: snrColor(snr),
         className: lineClass,
@@ -3087,6 +3110,28 @@ function renderRoute(route, { archive = false } = {}) {
         opacity,
         weight,
       }).addTo(group));
+    }
+    if (!archive) {
+      for (let index = 1; index < route.points.length; index += 1) {
+        const previous = route.points[index - 1];
+        const point = route.points[index];
+        if (!point.breakBefore) continue;
+        const marker = L.marker(
+          [(previous.lat + point.lat) / 2, (previous.lon + point.lon) / 2],
+          {
+            icon: L.divIcon({
+              className: "route-break-marker",
+              html: "?",
+              iconAnchor: [8, 8],
+              iconSize: [16, 16],
+            }),
+          },
+        ).bindTooltip(t("route.breakUnknown"), {
+          className: "node-tooltip",
+          direction: "top",
+        }).addTo(group);
+        breakMarkers.push(marker);
+      }
     }
   }
 
@@ -3122,6 +3167,7 @@ function renderRoute(route, { archive = false } = {}) {
     openRouteDetail(route, event.latlng);
   };
   for (const line of lines) line.on("click", openDetail);
+  for (const marker of breakMarkers) marker.on("click", openDetail);
   endpoint.on("click", openDetail);
 
   return { endpoint, group, line: lines[0], lines, versionId: route.versionId };
