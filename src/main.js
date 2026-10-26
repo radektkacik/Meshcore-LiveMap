@@ -551,6 +551,12 @@ const routeLayer = L.layerGroup().addTo(map);
 const observerLayer = L.layerGroup();
 const selectedRouteLayer = L.layerGroup().addTo(map);
 const neighborLayer = L.layerGroup();
+map.createPane("snrLabelPane");
+map.getPane("snrLabelPane").style.zIndex = "450";
+map.getPane("snrLabelPane").style.pointerEvents = "none";
+const snrLabelLayer = L.layerGroup().addTo(map);
+let snrLabelTimer = null;
+let snrLabelSignature = "";
 if (state.hideRoutes) {
   map.removeLayer(routeLayer);
   map.removeLayer(selectedRouteLayer);
@@ -1792,9 +1798,12 @@ function setRoutesHidden(hidden) {
     if (state.packetFocus) exitPacketFocus();
     if (map.hasLayer(routeLayer)) map.removeLayer(routeLayer);
     if (map.hasLayer(selectedRouteLayer)) map.removeLayer(selectedRouteLayer);
+    snrLabelLayer.clearLayers();
+    snrLabelSignature = "";
   } else {
     if (!state.packetFocus && !map.hasLayer(routeLayer)) routeLayer.addTo(map);
     if (!map.hasLayer(selectedRouteLayer)) selectedRouteLayer.addTo(map);
+    scheduleSnrLabels(150);
   }
   updateRouteAnimation();
 }
@@ -3047,6 +3056,61 @@ function snrColor(snr) {
   return "#d1374d";
 }
 
+function scheduleSnrLabels(delay = 250) {
+  clearTimeout(snrLabelTimer);
+  snrLabelTimer = setTimeout(() => {
+    snrLabelTimer = null;
+    rebuildSnrLabels();
+  }, delay);
+}
+
+function rebuildSnrLabels() {
+  if (state.hideRoutes || state.routeWindowMs !== 0 || map.getZoom() < LABEL_MIN_ZOOM) {
+    snrLabelLayer.clearLayers();
+    snrLabelSignature = "";
+    return;
+  }
+  const viewport = map.getBounds().pad(0.05);
+  const routes = routeStore.visibleLive(state, nowMs())
+    .filter((route) => Number(route.packetType) === 9 && route.snrValues?.length >= 1)
+    .filter((route) => routeVisibleIn(viewport, route));
+  const signature = routes
+    .map((route) => `${route.id}:${route.versionId}`)
+    .sort()
+    .join("|")
+    + `|${map.getZoom()}|${map.getCenter().lat.toFixed(3)},${map.getCenter().lng.toFixed(3)}`;
+  if (signature === snrLabelSignature) return;
+  snrLabelSignature = signature;
+  snrLabelLayer.clearLayers();
+  let count = 0;
+  for (const route of routes) {
+    for (let index = 1; index < route.points.length; index += 1) {
+      if (count >= 150) return;
+      const previous = route.points[index - 1];
+      const point = route.points[index];
+      if (point.breakBefore) continue;
+      const snr = Number(route.snrValues[Math.min(index - 1, route.snrValues.length - 1)]);
+      if (!Number.isFinite(snr)) continue;
+      const tone = snr >= SNR_GOOD_DB ? "good" : snr >= SNR_FAIR_DB ? "fair" : "bad";
+      L.marker(
+        [previous.lat + (point.lat - previous.lat) * 0.55, previous.lon + (point.lon - previous.lon) * 0.55],
+        {
+          icon: L.divIcon({
+            className: `route-snr-label ${tone}`,
+            html: `${formatDecimal(snr, 1)} dB`,
+            iconAnchor: [28, 9],
+            iconSize: [56, 18],
+          }),
+          interactive: false,
+          keyboard: false,
+          pane: "snrLabelPane",
+        },
+      ).addTo(snrLabelLayer);
+      count += 1;
+    }
+  }
+}
+
 function renderRoute(route, { archive = false } = {}) {
   const segments = routeSegments(route.points);
   if (!segments.length) return null;
@@ -3888,6 +3952,7 @@ function syncRoutePresentationCore(now = nowMs()) {
   updateFeed(routeStore.visibleFeed(state, now));
   updateRouteCount();
   updateRouteAnimation();
+  scheduleSnrLabels();
   for (const entry of state.nodeMarkers) {
     const key = entry.node.public_key?.toUpperCase();
     const previous = key ? previousLastRoutes.get(key) : null;
@@ -4992,6 +5057,7 @@ elements.hideRoutesToggle.addEventListener("change", () => {
 });
 map.on("moveend zoomend", scheduleNodeLabels);
 map.on("moveend zoomend resize", scheduleViewportRender);
+map.on("moveend zoomend", () => scheduleSnrLabels(150));
 
 const hud = document.querySelector("#hud");
 const hudToggle = document.querySelector("#hud-toggle");

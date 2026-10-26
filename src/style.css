@@ -664,6 +664,10 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 .qr-dialog p { margin: 12px 0 0; color: var(--muted); font: 10px "DM Mono", monospace; }
 .route-step-marker { width: 20px !important; height: 20px !important; border: 2px solid #fff; border-radius: 50%; color: #fff; background: #287fc9; box-shadow: 0 2px 6px rgba(20, 42, 32, 0.35); font: 500 10px/16px "DM Mono", monospace; text-align: center; }
 .route-break-marker { display: grid; place-items: center; width: 16px !important; height: 16px !important; border: 1px solid #b27616; border-radius: 50%; color: #8a5a00; background: #fff4e2; box-shadow: 0 1px 4px rgba(32, 54, 44, 0.25); font: 700 10px/1 "DM Mono", monospace; cursor: pointer; }
+.route-snr-label { display: grid; place-items: center; border: 1px solid; border-radius: 5px; background: rgba(255, 255, 251, 0.92); box-shadow: 0 1px 4px rgba(32, 54, 44, 0.22); font: 700 9px/1 "DM Mono", monospace; white-space: nowrap; }
+.route-snr-label.good { color: #1d8a58; border-color: rgba(43, 191, 136, 0.7); }
+.route-snr-label.fair { color: #a36a1a; border-color: rgba(227, 145, 28, 0.75); }
+.route-snr-label.bad { color: #b03024; border-color: rgba(209, 55, 77, 0.75); }
 .route-endpoint { transform-box: fill-box; transform-origin: center; animation: endpoint-pulse 900ms ease-out infinite alternate; filter: drop-shadow(0 1px 3px rgba(20, 42, 32, 0.45)); }
 @keyframes route-dash { to { stroke-dashoffset: -16; } }
 
@@ -910,6 +914,7 @@ html[data-theme="dark"] .neighbor-focus-bar button { color: #5fd0a5; background:
 html[data-theme="dark"] .node-neighbors-map { color: #5fd0a5; background: rgba(7, 142, 98, 0.16); border-color: rgba(7, 142, 98, 0.4); }
 html[data-theme="dark"] .neighbor-count { color: #5fd0a5; background: rgba(16, 32, 26, 0.9); border-color: rgba(95, 208, 165, 0.4); }
 html[data-theme="dark"] .route-break-marker { color: #ffc46b; background: #2a2318; border-color: #b27616; }
+html[data-theme="dark"] .route-snr-label { background: rgba(15, 20, 24, 0.92); }
 @media (max-width: 600px) {
   .packet-focus-bar { top: 8px; left: 50%; right: auto; bottom: auto; max-width: calc(100vw - 18px); transform: translateX(-50%); }
 }
