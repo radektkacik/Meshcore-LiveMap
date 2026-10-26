@@ -100,7 +100,7 @@ Aktualizováno: 2026-10-26 (prod `20261026T115757Z`, beta `20261026T115625Z`)
 - Klik na řádek observeru otevře detail trasy; `↗` zobrazí trasu na mapě
 - Focus režim: jen vybraný paket, živý provoz skrytý, trvá do „Zrušit výběr“/Escape
 - Deep link `?packet=<hash>`
-- TRACE: 1B se zobrazují vždy, SNR skoků v detailu i u hopů; pozorování stejného TRACE se seskupují podle `tag` (jeden řádek `×N`, na mapě nejúplnější trasa)
+- TRACE: 1B se zobrazují vždy, SNR skoků v detailu i u hopů; pozorování stejného TRACE se seskupují podle `tag` (jeden řádek `×N`, na mapě nejúplnější SNR trasa); SNR se neopakuje pro hopy bez hodnoty
 - Ambiguous 1B cesty: výběr celého kandidátního řetězu minimalizací vzdálenosti, kotva podle IATA observeru
 - Režim Historie: 300 paketů ze 7 dní; filtry observer/nod/hash, typ, okno 1 h/24 h/7 dní, „Jen anomálie“
 - Anomálie: dlouhý skok >140 km, smyčka, >20 hopů
@@ -141,7 +141,7 @@ Aktualizováno: 2026-10-26 (prod `20261026T115757Z`, beta `20261026T115625Z`)
 
 ## 4. Testy a CI
 
-- `npm test`: 102 testů, 99 pass, 3 skip, 0 fail
+- `npm test`: 103 testů, 100 pass, 3 skip, 0 fail
 - `npm audit --omit=dev`: 0 zranitelností
 - GitHub Actions CI: Node 20 a 22, běží `npm ci`, syntax check, testy, build
 - CI nelze z tohoto prostředí číst bez GitHub přihlášení

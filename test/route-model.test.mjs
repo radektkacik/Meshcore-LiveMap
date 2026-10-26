@@ -174,6 +174,33 @@ test("trace observations are grouped by tag and the most complete route wins", (
   assert.equal(grouped[1].id, ordinary.id);
 });
 
+test("trace grouping prefers the observation with the most SNR values", () => {
+  const partial = route({
+    createdAt: 100_000,
+    id: "partial",
+    packetHash: "AAAA",
+    packetType: 9,
+    points: Array.from({ length: 8 }, (_, index) => ({ publicKey: `P${index}` })),
+    snrValues: [12.3],
+    traceTag: "777",
+    versionId: "v-partial",
+  });
+  const full = route({
+    createdAt: 100_001,
+    id: "full",
+    packetHash: "BBBB",
+    packetType: 9,
+    points: [{ publicKey: "A" }, { publicKey: "B" }],
+    snrValues: [1, 2, 3, 4, 5, 6, 7],
+    traceTag: "777",
+    versionId: "v-full",
+  });
+  const grouped = groupTraceObservations([partial, full]);
+  assert.equal(grouped.length, 1);
+  assert.equal(grouped[0].id, "full");
+  assert.deepEqual(grouped[0].snrValues, [1, 2, 3, 4, 5, 6, 7]);
+});
+
 test("route version state coalesces in-flight work and retries failures", async () => {
   const state = new RouteVersionState(2);
   let calls = 0;

@@ -30,7 +30,7 @@ function newestFirst(a, b) {
 function traceObservationScore(route) {
   const points = Array.isArray(route.points) ? route.points.length : 0;
   const snr = Array.isArray(route.snrValues) ? route.snrValues.length : 0;
-  return points * 100 + snr;
+  return snr * 1000 + points;
 }
 
 export function groupTraceObservations(routes) {

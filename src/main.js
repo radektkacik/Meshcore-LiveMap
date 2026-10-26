@@ -3119,7 +3119,8 @@ function rebuildSnrLabels() {
       const previous = route.points[index - 1];
       const point = route.points[index];
       if (point.breakBefore) continue;
-      const snr = Number(route.snrValues[Math.min(index - 1, route.snrValues.length - 1)]);
+      if (index - 1 >= route.snrValues.length) continue;
+      const snr = Number(route.snrValues[index - 1]);
       if (!Number.isFinite(snr)) continue;
       const tone = snr >= SNR_GOOD_DB ? "good" : snr >= SNR_FAIR_DB ? "fair" : "bad";
       L.marker(
@@ -3154,7 +3155,7 @@ function renderRoute(route, { archive = false } = {}) {
   const snrValues = route.snrValues || [];
   const lines = [];
   const breakMarkers = [];
-  const traceWithSnr = Number(route.packetType) === 9 && snrValues.length >= 2;
+  const traceWithSnr = Number(route.packetType) === 9 && snrValues.length > 0;
 
   if (traceWithSnr) {
     for (let index = 1; index < route.points.length; index += 1) {
@@ -3180,10 +3181,10 @@ function renderRoute(route, { archive = false } = {}) {
         }
         continue;
       }
-      const snr = snrValues[Math.min(index - 1, snrValues.length - 1)];
+      const snr = index - 1 < snrValues.length ? Number(snrValues[index - 1]) : null;
       lines.push(L.polyline([[previous.lat, previous.lon], [point.lat, point.lon]], {
         renderer: layerRenderer,
-        color: snrColor(snr),
+        color: Number.isFinite(snr) ? snrColor(snr) : route.color,
         className: lineClass,
         dashArray,
         lineCap: "round",
