@@ -88,7 +88,24 @@ export function createNodeMetricsStore(dbPath, {
       avg_observations REAL,
       last_sampled_at INTEGER
     );
+    CREATE TABLE IF NOT EXISTS stats_rollup_meta (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
+
+  // Daily buckets are local-midnight based; rebuild older UTC-day rows once.
+  const statsRollupVersion = "2026-10-26-local-day";
+  const storedRollupVersion = db
+    .prepare("SELECT value FROM stats_rollup_meta WHERE key = 'version'")
+    .get();
+  if (storedRollupVersion?.value !== statsRollupVersion) {
+    db.transaction(() => {
+      db.prepare("DELETE FROM stats_daily").run();
+      db.prepare("INSERT OR REPLACE INTO stats_rollup_meta (key, value) VALUES ('version', ?)")
+        .run(statsRollupVersion);
+    })();
+  }
 
   const upsertSample = db.prepare(`
     INSERT INTO node_score_samples (
@@ -180,18 +197,18 @@ export function createNodeMetricsStore(dbPath, {
       avg_packets_24h, avg_nodes, avg_observers, avg_observations, last_sampled_at
     )
     SELECT
-      CAST(bucket_at / 86400000 AS INTEGER) * 86400000,
-      AVG(avg_packets_hour),
+      CAST(strftime('%s', datetime(bucket_at / 1000, 'unixepoch', 'localtime', 'start of day'), 'utc') AS INTEGER) * 1000,
+      SUM(avg_packets_hour * samples) / NULLIF(SUM(samples), 0),
       MAX(max_packets_hour),
       SUM(samples),
-      AVG(avg_packets_24h),
-      AVG(avg_nodes),
-      AVG(avg_observers),
-      AVG(avg_observations),
+      SUM(avg_packets_24h * samples) / NULLIF(SUM(samples), 0),
+      SUM(avg_nodes * samples) / NULLIF(SUM(samples), 0),
+      SUM(avg_observers * samples) / NULLIF(SUM(samples), 0),
+      SUM(avg_observations * samples) / NULLIF(SUM(samples), 0),
       MAX(last_sampled_at)
     FROM stats_hourly
     WHERE bucket_at >= ? AND bucket_at < ?
-    GROUP BY CAST(bucket_at / 86400000 AS INTEGER)
+    GROUP BY CAST(strftime('%s', datetime(bucket_at / 1000, 'unixepoch', 'localtime', 'start of day'), 'utc') AS INTEGER)
   `);
   const purgeHourly = db.prepare("DELETE FROM stats_hourly WHERE bucket_at < ?");
   const purgeDaily = db.prepare("DELETE FROM stats_daily WHERE bucket_at < ?");

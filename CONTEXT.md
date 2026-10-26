@@ -126,7 +126,7 @@ Aktualizováno: 2026-10-26 (prod `20261026T183103Z`, beta `20261026T183024Z`)
 - Cache `/api/nodes` a `/api/resolve-hops` proti výpadkům CoreScope; nody se vydávají z cache okamžitě (SWR, soft TTL 15 min)
 - Start stránky: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE běží s `?replay=0`
 - `/api/stats` cache (24 h) + lokální fallback z `packet_routes` při výpadku Analyzeru; klient zobrazí stale/partial hodnotu oranžově a zkusí obnovu za 60 s
-- Sběr `/api/stats` každých 5 min do `stats_samples` v `data/node-metrics.sqlite` (retence 30 dní); graf Paketů/h do 7 dní čte surové vzorky, 30 dní a 1 rok denní agregáty `stats_daily` (hodinové `stats_hourly` 730 dní, denní 1825 dní); chybějící hodiny/dny jsou mezery
+- Sběr `/api/stats` každých 5 min do `stats_samples` v `data/node-metrics.sqlite` (retence 30 dní); graf Paketů/h do 7 dní čte surové vzorky, 30 dní a 1 rok denní agregáty `stats_daily` (místní půlnoc; hodinové `stats_hourly` 730 dní, denní 1825 dní); chybějící hodiny/dny jsou mezery
 - MQTT reconnect/backoff, SSE feed, replay buffer
 - Ukládání TRACE i bez `resolved_path`; cesty se doresolvují na klientu
 - Security headers: CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP

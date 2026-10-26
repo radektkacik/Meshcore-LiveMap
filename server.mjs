@@ -281,6 +281,18 @@ function sendStatsFallback(response) {
   return true;
 }
 
+function startOfLocalDay(timestamp) {
+  const date = new Date(timestamp);
+  date.setHours(0, 0, 0, 0);
+  return date.getTime();
+}
+
+function addLocalDays(timestamp, days) {
+  const date = new Date(timestamp);
+  date.setDate(date.getDate() + days);
+  return date.getTime();
+}
+
 function sendJson(response, status, payload, headers = {}) {
   response.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
@@ -1894,8 +1906,10 @@ async function handleRequest(request, response) {
     const points = granularity === "hour" ? hours : Math.ceil(hours / 24);
     const end = granularity === "hour"
       ? Math.floor(Date.now() / bucketMs) * bucketMs
-      : Math.floor(Date.now() / bucketMs) * bucketMs - bucketMs;
-    const since = end - (points - 1) * bucketMs;
+      : addLocalDays(startOfLocalDay(Date.now()), -1);
+    const since = granularity === "hour"
+      ? end - (points - 1) * bucketMs
+      : addLocalDays(end, -(points - 1));
     const series = [];
     if (granularity === "hour") {
       const byHour = new Map();
@@ -1917,7 +1931,7 @@ async function handleRequest(request, response) {
     } else {
       const byDay = new Map(metricsStore.statsRollupSeries(since, "day").map((sample) => [sample.bucketAt, sample]));
       for (let index = 0; index < points; index += 1) {
-        const day = since + index * bucketMs;
+        const day = addLocalDays(since, index);
         const sample = byDay.get(day);
         const value = sample ? Number(sample.packetsLastHour) : NaN;
         series.push({

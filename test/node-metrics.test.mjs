@@ -74,9 +74,11 @@ test("aggregates five-minute stats into hourly and daily rollups", () => {
     assert.equal(hourly[0].peak, 111);
 
     store.recordStats({ packetsLastHour: 300 }, start + 24 * 60 * 60_000);
-    const daily = store.statsRollupSeries(Date.UTC(2026, 8, 1), "day");
+    const localDayStart = new Date(start);
+    localDayStart.setHours(0, 0, 0, 0);
+    const daily = store.statsRollupSeries(localDayStart.getTime(), "day");
     assert.equal(daily.length, 1);
-    assert.equal(daily[0].bucketAt, Date.UTC(2026, 8, 1));
+    assert.equal(daily[0].bucketAt, localDayStart.getTime());
     assert.equal(daily[0].samples, 13);
     assert.equal(daily[0].peak, 200);
   } finally {

@@ -89,7 +89,8 @@ přihlašovací údaje zůstávají pouze na serveru.
 - `/api/packet-history?hours=24|168|720|8760` vrací historii paketů/h.
   Do 168 h (7 dní) používá hodinové hodnoty ze surových vzorků v
   `stats_samples`, delší období (30 dní, 1 rok) z denních agregátů v
-  `stats_daily`. Server ukládá `packetsLastHour` z Analyzeru každých 5 minut;
+  `stats_daily` (denní intervaly od místní půlnoci). Server ukládá `packetsLastHour`
+  z Analyzeru každých 5 minut;
   surová data drží 30 dní, hodinové agregáty 730 dní a denní 1825 dní
   (`STATS_HOURLY_RETENTION_DAYS`, `STATS_DAILY_RETENTION_DAYS`). Chybějící
   hodiny/dny jsou `null` (mezera), žádný dopočet; starší data než 30 dní před
