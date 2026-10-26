@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { dirname, extname, join, normalize } from "node:path";
@@ -42,6 +42,9 @@ const visitStore = createVisitStatsStore(visitsDbPath);
 const feedbackDbPath = process.env.FEEDBACK_DB_PATH || join(process.cwd(), "data", "feedback.sqlite");
 const feedbackStore = createFeedbackStore(feedbackDbPath);
 const feedbackToken = process.env.FEEDBACK_TOKEN || "";
+const adminPassword = process.env.ADMIN_PASSWORD || feedbackToken || process.env.PHOTO_TOKEN || "";
+const adminSessionSecret = process.env.ADMIN_SESSION_SECRET || adminPassword;
+const adminSessionTtlMs = Math.max(60_000, Number(process.env.ADMIN_SESSION_TTL_MS || 12 * 60 * 60 * 1000));
 const photoDir = process.env.PHOTO_DIR || join(process.cwd(), "uploads");
 const photoMaxBytes = Math.max(1024, Number(process.env.PHOTO_MAX_BYTES || 5 * 1024 * 1024));
 const photoStore = createPhotoStore(photoDir, {
@@ -55,7 +58,27 @@ const photoToken = process.env.PHOTO_TOKEN || feedbackToken;
 if (!photoToken) {
   console.warn("Photo uploads are disabled: set PHOTO_TOKEN or FEEDBACK_TOKEN");
 }
+if (!adminPassword) {
+  console.warn("Admin UI is disabled: set ADMIN_PASSWORD or FEEDBACK_TOKEN");
+}
 const publicBaseUrl = (process.env.PUBLIC_BASE_URL || "https://mapa.meshcore.cz").replace(/\/+$/, "");
+const publicBasePath = (() => {
+  try {
+    return new URL(publicBaseUrl).pathname.replace(/\/+$/, "");
+  } catch {
+    return "";
+  }
+})();
+const adminBasePath = `${publicBasePath}/admin` || "/admin";
+
+function sitePath(path = "/") {
+  return `${publicBasePath}${path}`;
+}
+
+function adminPath(path = "") {
+  return `${adminBasePath}${path}`;
+}
+
 const telegramNotifier = createTelegramNotifier({
   apiBase: process.env.TELEGRAM_API_BASE || "https://api.telegram.org",
   chatId: process.env.TELEGRAM_CHAT_ID || "",
@@ -809,8 +832,9 @@ function notifyTelegram(text) {
 
 function telegramAdminUrl(path) {
   if (!telegramAdminLink) return null;
-  const token = path.startsWith("/api/photos") ? photoToken : feedbackToken;
-  return token ? `${publicBaseUrl}${path}?token=${encodeURIComponent(token)}` : null;
+  if (path.startsWith("/api/feedback")) return `${publicBaseUrl}/admin/feedback`;
+  if (path.endsWith("/reports")) return `${publicBaseUrl}/admin/photos?status=reports`;
+  return `${publicBaseUrl}/admin/photos`;
 }
 
 const photoNotificationBatches = new Map();
@@ -886,7 +910,7 @@ function notifyNewReport({ contact, message, photo, reason }) {
   if (message) lines.push(`Zpráva: ${message}`);
   if (contact) lines.push(`Kontakt: ${contact}`);
   lines.push(`Otevřené žádosti: ${photoStore.openReportCount()}`);
-  const url = telegramAdminUrl("/api/photos/view");
+  const url = telegramAdminUrl("/api/photos/reports");
   if (url) lines.push(url);
   notifyTelegram(lines.join("\n"));
 }
@@ -1479,6 +1503,542 @@ async function fetchTerrainTile(zoom, x, y) {
   }
 }
 
+
+const adminLoginAttempts = new Map();
+
+function parseCookieHeader(header) {
+  const cookies = {};
+  for (const part of String(header || "").split(";")) {
+    const index = part.indexOf("=");
+    if (index < 0) continue;
+    const name = part.slice(0, index).trim();
+    if (!name) continue;
+    try {
+      cookies[name] = decodeURIComponent(part.slice(index + 1).trim());
+    } catch {
+      cookies[name] = part.slice(index + 1).trim();
+    }
+  }
+  return cookies;
+}
+
+function safeEqualText(left, right) {
+  const a = Buffer.from(String(left ?? ""));
+  const b = Buffer.from(String(right ?? ""));
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
+function adminSessionValid(request) {
+  if (!adminPassword || !adminSessionSecret) return false;
+  const token = parseCookieHeader(request.headers.cookie).mc_admin;
+  if (!token) return false;
+  const [expires, signature] = String(token).split(".");
+  if (!/^\d+$/.test(expires) || !signature || Number(expires) <= Date.now()) return false;
+  const expected = createHmac("sha256", adminSessionSecret).update(expires).digest("base64url");
+  return safeEqualText(signature, expected);
+}
+
+function createAdminSessionToken(now = Date.now()) {
+  const expires = String(now + adminSessionTtlMs);
+  const signature = createHmac("sha256", adminSessionSecret).update(expires).digest("base64url");
+  return `${expires}.${signature}`;
+}
+
+function adminCookie(request, value, maxAge = Math.floor(adminSessionTtlMs / 1000)) {
+  const secure = String(request.headers["x-forwarded-proto"] || "").split(",")[0].trim() === "https"
+    || Boolean(request.socket?.encrypted);
+  return `mc_admin=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Strict;${secure ? " Secure;" : ""} Max-Age=${maxAge}`;
+}
+
+function checkAdminLogin(ip, now = Date.now()) {
+  const windowMs = 15 * 60 * 1000;
+  const stamps = (adminLoginAttempts.get(ip) || []).filter((stamp) => stamp > now - windowMs);
+  if (stamps.length >= 10) {
+    adminLoginAttempts.set(ip, stamps);
+    return { ok: false, retryAfter: Math.max(1, Math.ceil((stamps[0] + windowMs - now) / 1000)) };
+  }
+  stamps.push(now);
+  adminLoginAttempts.set(ip, stamps);
+  if (adminLoginAttempts.size > 5000) {
+    for (const [key, value] of adminLoginAttempts) {
+      if (!value.some((stamp) => stamp > now - windowMs)) adminLoginAttempts.delete(key);
+    }
+  }
+  return { ok: true };
+}
+
+function sameOriginRequest(request) {
+  const origin = request.headers.origin;
+  if (!origin) return true;
+  try {
+    return new URL(origin).host === request.headers.host;
+  } catch {
+    return false;
+  }
+}
+
+function safeAdminNext(value) {
+  const next = String(value || "");
+  const prefix = adminBasePath;
+  return (next === prefix || next.startsWith(`${prefix}/`)) && !next.startsWith("//")
+    ? next
+    : prefix;
+}
+
+async function readAdminForm(request) {
+  try {
+    return new URLSearchParams(await readBody(request, 8192));
+  } catch {
+    return null;
+  }
+}
+
+function redirectAdmin(response, location) {
+  response.writeHead(303, { Location: location, "Cache-Control": "no-store" });
+  response.end();
+}
+
+function renderAdminLogin({ error = "", next = adminBasePath, retryAfter = 0 } = {}) {
+  return `<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>Administrace · MeshCore CZ</title>
+<style>
+* { box-sizing:border-box; }
+body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px; background:#e9e8e1; color:#182820; font:14px/1.5 Manrope, system-ui, sans-serif; }
+.card { width:min(390px, 100%); padding:26px; border:1px solid rgba(30,65,49,.16); border-radius:16px; background:#fffef9; box-shadow:0 18px 50px rgba(20,42,32,.12); }
+.brand { color:#078e62; font:800 18px/1.1 Manrope, system-ui, sans-serif; letter-spacing:.02em; }
+.brand span { color:#87978f; font:10px "DM Mono", monospace; letter-spacing:.08em; vertical-align:2px; margin-left:5px; }
+h1 { margin:22px 0 4px; font-size:22px; }
+p { margin:0 0 16px; color:#667b70; }
+label { display:flex; flex-direction:column; gap:6px; color:#49665b; font:10px "DM Mono", monospace; }
+input { width:100%; padding:10px 11px; border:1px solid rgba(30,65,49,.22); border-radius:8px; color:#182820; background:#fff; font:14px Manrope, system-ui, sans-serif; }
+input:focus { outline:2px solid #078e62; outline-offset:1px; }
+button { width:100%; margin-top:14px; padding:10px 14px; border:1px solid #078e62; border-radius:8px; color:#fff; background:#078e62; font:700 13px Manrope, system-ui, sans-serif; cursor:pointer; }
+button:hover { background:#067a54; }
+.error { padding:8px 10px; border-radius:7px; color:#a32920; background:#fbeceb; font-size:12px; }
+.hint { margin:14px 0 0; font:10px/1.5 "DM Mono", monospace; color:#87978f; }
+.back { display:inline-block; margin-top:18px; color:#49665b; font-size:12px; text-decoration:none; }
+.back:hover { color:#078e62; }
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="brand">MESHCORE <span>ADMIN</span></div>
+  <h1>Administrace</h1>
+  <p>Zadejte heslo pro přístup ke správě fotek a zpětné vazby.</p>
+  ${error ? `<p class="error">${escapeHtml(error)}</p>` : ""}
+  <form method="post" action="${adminPath("/login")}">
+    <input type="hidden" name="next" value="${escapeHtml(next)}" />
+    <label>Heslo
+      <input type="password" name="password" autocomplete="current-password" required autofocus />
+    </label>
+    <button type="submit">Přihlásit se</button>
+  </form>
+  ${retryAfter ? `<p class="hint">Další pokus za ${Math.ceil(retryAfter / 60)} min.</p>` : ""}
+  <a class="back" href="${sitePath("/")}">← Zpět na mapu</a>
+</main>
+</body>
+</html>`;
+}
+
+function adminLayout({ active = "", content = "", title = "Administrace" }) {
+  const links = [
+    ["dashboard", adminPath(), "Přehled"],
+    ["photos", adminPath("/photos"), "Fotky"],
+    ["reports", adminPath("/photos?status=reports"), "Žádosti"],
+    ["feedback", adminPath("/feedback"), "Zpětná vazba"],
+  ].map(([key, href, label]) => `<a class="${active === key ? "active" : ""}" href="${href}">${label}</a>`).join("");
+  return `<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex,nofollow" />
+<title>${escapeHtml(title)} · MeshCore CZ</title>
+<style>
+* { box-sizing:border-box; }
+body { margin:0; padding:0 0 40px; background:#e9e8e1; color:#182820; font:14px/1.5 Manrope, system-ui, sans-serif; }
+header { display:flex; flex-wrap:wrap; align-items:center; gap:12px 18px; padding:14px 24px; border-bottom:1px solid rgba(30,65,49,.14); background:#fffef9; }
+.brand { color:#078e62; font:800 16px/1.1 Manrope, system-ui, sans-serif; text-decoration:none; }
+.brand span { color:#87978f; font:9px "DM Mono", monospace; letter-spacing:.08em; vertical-align:2px; margin-left:5px; }
+nav { display:flex; flex-wrap:wrap; gap:4px; }
+nav a { padding:6px 10px; border-radius:6px; color:#49665b; text-decoration:none; font-size:12px; }
+nav a:hover { background:#f1f5f3; }
+nav a.active { color:#fff; background:#078e62; }
+.header-actions { display:flex; align-items:center; gap:12px; margin-left:auto; }
+.header-actions a { color:#49665b; font-size:12px; text-decoration:none; }
+.header-actions a:hover { color:#078e62; }
+.logout { padding:6px 10px; border:1px solid rgba(30,65,49,.2); border-radius:6px; color:#49665b; background:#fff; font:12px Manrope, system-ui, sans-serif; cursor:pointer; }
+.logout:hover { color:#a32920; border-color:#d9a6a2; }
+main { width:min(1120px, 100%); margin:24px auto; padding:0 16px; }
+h1 { margin:0 0 4px; font-size:22px; }
+h2 { margin:0 0 12px; font-size:16px; }
+.sub { margin:0 0 18px; color:#667b70; font-size:12px; }
+.cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(155px, 1fr)); gap:12px; margin-bottom:22px; }
+.card { padding:14px 16px; border:1px solid rgba(30,65,49,.14); border-radius:10px; background:#fffef9; }
+.card .label { margin-bottom:4px; color:#667b70; font:10px "DM Mono", monospace; text-transform:uppercase; letter-spacing:.04em; }
+.card .value { font-size:22px; font-weight:800; line-height:1.15; }
+.card .value.online { color:#078e62; }
+.card .value.offline { color:#b27616; }
+.card a { color:inherit; text-decoration:none; }
+.card a:hover .value { color:#078e62; }
+.card small { display:block; margin-top:4px; color:#87978f; font-size:11px; }
+.split { display:grid; grid-template-columns:1.2fr .8fr; gap:18px; align-items:start; }
+@media (max-width: 760px) { .split { grid-template-columns:1fr; } header { padding:12px 14px; } }
+.panel { padding:16px 18px; border:1px solid rgba(30,65,49,.14); border-radius:10px; background:#fffef9; }
+.panel + .panel { margin-top:16px; }
+.tabs { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+.tabs a { padding:5px 10px; border:1px solid rgba(30,65,49,.2); border-radius:6px; color:#49665b; text-decoration:none; font-size:12px; }
+.tabs a.active { color:#fff; border-color:#078e62; background:#078e62; }
+.list { list-style:none; margin:0; padding:0; display:grid; gap:12px; }
+.photo { display:flex; gap:12px; padding:10px; border:1px solid rgba(30,65,49,.14); border-radius:10px; background:#fff; }
+.photo.hidden { opacity:.55; }
+.thumb { flex:0 0 150px; width:150px; height:110px; display:block; overflow:hidden; border-radius:8px; background:#f1f5f3; }
+.thumb img { display:block; width:100%; height:100%; object-fit:cover; }
+.thumb.missing { border:1px dashed rgba(30,65,49,.2); }
+.body { min-width:0; flex:1; }
+.meta { margin-bottom:4px; color:#667b70; font:11px "DM Mono", monospace; }
+.node { font-weight:700; }
+.node a { color:#182820; text-decoration:none; }
+.node a:hover { color:#078e62; }
+.author, .contact { color:#49665b; font-size:12px; }
+p { margin:4px 0; white-space:pre-wrap; }
+.actions { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:8px; }
+.actions button { padding:5px 10px; border:1px solid rgba(30,65,49,.2); border-radius:6px; background:#fff; font:12px Manrope, system-ui, sans-serif; cursor:pointer; }
+.actions button:hover { border-color:#078e62; color:#078e62; }
+.actions button.approve { color:#078e62; border-color:rgba(7,142,98,.45); }
+.actions button.hide { color:#b27616; border-color:rgba(178,118,22,.4); }
+.actions button.delete { color:#c0392b; border-color:rgba(192,57,43,.4); }
+.empty { margin:0; color:#667b70; }
+.feedback li { padding:12px 14px; border:1px solid rgba(30,65,49,.14); border-radius:10px; background:#fff; }
+.feedback li.is-hidden { opacity:.55; }
+.feedback .actions { margin-top:8px; }
+.quick { display:flex; flex-wrap:wrap; gap:8px; }
+.quick a { padding:7px 11px; border:1px solid rgba(7,142,98,.35); border-radius:7px; color:#078e62; background:#fff; text-decoration:none; font-size:12px; }
+.quick a:hover { color:#fff; background:#078e62; }
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="${adminPath()}">MESHCORE <span>ADMIN</span></a>
+  <nav>${links}</nav>
+  <div class="header-actions">
+    <a href="${sitePath("/")}" target="_blank" rel="noreferrer">Mapa ↗</a>
+    <form method="post" action="${adminPath("/logout")}"><button class="logout" type="submit">Odhlásit</button></form>
+  </div>
+</header>
+<main>
+${content}
+</main>
+</body>
+</html>`;
+}
+
+function adminDashboardPage() {
+  const stats = photoStore.stats();
+  const visits = visitStore.report(Date.now(), 14);
+  const feedbackCount = feedbackStore.count();
+  const uptime = Math.floor(process.uptime());
+  const uptimeLabel = `${Math.floor(uptime / 3600)} h ${Math.floor((uptime % 3600) / 60)} min`;
+  return adminLayout({
+    active: "dashboard",
+    title: "Přehled",
+    content: `
+<h1>Přehled</h1>
+<p class="sub">Stav administrace a rychlé odkazy.</p>
+<div class="cards">
+  <div class="card"><div class="label">Fotky čekající</div><a href="${adminPath("/photos?status=pending")}"><div class="value">${formatAdminNumber(stats.pending)}</div></a><small>ke schválení</small></div>
+  <div class="card"><div class="label">Otevřené žádosti</div><a href="${adminPath("/photos?status=reports")}"><div class="value">${formatAdminNumber(stats.reports)}</div></a><small>o smazání / nahlášení</small></div>
+  <div class="card"><div class="label">Fotky celkem</div><a href="${adminPath("/photos?status=all")}"><div class="value">${formatAdminNumber(stats.total)}</div></a><small>${formatAdminNumber(stats.bytes)} B</small></div>
+  <div class="card"><div class="label">Zpětná vazba</div><a href="${adminPath("/feedback")}"><div class="value">${formatAdminNumber(feedbackCount)}</div></a><small>uložených zpráv</small></div>
+  <div class="card"><div class="label">Dnes návštěv</div><div class="value">${formatAdminNumber(visits.today.visits)}</div><small>${formatAdminNumber(visits.today.uniqueVisitors)} unikátních · peak ${formatAdminNumber(visits.today.peakViewers)}</small></div>
+  <div class="card"><div class="label">MQTT</div><div class="value ${mqttConnected ? "online" : "offline"}">${mqttConnected ? "online" : "offline"}</div><small>${packetStreams.size} připojených klientů</small></div>
+</div>
+<div class="split">
+  <section class="panel">
+    <h2>Rychlé akce</h2>
+    <div class="quick">
+      <a href="${adminPath("/photos?status=pending")}">Schvalovat fotky</a>
+      <a href="${adminPath("/photos?status=reports")}">Řešit žádosti</a>
+      <a href="${adminPath("/feedback")}">Projít zpětnou vazbu</a>
+      <a href="${sitePath("/api/health")}" target="_blank" rel="noreferrer">Health JSON</a>
+    </div>
+    <p class="sub" style="margin-top:16px; margin-bottom:0;">Provoz aplikace: ${escapeHtml(uptimeLabel)}.</p>
+  </section>
+  <section class="panel">
+    <h2>Návštěvy</h2>
+    <p class="sub" style="margin-bottom:8px;">Dnes: ${formatAdminNumber(visits.today.visits)} zobrazení, ${formatAdminNumber(visits.today.uniqueVisitors)} unikátních návštěvníků.</p>
+    <p class="sub" style="margin-bottom:0;">Celkem: ${formatAdminNumber(visits.totals.visits)} zobrazení, peak ${formatAdminNumber(visits.totals.peakViewers)} diváků.</p>
+  </section>
+</div>`,
+  });
+}
+
+function formatAdminNumber(value) {
+  return new Intl.NumberFormat("cs-CZ").format(Number(value) || 0);
+}
+
+function adminPhotoRows(entries, names, status) {
+  return entries.map((photo) => {
+    const node = names.get(photo.nodeKey);
+    const nodeLabel = node ? `${node} · ${photo.nodeKey.slice(0, 8)}` : photo.nodeKey.slice(0, 16);
+    const imageUrl = sitePath(`/api/photos/${encodeURIComponent(photo.id)}`);
+    const actions = [
+      photo.status !== "approved"
+        ? '<button class="approve" name="action" value="approve" type="submit">Schválit</button>'
+        : "",
+      photo.status !== "hidden"
+        ? '<button class="hide" name="action" value="hide" type="submit">Skrýt</button>'
+        : "",
+      '<button class="delete" name="action" value="delete" type="submit">Smazat</button>',
+    ].filter(Boolean).join("");
+    return `
+    <li class="photo ${escapeHtml(photo.status)}">
+      <a class="thumb" href="${imageUrl}" target="_blank" rel="noreferrer"><img src="${imageUrl}" alt="" loading="lazy" /></a>
+      <div class="body">
+        <div class="meta">${escapeHtml(photo.status)} · ${escapeHtml(new Date(photo.createdAt).toLocaleString("cs-CZ"))} · ${escapeHtml(photo.bytes)} B · ${photo.width || "?"}×${photo.height || "?"}</div>
+        <div class="node"><a href="${sitePath("/")}?node=${encodeURIComponent(photo.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(nodeLabel)}</a></div>
+        ${photo.author ? `<div class="author">${escapeHtml(photo.author)}</div>` : ""}
+        ${photo.caption ? `<p>${escapeHtml(photo.caption)}</p>` : ""}
+        <form class="actions" method="post" action="${adminPath("/photos/moderate")}">
+          <input type="hidden" name="id" value="${escapeHtml(photo.id)}" />
+          <input type="hidden" name="status" value="${escapeHtml(status)}" />
+          ${actions}
+        </form>
+      </div>
+    </li>`;
+  }).join("");
+}
+
+function adminPhotoPage(status) {
+  const entries = status === "reports" ? [] : photoStore.listAdmin(status, 300);
+  const reports = status === "reports" ? photoStore.listReports("open", 300) : [];
+  const names = photoNodeNames();
+  const stats = photoStore.stats();
+  const labels = {
+    all: "Vše",
+    approved: "Schválené",
+    hidden: "Skryté",
+    pending: "Čekající",
+    reports: `Žádosti${stats.reports ? ` (${stats.reports})` : ""}`,
+  };
+  const tabs = ["pending", "approved", "hidden", "all", "reports"].map((value) => {
+    const active = status === value ? ' class="active"' : "";
+    return `<a${active} href="${adminPath(`/photos?status=${value}`)}">${labels[value]}</a>`;
+  }).join("");
+  const reportReasons = {
+    inappropriate: "Nevhodný obsah",
+    other: "Jiné",
+    owner: "Moje fotka",
+    privacy: "Soukromí",
+  };
+  const reportRows = reports.map((report) => {
+    const imageUrl = report.photo ? sitePath(`/api/photos/${encodeURIComponent(report.photo.id)}`) : null;
+    const node = report.photo ? names.get(report.photo.nodeKey) : null;
+    const nodeLabel = node ? `${node} · ${report.photo.nodeKey.slice(0, 8)}` : (report.photo ? report.photo.nodeKey.slice(0, 16) : report.photoId.slice(0, 16));
+    const actions = [
+      report.photo
+        ? `<form class="actions" method="post" action="${adminPath("/photos/moderate")}">
+             <input type="hidden" name="id" value="${escapeHtml(report.photoId)}" />
+             <input type="hidden" name="status" value="reports" />
+             <button class="delete" name="action" value="delete" type="submit">Smazat fotku</button>
+           </form>`
+        : '<span class="meta">Fotka už není dostupná</span>',
+      `<form class="actions" method="post" action="${adminPath("/photos/moderate")}">
+         <input type="hidden" name="report" value="${escapeHtml(report.id)}" />
+         <input type="hidden" name="status" value="reports" />
+         <button class="approve" name="action" value="dismiss" type="submit">Zamítnout žádost</button>
+       </form>`,
+    ].filter(Boolean).join("");
+    return `
+    <li class="photo report">
+      ${imageUrl
+        ? `<a class="thumb" href="${imageUrl}" target="_blank" rel="noreferrer"><img src="${imageUrl}" alt="" loading="lazy" /></a>`
+        : '<div class="thumb missing"></div>'}
+      <div class="body">
+        <div class="meta">${escapeHtml(reportReasons[report.reason] || report.reason)} · ${escapeHtml(new Date(report.createdAt).toLocaleString("cs-CZ"))}</div>
+        ${report.photo ? `<div class="node"><a href="${sitePath("/")}?node=${encodeURIComponent(report.photo.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(nodeLabel)}</a></div>` : ""}
+        ${report.message ? `<p>${escapeHtml(report.message)}</p>` : ""}
+        ${report.contact ? `<div class="contact">Kontakt: ${escapeHtml(report.contact)}</div>` : ""}
+        <div class="actions">${actions}</div>
+      </div>
+    </li>`;
+  }).join("");
+  return adminLayout({
+    active: status === "reports" ? "reports" : "photos",
+    title: "Fotky",
+    content: `
+<h1>Fotky</h1>
+<p class="sub">${status === "reports" ? `${formatAdminNumber(reports.length)} otevřených žádostí` : `${formatAdminNumber(entries.length)} fotek v této kategorii`}.</p>
+<nav class="tabs">${tabs}</nav>
+${status === "reports"
+  ? (reports.length ? `<ul class="list">${reportRows}</ul>` : '<p class="empty">Žádné otevřené žádosti.</p>')
+  : (entries.length ? `<ul class="list">${adminPhotoRows(entries, names, status)}</ul>` : '<p class="empty">Žádné fotky v této kategorii.</p>')}`,
+  });
+}
+
+function adminFeedbackPage() {
+  const entries = feedbackStore.list(200);
+  const rows = entries.map((entry) => {
+    const flags = [entry.is_public ? "veřejné" : "soukromé", entry.hidden ? "skryté" : null].filter(Boolean).join(" · ");
+    return `
+    <li class="${entry.hidden ? "is-hidden" : ""}">
+      <div class="meta">#${entry.id} · ${escapeHtml(new Date(entry.created_at).toLocaleString("cs-CZ"))} · ${escapeHtml(entry.category || "other")} · ${escapeHtml(flags)}</div>
+      ${entry.name ? `<div class="node">${escapeHtml(entry.name)}</div>` : ""}
+      <p>${escapeHtml(entry.message)}</p>
+      ${entry.contact ? `<div class="contact">Kontakt: ${escapeHtml(entry.contact)}</div>` : ""}
+      <form class="actions" method="post" action="${adminPath("/feedback/moderate")}">
+        <input type="hidden" name="id" value="${escapeHtml(entry.id)}" />
+        <input type="hidden" name="hidden" value="${entry.hidden ? "0" : "1"}" />
+        <button class="${entry.hidden ? "approve" : "hide"}" type="submit">${entry.hidden ? "Zobrazit" : "Skrýt"}</button>
+      </form>
+    </li>`;
+  }).join("");
+  return adminLayout({
+    active: "feedback",
+    title: "Zpětná vazba",
+    content: `
+<h1>Zpětná vazba</h1>
+<p class="sub">${formatAdminNumber(entries.length)} zpráv (nejnovější první).</p>
+${entries.length ? `<ul class="list feedback">${rows}</ul>` : '<p class="empty">Zatím žádné zprávy.</p>'}`,
+  });
+}
+
+async function handleAdminRequest(request, response, url) {
+  response.setHeader("Cache-Control", "no-store");
+  if (!adminPassword || !adminSessionSecret) {
+    response.writeHead(503, { "Content-Type": "text/html; charset=utf-8" });
+    response.end("<!doctype html><html lang=\"cs\"><meta charset=\"utf-8\"><body style=\"font:16px system-ui;padding:40px\">Administrace není nakonfigurovaná. Nastavte <code>ADMIN_PASSWORD</code> nebo <code>FEEDBACK_TOKEN</code>.</body></html>");
+    return;
+  }
+  const method = request.method || "GET";
+  const path = url.pathname;
+  if (path === "/admin/login" && method === "GET") {
+    if (adminSessionValid(request)) {
+      redirectAdmin(response, adminBasePath);
+      return;
+    }
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(renderAdminLogin({ next: safeAdminNext(url.searchParams.get("next")) }));
+    return;
+  }
+  if (path === "/admin/login" && method === "POST") {
+    if (!sameOriginRequest(request)) {
+      response.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" }).end("Forbidden");
+      return;
+    }
+    const ip = clientIp(request);
+    const rate = checkAdminLogin(ip);
+    if (!rate.ok) {
+      response.writeHead(429, { "Content-Type": "text/html; charset=utf-8", "Retry-After": String(rate.retryAfter) });
+      response.end(renderAdminLogin({ error: "Příliš mnoho pokusů o přihlášení.", retryAfter: rate.retryAfter }));
+      return;
+    }
+    const form = await readAdminForm(request);
+    if (!form) {
+      response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Bad Request");
+      return;
+    }
+    const next = safeAdminNext(form.get("next"));
+    if (!safeEqualText(form.get("password"), adminPassword)) {
+      response.writeHead(401, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(renderAdminLogin({ error: "Nesprávné heslo.", next }));
+      return;
+    }
+    adminLoginAttempts.delete(ip);
+    response.writeHead(303, {
+      "Cache-Control": "no-store",
+      "Location": next,
+      "Set-Cookie": adminCookie(request, createAdminSessionToken()),
+    });
+    response.end();
+    return;
+  }
+  if (path === "/admin/logout" && method === "POST") {
+    response.writeHead(303, {
+      "Cache-Control": "no-store",
+      "Location": adminBasePath,
+      "Set-Cookie": adminCookie(request, "", 0),
+    });
+    response.end();
+    return;
+  }
+  if ((path === "/admin" || path === "/admin/") && method === "GET") {
+    if (!adminSessionValid(request)) {
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(renderAdminLogin({ next: safeAdminNext(url.searchParams.get("next")) }));
+      return;
+    }
+    response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    response.end(adminDashboardPage());
+    return;
+  }
+  if (path.startsWith("/admin/") && method === "GET") {
+    if (!adminSessionValid(request)) {
+      const externalPath = `${adminBasePath}${path.slice("/admin".length)}${url.search}`;
+      redirectAdmin(response, `${adminBasePath}/login?next=${encodeURIComponent(externalPath)}`);
+      return;
+    }
+    if (path === "/admin/photos") {
+      const status = ["pending", "approved", "hidden", "all", "reports"].includes(url.searchParams.get("status"))
+        ? url.searchParams.get("status")
+        : "pending";
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(adminPhotoPage(status));
+      return;
+    }
+    if (path === "/admin/feedback") {
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(adminFeedbackPage());
+      return;
+    }
+    response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not Found");
+    return;
+  }
+  if (path.startsWith("/admin/") && method === "POST") {
+    if (!adminSessionValid(request)) {
+      response.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" }).end("Forbidden");
+      return;
+    }
+    if (!sameOriginRequest(request)) {
+      response.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" }).end("Forbidden");
+      return;
+    }
+    const form = await readAdminForm(request);
+    if (!form) {
+      response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Bad Request");
+      return;
+    }
+    if (path === "/admin/photos/moderate") {
+      const id = String(form.get("id") || "");
+      const reportId = String(form.get("report") || "");
+      const action = String(form.get("action") || "");
+      const status = ["pending", "approved", "hidden", "all", "reports"].includes(form.get("status"))
+        ? form.get("status")
+        : "pending";
+      if (action === "delete") photoStore.remove(id);
+      else if (action === "approve") photoStore.setStatus(id, "approved");
+      else if (action === "hide") photoStore.setStatus(id, "hidden");
+      else if (action === "dismiss") photoStore.resolveReport(reportId);
+      redirectAdmin(response, `${adminBasePath}/photos?status=${encodeURIComponent(status)}`);
+      return;
+    }
+    if (path === "/admin/feedback/moderate") {
+      const id = Number(form.get("id"));
+      if (Number.isFinite(id)) feedbackStore.setHidden(id, form.get("hidden") === "1");
+      redirectAdmin(response, `${adminBasePath}/feedback`);
+      return;
+    }
+    response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not Found");
+    return;
+  }
+  response.writeHead(405, { "Content-Type": "text/plain; charset=utf-8", Allow: "GET, POST" }).end("Method Not Allowed");
+}
+
 async function handleRequest(request, response) {
   for (const [name, value] of Object.entries(securityHeaders)) response.setHeader(name, value);
   let url;
@@ -1490,6 +2050,11 @@ async function handleRequest(request, response) {
   } catch {
     response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
     response.end("Malformed request URL");
+    return;
+  }
+
+  if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) {
+    await handleAdminRequest(request, response, url);
     return;
   }
 
@@ -1768,7 +2333,8 @@ async function handleRequest(request, response) {
     }
     const photo = photoStore.get(id);
     const token = url.searchParams.get("token") || "";
-    if (!photo || (photo.status !== "approved" && (!photoToken || token !== photoToken))) {
+    const admin = adminSessionValid(request);
+    if (!photo || (photo.status !== "approved" && !admin && (!photoToken || token !== photoToken))) {
       response.writeHead(404).end("Not Found");
       return;
     }

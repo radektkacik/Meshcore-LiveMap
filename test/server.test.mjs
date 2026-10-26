@@ -112,6 +112,8 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       STATS_COLLECT_MS: "0",
       FEEDBACK_DB_PATH: join(directory, "feedback.sqlite"),
       FEEDBACK_TOKEN: "test-token",
+      ADMIN_PASSWORD: "admin-test",
+      ADMIN_SESSION_SECRET: "admin-session-test",
       PORT: String(appPort),
       SCORE_DB_PATH: join(directory, "metrics.sqlite"),
       VISITS_DB_PATH: join(directory, "visits.sqlite"),
@@ -176,6 +178,42 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(uploaded.status, "pending");
     await new Promise((resolve) => setTimeout(resolve, 150));
     assert.ok(telegramMessages.some((text) => text.includes("Nová fotka čeká na schválení")));
+
+    const adminLoginPage = await fetch(`http://127.0.0.1:${appPort}/admin`);
+    assert.equal(adminLoginPage.status, 200);
+    assert.match(await adminLoginPage.text(), /Administrace/);
+    const adminProtected = await fetch(`http://127.0.0.1:${appPort}/admin/photos`, { redirect: "manual" });
+    assert.equal(adminProtected.status, 303);
+    assert.match(adminProtected.headers.get("location") || "", /\/admin\/login/);
+    const adminWrongLogin = await fetch(`http://127.0.0.1:${appPort}/admin/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "password=wrong&next=%2Fadmin",
+      redirect: "manual",
+    });
+    assert.equal(adminWrongLogin.status, 401);
+    const adminLogin = await fetch(`http://127.0.0.1:${appPort}/admin/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "password=admin-test&next=%2Fadmin",
+      redirect: "manual",
+    });
+    assert.equal(adminLogin.status, 303);
+    const adminCookie = (adminLogin.headers.get("set-cookie") || "").split(";")[0];
+    assert.match(adminCookie, /^mc_admin=/);
+    assert.match(adminLogin.headers.get("set-cookie") || "", /HttpOnly/);
+    assert.match(adminLogin.headers.get("set-cookie") || "", /SameSite=Strict/);
+    const adminDashboard = await fetch(`http://127.0.0.1:${appPort}/admin`, { headers: { cookie: adminCookie } });
+    assert.equal(adminDashboard.status, 200);
+    assert.match(await adminDashboard.text(), /Přehled/);
+    const adminPhotos = await fetch(`http://127.0.0.1:${appPort}/admin/photos?status=pending`, { headers: { cookie: adminCookie } });
+    assert.equal(adminPhotos.status, 200);
+    assert.match(await adminPhotos.text(), /Schválit/);
+    const adminFeedback = await fetch(`http://127.0.0.1:${appPort}/admin/feedback`, { headers: { cookie: adminCookie } });
+    assert.equal(adminFeedback.status, 200);
+    assert.match(await adminFeedback.text(), /Zpětná vazba/);
+    const pendingImage = await fetch(`http://127.0.0.1:${appPort}/api/photos/${uploaded.id}`, { headers: { cookie: adminCookie } });
+    assert.equal(pendingImage.status, 200);
     const largePng = Buffer.from(tinyPng);
     largePng.writeUInt32BE(3000, 16);
     largePng.writeUInt32BE(2000, 20);

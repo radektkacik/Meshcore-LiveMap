@@ -134,8 +134,14 @@ přihlašovací údaje zůstávají pouze na serveru.
   a `X-Photo-Batch-Id`; server mezi fotkami stejné dávky přeskočí 10s pauzu
   a Telegram notifikaci pošle jednou za dávku. Fotka se uloží jako `pending`
   a zobrazí se až po schválení.
-- Moderace fotek je na `GET /api/photos/view?token=<PHOTO_TOKEN>` (fallback
-  `FEEDBACK_TOKEN`), odkud lze fotky schválit, skrýt nebo smazat. Soubory i
+- Administrace je na `GET /admin` (beta `/map/admin`). Přihlašuje se heslem
+  `ADMIN_PASSWORD`; když není nastavené, použije se `FEEDBACK_TOKEN`, případně
+  `PHOTO_TOKEN`. Po přihlášení drží server HttpOnly session cookie 12 hodin
+  (`ADMIN_SESSION_SECRET`, `ADMIN_SESSION_TTL_MS`). Sekce: přehled, fotky
+  (čekající/schválené/skryté/vše/žádosti) a zpětná vazba. Staré tokenové URL
+  `/api/photos/view?token=…` a `/api/feedback/view?token=…` zůstávají funkční.
+- Moderace fotek je i nadále dostupná na `GET /api/photos/view?token=<PHOTO_TOKEN>`
+  (fallback `FEEDBACK_TOKEN`), odkud lze fotky schválit, skrýt nebo smazat. Soubory i
   `photos.sqlite` jsou v `uploads/` mimo `data/`, takže se nedostanou do záloh.
   Platí limity: 8 fotek/hodinu na IP, 30/den, 8 fotek na nod, 2 GB celkem
   a max. 2400 px na delší straně (klient posílá max. 2000 px).
@@ -148,8 +154,9 @@ přihlašovací údaje zůstávají pouze na serveru.
 - Volitelné Telegram notifikace pro správce: `TELEGRAM_BOT_TOKEN` a
   `TELEGRAM_CHAT_ID`. Upozornění chodí na novou fotku čekající na schválení,
   žádost o smazání fotky a volitelně (`TELEGRAM_NOTIFY_FEEDBACK=1`) i na novou
-  zprávu v knize návštěv. Zprávy obsahují počty čekajících položek; přímý odkaz
-  do administrace s tokenem lze zapnout přes `TELEGRAM_ADMIN_LINK=1`.
+  zprávu v knize návštěv. Zprávy obsahují počty čekajících položek; odkaz
+  do administrace lze zapnout přes `TELEGRAM_ADMIN_LINK=1` (odkaz už neobsahuje
+  token, vede na `/admin`).
   `PUBLIC_BASE_URL` určuje základ odkazu (u bety `https://2b.meshcore.cz/map`).
 - Animace tras je ve výchozím stavu řešená canvas rendererem (jedna kresba,
   posun `lineDashOffset` bez CSS animací). Méně výkonnou SVG variantu s CSS
@@ -277,10 +284,9 @@ TELEGRAM_ADMIN_LINK=0
 TELEGRAM_SILENT=0
 ```
 
-`TELEGRAM_ADMIN_LINK=1` přidá do zprávy přímý odkaz do administrace včetně
-tokenu; nechte `0`, pokud nechcete token posílat do Telegramu. Po změně `.env`
-restartujte službu. Stav je vidět v `/api/health` v poli
-`notifications.telegram`.
+`TELEGRAM_ADMIN_LINK=1` přidá do zprávy odkaz do administrace `/admin`
+(bez tokenu). Po změně `.env` restartujte službu. Stav je vidět v `/api/health`
+v poli `notifications.telegram`.
 
 ## Pokrytí terénu
 
