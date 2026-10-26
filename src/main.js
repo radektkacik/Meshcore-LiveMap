@@ -2794,10 +2794,12 @@ function svgNode(name, attributes = {}) {
   return node;
 }
 
-function renderPacketHistory(series, hours) {
+function renderPacketHistory(series, hours, granularity = "hour") {
   elements.packetHistoryChart.replaceChildren();
   elements.packetHistoryHover.textContent = "";
-  elements.packetHistoryNote.textContent = t("packetHistory.note");
+  elements.packetHistoryNote.textContent = granularity === "day"
+    ? t("packetHistory.noteDaily")
+    : t("packetHistory.note");
   const points = Array.isArray(series) ? series : [];
   const values = points.map((point) => (point.packets == null ? null : Number(point.packets)));
   const present = values.filter((value) => value != null);
@@ -2811,11 +2813,17 @@ function renderPacketHistory(series, hours) {
   }
   const total = present.reduce((sum, value) => sum + value, 0);
   const peak = Math.max(0, ...present);
-  elements.packetHistorySummary.textContent = `${t("packetHistory.summary", {
-    avg: formatNumber(Math.round(total / present.length)),
-    peak: formatNumber(peak),
-    total: formatNumber(total),
-  })} · ${tCount("packetHistory.coverage", present.length, { hours: points.length })}`;
+  const average = Math.round(total / present.length);
+  elements.packetHistorySummary.textContent = granularity === "day"
+    ? `${t("packetHistory.summaryDaily", {
+      avg: formatNumber(average),
+      peak: formatNumber(Math.round(peak)),
+    })} · ${t("packetHistory.coveragePeriod", { count: present.length, total: points.length })}`
+    : `${t("packetHistory.summary", {
+      avg: formatNumber(average),
+      peak: formatNumber(Math.round(peak)),
+      total: formatNumber(total),
+    })} · ${tCount("packetHistory.coverage", present.length, { hours: points.length })}`;
   const width = 640;
   const height = 200;
   const left = 38;
@@ -2850,7 +2858,9 @@ function renderPacketHistory(series, hours) {
     label.textContent = formatNumber(Math.round(maxValue * ratio));
     svg.appendChild(label);
   }
-  const step = hours > 48 ? 24 : 6;
+  const step = granularity === "day"
+    ? Math.max(1, Math.ceil(points.length / 8))
+    : (hours > 48 ? 24 : 6);
   for (let index = 0; index < points.length; index += step) {
     const label = svgNode("text", {
       "text-anchor": "middle",
@@ -2858,7 +2868,7 @@ function renderPacketHistory(series, hours) {
       x: x(index),
       y: height - 6,
     });
-    label.textContent = hours > 48
+    label.textContent = granularity === "day" || hours > 48
       ? formatDate(new Date(points[index].hour))
       : `${String(new Date(points[index].hour).getHours()).padStart(2, "0")}:00`;
     svg.appendChild(label);
@@ -2920,11 +2930,12 @@ function renderPacketHistory(series, hours) {
     const index = Math.min(points.length - 1, Math.max(0, Math.round(ratio * (points.length - 1))));
     const point = points[index];
     const value = values[index];
+    const timeLabel = granularity === "day" ? formatDate(new Date(point.hour)) : formatDateTimeShort(point.hour);
     elements.packetHistoryHover.textContent = value == null
-      ? t("packetHistory.noSample", { time: formatDateTimeShort(point.hour) })
+      ? t("packetHistory.noSample", { time: timeLabel })
       : t("packetHistory.hover", {
         packets: formatNumber(value),
-        time: formatDateTimeShort(point.hour),
+        time: timeLabel,
       });
     cursor.setAttribute("x1", x(index));
     cursor.setAttribute("x2", x(index));
@@ -2938,7 +2949,9 @@ function renderPacketHistory(series, hours) {
 }
 
 async function loadPacketHistory(hours) {
-  const nextHours = Number(hours) === 168 ? 168 : 24;
+  const allowed = [24, 168, 720, 8760];
+  const requested = Number(hours);
+  const nextHours = allowed.includes(requested) ? requested : 24;
   state.packetHistoryHours = nextHours;
   for (const button of elements.packetHistoryWindows) {
     button.classList.toggle("active", Number(button.dataset.hours) === nextHours);
@@ -2950,7 +2963,7 @@ async function loadPacketHistory(hours) {
   try {
     const data = await getJson(`/api/packet-history?hours=${nextHours}`);
     if (requestId !== state.packetHistoryRequestId) return;
-    renderPacketHistory(data.series || [], nextHours);
+    renderPacketHistory(data.series || [], nextHours, data.granularity || "hour");
   } catch (error) {
     if (requestId !== state.packetHistoryRequestId) return;
     console.error("Historii paketů se nepodařilo načíst", error);
@@ -5286,10 +5299,14 @@ elements.packetRateCard.title = t("packetHistory.openTitle");
 document.querySelector("#packet-history-title").textContent = t("packetHistory.title");
 elements.packetHistoryClose.setAttribute("aria-label", t("packetHistory.close"));
 document.querySelector("#packet-history-windows").setAttribute("aria-label", t("packetHistory.period"));
+const packetHistoryWindowLabels = {
+  24: t("packetHistory.window24"),
+  168: t("packetHistory.window7d"),
+  720: t("packetHistory.window30d"),
+  8760: t("packetHistory.window1y"),
+};
 for (const button of elements.packetHistoryWindows) {
-  button.textContent = Number(button.dataset.hours) === 168
-    ? t("packetHistory.window7d")
-    : t("packetHistory.window24");
+  button.textContent = packetHistoryWindowLabels[Number(button.dataset.hours)] || packetHistoryWindowLabels[24];
 }
 document.querySelector("#packet-history-dialog .los-note").textContent = t("packetHistory.note");
 

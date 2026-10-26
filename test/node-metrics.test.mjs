@@ -57,6 +57,34 @@ test("stores analyzer stats samples in five-minute buckets and prunes old ones",
   }
 });
 
+test("aggregates five-minute stats into hourly and daily rollups", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-metrics-"));
+  const store = createNodeMetricsStore(join(directory, "metrics.sqlite"));
+  const start = Date.UTC(2026, 8, 1, 10, 0);
+  try {
+    for (let index = 0; index < 12; index += 1) {
+      store.recordStats({ packetsLastHour: 100 + index }, start + index * 5 * 60_000);
+    }
+    store.recordStats({ packetsLastHour: 200 }, start + 60 * 60_000);
+    const hourly = store.statsRollupSeries(start, "hour");
+    assert.equal(hourly.length, 1);
+    assert.equal(hourly[0].bucketAt, start);
+    assert.equal(hourly[0].samples, 12);
+    assert.equal(hourly[0].packetsLastHour, 105.5);
+    assert.equal(hourly[0].peak, 111);
+
+    store.recordStats({ packetsLastHour: 300 }, start + 24 * 60 * 60_000);
+    const daily = store.statsRollupSeries(Date.UTC(2026, 8, 1), "day");
+    assert.equal(daily.length, 1);
+    assert.equal(daily[0].bucketAt, Date.UTC(2026, 8, 1));
+    assert.equal(daily[0].samples, 13);
+    assert.equal(daily[0].peak, 200);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("drops samples outside the seven-day scoring window", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-metrics-"));
   const store = createNodeMetricsStore(join(directory, "metrics.sqlite"));

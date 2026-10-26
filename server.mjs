@@ -21,11 +21,15 @@ const upstreamTimeoutMs = Math.max(1, Number(process.env.UPSTREAM_TIMEOUT_MS || 
 const statsTimeoutMs = Math.max(1_000, Number(process.env.STATS_TIMEOUT_MS || 5_000));
 const statsCollectMs = Math.max(0, Number(process.env.STATS_COLLECT_MS ?? 5 * 60 * 1000));
 const statsHistoryDays = Math.max(1, Number(process.env.STATS_HISTORY_DAYS || 30));
+const statsHourlyRetentionDays = Math.max(7, Number(process.env.STATS_HOURLY_RETENTION_DAYS || 730));
+const statsDailyRetentionDays = Math.max(30, Number(process.env.STATS_DAILY_RETENTION_DAYS || 1825));
 const metricsCollectionMs = 15 * 60 * 1000;
 const scoreDbPath = process.env.SCORE_DB_PATH || join(process.cwd(), "data", "node-metrics.sqlite");
 const metricsStore = createNodeMetricsStore(scoreDbPath, {
   statsBucketMs: statsCollectMs || 5 * 60 * 1000,
+  statsDailyRetentionDays,
   statsHistoryDays,
+  statsHourlyRetentionDays,
 });
 const packetDbPath = process.env.PACKET_DB_PATH || join(process.cwd(), "data", "packets.sqlite");
 const packetStore = createPacketStore(packetDbPath, {
@@ -1884,35 +1888,57 @@ async function handleRequest(request, response) {
       return;
     }
     const hoursParam = url.searchParams.has("hours") ? Number(url.searchParams.get("hours")) : NaN;
-    const hours = Number.isFinite(hoursParam) ? Math.min(Math.max(1, Math.round(hoursParam)), 168) : 24;
-    const bucketMs = 3_600_000;
-    const end = Math.floor(Date.now() / bucketMs) * bucketMs;
-    const since = end - (hours - 1) * bucketMs;
-    const byHour = new Map();
-    for (const sample of metricsStore.statsSeries(since)) {
-      const hour = Math.floor(sample.bucketAt / bucketMs) * bucketMs;
-      const previous = byHour.get(hour);
-      if (!previous || sample.bucketAt > previous.bucketAt) byHour.set(hour, sample);
-    }
+    const hours = Number.isFinite(hoursParam) ? Math.min(Math.max(1, Math.round(hoursParam)), 8760) : 24;
+    const granularity = hours <= 168 ? "hour" : "day";
+    const bucketMs = granularity === "hour" ? 3_600_000 : 86_400_000;
+    const points = granularity === "hour" ? hours : Math.ceil(hours / 24);
+    const end = granularity === "hour"
+      ? Math.floor(Date.now() / bucketMs) * bucketMs
+      : Math.floor(Date.now() / bucketMs) * bucketMs - bucketMs;
+    const since = end - (points - 1) * bucketMs;
     const series = [];
-    for (let index = 0; index < hours; index += 1) {
-      const hour = since + index * bucketMs;
-      const sample = byHour.get(hour);
-      const value = sample ? Number(sample.packetsLastHour) : NaN;
-      series.push({
-        hour,
-        packets: Number.isFinite(value) ? value : null,
-        sampledAt: sample?.sampledAt || null,
-      });
+    if (granularity === "hour") {
+      const byHour = new Map();
+      for (const sample of metricsStore.statsSeries(since)) {
+        const hour = Math.floor(sample.bucketAt / bucketMs) * bucketMs;
+        const previous = byHour.get(hour);
+        if (!previous || sample.bucketAt > previous.bucketAt) byHour.set(hour, sample);
+      }
+      for (let index = 0; index < points; index += 1) {
+        const hour = since + index * bucketMs;
+        const sample = byHour.get(hour);
+        const value = sample ? Number(sample.packetsLastHour) : NaN;
+        series.push({
+          hour,
+          packets: Number.isFinite(value) ? value : null,
+          sampledAt: sample?.sampledAt || null,
+        });
+      }
+    } else {
+      const byDay = new Map(metricsStore.statsRollupSeries(since, "day").map((sample) => [sample.bucketAt, sample]));
+      for (let index = 0; index < points; index += 1) {
+        const day = since + index * bucketMs;
+        const sample = byDay.get(day);
+        const value = sample ? Number(sample.packetsLastHour) : NaN;
+        series.push({
+          hour: day,
+          packets: Number.isFinite(value) ? value : null,
+          peak: sample?.peak ?? null,
+          samples: sample?.samples ?? 0,
+          sampledAt: sample?.sampledAt || null,
+        });
+      }
     }
     sendJson(response, 200, {
       bucketMs,
       collectMs: statsCollectMs,
+      granularity,
       hours,
-      retentionDays: statsHistoryDays,
+      points: series.length,
+      retentionDays: granularity === "day" ? statsDailyRetentionDays : statsHistoryDays,
       series,
       since,
-      source: "stats-history",
+      source: granularity === "day" ? "stats-daily" : "stats-history",
     });
     return;
   }

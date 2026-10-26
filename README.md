@@ -86,10 +86,14 @@ přihlašovací údaje zůstávají pouze na serveru.
   kruhového bufferu (max. 120 s) jako jeden JSON. Klient ho načte paralelně
   s nody, všechny prefixy vyřeší jedním dávkovým requestem a trasy vykreslí
   najednou, místo aby zpracovával stovky SSE událostí po jednom.
-- `/api/packet-history?hours=24|168` vrací hodinové hodnoty z tabulky
-  `stats_samples` v `data/node-metrics.sqlite`. Server ukládá `packetsLastHour`
-  z Analyzeru každých 5 minut (retence 30 dní); chybějící hodiny jsou `null`
-  (mezera), žádný dopočet.
+- `/api/packet-history?hours=24|168|720|8760` vrací historii paketů/h.
+  Do 168 h (7 dní) používá hodinové hodnoty ze surových vzorků v
+  `stats_samples`, delší období (30 dní, 1 rok) z denních agregátů v
+  `stats_daily`. Server ukládá `packetsLastHour` z Analyzeru každých 5 minut;
+  surová data drží 30 dní, hodinové agregáty 730 dní a denní 1825 dní
+  (`STATS_HOURLY_RETENTION_DAYS`, `STATS_DAILY_RETENTION_DAYS`). Chybějící
+  hodiny/dny jsou `null` (mezera), žádný dopočet; starší data než 30 dní před
+  nasazením agregace nelze zpětně doplnit.
 - `/api/stats` se ukládá do `data/stats-cache.json` (24 h). Při výpadku
   Analyzeru se vydá poslední známá odpověď s `X-Data-Stale: 1`; pokud cache
   chybí, server dopočítá `packetsLastHour` z lokální DB (unikátní hashe za

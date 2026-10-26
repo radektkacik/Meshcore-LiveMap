@@ -23,6 +23,8 @@ export function createNodeMetricsStore(dbPath, {
   historyDays = 30,
   windowDays = 7,
   statsHistoryDays = 30,
+  statsHourlyRetentionDays = 730,
+  statsDailyRetentionDays = 1825,
   statsBucketMs = STATS_BUCKET_MS,
 } = {}) {
   mkdirSync(dirname(dbPath), { recursive: true });
@@ -64,6 +66,28 @@ export function createNodeMetricsStore(dbPath, {
     );
     CREATE INDEX IF NOT EXISTS stats_samples_bucket
       ON stats_samples (bucket_at);
+    CREATE TABLE IF NOT EXISTS stats_hourly (
+      bucket_at INTEGER PRIMARY KEY,
+      avg_packets_hour REAL,
+      max_packets_hour INTEGER,
+      samples INTEGER NOT NULL,
+      avg_packets_24h REAL,
+      avg_nodes REAL,
+      avg_observers REAL,
+      avg_observations REAL,
+      last_sampled_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS stats_daily (
+      bucket_at INTEGER PRIMARY KEY,
+      avg_packets_hour REAL,
+      max_packets_hour INTEGER,
+      samples INTEGER NOT NULL,
+      avg_packets_24h REAL,
+      avg_nodes REAL,
+      avg_observers REAL,
+      avg_observations REAL,
+      last_sampled_at INTEGER
+    );
   `);
 
   const upsertSample = db.prepare(`
@@ -131,6 +155,72 @@ export function createNodeMetricsStore(dbPath, {
     WHERE bucket_at >= ?
     ORDER BY bucket_at
   `);
+  const rollupHourly = db.prepare(`
+    INSERT OR REPLACE INTO stats_hourly (
+      bucket_at, avg_packets_hour, max_packets_hour, samples,
+      avg_packets_24h, avg_nodes, avg_observers, avg_observations, last_sampled_at
+    )
+    SELECT
+      CAST(bucket_at / 3600000 AS INTEGER) * 3600000,
+      AVG(packets_last_hour),
+      MAX(packets_last_hour),
+      COUNT(packets_last_hour),
+      AVG(packets_last_24h),
+      AVG(total_nodes),
+      AVG(total_observers),
+      AVG(total_observations),
+      MAX(sampled_at)
+    FROM stats_samples
+    WHERE bucket_at >= ? AND bucket_at < ?
+    GROUP BY CAST(bucket_at / 3600000 AS INTEGER)
+  `);
+  const rollupDaily = db.prepare(`
+    INSERT OR REPLACE INTO stats_daily (
+      bucket_at, avg_packets_hour, max_packets_hour, samples,
+      avg_packets_24h, avg_nodes, avg_observers, avg_observations, last_sampled_at
+    )
+    SELECT
+      CAST(bucket_at / 86400000 AS INTEGER) * 86400000,
+      AVG(avg_packets_hour),
+      MAX(max_packets_hour),
+      SUM(samples),
+      AVG(avg_packets_24h),
+      AVG(avg_nodes),
+      AVG(avg_observers),
+      AVG(avg_observations),
+      MAX(last_sampled_at)
+    FROM stats_hourly
+    WHERE bucket_at >= ? AND bucket_at < ?
+    GROUP BY CAST(bucket_at / 86400000 AS INTEGER)
+  `);
+  const purgeHourly = db.prepare("DELETE FROM stats_hourly WHERE bucket_at < ?");
+  const purgeDaily = db.prepare("DELETE FROM stats_daily WHERE bucket_at < ?");
+  const readHourly = db.prepare(`
+    SELECT bucket_at, avg_packets_hour, max_packets_hour, samples, last_sampled_at
+    FROM stats_hourly WHERE bucket_at >= ? ORDER BY bucket_at
+  `);
+  const readDaily = db.prepare(`
+    SELECT bucket_at, avg_packets_hour, max_packets_hour, samples, last_sampled_at
+    FROM stats_daily WHERE bucket_at >= ? ORDER BY bucket_at
+  `);
+
+  let lastHourlyRollup = 0;
+  let lastDailyRollup = 0;
+
+  function rollupStats(now = Date.now()) {
+    const hourEnd = Math.floor(now / HOUR_MS) * HOUR_MS;
+    if (hourEnd > lastHourlyRollup) {
+      rollupHourly.run(now - statsHistoryDays * DAY_MS, hourEnd);
+      purgeHourly.run(now - statsHourlyRetentionDays * DAY_MS);
+      lastHourlyRollup = hourEnd;
+    }
+    const dayEnd = Math.floor(now / DAY_MS) * DAY_MS;
+    if (dayEnd > lastDailyRollup) {
+      rollupDaily.run(now - statsHourlyRetentionDays * DAY_MS, dayEnd);
+      purgeDaily.run(now - statsDailyRetentionDays * DAY_MS);
+      lastDailyRollup = dayEnd;
+    }
+  }
 
   const recordNodes = db.transaction((nodes, now) => {
     const sampledAt = Math.floor(now / HOUR_MS) * HOUR_MS;
@@ -191,6 +281,7 @@ export function createNodeMetricsStore(dbPath, {
       total_observations: finiteNumber(stats?.totalObservations),
     });
     purgeStats.run(now - statsHistoryDays * DAY_MS);
+    rollupStats(now);
     return bucketAt;
   }
 
@@ -206,12 +297,27 @@ export function createNodeMetricsStore(dbPath, {
     }));
   }
 
+  function statsRollupSeries(sinceMs, granularity = "hour") {
+    const rows = granularity === "day"
+      ? readDaily.all(Math.floor(Number(sinceMs) || 0))
+      : readHourly.all(Math.floor(Number(sinceMs) || 0));
+    return rows.map((row) => ({
+      bucketAt: row.bucket_at,
+      packetsLastHour: row.avg_packets_hour,
+      peak: row.max_packets_hour,
+      samples: row.samples,
+      sampledAt: row.last_sampled_at,
+    }));
+  }
+
   return {
     close: () => db.close(),
     decorateNodes,
     history,
     recordNodes: (nodes, now = Date.now()) => recordNodes(nodes, now),
     recordStats: (stats, now = Date.now()) => recordStats(stats, now),
+    rollupStats: (now = Date.now()) => rollupStats(now),
+    statsRollupSeries,
     statsSeries,
   };
 }

@@ -73,7 +73,7 @@ Aktualizováno: 2026-10-26 (prod `20261026T183103Z`, beta `20261026T183024Z`)
 - Sdílené odkazy: nod, pozice, filtry, časové okno, jazyk
 - Rychlý start: 30s snapshot živých paketů + nody z cache (SWR), první trasy ~1 s
 - Cache posledních zobrazených live tras: localStorage, max. 200 tras / 15 min; po refreshi okamžitě jako „z cache“ do příchodu živých dat
-- Klik na „Paketů/h“: SVG graf 24 h / 7 dní ze skutečných vzorků Analyzeru (sběr 5 min, retence 30 dní, mezery bez dopočtu)
+- Klik na „Paketů/h“: SVG graf 24 h / 7 dní / 30 dní / 1 rok ze skutečných vzorků Analyzeru (sběr 5 min; surová data 30 dní, hodinové agregáty 730 dní, denní 1825 dní; mezery bez dopočtu)
 - Detail trasy z feedu i kliknutím na trasu, seznam hopů, vzdálenosti, SNR
 - Mobilní bottom sheet pro detail nodu/trasy, `?sheet=1`
 - Panel Aktivity: uživatelsky měnitelná velikost tažením za levý horní roh, persistováno; dvojklik/Home reset
@@ -126,7 +126,7 @@ Aktualizováno: 2026-10-26 (prod `20261026T183103Z`, beta `20261026T183024Z`)
 - Cache `/api/nodes` a `/api/resolve-hops` proti výpadkům CoreScope; nody se vydávají z cache okamžitě (SWR, soft TTL 15 min)
 - Start stránky: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE běží s `?replay=0`
 - `/api/stats` cache (24 h) + lokální fallback z `packet_routes` při výpadku Analyzeru; klient zobrazí stale/partial hodnotu oranžově a zkusí obnovu za 60 s
-- Sběr `/api/stats` každých 5 min do `stats_samples` v `data/node-metrics.sqlite` (retence 30 dní); graf Paketů/h čte jen tyto vzorky, chybějící hodiny jsou mezery
+- Sběr `/api/stats` každých 5 min do `stats_samples` v `data/node-metrics.sqlite` (retence 30 dní); graf Paketů/h do 7 dní čte surové vzorky, 30 dní a 1 rok denní agregáty `stats_daily` (hodinové `stats_hourly` 730 dní, denní 1825 dní); chybějící hodiny/dny jsou mezery
 - MQTT reconnect/backoff, SSE feed, replay buffer
 - Ukládání TRACE i bez `resolved_path`; cesty se doresolvují na klientu
 - Security headers: CSP, HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy, COOP
@@ -142,7 +142,7 @@ Aktualizováno: 2026-10-26 (prod `20261026T183103Z`, beta `20261026T183024Z`)
 
 ## 4. Testy a CI
 
-- `npm test`: 103 testů, 100 pass, 3 skip, 0 fail
+- `npm test`: 104 testů, 101 pass, 3 skip, 0 fail
 - `npm audit --omit=dev`: 0 zranitelností
 - GitHub Actions CI: Node 20 a 22, běží `npm ci`, syntax check, testy, build
 - CI nelze z tohoto prostředí číst bez GitHub přihlášení
@@ -224,8 +224,8 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261026T183103Z'
 - Případné odstranění DNS záznamu pro 2b
 
 ### Data
-- Historie Paketů/h je hotová (5 min vzorky, retence 30 dní); případně zkrátit interval na 1 min nebo přidat 5min rozlišení grafu
-- Backfill starších hodin není možný – Analyzer historii neposkytuje, mezery jsou záměrné
+- Historie Paketů/h: surové 5min vzorky 30 dní, hodinové agregáty 730 dní, denní 1825 dní; graf 24 h / 7 dní / 30 dní / 1 rok. Případně zkrátit interval na 1 min nebo přidat 5min rozlišení grafu.
+- Backfill starších hodin není možný – Analyzer historii neposkytuje, mezery jsou záměrné. Agregace se při nasazení doplní jen z dostupných surových 30 dní.
 
 ## 10. Rychlé příkazy
 
