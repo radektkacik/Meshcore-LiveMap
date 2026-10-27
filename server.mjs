@@ -3100,7 +3100,8 @@ async function handleRequest(request, response) {
   }
 
   const changelogPath = sitePath("/changelog");
-  if (decodedPathname === changelogPath || decodedPathname === `${changelogPath}/`) {
+  const changelogPaths = new Set(["/changelog", "/changelog/", changelogPath, `${changelogPath}/`]);
+  if (changelogPaths.has(decodedPathname)) {
     const changelogFile = join(dist, "changelog.html");
     if (!existsSync(changelogFile)) {
       response.writeHead(503, { "Content-Type": "text/plain; charset=utf-8" });
