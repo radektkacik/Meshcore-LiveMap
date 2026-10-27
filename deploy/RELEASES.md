@@ -245,6 +245,8 @@
 | 2026-10-27 11:54 | `20261027T115403Z.tar.gz` | `20261027-1154-c992da8` | Prod: stejná přímá editace uživatelského info adminem | `node-info.mjs`, `server.mjs`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-27 16:20 | `20261027T162011Z.tar.gz` (stage APP_DIR) | `20261027-1620-28751fe` | Beta: veřejná stránka `/map/changelog` s historií nasazení generovaná z `deploy/RELEASES.md`, odkaz „Změny verzí“ v patičce; oprava routy za `/map/` proxy (první beta deploy `20261027T161841Z`) | `scripts/build-changelog.mjs`, `vite.config.js`, `server.mjs`, `index.html`, `README.md`, `deploy/RELEASES.md`, testy |
 | 2026-10-27 16:20 | `20261027T162031Z.tar.gz` | `20261027-1620-28751fe` | Prod: veřejná stránka `/changelog` s historií nasazení a odkazem „Změny verzí“ v patičce | `scripts/build-changelog.mjs`, `vite.config.js`, `server.mjs`, `index.html`, `README.md`, `deploy/RELEASES.md`, testy |
+| 2026-10-27 16:28 | `20261027T162807Z.tar.gz` (stage APP_DIR) | `20261027-1628-e4d4c8c` | Beta: changelog zobrazuje jen beta nasazení (`Beta:`/`Beta fix:`) | `scripts/build-changelog.mjs`, `vite.config.js`, testy, `README.md`, `deploy/RELEASES.md` |
+| 2026-10-27 16:28 | `20261027T162827Z.tar.gz` | `20261027-1628-e4d4c8c` | Prod: changelog zobrazuje jen produkční nasazení (`Prod:`/`Prod fix:`) | `scripts/build-changelog.mjs`, `vite.config.js`, testy, `README.md`, `deploy/RELEASES.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
