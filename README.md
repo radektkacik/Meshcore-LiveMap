@@ -86,13 +86,14 @@ přihlašovací údaje zůstávají pouze na serveru.
   (hardware, baterie, panel, anténa…). `POST /api/node-info` s JSON
   `{key, text, author}` jej uloží; první text u nodu se zveřejní ihned,
   každá další změna čeká na schválení správcem (`status: "pending"`) a veřejný
-  text se nemění, dokud ji správce neschválí. Při prvním vložení si uživatel
-  zvolí heslo (6–128 znaků); server ukládá jen scrypt hash a další úpravu
-  povolí jen se správným heslem. Text má 5–1000 znaků, autor je nepovinný.
-  Ukládá se do `data/node-info.sqlite`; správce schvaluje, zamítá nebo maže
-  v `/admin/node-info`. Platí limit 10 úprav/h, 50/den a 5s pauza na IP.
-  Zapomenuté heslo se neobnovuje; správce může info smazat a uživatel jej
-  založí znovu.
+  text se nemění, dokud ji správce neschválí. Heslo je nepovinné: když ho
+  uživatel při prvním vložení zadá (6–128 znaků), server uloží jen scrypt hash
+  a další úpravu povolí jen se správným heslem. Bez hesla může změny navrhovat
+  kdokoli, ale stále je schvaluje správce. Text má 5–1000 znaků, autor je
+  nepovinný. Ukládá se do `data/node-info.sqlite`; správce schvaluje, zamítá
+  nebo maže v `/admin/node-info`. Platí limit 10 úprav/h, 50/den a 5s pauza
+  na IP. Zapomenuté heslo se neobnovuje; správce může info smazat a uživatel
+  jej založí znovu.
 - `/api/recent?seconds=30` vrací posledních N sekund živých paketů z paměťového
   kruhového bufferu (max. 120 s) jako jeden JSON. Klient ho načte paralelně
   s nody, všechny prefixy vyřeší jedním dávkovým requestem a trasy vykreslí

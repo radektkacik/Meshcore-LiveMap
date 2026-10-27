@@ -27,6 +27,7 @@ function mapRow(row) {
     author: row.author || "",
     createdAt: row.created_at,
     nodeKey: row.node_key,
+    protected: Boolean(row.edit_password_hash),
     text: row.text || "",
     updatedAt: row.updated_at,
   };
@@ -179,27 +180,27 @@ export function createNodeInfoStore(dbPath) {
     submit: (entry, now = Date.now()) => {
       const value = validEntry(entry);
       if (!value) return null;
+      const password = String(entry?.password || "");
+      if (password && !validPassword(password)) return { error: "invalid_password" };
       const current = selectOne.get(value.nodeKey);
       if (!current) {
-        if (!validPassword(entry?.password)) return { error: "password_required" };
         return {
-          info: publish(value, now, hashPassword(entry.password)),
+          info: publish(value, now, password ? hashPassword(password) : null),
           status: "published",
         };
       }
       if (!current.edit_password_hash) {
-        if (!validPassword(entry?.password)) return { error: "password_required" };
         upsertPending.run({
           author: value.author,
           created_at: now,
-          edit_password_hash: hashPassword(entry.password),
+          edit_password_hash: password ? hashPassword(password) : null,
           ip_hash: String(entry?.ipHash || "").slice(0, 32),
           node_key: value.nodeKey,
           text: value.text,
         });
         return { info: mapPendingRow(selectPendingOne.get(value.nodeKey)), status: "pending" };
       }
-      if (!passwordMatches(entry?.password, current.edit_password_hash)) {
+      if (!passwordMatches(password, current.edit_password_hash)) {
         return { error: "bad_password" };
       }
       upsertPending.run({

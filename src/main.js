@@ -1639,13 +1639,22 @@ function renderNodeInfoDialog() {
   elements.nodeInfoClose.setAttribute("aria-label", t("nodeInfo.cancel"));
   elements.nodeInfoTextLabel.textContent = t("nodeInfo.textLabel");
   elements.nodeInfoText.placeholder = t("nodeInfo.textPlaceholder");
-  const hasCurrent = Boolean(state.nodeInfoTarget && state.nodeInfoCache.get(state.nodeInfoTarget.key)?.info?.text);
-  elements.nodeInfoPasswordLabel.textContent = hasCurrent ? t("nodeInfo.passwordLabelEdit") : t("nodeInfo.passwordLabelNew");
-  elements.nodeInfoPassword.placeholder = hasCurrent ? t("nodeInfo.passwordPlaceholderEdit") : t("nodeInfo.passwordPlaceholderNew");
-  elements.nodeInfoPassword.autocomplete = hasCurrent ? "current-password" : "new-password";
+  const currentInfo = state.nodeInfoTarget ? state.nodeInfoCache.get(state.nodeInfoTarget.key)?.info : null;
+  const hasCurrent = Boolean(currentInfo?.text);
+  const protectedInfo = Boolean(currentInfo?.protected);
+  elements.nodeInfoPassword.required = protectedInfo;
+  elements.nodeInfoPasswordLabel.textContent = protectedInfo
+    ? t("nodeInfo.passwordLabelEdit")
+    : t("nodeInfo.passwordLabelOptional");
+  elements.nodeInfoPassword.placeholder = protectedInfo
+    ? t("nodeInfo.passwordPlaceholderEdit")
+    : t("nodeInfo.passwordPlaceholderOptional");
+  elements.nodeInfoPassword.autocomplete = protectedInfo ? "current-password" : "new-password";
   elements.nodeInfoAuthorLabel.textContent = t("nodeInfo.authorLabel");
   elements.nodeInfoAuthor.placeholder = t("nodeInfo.authorPlaceholder");
-  elements.nodeInfoNote.textContent = hasCurrent ? t("nodeInfo.noteEdit") : t("nodeInfo.noteNew");
+  elements.nodeInfoNote.textContent = protectedInfo
+    ? t("nodeInfo.noteEdit")
+    : (hasCurrent ? t("nodeInfo.noteUnprotected") : t("nodeInfo.noteNew"));
   elements.nodeInfoSubmit.textContent = t("nodeInfo.submit");
   elements.nodeInfoCancel.textContent = t("nodeInfo.cancel");
   const target = state.nodeInfoTarget;
@@ -6488,7 +6497,12 @@ elements.nodeInfoForm.addEventListener("submit", async (event) => {
     return;
   }
   const password = elements.nodeInfoPassword.value;
-  if (password.length < 6 || password.length > 128) {
+  const protectedInfo = Boolean(state.nodeInfoCache.get(target.key)?.info?.protected);
+  if (protectedInfo && !password) {
+    setNodeInfoStatus(t("nodeInfo.passwordRequired"), true);
+    return;
+  }
+  if (password && (password.length < 6 || password.length > 128)) {
     setNodeInfoStatus(t("nodeInfo.passwordTooShort"), true);
     return;
   }

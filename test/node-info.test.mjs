@@ -79,13 +79,33 @@ test("node info can reject a pending change and keeps the published text", () =>
   }
 });
 
+test("node info can be left without a password and still requires approval for changes", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-node-info-"));
+  const store = createNodeInfoStore(join(directory, "node-info.sqlite"));
+  const key = "d".repeat(64);
+  try {
+    const first = store.submit({ nodeKey: key, text: "Bez hesla" }, 1000);
+    assert.equal(first.status, "published");
+    assert.equal(first.info.protected, false);
+    const change = store.submit({ nodeKey: key, text: "Změna bez hesla" }, 2000);
+    assert.equal(change.status, "pending");
+    assert.equal(store.get(key).text, "Bez hesla");
+    const approved = store.approve(key, 3000);
+    assert.equal(approved.text, "Změna bez hesla");
+    assert.equal(approved.protected, false);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("node info rejects invalid node keys and empty text", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-node-info-"));
   const store = createNodeInfoStore(join(directory, "node-info.sqlite"));
   try {
     assert.equal(store.submit({ nodeKey: "short", password: "tajne123", text: "test" }), null);
     assert.equal(store.submit({ nodeKey: "c".repeat(64), password: "tajne123", text: "   " }), null);
-    assert.equal(store.submit({ nodeKey: "c".repeat(64), text: "bez hesla" }).error, "password_required");
+    assert.equal(store.submit({ nodeKey: "c".repeat(64), password: "123", text: "krátké heslo" }).error, "invalid_password");
     assert.equal(store.count(), 0);
     assert.equal(store.pendingCount(), 0);
   } finally {
