@@ -235,6 +235,8 @@
 | 2026-10-27 08:57 | `20261027T085711Z.tar.gz` | `20261027-0857-fe570ec` | Prod: stejný hint přepínače fotek | `index.html`, `src/i18n.js`, `CONTEXT.md` |
 | 2026-10-27 10:43 | `20261027T104328Z.tar.gz` (stage APP_DIR) | `20261027-1043-673d0f9` | Beta: výrazný banner v HUD „BETA VERZE“ s upozorněním a tlačítkem na produkci | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-27 10:44 | `20261027T104402Z.tar.gz` | `20261027-1044-673d0f9` | Prod: stejný build, banner se na produkci nezobrazuje | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
+| 2026-10-27 11:03 | `20261027T110339Z.tar.gz` (stage APP_DIR) | `20261027-1103-543b301` | Beta: první uživatelské info k nodu se zveřejní, další změny čekají na schválení; admin schvaluje/zamítá v `/admin/node-info` | `node-info.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, testy, `.env.example`, `README.md`, `CONTEXT.md` |
+| 2026-10-27 11:04 | `20261027T110405Z.tar.gz` | `20261027-1104-543b301` | Prod: stejné schvalování změn uživatelského info | `node-info.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, testy, `.env.example`, `README.md`, `CONTEXT.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
