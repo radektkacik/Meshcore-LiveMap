@@ -81,6 +81,21 @@ test("photo store creates a pending photo, hides it until approval and serves th
   }
 });
 
+test("photo store can publish a photo immediately when auto-approval is enabled", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
+  const store = createPhotoStore(directory);
+  const nodeKey = "f".repeat(64);
+  try {
+    const photo = store.create({ buffer: pngBuffer(), nodeKey, status: "approved" });
+    assert.equal(photo.status, "approved");
+    assert.deepEqual(store.listApproved(nodeKey).map((item) => item.id), [photo.id]);
+    assert.equal(store.stats().pending, 0);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("photo store rejects invalid input and enforces the per-node limit", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
   const store = createPhotoStore(directory, { maxPerNode: 1 });

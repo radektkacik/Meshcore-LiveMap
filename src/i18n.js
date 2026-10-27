@@ -327,6 +327,7 @@ const cs = {
   "photos.consent": "Mám právo fotky zveřejnit a souhlasím s jejich zveřejněním.",
   "photos.consentRequired": "Potvrďte prosím právo fotky zveřejnit.",
   "photos.note": "Fotky se zobrazí až po schválení správcem. Najednou lze vybrat až 5 fotek. HEIC z iPhonu automaticky převedeme. Nahráním souhlasíte s jejich zveřejněním.",
+  "photos.noteAuto": "Fotky se zobrazí ihned po nahrání. Nevhodné fotky může správce odstranit. Najednou lze vybrat až 5 fotek. HEIC z iPhonu automaticky převedeme. Nahráním souhlasíte s jejich zveřejněním.",
   "photos.heicFailed": "HEIC se nepodařilo převést. Uložte fotku jako JPEG (v iPhonu Nastavení → Fotoaparát → Formáty → Nejkompatibilnější).",
   "photos.submit": "Nahrát",
   "photos.cancel": "Zavřít",
@@ -340,6 +341,12 @@ const cs = {
     few: "{count} fotky čekají na schválení správcem.",
     other: "{count} fotek čeká na schválení správcem."
   },
+  "photos.publishedCount": {
+    one: "{count} fotka byla zveřejněna.",
+    few: "{count} fotky byly zveřejněny.",
+    other: "{count} fotek bylo zveřejněno."
+  },
+  "photos.mixed": "{published} zveřejněno, {pending} čeká na schválení.",
   "photos.failed": "Fotku se nepodařilo nahrát.",
   "photos.invalid": "Nepodařilo se načíst obrázek. Použijte JPEG, PNG nebo WebP.",
   "photos.tooLarge": "Fotka je příliš velká.",
@@ -699,6 +706,7 @@ const en = {
   "photos.consent": "I have the right to publish these photos and agree to their publication.",
   "photos.consentRequired": "Please confirm your right to publish the photos.",
   "photos.note": "Photos appear after administrator approval. You can select up to 5 photos at once. HEIC photos from iPhone are converted automatically. By uploading, you agree to their publication.",
+  "photos.noteAuto": "Photos appear immediately after upload. The administrator can remove inappropriate photos. You can select up to 5 photos at once. HEIC photos from iPhone are converted automatically. By uploading, you agree to their publication.",
   "photos.heicFailed": "The HEIC photo could not be converted. Save it as JPEG (on iPhone: Settings → Camera → Formats → Most Compatible).",
   "photos.submit": "Upload",
   "photos.cancel": "Close",
@@ -711,6 +719,11 @@ const en = {
     one: "{count} photo is waiting for administrator approval.",
     other: "{count} photos are waiting for administrator approval."
   },
+  "photos.publishedCount": {
+    one: "{count} photo was published.",
+    other: "{count} photos were published."
+  },
+  "photos.mixed": "{published} published, {pending} waiting for approval.",
   "photos.failed": "The photo could not be uploaded.",
   "photos.invalid": "The image could not be read. Use JPEG, PNG or WebP.",
   "photos.tooLarge": "The photo is too large.",

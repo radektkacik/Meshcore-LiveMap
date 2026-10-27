@@ -409,6 +409,7 @@ const state = {
   photoPanY: 0,
   photoDrag: null,
   photoPreviewUrls: [],
+  photoAutoApprove: null,
   photoTarget: null,
   photoUploading: false,
   lightboxPhoto: null,
@@ -2054,6 +2055,21 @@ function renderPhotoPreviews(files) {
   }
 }
 
+function photoNoteText() {
+  return state.photoAutoApprove ? t("photos.noteAuto") : t("photos.note");
+}
+
+async function loadPhotoConfig() {
+  if (state.photoAutoApprove !== null) return;
+  try {
+    const data = await getJson("/api/photos/config");
+    state.photoAutoApprove = data.autoApprove === true;
+  } catch {
+    state.photoAutoApprove = false;
+  }
+  if (elements.photoDialog.open) elements.photoNote.textContent = photoNoteText();
+}
+
 function resetPhotoDialog() {
   elements.photoForm.reset();
   setPhotoStatus("");
@@ -2069,7 +2085,7 @@ function renderPhotoDialog() {
   elements.photoAuthorLabel.textContent = t("photos.author");
   elements.photoAuthor.placeholder = t("photos.authorPlaceholder");
   elements.photoConsentLabel.textContent = t("photos.consent");
-  elements.photoNote.textContent = t("photos.note");
+  elements.photoNote.textContent = photoNoteText();
   elements.photoSubmit.textContent = t("photos.submit");
   elements.photoCancel.textContent = t("photos.cancel");
   const target = state.photoTarget;
@@ -2084,6 +2100,7 @@ function openPhotoDialog(node) {
   state.photoTarget = { key, name: node.name || t("common.unknownNode") };
   resetPhotoDialog();
   renderPhotoDialog();
+  void loadPhotoConfig();
   if (!elements.photoDialog.open) elements.photoDialog.showModal();
 }
 
@@ -6204,6 +6221,8 @@ elements.photoForm.addEventListener("submit", async (event) => {
   state.photoUploading = true;
   elements.photoSubmit.disabled = true;
   let created = 0;
+  let published = 0;
+  let pending = 0;
   let failed = 0;
   let lastError = "";
   const batchId = files.length > 1
@@ -6252,15 +6271,33 @@ elements.photoForm.addEventListener("submit", async (event) => {
           continue;
         }
         created += 1;
+        if (data.status === "approved") published += 1;
+        else pending += 1;
       } catch (error) {
         failed += 1;
         lastError = error?.message || t("photos.failed");
       }
     }
     if (created > 0) {
-      setPhotoStatus(failed > 0
-        ? t("photos.partial", { created, failed, total: files.length })
-        : tCount("photos.pendingCount", created), failed > 0);
+      let statusText = t("photos.failed");
+      if (failed > 0) statusText = t("photos.partial", { created, failed, total: files.length });
+      else if (published === created) statusText = tCount("photos.publishedCount", published);
+      else if (pending === created) statusText = tCount("photos.pendingCount", pending);
+      else statusText = t("photos.mixed", { pending, published });
+      setPhotoStatus(statusText, failed > 0);
+      if (published > 0) {
+        state.photoCache.delete(target.key);
+        const section = document.querySelector(`.node-photos[data-node-key="${target.key}"]`);
+        if (section) {
+          void loadNodePhotos(section, {
+            name: target.name,
+            public_key: target.key,
+          });
+        }
+        void loadPhotoNodes(true).then(() => {
+          if (state.photosOnly) refreshNodeState();
+        }).catch(() => {});
+      }
       elements.photoForm.reset();
       resetPhotoPreview();
       if (failed === 0) {

@@ -248,6 +248,7 @@ export function createPhotoStore(rootDir, {
         throw new PhotoError("node_limit", "Tento nod už má maximální počet fotek.");
       }
       const id = randomUUID();
+      const status = PHOTO_STATUSES.includes(entry?.status) ? entry.status : "pending";
       const file = join(nodeKey.slice(0, 2), nodeKey, `${id}.${image.ext}`);
       const absolute = absolutePath({ file });
       mkdirSync(dirname(absolute), { recursive: true });
@@ -263,7 +264,7 @@ export function createPhotoStore(rootDir, {
         ip_hash: String(entry.ipHash || "").slice(0, 32),
         mime: image.mime,
         node_key: nodeKey,
-        status: "pending",
+        status,
         width: image.width,
       });
       return get(id);

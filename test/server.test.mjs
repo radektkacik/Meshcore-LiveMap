@@ -106,6 +106,7 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       NODES_CACHE_PATH: join(directory, "nodes-cache.json"),
       PACKET_DB_PATH: join(directory, "packets.sqlite"),
       PHOTO_DIR: join(directory, "uploads"),
+      PHOTO_AUTO_APPROVE: "0",
       PHOTO_COOLDOWN_MS: "0",
       PHOTO_TOKEN: "photo-token",
       STATS_CACHE_PATH: join(directory, "stats-cache.json"),
@@ -161,6 +162,9 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(nodeDetailBody.health.observers[0].observer_name, "Tester");
     assert.equal(nodeDetailBody.clockSkew.recentMedianSkewSec, 2);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/node-detail?key=short`)).status, 400);
+    const photoConfig = await fetch(`http://127.0.0.1:${appPort}/api/photos/config`);
+    assert.equal(photoConfig.status, 200);
+    assert.deepEqual(await photoConfig.json(), { autoApprove: false });
     const photoKey = "a".repeat(64);
     const upload = await fetch(`http://127.0.0.1:${appPort}/api/photos`, {
       method: "POST",

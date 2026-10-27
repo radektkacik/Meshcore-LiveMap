@@ -47,6 +47,7 @@ const adminSessionSecret = process.env.ADMIN_SESSION_SECRET || adminPassword;
 const adminSessionTtlMs = Math.max(60_000, Number(process.env.ADMIN_SESSION_TTL_MS || 12 * 60 * 60 * 1000));
 const photoDir = process.env.PHOTO_DIR || join(process.cwd(), "uploads");
 const photoMaxBytes = Math.max(1024, Number(process.env.PHOTO_MAX_BYTES || 5 * 1024 * 1024));
+const photoAutoApprove = process.env.PHOTO_AUTO_APPROVE === "1";
 const photoStore = createPhotoStore(photoDir, {
   maxBytes: photoMaxBytes,
   maxDimension: Math.max(100, Number(process.env.PHOTO_MAX_DIMENSION || 2400)),
@@ -834,6 +835,7 @@ function telegramAdminUrl(path) {
   if (!telegramAdminLink) return null;
   if (path.startsWith("/api/feedback")) return `${publicBaseUrl}/admin/feedback`;
   if (path.endsWith("/reports")) return `${publicBaseUrl}/admin/photos?status=reports`;
+  if (path.endsWith("/approved")) return `${publicBaseUrl}/admin/photos?status=approved`;
   return `${publicBaseUrl}/admin/photos`;
 }
 
@@ -845,16 +847,20 @@ function notifyNewPhotos(photos) {
   const first = photosToNotify[0];
   const name = photoNodeNames().get(first.nodeKey) || first.nodeKey.slice(0, 8);
   const stats = photoStore.stats();
+  const published = photosToNotify.every((photo) => photo.status === "approved");
   const lines = [
-    photosToNotify.length === 1 ? "📷 Nová fotka čeká na schválení" : "📷 Nové fotky čekají na schválení",
+    photosToNotify.length === 1
+      ? (published ? "📷 Nová fotka byla zveřejněna" : "📷 Nová fotka čeká na schválení")
+      : (published ? "📷 Nové fotky byly zveřejněny" : "📷 Nové fotky čekají na schválení"),
     `Nod: ${name}`,
   ];
   if (photosToNotify.length > 1) lines.push(`Počet: ${photosToNotify.length}`);
   if (first.caption) lines.push(`Popis: ${first.caption}`);
   const author = photosToNotify.find((photo) => photo.author)?.author;
   if (author) lines.push(`Autor: ${author}`);
-  lines.push(`Čeká na schválení: ${stats.pending}`);
-  const url = telegramAdminUrl("/api/photos/view");
+  if (published) lines.push("Fotky můžeš zkontrolovat a případně smazat v administraci.");
+  else lines.push(`Čeká na schválení: ${stats.pending}`);
+  const url = telegramAdminUrl(published ? "/api/photos/approved" : "/api/photos/view");
   if (url) lines.push(url);
   notifyTelegram(lines.join("\n"));
 }
@@ -1749,7 +1755,7 @@ function adminDashboardPage() {
     title: "Přehled",
     content: `
 <h1>Přehled</h1>
-<p class="sub">Stav administrace a rychlé odkazy.</p>
+<p class="sub">Stav administrace a rychlé odkazy.${photoAutoApprove ? " Fotky se zveřejňují automaticky a nové najdeš v sekci Fotky." : ""}</p>
 <div class="cards">
   <div class="card"><div class="label">Fotky čekající</div><a href="${adminPath("/photos?status=pending")}"><div class="value">${formatAdminNumber(stats.pending)}</div></a><small>ke schválení</small></div>
   <div class="card"><div class="label">Otevřené žádosti</div><a href="${adminPath("/photos?status=reports")}"><div class="value">${formatAdminNumber(stats.reports)}</div></a><small>o smazání / nahlášení</small></div>
@@ -1984,9 +1990,10 @@ async function handleAdminRequest(request, response, url) {
       return;
     }
     if (path === "/admin/photos") {
+      const defaultStatus = photoAutoApprove ? "approved" : "pending";
       const status = ["pending", "approved", "hidden", "all", "reports"].includes(url.searchParams.get("status"))
         ? url.searchParams.get("status")
-        : "pending";
+        : defaultStatus;
       response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       response.end(adminPhotoPage(status));
       return;
@@ -2133,6 +2140,15 @@ async function handleRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/photos/config") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET, HEAD" }).end("Method Not Allowed");
+      return;
+    }
+    sendJson(response, 200, { autoApprove: photoAutoApprove });
+    return;
+  }
+
   if (url.pathname === "/api/photos") {
     if (request.method === "GET" || request.method === "HEAD") {
       const key = String(url.searchParams.get("key") || "").trim().toLowerCase();
@@ -2204,6 +2220,7 @@ async function handleRequest(request, response) {
         caption: cleanPhotoText(decodeHeaderValue(request.headers["x-photo-caption"]), 240),
         ipHash: createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16),
         nodeKey: key,
+        status: photoAutoApprove ? "approved" : "pending",
       });
       queueNewPhotoNotification(
         photo,

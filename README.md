@@ -132,8 +132,10 @@ přihlašovací údaje zůstávají pouze na serveru.
   stále přijímá, ale UI popis už nezadává. Klient umožní vybrat až 5 fotek
   najednou a posílá je postupně s `X-Photo-Batch-Size`, `X-Photo-Batch-Index`
   a `X-Photo-Batch-Id`; server mezi fotkami stejné dávky přeskočí 10s pauzu
-  a Telegram notifikaci pošle jednou za dávku. Fotka se uloží jako `pending`
-  a zobrazí se až po schválení.
+  a Telegram notifikaci pošle jednou za dávku. Ve výchozím stavu se fotka
+  uloží jako `pending` a zobrazí se až po schválení. S `PHOTO_AUTO_APPROVE=1`
+  se ihned uloží jako `approved`, zobrazí se v galerii a správce ji může
+  dodatečně smazat. `GET /api/photos/config` vrací `{ autoApprove }`.
 - Administrace je na `GET /admin` (beta `/map/admin`). Přihlašuje se heslem
   `ADMIN_PASSWORD`; když není nastavené, použije se `FEEDBACK_TOKEN`, případně
   `PHOTO_TOKEN`. Po přihlášení drží server HttpOnly session cookie 12 hodin
@@ -156,7 +158,8 @@ přihlašovací údaje zůstávají pouze na serveru.
   žádost o smazání fotky a volitelně (`TELEGRAM_NOTIFY_FEEDBACK=1`) i na novou
   zprávu v knize návštěv. Zprávy obsahují počty čekajících položek; odkaz
   do administrace lze zapnout přes `TELEGRAM_ADMIN_LINK=1` (odkaz už neobsahuje
-  token, vede na `/admin`).
+  token, vede na `/admin`). U automaticky zveřejněných fotek notifikace vede
+  na schválené fotky a obsahuje upozornění, že je možné je smazat.
   `PUBLIC_BASE_URL` určuje základ odkazu (u bety `https://2b.meshcore.cz/map`).
 - Animace tras je ve výchozím stavu řešená canvas rendererem (jedna kresba,
   posun `lineDashOffset` bez CSS animací). Méně výkonnou SVG variantu s CSS
