@@ -90,10 +90,11 @@ přihlašovací údaje zůstávají pouze na serveru.
   uživatel při prvním vložení zadá (6–128 znaků), server uloží jen scrypt hash
   a další úpravu povolí jen se správným heslem. Bez hesla může změny navrhovat
   kdokoli, ale stále je schvaluje správce. Text má 5–1000 znaků, autor je
-  nepovinný. Ukládá se do `data/node-info.sqlite`; správce schvaluje, zamítá
-  nebo maže v `/admin/node-info`. Platí limit 10 úprav/h, 50/den a 5s pauza
-  na IP. Zapomenuté heslo se neobnovuje; správce může info smazat a uživatel
-  jej založí znovu.
+  nepovinný. Ukládá se do `data/node-info.sqlite`; správce v `/admin/node-info`
+  schvaluje, zamítá, maže a může text i přímo upravit (uložení se zveřejní
+  ihned a zruší případný čekající návrh). Platí limit 10 úprav/h, 50/den
+  a 5s pauza na IP. Zapomenuté heslo se neobnovuje; správce může info smazat
+  a uživatel jej založí znovu.
 - `/api/recent?seconds=30` vrací posledních N sekund živých paketů z paměťového
   kruhového bufferu (max. 120 s) jako jeden JSON. Klient ho načte paralelně
   s nody, všechny prefixy vyřeší jedním dávkovým requestem a trasy vykreslí

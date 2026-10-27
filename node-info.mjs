@@ -96,6 +96,11 @@ export function createNodeInfoStore(dbPath) {
       edit_password_hash = excluded.edit_password_hash
   `);
   const deleteRow = db.prepare("DELETE FROM node_info WHERE node_key = ?");
+  const updatePublished = db.prepare(`
+    UPDATE node_info
+    SET text = @text, author = @author, updated_at = @updated_at
+    WHERE node_key = @node_key
+  `);
   const selectPendingOne = db.prepare(`
     SELECT p.*, n.text AS current_text, n.updated_at AS current_updated_at
     FROM node_info_pending p
@@ -145,6 +150,23 @@ export function createNodeInfoStore(dbPath) {
   }
 
   return {
+    adminUpdate: (nodeKey, entry, now = Date.now()) => {
+      const value = validEntry({ author: entry?.author, nodeKey, text: entry?.text });
+      if (!value) return null;
+      const current = selectOne.get(value.nodeKey);
+      if (!current) return null;
+      const info = db.transaction(() => {
+        updatePublished.run({
+          author: value.author,
+          node_key: value.nodeKey,
+          text: value.text,
+          updated_at: now,
+        });
+        deletePending.run(value.nodeKey);
+        return mapRow(selectOne.get(value.nodeKey));
+      })();
+      return info;
+    },
     approve: (nodeKey, now = Date.now()) => {
       const key = String(nodeKey || "").toLowerCase();
       const pending = selectPendingOne.get(key);

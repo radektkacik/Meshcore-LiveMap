@@ -1779,6 +1779,16 @@ p { margin:4px 0; white-space:pre-wrap; }
 .actions button.approve { color:#078e62; border-color:rgba(7,142,98,.45); }
 .actions button.hide { color:#b27616; border-color:rgba(178,118,22,.4); }
 .actions button.delete { color:#c0392b; border-color:rgba(192,57,43,.4); }
+.actions a.edit { padding:5px 10px; border:1px solid rgba(7,142,98,.45); border-radius:6px; color:#078e62; background:#fff; font:12px Manrope, system-ui, sans-serif; text-decoration:none; }
+.actions a.edit:hover { color:#fff; background:#078e62; }
+.admin-edit-form { display:flex; flex-direction:column; gap:12px; max-width:760px; }
+.admin-edit-form label { display:flex; flex-direction:column; gap:5px; color:#49665b; font:10px "DM Mono", monospace; }
+.admin-edit-form input, .admin-edit-form textarea { width:100%; padding:9px 10px; border:1px solid rgba(30,65,49,.22); border-radius:7px; color:#182820; background:#fff; font:13px Manrope, system-ui, sans-serif; }
+.admin-edit-form textarea { min-height:180px; resize:vertical; }
+.feedback-actions { display:flex; align-items:center; justify-content:flex-end; gap:10px; }
+.feedback-actions a, .feedback-actions button { padding:8px 13px; border:1px solid rgba(30,65,49,.2); border-radius:7px; color:#49665b; background:#fff; font:12px Manrope, system-ui, sans-serif; text-decoration:none; cursor:pointer; }
+.feedback-actions button { color:#fff; border-color:#078e62; background:#078e62; }
+.feedback-actions button:hover { background:#067a54; }
 .empty { margin:0; color:#667b70; }
 .feedback li { padding:12px 14px; border:1px solid rgba(30,65,49,.14); border-radius:10px; background:#fff; }
 .feedback li.is-hidden { opacity:.55; }
@@ -2008,10 +2018,13 @@ function adminNodeInfoPage() {
       <div class="meta">${escapeHtml(new Date(info.updatedAt).toLocaleString("cs-CZ"))}${info.author ? ` · ${escapeHtml(info.author)}` : ""}</div>
       <div class="node"><a href="${sitePath("/")}?node=${encodeURIComponent(info.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(nodeLabel)}</a></div>
       <p>${escapeHtml(info.text)}</p>
-      <form class="actions" method="post" action="${adminPath("/node-info/delete")}">
-        <input type="hidden" name="key" value="${escapeHtml(info.nodeKey)}" />
-        <button class="delete" type="submit">Smazat info</button>
-      </form>
+      <div class="actions">
+        <a class="edit" href="${adminPath(`/node-info/edit?key=${encodeURIComponent(info.nodeKey)}`)}">Upravit</a>
+        <form method="post" action="${adminPath("/node-info/delete")}">
+          <input type="hidden" name="key" value="${escapeHtml(info.nodeKey)}" />
+          <button class="delete" type="submit">Smazat info</button>
+        </form>
+      </div>
     </li>`;
   }).join("");
   return adminLayout({
@@ -2023,6 +2036,31 @@ function adminNodeInfoPage() {
 ${pending.length ? `<h2>Změny ke schválení</h2><ul class="list feedback">${pendingRows}</ul>` : ""}
 <h2>Zveřejněné info</h2>
 ${entries.length ? `<ul class="list feedback">${rows}</ul>` : '<p class="empty">Zatím žádné uživatelské info.</p>'}`,
+  });
+}
+
+function adminNodeInfoEditPage(info) {
+  const pending = nodeInfoStore.getPending(info.nodeKey);
+  return adminLayout({
+    active: "nodeinfo",
+    title: "Upravit info nodu",
+    content: `
+<h1>Upravit info nodu</h1>
+<p class="sub">${info.protected ? "Záznam je chráněný heslem." : "Záznam není chráněný heslem."} Uložení se zveřejní ihned.</p>
+${pending ? '<p class="sub">Pozor: existuje čekající návrh změny. Uložením tohoto textu se návrh zruší.</p>' : ""}
+<form class="admin-edit-form" method="post" action="${adminPath("/node-info/edit")}">
+  <input type="hidden" name="key" value="${escapeHtml(info.nodeKey)}" />
+  <label>Text info
+    <textarea name="text" rows="10" maxlength="1000" required>${escapeHtml(info.text)}</textarea>
+  </label>
+  <label>Autor (nepovinné)
+    <input type="text" name="author" maxlength="60" value="${escapeHtml(info.author || "")}" />
+  </label>
+  <div class="feedback-actions">
+    <a href="${adminPath("/node-info")}">Zrušit</a>
+    <button type="submit">Uložit a zveřejnit</button>
+  </div>
+</form>`,
   });
 }
 
@@ -2120,6 +2158,16 @@ async function handleAdminRequest(request, response, url) {
       response.end(adminNodeInfoPage());
       return;
     }
+    if (path === "/admin/node-info/edit") {
+      const info = nodeInfoStore.get(url.searchParams.get("key"));
+      if (!info) {
+        response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not Found");
+        return;
+      }
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(adminNodeInfoEditPage(info));
+      return;
+    }
     response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not Found");
     return;
   }
@@ -2155,6 +2203,22 @@ async function handleAdminRequest(request, response, url) {
       const id = Number(form.get("id"));
       if (Number.isFinite(id)) feedbackStore.setHidden(id, form.get("hidden") === "1");
       redirectAdmin(response, `${adminBasePath}/feedback`);
+      return;
+    }
+    if (path === "/admin/node-info/edit") {
+      const key = String(form.get("key") || "");
+      const text = String(form.get("text") || "").trim();
+      const author = String(form.get("author") || "").trim().slice(0, 60);
+      if (text.length < 5 || text.length > 1000) {
+        response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Text musí mít 5 až 1000 znaků.");
+        return;
+      }
+      const info = nodeInfoStore.adminUpdate(key, { author, text });
+      if (!info) {
+        response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not Found");
+        return;
+      }
+      redirectAdmin(response, `${adminBasePath}/node-info`);
       return;
     }
     if (path === "/admin/node-info/moderate") {

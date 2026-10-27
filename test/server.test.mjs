@@ -273,6 +273,19 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     });
     assert.equal(approveInfo.status, 303);
     assert.equal((await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json()).info.text, "Anténa: 5 dBi");
+    const adminEdit = await fetch(`http://127.0.0.1:${appPort}/admin/node-info/edit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        cookie: adminCookie,
+      },
+      body: `key=${infoKey}&author=Admin&text=${encodeURIComponent("Text upravený adminem")}`,
+      redirect: "manual",
+    });
+    assert.equal(adminEdit.status, 303);
+    const adminEditedInfo = await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json();
+    assert.equal(adminEditedInfo.info.text, "Text upravený adminem");
+    assert.equal(adminEditedInfo.info.author, "Admin");
     const deleteInfo = await fetch(`http://127.0.0.1:${appPort}/admin/node-info/delete`, {
       method: "POST",
       headers: {

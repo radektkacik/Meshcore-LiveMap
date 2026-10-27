@@ -56,7 +56,7 @@ Aktualizováno: 2026-10-27 (prod `20261027T113026Z`, beta `20261027T113000Z`)
 - Experimenty přehrávání archivu, heatmapa provozu a trasy A→B byly vyzkoušeny na betě a následně revertovány (`982ed8e`); v produkci nebyly
 - Rychlé výhry (prod i beta): `/api/health` (uptime, MQTT, cache, DB), `/api/search?hash=` a globální hledání v HUD (nody, observeři, hashe paketů, veřejné kanály, klávesnice ↑/↓/Enter/Esc); export nodů, observerů a tras do CSV/GeoJSON – tlačítko Export je zatím jen na betě, v produkci je skryté
 - Fotky nodů (prod i beta): veřejné nahrávání JPEG/PNG/WebP + automatický převod HEIC/HEIF z iPhonu přes `libheif-js` (WASM) v prohlížeči, s potvrzením práv; s `PHOTO_AUTO_APPROVE=1` se fotky zveřejní ihned, správce dostane Telegram notifikaci a může je v `/admin` zkontrolovat nebo smazat; bez tohoto příznaku zůstává původní schvalování (`pending`). Soubory v `uploads/` mimo zálohy, moderace na `/api/photos/view?token=…` i `/admin`. Klient zmenšuje na 2000 px, server povolí max. 2400 px. Najednou lze vybrat až 5 fotek, každou s volitelným popisem; klient je nahrává postupně s batch hlavičkami, server přeskočí 10s pauzu mezi fotkami dávky a pošle jednu Telegram notifikaci za dávku. Lightbox je celoobrazovkový (100vw/100dvh) s zoomem kolečkem myši, tažením, tlačítky +/- a režimem 1:1 (plné rozlišení); dvojklik přepíná fit ↔ 1:1. Přepínač „Jen nody s fotkou“ je dostupný v HUD a filtruje nody podle fotek.
-- Administrace `/admin` (beta `/map/admin`): přihlášení heslem `ADMIN_PASSWORD` (fallback `FEEDBACK_TOKEN`/`PHOTO_TOKEN`), HttpOnly session cookie 12 h, přehled, moderace fotek a žádostí, zpětná vazba; staré tokenové URL zůstávají funkční. Odkaz v Telegramu už token neobsahuje.
+- Administrace `/admin` (beta `/map/admin`): přihlášení heslem `ADMIN_PASSWORD` (fallback `FEEDBACK_TOKEN`/`PHOTO_TOKEN`), HttpOnly session cookie 12 h, přehled, moderace fotek a žádostí, zpětná vazba, schvalování a přímá editace uživatelského info nodů; staré tokenové URL zůstávají funkční. Odkaz v Telegramu už token neobsahuje.
 - Telegram notifikace pro správce (prod i beta): nová fotka k schválení, žádost o smazání fotky, volitelně nová zpráva v knize návštěv; konfigurace `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `PUBLIC_BASE_URL`, `TELEGRAM_ADMIN_LINK`.
 
 ### Mapa a nody
@@ -67,7 +67,7 @@ Aktualizováno: 2026-10-27 (prod `20261027T113026Z`, beta `20261027T113000Z`)
 - Trasy: přerušení kvůli neznámému hopu nebo skoku >170 km je označené žlutým `?` s tooltipem; TRACE dostává barvy podle SNR i při více segmentech.
 - TRACE při zoomu ≥ 9 zobrazuje u každého hopu štítek se SNR (`12,5 dB`), barva podle kvality; max. 150 štítků. Funguje i v archivních oknech 5 min / 1 h / 24 h.
 - Detail nodu: role v hlavičce, relativní časy (`teď`, `12 min`, `3 h`, `2 d`), V síti od, region, obohacení sousedů (role, vzdálenost, naposledy), odkaz do Analyzeru
-- Uživatelské info k nodu: volitelný veřejný text (hardware, baterie, panel, anténa…), autor, čas úpravy; tlačítko Přidat / upravit, limit 5–1000 znaků. První text se zveřejní ihned; heslo je nepovinné (6–128 znaků, server drží jen scrypt hash), s heslem mohou další změny navrhovat jen znalci hesla, bez hesla kdokoli; změny vždy čekají na schválení v `/admin/node-info` (schválit/zamítnout/smazat); ukládání do `data/node-info.sqlite`, Telegram notifikace správci
+- Uživatelské info k nodu: volitelný veřejný text (hardware, baterie, panel, anténa…), autor, čas úpravy; tlačítko Přidat / upravit, limit 5–1000 znaků. První text se zveřejní ihned; heslo je nepovinné (6–128 znaků, server drží jen scrypt hash), s heslem mohou další změny navrhovat jen znalci hesla, bez hesla kdokoli; změny vždy čekají na schválení v `/admin/node-info` (schválit/zamítnout/smazat, admin může text i přímo upravit); ukládání do `data/node-info.sqlite`, Telegram notifikace správci
 - Analytika z Analyzeru v detailu nodu: total packets, packets today, pozorování, Ø hopů/SNR, přímí observeři s SNR/RSSI, poslední adverty, trasy přes nod, clock skew; serverový `/api/node-detail` s 5min cache a stale fallbackem
 - Historie užitečnosti: 7 dní hodinových vzorků, hover tooltip; bez průměrování
 - Zvýraznění užitečnosti: relativní Top 5 % (červená) a 5–15 % (žlutá) z aktivních nodů se skóre za 24 h; počty v legendě
@@ -144,7 +144,7 @@ Aktualizováno: 2026-10-27 (prod `20261027T113026Z`, beta `20261027T113000Z`)
 
 ## 4. Testy a CI
 
-- `npm test`: 109 testů, 106 pass, 3 skip, 0 fail
+- `npm test`: 110 testů, 107 pass, 3 skip, 0 fail
 - `npm audit --omit=dev`: 0 zranitelností
 - GitHub Actions CI: Node 20 a 22, běží `npm ci`, syntax check, testy, build
 - CI nelze z tohoto prostředí číst bez GitHub přihlášení

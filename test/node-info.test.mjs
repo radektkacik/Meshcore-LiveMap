@@ -79,6 +79,26 @@ test("node info can reject a pending change and keeps the published text", () =>
   }
 });
 
+test("admin can edit published node info and clears a pending change", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-node-info-"));
+  const store = createNodeInfoStore(join(directory, "node-info.sqlite"));
+  const key = "e".repeat(64);
+  try {
+    store.submit({ nodeKey: key, password: "tajne123", text: "Původní text" }, 1000);
+    store.submit({ nodeKey: key, password: "tajne123", text: "Čekající návrh" }, 2000);
+    assert.equal(store.pendingCount(), 1);
+    const updated = store.adminUpdate(key, { author: "Admin", text: "Text od admina" }, 3000);
+    assert.equal(updated.text, "Text od admina");
+    assert.equal(updated.author, "Admin");
+    assert.equal(updated.protected, true);
+    assert.equal(store.pendingCount(), 0);
+    assert.equal(store.get(key).text, "Text od admina");
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("node info can be left without a password and still requires approval for changes", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-node-info-"));
   const store = createNodeInfoStore(join(directory, "node-info.sqlite"));
