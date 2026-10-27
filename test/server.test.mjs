@@ -231,6 +231,7 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       body: JSON.stringify({
         author: "Tester",
         key: infoKey,
+        password: "tajne123",
         text: "Hardware: RAK v2\nBaterie: 10 Ah\nPanel: 20 W",
       }),
     });
@@ -241,10 +242,16 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.match(savedInfo.info.text, /Baterie/);
     const readInfo = await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json();
     assert.equal(readInfo.info.author, "Tester");
+    const badPassword = await fetch(`http://127.0.0.1:${appPort}/api/node-info`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ author: "Jana", key: infoKey, password: "spatne", text: "Anténa: 5 dBi" }),
+    });
+    assert.equal(badPassword.status, 403);
     const changeInfo = await fetch(`http://127.0.0.1:${appPort}/api/node-info`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ author: "Jana", key: infoKey, text: "Anténa: 5 dBi" }),
+      body: JSON.stringify({ author: "Jana", key: infoKey, password: "tajne123", text: "Anténa: 5 dBi" }),
     });
     assert.equal(changeInfo.status, 200);
     assert.equal((await changeInfo.json()).status, "pending");

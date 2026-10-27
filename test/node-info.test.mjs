@@ -13,6 +13,7 @@ test("node info publishes the first text and requires approval for changes", () 
     const first = store.submit({
       author: "Petr",
       nodeKey: key,
+      password: "tajne123",
       text: "Hardware: RAK v2\nBaterie: 10 Ah\nPanel: 20 W",
     }, 1000);
     assert.equal(first.status, "published");
@@ -22,9 +23,19 @@ test("node info publishes the first text and requires approval for changes", () 
     assert.equal(store.count(), 1);
     assert.equal(store.pendingCount(), 0);
 
+    const wrong = store.submit({
+      author: "Jana",
+      nodeKey: key,
+      password: "spatne",
+      text: "Anténa: 5 dBi",
+    }, 2000);
+    assert.equal(wrong.error, "bad_password");
+    assert.equal(store.pendingCount(), 0);
+
     const second = store.submit({
       author: "Jana",
       nodeKey: key,
+      password: "tajne123",
       text: "Anténa: 5 dBi",
     }, 2000);
     assert.equal(second.status, "pending");
@@ -56,8 +67,8 @@ test("node info can reject a pending change and keeps the published text", () =>
   const store = createNodeInfoStore(join(directory, "node-info.sqlite"));
   const key = "b".repeat(64);
   try {
-    store.submit({ nodeKey: key, text: "Původní text" }, 1000);
-    store.submit({ nodeKey: key, text: "Navrhovaná změna" }, 2000);
+    store.submit({ nodeKey: key, password: "tajne123", text: "Původní text" }, 1000);
+    store.submit({ nodeKey: key, password: "tajne123", text: "Navrhovaná změna" }, 2000);
     assert.equal(store.reject(key), true);
     assert.equal(store.get(key).text, "Původní text");
     assert.equal(store.pendingCount(), 0);
@@ -72,8 +83,9 @@ test("node info rejects invalid node keys and empty text", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-node-info-"));
   const store = createNodeInfoStore(join(directory, "node-info.sqlite"));
   try {
-    assert.equal(store.submit({ nodeKey: "short", text: "test" }), null);
-    assert.equal(store.submit({ nodeKey: "c".repeat(64), text: "   " }), null);
+    assert.equal(store.submit({ nodeKey: "short", password: "tajne123", text: "test" }), null);
+    assert.equal(store.submit({ nodeKey: "c".repeat(64), password: "tajne123", text: "   " }), null);
+    assert.equal(store.submit({ nodeKey: "c".repeat(64), text: "bez hesla" }).error, "password_required");
     assert.equal(store.count(), 0);
     assert.equal(store.pendingCount(), 0);
   } finally {

@@ -1,6 +1,25 @@
+import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import Database from "better-sqlite3";
+
+function hashPassword(password) {
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(String(password), salt, 64).toString("hex");
+  return `scrypt$${salt}$${hash}`;
+}
+
+function passwordMatches(password, stored) {
+  const [scheme, salt, hash] = String(stored || "").split("$");
+  if (scheme !== "scrypt" || !salt || !hash) return false;
+  const expected = Buffer.from(hash, "hex");
+  const actual = scryptSync(String(password || ""), salt, 64);
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+function validPassword(password) {
+  return typeof password === "string" && password.length >= 6 && password.length <= 128;
+}
 
 function mapRow(row) {
   if (!row) return null;
@@ -36,7 +55,8 @@ export function createNodeInfoStore(dbPath) {
       text TEXT NOT NULL,
       author TEXT,
       created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL
+      updated_at INTEGER NOT NULL,
+      edit_password_hash TEXT
     );
     CREATE INDEX IF NOT EXISTS node_info_updated ON node_info (updated_at DESC);
     CREATE TABLE IF NOT EXISTS node_info_pending (
@@ -49,16 +69,23 @@ export function createNodeInfoStore(dbPath) {
     CREATE INDEX IF NOT EXISTS node_info_pending_created ON node_info_pending (created_at DESC);
   `);
 
+  try {
+    db.exec("ALTER TABLE node_info ADD COLUMN edit_password_hash TEXT");
+  } catch {
+    // Column already exists.
+  }
+
   const selectOne = db.prepare("SELECT * FROM node_info WHERE node_key = ?");
   const selectAll = db.prepare("SELECT * FROM node_info ORDER BY updated_at DESC LIMIT ?");
   const countRows = db.prepare("SELECT COUNT(*) AS total FROM node_info");
   const upsertRow = db.prepare(`
-    INSERT INTO node_info (node_key, text, author, created_at, updated_at)
-    VALUES (@node_key, @text, @author, @created_at, @updated_at)
+    INSERT INTO node_info (node_key, text, author, created_at, updated_at, edit_password_hash)
+    VALUES (@node_key, @text, @author, @created_at, @updated_at, @edit_password_hash)
     ON CONFLICT(node_key) DO UPDATE SET
       text = excluded.text,
       author = excluded.author,
-      updated_at = excluded.updated_at
+      updated_at = excluded.updated_at,
+      edit_password_hash = excluded.edit_password_hash
   `);
   const deleteRow = db.prepare("DELETE FROM node_info WHERE node_key = ?");
   const selectPendingOne = db.prepare(`
@@ -94,12 +121,13 @@ export function createNodeInfoStore(dbPath) {
     return { author, nodeKey, text };
   }
 
-  function publish(entry, now = Date.now()) {
+  function publish(entry, now = Date.now(), passwordHash = null) {
     const value = validEntry(entry);
     if (!value) return null;
     upsertRow.run({
       author: value.author,
       created_at: now,
+      edit_password_hash: passwordHash,
       node_key: value.nodeKey,
       text: value.text,
       updated_at: now,
@@ -112,12 +140,13 @@ export function createNodeInfoStore(dbPath) {
       const key = String(nodeKey || "").toLowerCase();
       const pending = selectPendingOne.get(key);
       if (!pending) return null;
+      const current = selectOne.get(key);
       const info = db.transaction(() => {
         const published = publish({
           author: pending.author,
           nodeKey: key,
           text: pending.text,
-        }, now);
+        }, now, current?.edit_password_hash || null);
         deletePending.run(key);
         return published;
       })();
@@ -144,7 +173,15 @@ export function createNodeInfoStore(dbPath) {
       if (!value) return null;
       const current = selectOne.get(value.nodeKey);
       if (!current) {
-        return { info: publish(value, now), status: "published" };
+        if (!validPassword(entry?.password)) return { error: "password_required" };
+        return {
+          info: publish(value, now, hashPassword(entry.password)),
+          status: "published",
+        };
+      }
+      if (!current.edit_password_hash) return { error: "password_missing" };
+      if (!passwordMatches(entry?.password, current.edit_password_hash)) {
+        return { error: "bad_password" };
       }
       upsertPending.run({
         author: value.author,

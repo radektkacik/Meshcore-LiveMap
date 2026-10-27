@@ -2308,14 +2308,32 @@ async function handleRequest(request, response) {
       sendJson(response, 400, { error: "Info musí mít 5 až 1000 znaků." });
       return;
     }
+    const password = String(payload?.password || "");
+    if (password.length < 6 || password.length > 128) {
+      sendJson(response, 400, { error: "Heslo musí mít 6 až 128 znaků." });
+      return;
+    }
     const result = nodeInfoStore.submit({
       author,
       ipHash: createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16),
       nodeKey: key,
+      password,
       text,
     });
     if (!result) {
       sendJson(response, 400, { error: "Info se nepodařilo uložit." });
+      return;
+    }
+    if (result.error === "bad_password") {
+      sendJson(response, 403, { error: "Nesprávné heslo pro úpravu tohoto info." });
+      return;
+    }
+    if (result.error === "password_missing") {
+      sendJson(response, 409, { error: "U tohoto info není nastavené heslo. Kontaktujte správce." });
+      return;
+    }
+    if (result.error === "password_required") {
+      sendJson(response, 400, { error: "Pro první vložení nastavte heslo alespoň 6 znaků." });
       return;
     }
     notifyNodeInfo(result.info, result.status);

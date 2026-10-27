@@ -671,7 +671,7 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 .photo-dialog header p { margin: 0; color: var(--muted); font: 11px "DM Mono", monospace; }
 .photo-dialog form { display: flex; flex-direction: column; gap: 10px; }
 .photo-dialog label { display: flex; flex-direction: column; gap: 4px; color: var(--muted); font: 10px "DM Mono", monospace; }
-.photo-dialog input[type="text"] { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; color: #263b31; background: #fff; font: 12px Manrope, sans-serif; }
+.photo-dialog input[type="text"], .photo-dialog input[type="password"] { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; color: #263b31; background: #fff; font: 12px Manrope, sans-serif; }
 .photo-dialog textarea, .photo-dialog select { width: 100%; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; color: #263b31; background: #fff; font: 12px Manrope, sans-serif; }
 .photo-dialog textarea { min-height: 90px; resize: vertical; }
 .photo-dialog input[type="file"] { padding: 5px 0; color: #3f584e; font: 11px Manrope, sans-serif; }
@@ -803,7 +803,7 @@ html[data-theme="dark"] .node-photo-add { color: #5fd0a5; background: rgba(7, 14
 html[data-theme="dark"] .node-user-info-edit { color: #5fd0a5; background: rgba(7, 142, 98, 0.16); border-color: rgba(7, 142, 98, 0.4); }
 html[data-theme="dark"] .node-user-info-text { color: #e6ecef; }
 html[data-theme="dark"] .photo-dialog { color: #e6ecef; background: #161d24; border-color: var(--line); }
-html[data-theme="dark"] .photo-dialog input[type="text"] { color: #e6ecef; background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .photo-dialog input[type="text"], html[data-theme="dark"] .photo-dialog input[type="password"] { color: #e6ecef; background: #1b232b; border-color: var(--line); }
 html[data-theme="dark"] .photo-dialog textarea,
 html[data-theme="dark"] .photo-dialog select { color: #e6ecef; background: #1b232b; border-color: var(--line); }
 html[data-theme="dark"] .photo-dialog label.feedback-check { color: #cfd9dd; }

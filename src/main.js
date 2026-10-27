@@ -288,6 +288,8 @@ const elements = {
   nodeInfoForm: document.querySelector("#node-info-form"),
   nodeInfoNode: document.querySelector("#node-info-node"),
   nodeInfoNote: document.querySelector("#node-info-note"),
+  nodeInfoPassword: document.querySelector("#node-info-password"),
+  nodeInfoPasswordLabel: document.querySelector("#node-info-password-label"),
   nodeInfoStatus: document.querySelector("#node-info-status"),
   nodeInfoSubmit: document.querySelector("#node-info-submit"),
   nodeInfoText: document.querySelector("#node-info-text"),
@@ -1637,9 +1639,13 @@ function renderNodeInfoDialog() {
   elements.nodeInfoClose.setAttribute("aria-label", t("nodeInfo.cancel"));
   elements.nodeInfoTextLabel.textContent = t("nodeInfo.textLabel");
   elements.nodeInfoText.placeholder = t("nodeInfo.textPlaceholder");
+  const hasCurrent = Boolean(state.nodeInfoTarget && state.nodeInfoCache.get(state.nodeInfoTarget.key)?.info?.text);
+  elements.nodeInfoPasswordLabel.textContent = hasCurrent ? t("nodeInfo.passwordLabelEdit") : t("nodeInfo.passwordLabelNew");
+  elements.nodeInfoPassword.placeholder = hasCurrent ? t("nodeInfo.passwordPlaceholderEdit") : t("nodeInfo.passwordPlaceholderNew");
+  elements.nodeInfoPassword.autocomplete = hasCurrent ? "current-password" : "new-password";
   elements.nodeInfoAuthorLabel.textContent = t("nodeInfo.authorLabel");
   elements.nodeInfoAuthor.placeholder = t("nodeInfo.authorPlaceholder");
-  elements.nodeInfoNote.textContent = t("nodeInfo.note");
+  elements.nodeInfoNote.textContent = hasCurrent ? t("nodeInfo.noteEdit") : t("nodeInfo.noteNew");
   elements.nodeInfoSubmit.textContent = t("nodeInfo.submit");
   elements.nodeInfoCancel.textContent = t("nodeInfo.cancel");
   const target = state.nodeInfoTarget;
@@ -1657,6 +1663,7 @@ async function openNodeInfoDialog(node) {
   setNodeInfoStatus("");
   elements.nodeInfoText.value = cached?.info?.text || "";
   elements.nodeInfoAuthor.value = cached?.info?.author || "";
+  elements.nodeInfoPassword.value = "";
   renderNodeInfoDialog();
   if (!elements.nodeInfoDialog.open) elements.nodeInfoDialog.showModal();
   if (!cached) {
@@ -1666,6 +1673,7 @@ async function openNodeInfoDialog(node) {
       state.nodeInfoCache.set(key, { at: Date.now(), info: data.info || null });
       elements.nodeInfoText.value = data.info?.text || "";
       elements.nodeInfoAuthor.value = data.info?.author || "";
+      renderNodeInfoDialog();
     } catch (error) {
       console.error("Uživatelské info nodu se nepodařilo načíst", error);
     }
@@ -6479,6 +6487,11 @@ elements.nodeInfoForm.addEventListener("submit", async (event) => {
     setNodeInfoStatus(t("nodeInfo.tooLong"), true);
     return;
   }
+  const password = elements.nodeInfoPassword.value;
+  if (password.length < 6 || password.length > 128) {
+    setNodeInfoStatus(t("nodeInfo.passwordTooShort"), true);
+    return;
+  }
   state.nodeInfoSaving = true;
   elements.nodeInfoSubmit.disabled = true;
   setNodeInfoStatus(t("nodeInfo.saving"));
@@ -6486,6 +6499,7 @@ elements.nodeInfoForm.addEventListener("submit", async (event) => {
     const data = await postJson("/api/node-info", {
       author: elements.nodeInfoAuthor.value.trim(),
       key: target.key,
+      password,
       text,
     });
     if (data.status === "pending") {
