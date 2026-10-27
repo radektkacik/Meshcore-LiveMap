@@ -3099,6 +3099,18 @@ async function handleRequest(request, response) {
     return;
   }
 
+  const changelogPath = sitePath("/changelog");
+  if (decodedPathname === changelogPath || decodedPathname === `${changelogPath}/`) {
+    const changelogFile = join(dist, "changelog.html");
+    if (!existsSync(changelogFile)) {
+      response.writeHead(503, { "Content-Type": "text/plain; charset=utf-8" });
+      response.end("Changelog není k dispozici");
+      return;
+    }
+    sendFile(response, changelogFile);
+    return;
+  }
+
   const relativePath = normalize(decodedPathname).replace(/^(\.\.(\/|\\|$))+/, "");
   let filePath = join(dist, relativePath === "/" ? "index.html" : relativePath);
   if (!filePath.startsWith(dist)) {

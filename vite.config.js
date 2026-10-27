@@ -1,5 +1,6 @@
 import { execSync } from "node:child_process";
 import { defineConfig } from "vite";
+import { buildChangelog } from "./scripts/build-changelog.mjs";
 
 function buildId() {
   const now = new Date();
@@ -13,11 +14,28 @@ function buildId() {
   }
 }
 
+const currentBuildId = buildId();
+
+function changelogPlugin() {
+  let outDir = "dist";
+  return {
+    name: "meshcore-changelog",
+    apply: "build",
+    configResolved(config) {
+      outDir = config.build.outDir;
+    },
+    closeBundle() {
+      buildChangelog(outDir, { buildId: currentBuildId });
+    },
+  };
+}
+
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/",
   define: {
-    __BUILD_ID__: JSON.stringify(buildId()),
+    __BUILD_ID__: JSON.stringify(currentBuildId),
   },
+  plugins: [changelogPlugin()],
   server: {
     proxy: {
       "/api": {
