@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-27 (prod `20261027T113026Z`, beta `20261027T113000Z`)  
+Aktualizováno: 2026-10-27 (prod `20261027T115403Z`, beta `20261027T115342Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -17,20 +17,20 @@ Aktualizováno: 2026-10-27 (prod `20261027T113026Z`, beta `20261027T113000Z`)
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261027T113026Z`
-- Build: `20261027-1130-c26b018`
-- Asset: `index-B8Nlh5bg.js` + `wasm-bundle-DEIvxCn4.js`
+- Release: `20261027T115403Z`
+- Build: `20261027-1154-c992da8`
+- Asset: `index-uOQ61WAK.js` + `wasm-bundle-D6FHrkgs.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261027T113026Z.tar.gz`
-- Tag: `prod-20261027-1130`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261027T115403Z.tar.gz`
+- Tag: `prod-20261027-1154`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261027T113000Z`
-- Build: `20261027-1130-c26b018`
-- Asset: `index-vAyFDssF.js` + `wasm-bundle-B6I7AbTc.js`
+- Release: `20261027T115342Z`
+- Build: `20261027-1153-c992da8`
+- Asset: `index-P5NQvZdR.js` + `wasm-bundle-DjXVvL9S.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261027T113000Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261027T115342Z.tar.gz`
 - BETA badge + výrazný banner v HUD s upozorněním „BETA VERZE“ a tlačítkem na produkci
 
 ### 2b repeater tabulka
@@ -167,7 +167,7 @@ Aktualizováno: 2026-10-27 (prod `20261027T113026Z`, beta `20261027T113000Z`)
 - Rollback aktuální produkce `20261026T194022Z` na předchozí `20261026T192013Z`:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261027T113026Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261027T115403Z'
 ```
 
 ## 7. Deploy konvence
