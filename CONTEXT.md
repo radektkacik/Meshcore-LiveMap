@@ -1,6 +1,6 @@
 # Kontext projektu MeshCore CZ Live Map
 
-Aktualizováno: 2026-10-27 (prod `20261027T083755Z`, beta `20261027T083724Z`)  
+Aktualizováno: 2026-10-27 (prod `20261027T085711Z`, beta `20261027T085652Z`)  
 Účel: předání kontextu do nového vlákna. Neobsahuje IP adresy ani přihlašovací údaje.
 
 ## 1. Repozitář a základní údaje
@@ -17,20 +17,20 @@ Aktualizováno: 2026-10-27 (prod `20261027T083755Z`, beta `20261027T083724Z`)
 
 ### Produkce
 - URL: https://mapa.meshcore.cz/
-- Release: `20261027T083755Z`
-- Build: `20261027-0837-60f30cd`
-- Asset: `index-kK6ONOet.js` + `wasm-bundle-DxYR-WCC.js`
+- Release: `20261027T085711Z`
+- Build: `20261027-0857-fe570ec`
+- Asset: `index-CWKytp-m.js` + `wasm-bundle-B8AL99Qd.js`
 - Služba `meshcore-live-map`, port 4173, `APP_DIR=/opt/meshcore-live-map`
-- Poslední záloha: `/opt/meshcore-live-map/backups/20261027T083755Z.tar.gz`
-- Tag: `prod-20261027-0837`
+- Poslední záloha: `/opt/meshcore-live-map/backups/20261027T085711Z.tar.gz`
+- Tag: `prod-20261027-0857`
 
 ### Beta
 - URL: https://2b.meshcore.cz/map/
-- Release: `20261027T083724Z`
-- Build: `20261027-0837-60f30cd`
-- Asset: `index-BUDQoVce.js` + `wasm-bundle-BSlFXro5.js`
+- Release: `20261027T085652Z`
+- Build: `20261027-0856-fe570ec`
+- Asset: `index-BcJ6NHpM.js` + `wasm-bundle-6baFazXD.js`
 - Služba `meshcore-live-map-stage`, port 4174, `APP_DIR=/opt/meshcore-live-map-stage`
-- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261027T083724Z.tar.gz`
+- Poslední záloha: `/opt/meshcore-live-map-stage/backups/20261027T085652Z.tar.gz`
 - BETA badge + odkaz „produkce ↗“ v beta buildu
 
 ### 2b repeater tabulka
@@ -167,7 +167,7 @@ Aktualizováno: 2026-10-27 (prod `20261027T083755Z`, beta `20261027T083724Z`)
 - Rollback aktuální produkce `20261026T194022Z` na předchozí `20261026T192013Z`:
 
 ```bash
-ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261027T083755Z'
+ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261027T085711Z'
 ```
 
 ## 7. Deploy konvence

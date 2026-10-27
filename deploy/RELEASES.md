@@ -231,6 +231,8 @@
 | 2026-10-27 08:27 | `20261027T082733Z.tar.gz` | `20261027-0827-0828bb1` | Prod: stejný popisek přepínače | `index.html`, `src/i18n.js`, `README.md`, `CONTEXT.md` |
 | 2026-10-27 08:37 | `20261027T083724Z.tar.gz` (stage APP_DIR) | `20261027-0837-60f30cd` | Beta: uživatelské info k nodu (hardware, baterie, panel, anténa…), editace z detailu nodu, Telegram notifikace, moderace v `/admin/node-info` | `node-info.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `.env.example`, deploy skripty, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-27 08:37 | `20261027T083755Z.tar.gz` | `20261027-0837-60f30cd` | Prod: stejné uživatelské info k nodům | `node-info.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `.env.example`, deploy skripty, testy, `README.md`, `CONTEXT.md` |
+| 2026-10-27 08:56 | `20261027T085652Z.tar.gz` (stage APP_DIR) | `20261027-0856-fe570ec` | Beta: hint přepínače fotek bez „schválené“ – „Zobrazí pouze nody s fotkou.“ | `index.html`, `src/i18n.js`, `CONTEXT.md` |
+| 2026-10-27 08:57 | `20261027T085711Z.tar.gz` | `20261027-0857-fe570ec` | Prod: stejný hint přepínače fotek | `index.html`, `src/i18n.js`, `CONTEXT.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
