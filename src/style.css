@@ -61,8 +61,13 @@ button { color: inherit; }
 .hud-title strong { font-size: 16px; letter-spacing: -0.025em; }
 .beta-badge { display: inline-block; padding: 1px 5px; border-radius: 4px; color: #fff; background: #d87412; font: 700 9px/1.4 "DM Mono", monospace; letter-spacing: 0.08em; }
 .beta-badge[hidden] { display: none; }
-.beta-prod-link { color: #4a6257; font: 10px "DM Mono", monospace; letter-spacing: 0.04em; text-decoration: none; }
-.beta-prod-link:hover { color: var(--green); }
+.beta-notice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 8px 0 2px; padding: 10px; border: 1px solid #d87412; border-radius: 8px; color: #7a3e00; background: #fff4e6; }
+.beta-notice[hidden] { display: none; }
+.beta-notice-copy { flex: 1 1 170px; min-width: 0; }
+.beta-notice strong { display: block; font: 800 12px/1.2 Manrope, system-ui, sans-serif; letter-spacing: 0.04em; }
+.beta-notice span { display: block; margin-top: 3px; font-size: 11px; line-height: 1.35; }
+.beta-notice a { flex: 0 0 auto; padding: 6px 9px; border-radius: 6px; color: #fff; background: #d87412; font: 700 11px Manrope, system-ui, sans-serif; text-decoration: none; white-space: nowrap; }
+.beta-notice a:hover { background: #b9600c; }
 .lang-toggle { padding: 0; color: #4a6257; background: transparent; font: 700 10px "DM Mono", monospace; letter-spacing: 0.04em; cursor: pointer; }
 .lang-toggle:hover { color: var(--green); }
 .hud-title small { display: block; margin-top: 2px; color: var(--muted); font: 11px "DM Mono", monospace; text-transform: uppercase; letter-spacing: 0.12em; }
@@ -777,6 +782,9 @@ html[data-theme="dark"] .activity-resize:focus-visible { color: #5fd0a5; backgro
 html[data-theme="dark"] .hud-body { border-color: var(--line); }
 html[data-theme="dark"] .logo-button { background: #1b232b; }
 html[data-theme="dark"] .external-link { color: #c3d0d6; }
+html[data-theme="dark"] .beta-notice { color: #ffd8a3; background: #2a1d0f; border-color: #b86c16; }
+html[data-theme="dark"] .beta-notice a { color: #1b1209; background: #f0a044; }
+html[data-theme="dark"] .beta-notice a:hover { background: #ffb45c; }
 html[data-theme="dark"] .status-line time { color: #a9b8bf; }
 html[data-theme="dark"] .metrics { background: rgba(255, 255, 255, 0.06); }
 html[data-theme="dark"] .metrics strong { color: #eef4f6; }

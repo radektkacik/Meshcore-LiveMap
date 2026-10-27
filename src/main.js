@@ -157,6 +157,10 @@ const elements = {
   baseLayerButtons: [...document.querySelectorAll("#base-layer-buttons button")],
   buildStamp: document.querySelector("#build-stamp"),
   betaBadge: document.querySelector("#beta-badge"),
+  betaNotice: document.querySelector("#beta-notice"),
+  betaNoticeLink: document.querySelector("#beta-notice-link"),
+  betaNoticeText: document.querySelector("#beta-notice-text"),
+  betaNoticeTitle: document.querySelector("#beta-notice-title"),
   connectionDot: document.querySelector("#connection-dot"),
   connectionLabel: document.querySelector("#connection-label"),
   dataStale: document.querySelector("#data-stale"),
@@ -336,12 +340,13 @@ elements.buildStamp.textContent = `build ${typeof __BUILD_ID__ === "string" ? __
 if (IS_BETA) {
   elements.betaBadge.hidden = false;
   document.title = "MeshCore CZ · beta";
-  const prodLink = document.createElement("a");
-  prodLink.className = "beta-prod-link";
-  prodLink.href = getLocale() === "en" ? "https://mapa.meshcore.cz/?lang=en" : "https://mapa.meshcore.cz/";
-  prodLink.textContent = t("lang.production");
-  prodLink.title = t("lang.productionTitle");
-  elements.betaBadge.after(prodLink);
+  elements.betaNotice.hidden = false;
+  elements.betaNoticeTitle.textContent = t("lang.betaTitle");
+  elements.betaNoticeText.textContent = t("lang.betaNotice");
+  elements.betaNoticeLink.textContent = t("lang.betaCta");
+  elements.betaNoticeLink.href = getLocale() === "en"
+    ? "https://mapa.meshcore.cz/?lang=en"
+    : "https://mapa.meshcore.cz/";
 } else {
   elements.exportToggle.hidden = true;
 }
