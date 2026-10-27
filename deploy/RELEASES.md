@@ -223,6 +223,8 @@
 | 2026-10-26 19:20 | `20261026T192013Z.tar.gz` | `20261026-1920-4f42d90` | Prod: stejné nahrávání až 5 fotek najednou | `index.html`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `README.md`, `CONTEXT.md` |
 | 2026-10-26 19:39 | `20261026T193936Z.tar.gz` (stage APP_DIR) | `20261026-1939-7519e41` | Beta: administrace `/map/admin` s heslem, session cookie, přehledem, moderací fotek/žádostí a zpětnou vazbou; staré tokenové URL zůstávají | `.env.example`, `server.mjs`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-26 19:40 | `20261026T194022Z.tar.gz` | `20261026-1940-7519e41` | Prod: stejná administrace `/admin`; na serveru nastaveno `ADMIN_PASSWORD` a heslo uloženo mimo repo | `.env.example`, `server.mjs`, testy, `README.md`, `CONTEXT.md` |
+| 2026-10-27 08:20 | `20261027T082029Z.tar.gz` (stage APP_DIR) | `20261027-0820-a7c5cdb` | Beta: fotky se zveřejňují ihned (`PHOTO_AUTO_APPROVE=1`), Telegram notifikace s odkazem na schválené fotky, admin může smazat; klient obnoví galerii a zobrazí „zveřejněno“ | `.env.example`, `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, testy, `README.md`, `CONTEXT.md` |
+| 2026-10-27 08:20 | `20261027T082050Z.tar.gz` | `20261027-0820-a7c5cdb` | Prod: stejné okamžité zveřejnění fotek s možností dodatečného smazání | `.env.example`, `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
