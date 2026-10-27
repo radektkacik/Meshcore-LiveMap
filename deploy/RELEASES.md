@@ -229,6 +229,8 @@
 | 2026-10-27 08:25 | `20261027T082519Z.tar.gz` | `20261027-0825-ee388fd` | Prod: stejné volitelné popisy fotek | `src/main.js`, `src/i18n.js`, `src/style.css`, `README.md`, `CONTEXT.md` |
 | 2026-10-27 08:27 | `20261027T082715Z.tar.gz` (stage APP_DIR) | `20261027-0827-0828bb1` | Beta: přepínač přejmenován na „Jen nody s fotkou“ (jednotné číslo) | `index.html`, `src/i18n.js`, `README.md`, `CONTEXT.md` |
 | 2026-10-27 08:27 | `20261027T082733Z.tar.gz` | `20261027-0827-0828bb1` | Prod: stejný popisek přepínače | `index.html`, `src/i18n.js`, `README.md`, `CONTEXT.md` |
+| 2026-10-27 08:37 | `20261027T083724Z.tar.gz` (stage APP_DIR) | `20261027-0837-60f30cd` | Beta: uživatelské info k nodu (hardware, baterie, panel, anténa…), editace z detailu nodu, Telegram notifikace, moderace v `/admin/node-info` | `node-info.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `.env.example`, deploy skripty, testy, `README.md`, `CONTEXT.md` |
+| 2026-10-27 08:37 | `20261027T083755Z.tar.gz` | `20261027-0837-60f30cd` | Prod: stejné uživatelské info k nodům | `node-info.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `.env.example`, deploy skripty, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
