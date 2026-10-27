@@ -332,7 +332,6 @@ if (IS_BETA) {
 } else {
   elements.exportToggle.hidden = true;
 }
-elements.photosOnlyToggle.closest("label").hidden = true;
 
 const nextLocale = getLocale() === "cs" ? "en" : "cs";
 const langButton = document.createElement("button");
