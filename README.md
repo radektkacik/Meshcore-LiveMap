@@ -38,6 +38,7 @@ VITE_BASE_PATH=/map/ npm run build
 Build zároveň vygeneruje stránku `/changelog` (na betě `/map/changelog`)
 z tabulky v [`deploy/RELEASES.md`](deploy/RELEASES.md). Stránka zobrazuje
 build, datum, prostředí a popis změny; odkaz „Změny verzí“ je v patičce mapy.
+Produkční build zobrazuje jen záznamy `Prod:` a beta build jen `Beta:`.
 
 ## Aktualizace VPS
 

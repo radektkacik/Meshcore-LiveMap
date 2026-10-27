@@ -16,10 +16,15 @@ function codeValue(value) {
 }
 
 function releaseEnvironment(change) {
-  const match = /^(Beta|Prod|Stage):\s*(.*)$/i.exec(change || "");
+  const match = /^(Beta|Prod|Stage)(?:\s+fix)?:\s*(.*)$/i.exec(change || "");
   if (!match) return { environment: "", text: change || "" };
-  const environment = match[1].toLowerCase() === "prod" ? "Produkce" : match[1];
+  const environment = match[1].toLowerCase() === "prod" ? "Produkce" : "Beta";
   return { environment, text: match[2] };
+}
+
+export function releasesForEnvironment(rows, environment = "Produkce") {
+  const wanted = environment === "Beta" ? "Beta" : "Produkce";
+  return rows.filter((row) => row.environment === wanted);
 }
 
 export function parseReleases(markdown) {
@@ -56,8 +61,11 @@ function formatChange(value) {
   return escapeHtml(value).replace(/`([^`]+)`/g, "<code>$1</code>");
 }
 
-export function renderChangelog({ buildId = "", rows = [] } = {}) {
+export function renderChangelog({ buildId = "", environment = "Produkce", rows = [] } = {}) {
   const latest = rows[0];
+  const environmentLabel = environment === "Beta" ? "Beta" : "Produkce";
+  const historyLabel = environmentLabel === "Beta" ? "beta" : "produkčních";
+  const historyFilter = environmentLabel === "Beta" ? "beta nasazení" : "produkční nasazení";
   const items = rows.map((row) => `
       <li class="release">
         <div class="release-meta">
@@ -74,7 +82,7 @@ export function renderChangelog({ buildId = "", rows = [] } = {}) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f5f3ed" />
-    <meta name="description" content="Historie změn a nasazených verzí MeshCore CZ live mapy" />
+    <meta name="description" content="Historie změn a nasazených verzí MeshCore CZ live mapy (${environmentLabel})" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <title>Změny verzí · MeshCore CZ</title>
     <style>
@@ -162,7 +170,7 @@ export function renderChangelog({ buildId = "", rows = [] } = {}) {
       <header>
         <div>
           <h1>Změny verzí</h1>
-          <p class="subtitle">Historie nasazení MeshCore CZ live mapy · ${rows.length} záznamů</p>
+          <p class="subtitle">Historie ${historyLabel} nasazení MeshCore CZ live mapy · ${rows.length} záznamů</p>
         </div>
         <a class="back" href="../">← Zpět na mapu</a>
       </header>
@@ -182,7 +190,7 @@ export function renderChangelog({ buildId = "", rows = [] } = {}) {
 ${items}
       </ol>
       <footer>
-        <span>Zdroj: <code>deploy/RELEASES.md</code> · novější záznamy jsou nahoře · aktuální build může být novější než poslední zapsaný záznam</span>
+        <span>Zdroj: <code>deploy/RELEASES.md</code> · zobrazena pouze ${historyFilter} · novější záznamy jsou nahoře · aktuální build může být novější než poslední zapsaný záznam</span>
         <a href="../">Zpět na mapu</a>
       </footer>
     </main>
@@ -191,13 +199,13 @@ ${items}
 `;
 }
 
-export function buildChangelog(outDir = "dist", { buildId = "" } = {}) {
+export function buildChangelog(outDir = "dist", { buildId = "", environment = "Produkce" } = {}) {
   const root = process.cwd();
   const markdown = readFileSync(join(root, "deploy/RELEASES.md"), "utf8");
-  const rows = parseReleases(markdown);
+  const rows = releasesForEnvironment(parseReleases(markdown), environment);
   const target = resolve(root, outDir, "changelog.html");
   mkdirSync(dirname(target), { recursive: true });
-  writeFileSync(target, renderChangelog({ buildId, rows }));
+  writeFileSync(target, renderChangelog({ buildId, environment, rows }));
   return rows.length;
 }
 

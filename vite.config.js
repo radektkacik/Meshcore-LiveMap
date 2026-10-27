@@ -15,6 +15,7 @@ function buildId() {
 }
 
 const currentBuildId = buildId();
+const changelogEnvironment = process.env.VITE_BETA === "1" ? "Beta" : "Produkce";
 
 function changelogPlugin() {
   let outDir = "dist";
@@ -25,7 +26,7 @@ function changelogPlugin() {
       outDir = config.build.outDir;
     },
     closeBundle() {
-      buildChangelog(outDir, { buildId: currentBuildId });
+      buildChangelog(outDir, { buildId: currentBuildId, environment: changelogEnvironment });
     },
   };
 }

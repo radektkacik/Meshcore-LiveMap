@@ -305,6 +305,7 @@ ssh -i ./cntb root@<VPS_HOST> \
 
 Po každém nasazení doplnit řádek: datum UTC, `RELEASE_ID` (shodný s názvem zálohy), build stamp, stručný popis a dotčené soubory.
 Z této tabulky se při buildu generuje veřejná stránka `/changelog` (beta `/map/changelog`), takže se změny zobrazí i uživatelům mapy.
+Produkční stránka zobrazuje jen záznamy začínající `Prod:` (nebo `Prod fix:`), beta stránka jen `Beta:`/`Beta fix:`.
 Nová top-level `*.mjs` je nutné přidat do `deploy/update-vps.sh`, `deploy/update-vps-staging.sh` a `deploy/apply-release.sh`, jinak deploy selže.
 
 ## Přepsání historie
