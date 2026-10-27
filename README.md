@@ -126,7 +126,7 @@ přihlašovací údaje zůstávají pouze na serveru.
   `GET /api/feedback?token=<FEEDBACK_TOKEN>` (JSON). Bez správného tokenu vrací 404.
 - `GET /api/photos?key=<public_key>` vrací schválené fotky nodu. `GET
   /api/photos/nodes` vrací počty schválených fotek podle nodů pro přepínač
-  „Jen nody s fotkami“ v HUD. `POST /api/photos`
+  „Jen nody s fotkou“ v HUD. `POST /api/photos`
   přijímá binární JPEG/PNG/WebP (max 5 MB) s hlavičkami `X-Photo-Key`,
   `X-Photo-Author` a `X-Photo-Consent: 1`; volitelný `X-Photo-Caption` lze
   zadat u každé fotky (např. hardware, baterie, panel). Klient umožní vybrat až 5 fotek
