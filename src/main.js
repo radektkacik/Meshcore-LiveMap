@@ -276,6 +276,19 @@ const elements = {
   neighborFocusCount: document.querySelector("#neighbor-focus-count"),
   neighborFocusName: document.querySelector("#neighbor-focus-name"),
   neighborFocusTitle: document.querySelector("#neighbor-focus-title"),
+  nodeInfoAuthor: document.querySelector("#node-info-author"),
+  nodeInfoAuthorLabel: document.querySelector("#node-info-author-label"),
+  nodeInfoCancel: document.querySelector("#node-info-cancel"),
+  nodeInfoClose: document.querySelector("#node-info-close"),
+  nodeInfoDialog: document.querySelector("#node-info-dialog"),
+  nodeInfoForm: document.querySelector("#node-info-form"),
+  nodeInfoNode: document.querySelector("#node-info-node"),
+  nodeInfoNote: document.querySelector("#node-info-note"),
+  nodeInfoStatus: document.querySelector("#node-info-status"),
+  nodeInfoSubmit: document.querySelector("#node-info-submit"),
+  nodeInfoText: document.querySelector("#node-info-text"),
+  nodeInfoTextLabel: document.querySelector("#node-info-text-label"),
+  nodeInfoTitle: document.querySelector("#node-info-title"),
   nodeLabelsToggle: document.querySelector("#node-labels-toggle"),
   photosOnlyToggle: document.querySelector("#photos-only-toggle"),
   observersToggle: document.querySelector("#observers-toggle"),
@@ -390,6 +403,8 @@ const state = {
   neighborFocusKey: null,
   nodeByKey: new Map(),
   nodeHistoryCache: new Map(),
+  nodeInfoCache: new Map(),
+  nodeInfoSaving: false,
   nodeAnalyticsCache: new Map(),
   nodeMarkerByKey: new Map(),
   nodeMarkers: [],
@@ -1391,6 +1406,13 @@ function setupNodePopup(popup, node) {
   const copyButton = root.querySelector(".node-key-copy");
   const linkButton = root.querySelector(".node-link-copy");
 
+  void loadNodeInfo(root, node);
+  root.querySelector(".node-user-info-edit")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void openNodeInfoDialog(node);
+  });
+
   qrButton?.addEventListener("click", async (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -1541,6 +1563,108 @@ function nodePhotos(node) {
       <div class="node-photos-list"><p class="node-photos-empty">${t("photos.loading")}</p></div>
     </div>
   `;
+}
+
+function nodeUserInfo(node) {
+  if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
+  return `
+    <section class="node-user-info" data-node-key="${escapeHtml(node.public_key.toLowerCase())}">
+      <div class="node-user-info-head">
+        <span>${t("nodeInfo.title")}</span>
+        <button class="node-user-info-edit" type="button">${t("nodeInfo.edit")}</button>
+      </div>
+      <div class="node-user-info-body"><p class="node-user-info-empty">${t("nodeInfo.loading")}</p></div>
+    </section>
+  `;
+}
+
+function renderNodeInfoSection(root, info) {
+  const body = root.querySelector(".node-user-info-body");
+  if (!body) return;
+  body.replaceChildren();
+  if (!info?.text) {
+    const empty = document.createElement("p");
+    empty.className = "node-user-info-empty";
+    empty.textContent = t("nodeInfo.empty");
+    body.appendChild(empty);
+    return;
+  }
+  const text = document.createElement("p");
+  text.className = "node-user-info-text";
+  text.textContent = info.text;
+  body.appendChild(text);
+  const meta = document.createElement("small");
+  meta.className = "node-user-info-meta";
+  meta.textContent = [info.author, info.updatedAt ? formatNodeDate(info.updatedAt) : null]
+    .filter(Boolean)
+    .join(" · ");
+  body.appendChild(meta);
+}
+
+async function loadNodeInfo(root, node) {
+  const key = String(node.public_key || "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(key) || !root.querySelector(".node-user-info")) return;
+  const cached = state.nodeInfoCache.get(key);
+  if (cached && Date.now() - cached.at < 60_000) {
+    renderNodeInfoSection(root, cached.info);
+    return;
+  }
+  try {
+    const data = await getJson(`/api/node-info?key=${encodeURIComponent(key)}`);
+    const info = data.info || null;
+    state.nodeInfoCache.set(key, { at: Date.now(), info });
+    if (root.isConnected) renderNodeInfoSection(root, info);
+  } catch (error) {
+    console.error("Uživatelské info nodu se nepodařilo načíst", error);
+    if (!root.isConnected) return;
+    const body = root.querySelector(".node-user-info-body");
+    if (body) body.textContent = t("nodeInfo.failed");
+  }
+}
+
+function setNodeInfoStatus(text, isError = false) {
+  elements.nodeInfoStatus.textContent = text;
+  elements.nodeInfoStatus.classList.toggle("error", Boolean(isError));
+}
+
+function renderNodeInfoDialog() {
+  elements.nodeInfoTitle.textContent = t("nodeInfo.dialogTitle");
+  elements.nodeInfoClose.setAttribute("aria-label", t("nodeInfo.cancel"));
+  elements.nodeInfoTextLabel.textContent = t("nodeInfo.textLabel");
+  elements.nodeInfoText.placeholder = t("nodeInfo.textPlaceholder");
+  elements.nodeInfoAuthorLabel.textContent = t("nodeInfo.authorLabel");
+  elements.nodeInfoAuthor.placeholder = t("nodeInfo.authorPlaceholder");
+  elements.nodeInfoNote.textContent = t("nodeInfo.note");
+  elements.nodeInfoSubmit.textContent = t("nodeInfo.submit");
+  elements.nodeInfoCancel.textContent = t("nodeInfo.cancel");
+  const target = state.nodeInfoTarget;
+  elements.nodeInfoNode.textContent = target
+    ? `${target.name || t("common.unknownNode")} · ${target.key.slice(0, 8).toUpperCase()}`
+    : "";
+}
+
+async function openNodeInfoDialog(node) {
+  const key = String(node.public_key || "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(key)) return;
+  state.nodeInfoTarget = { key, name: node.name || t("common.unknownNode") };
+  const cached = state.nodeInfoCache.get(key);
+  elements.nodeInfoForm.reset();
+  setNodeInfoStatus("");
+  elements.nodeInfoText.value = cached?.info?.text || "";
+  elements.nodeInfoAuthor.value = cached?.info?.author || "";
+  renderNodeInfoDialog();
+  if (!elements.nodeInfoDialog.open) elements.nodeInfoDialog.showModal();
+  if (!cached) {
+    try {
+      const data = await getJson(`/api/node-info?key=${encodeURIComponent(key)}`);
+      if (state.nodeInfoTarget?.key !== key) return;
+      state.nodeInfoCache.set(key, { at: Date.now(), info: data.info || null });
+      elements.nodeInfoText.value = data.info?.text || "";
+      elements.nodeInfoAuthor.value = data.info?.author || "";
+    } catch (error) {
+      console.error("Uživatelské info nodu se nepodařilo načíst", error);
+    }
+  }
 }
 
 function clearNeighborFocus() {
@@ -1698,6 +1822,7 @@ function nodePopupContent(node, active) {
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
     ${nodePhotos(node)}
+    ${nodeUserInfo(node)}
     ${basicDetails}
     ${trafficDetails}
     ${networkDetails}
@@ -6323,6 +6448,55 @@ elements.photoForm.addEventListener("submit", async (event) => {
   } finally {
     state.photoUploading = false;
     elements.photoSubmit.disabled = false;
+  }
+});
+
+elements.nodeInfoClose.addEventListener("click", () => elements.nodeInfoDialog.close());
+elements.nodeInfoCancel.addEventListener("click", () => elements.nodeInfoDialog.close());
+elements.nodeInfoDialog.addEventListener("click", (event) => {
+  if (event.target === elements.nodeInfoDialog) elements.nodeInfoDialog.close();
+});
+elements.nodeInfoDialog.addEventListener("close", () => {
+  state.nodeInfoTarget = null;
+  setNodeInfoStatus("");
+});
+elements.nodeInfoForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (state.nodeInfoSaving) return;
+  const target = state.nodeInfoTarget;
+  if (!target) return;
+  const text = elements.nodeInfoText.value.trim();
+  if (text.length < 5) {
+    setNodeInfoStatus(t("nodeInfo.tooShort"), true);
+    return;
+  }
+  if (text.length > 1000) {
+    setNodeInfoStatus(t("nodeInfo.tooLong"), true);
+    return;
+  }
+  state.nodeInfoSaving = true;
+  elements.nodeInfoSubmit.disabled = true;
+  setNodeInfoStatus(t("nodeInfo.saving"));
+  try {
+    const data = await postJson("/api/node-info", {
+      author: elements.nodeInfoAuthor.value.trim(),
+      key: target.key,
+      text,
+    });
+    const info = data.info || null;
+    state.nodeInfoCache.set(target.key, { at: Date.now(), info });
+    for (const section of document.querySelectorAll(`.node-user-info[data-node-key="${target.key}"]`)) {
+      renderNodeInfoSection(section, info);
+    }
+    setNodeInfoStatus(t("nodeInfo.saved"));
+    setTimeout(() => {
+      if (elements.nodeInfoDialog.open) elements.nodeInfoDialog.close();
+    }, 1_200);
+  } catch (error) {
+    setNodeInfoStatus(error.message || t("nodeInfo.failed"), true);
+  } finally {
+    state.nodeInfoSaving = false;
+    elements.nodeInfoSubmit.disabled = false;
   }
 });
 

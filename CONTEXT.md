@@ -67,6 +67,7 @@ Aktualizováno: 2026-10-27 (prod `20261027T082733Z`, beta `20261027T082715Z`)
 - Trasy: přerušení kvůli neznámému hopu nebo skoku >170 km je označené žlutým `?` s tooltipem; TRACE dostává barvy podle SNR i při více segmentech.
 - TRACE při zoomu ≥ 9 zobrazuje u každého hopu štítek se SNR (`12,5 dB`), barva podle kvality; max. 150 štítků. Funguje i v archivních oknech 5 min / 1 h / 24 h.
 - Detail nodu: role v hlavičce, relativní časy (`teď`, `12 min`, `3 h`, `2 d`), V síti od, region, obohacení sousedů (role, vzdálenost, naposledy), odkaz do Analyzeru
+- Uživatelské info k nodu: volitelný veřejný text (hardware, baterie, panel, anténa…), autor, čas úpravy; tlačítko Přidat / upravit, limit 5–1000 znaků, ukládání do `data/node-info.sqlite`, Telegram notifikace správci a mazání v `/admin/node-info`
 - Analytika z Analyzeru v detailu nodu: total packets, packets today, pozorování, Ø hopů/SNR, přímí observeři s SNR/RSSI, poslední adverty, trasy přes nod, clock skew; serverový `/api/node-detail` s 5min cache a stale fallbackem
 - Historie užitečnosti: 7 dní hodinových vzorků, hover tooltip; bez průměrování
 - Zvýraznění užitečnosti: relativní Top 5 % (červená) a 5–15 % (žlutá) z aktivních nodů se skóre za 24 h; počty v legendě
@@ -123,7 +124,7 @@ Aktualizováno: 2026-10-27 (prod `20261027T082733Z`, beta `20261027T082715Z`)
 - Původní žebříčky nodů podle metrik zůstávají
 
 ### Backend
-- `/admin` (session), `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/recent`, `/api/packet-history`, `/api/packets`, `/api/nodes`, `/api/stats`, `/api/search`, `/api/health`, `/api/node-detail`, `/api/photos`, `/api/photos/nodes`, `/api/photos/report`
+- `/admin` (session), `/api/node-history`, `/api/elevation`, `/api/packet-routes`, `/api/observers`, `/api/history`, `/api/recent`, `/api/packet-history`, `/api/packets`, `/api/nodes`, `/api/stats`, `/api/search`, `/api/health`, `/api/node-detail`, `/api/node-info`, `/api/photos`, `/api/photos/nodes`, `/api/photos/report`
 - Cache `/api/nodes` a `/api/resolve-hops` proti výpadkům CoreScope; nody se vydávají z cache okamžitě (SWR, soft TTL 15 min)
 - Start stránky: paralelně `/api/nodes` + `/api/recent?seconds=30`, dávkové vyřešení prefixů a jedno vykreslení; SSE běží s `?replay=0`
 - `/api/stats` cache (24 h) + lokální fallback z `packet_routes` při výpadku Analyzeru; klient zobrazí stale/partial hodnotu oranžově a zkusí obnovu za 60 s
@@ -143,7 +144,7 @@ Aktualizováno: 2026-10-27 (prod `20261027T082733Z`, beta `20261027T082715Z`)
 
 ## 4. Testy a CI
 
-- `npm test`: 105 testů, 102 pass, 3 skip, 0 fail
+- `npm test`: 107 testů, 104 pass, 3 skip, 0 fail
 - `npm audit --omit=dev`: 0 zranitelností
 - GitHub Actions CI: Node 20 a 22, běží `npm ci`, syntax check, testy, build
 - CI nelze z tohoto prostředí číst bez GitHub přihlášení
@@ -194,9 +195,9 @@ ssh -i ./cntb root@<VPS_HOST> '/root/rollback-meshcore.sh 20261027T082733Z'
 - 1B prefixy jsou nejednoznačné; názvy nodů se mohou lišit od Analyzeru.
 - Pakety bez path se nekreslí; PATH (typ 11) se záměrně ignoruje.
 - Přibližná poloha observeru je jen IATA oblast, ne přesné letiště.
-- Detail nodu obsahuje galerii fotek; veřejné nahrávání JPEG/PNG/WebP s potvrzením práv, fotka se zobrazí až po schválení správcem. Moderace na `GET /api/photos/view?token=…`.
+- Detail nodu obsahuje galerii fotek a uživatelské info. Veřejné nahrávání JPEG/PNG/WebP s potvrzením práv; s `PHOTO_AUTO_APPROVE=1` se fotky zveřejní ihned, jinak čekají na schválení. Moderace na `GET /api/photos/view?token=…` i `/admin`.
 - Kanály jsou jen veřejné dešifrované zprávy, soukromé zůstávají šifrované.
-- Fotky jsou veřejné až po schválení; pending/hidden vrací 404. Veřejné nahrávání má limity 8/h a 30/den na IP (dávka 5 fotek se počítá jako 5), 8 fotek na nod, 2 GB celkem a max. 2400 px na delší straně (klient zmenšuje na 2000 px). Žádosti o smazání jsou omezené 5/h na IP. Soubory i `photos.sqlite` jsou v `uploads/` a nejsou v zálohách, takže po obnově ze zálohy fotky zmizí.
+- Fotky jsou ve výchozím stavu veřejné až po schválení; s `PHOTO_AUTO_APPROVE=1` ihned. Pending/hidden vrací 404. Veřejné nahrávání má limity 8/h a 30/den na IP (dávka 5 fotek se počítá jako 5), 8 fotek na nod, 2 GB celkem a max. 2400 px na delší straně (klient zmenšuje na 2000 px). Žádosti o smazání jsou omezené 5/h na IP. Soubory i `photos.sqlite` jsou v `uploads/` a nejsou v zálohách, takže po obnově ze zálohy fotky zmizí. Uživatelské info nodu je veřejné, limity 10/h, 50/den a 15s pauza na IP; ukládá se do `data/node-info.sqlite`.
 - OSM dlaždice mají policy riziko při větším provozu („Access blocked“).
 - Firewall/SSH hardening není hotový: ufw inactive, PasswordAuthentication yes, root login povolený.
 - Cloudflare běží Full se self-signed origin certem, ne Full (strict).

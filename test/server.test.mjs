@@ -104,6 +104,8 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       HOST: "127.0.0.1",
       MAX_PACKET_STREAMS: "1",
       NODES_CACHE_PATH: join(directory, "nodes-cache.json"),
+      NODE_INFO_DB_PATH: join(directory, "node-info.sqlite"),
+      NODE_INFO_COOLDOWN_MS: "0",
       PACKET_DB_PATH: join(directory, "packets.sqlite"),
       PHOTO_DIR: join(directory, "uploads"),
       PHOTO_AUTO_APPROVE: "0",
@@ -218,6 +220,40 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.match(await adminFeedback.text(), /Zpětná vazba/);
     const pendingImage = await fetch(`http://127.0.0.1:${appPort}/api/photos/${uploaded.id}`, { headers: { cookie: adminCookie } });
     assert.equal(pendingImage.status, 200);
+
+    const infoKey = "c".repeat(64);
+    const emptyInfo = await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`);
+    assert.equal(emptyInfo.status, 200);
+    assert.equal((await emptyInfo.json()).info, null);
+    const saveInfo = await fetch(`http://127.0.0.1:${appPort}/api/node-info`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        author: "Tester",
+        key: infoKey,
+        text: "Hardware: RAK v2\nBaterie: 10 Ah\nPanel: 20 W",
+      }),
+    });
+    assert.equal(saveInfo.status, 200);
+    const savedInfo = await saveInfo.json();
+    assert.equal(savedInfo.info.nodeKey, infoKey);
+    assert.match(savedInfo.info.text, /Baterie/);
+    const readInfo = await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json();
+    assert.equal(readInfo.info.author, "Tester");
+    const adminNodeInfo = await fetch(`http://127.0.0.1:${appPort}/admin/node-info`, { headers: { cookie: adminCookie } });
+    assert.equal(adminNodeInfo.status, 200);
+    assert.match(await adminNodeInfo.text(), /Hardware: RAK v2/);
+    const deleteInfo = await fetch(`http://127.0.0.1:${appPort}/admin/node-info/delete`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        cookie: adminCookie,
+      },
+      body: `key=${infoKey}`,
+      redirect: "manual",
+    });
+    assert.equal(deleteInfo.status, 303);
+    assert.equal((await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json()).info, null);
     const largePng = Buffer.from(tinyPng);
     largePng.writeUInt32BE(3000, 16);
     largePng.writeUInt32BE(2000, 20);

@@ -309,6 +309,30 @@
         </form>
       </dialog>
 
+      <dialog id="node-info-dialog" class="photo-dialog" aria-labelledby="node-info-title">
+        <button id="node-info-close" class="feedback-close" type="button">×</button>
+        <header>
+          <h2 id="node-info-title"></h2>
+          <p id="node-info-node"></p>
+        </header>
+        <form id="node-info-form">
+          <label>
+            <span id="node-info-text-label"></span>
+            <textarea id="node-info-text" rows="7" maxlength="1000" required></textarea>
+          </label>
+          <label>
+            <span id="node-info-author-label"></span>
+            <input id="node-info-author" type="text" maxlength="60" />
+          </label>
+          <p id="node-info-status" class="feedback-status" role="status"></p>
+          <p id="node-info-note" class="photo-note"></p>
+          <div class="feedback-actions">
+            <button type="button" id="node-info-cancel"></button>
+            <button type="submit" id="node-info-submit"></button>
+          </div>
+        </form>
+      </dialog>
+
       <dialog id="photo-lightbox" class="photo-lightbox" aria-label="Fotka nodu">
         <button id="photo-lightbox-close" class="qr-dialog-close" type="button">×</button>
         <button id="photo-lightbox-prev" class="photo-lightbox-nav prev" type="button">‹</button>
