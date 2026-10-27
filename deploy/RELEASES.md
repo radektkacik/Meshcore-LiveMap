@@ -237,6 +237,8 @@
 | 2026-10-27 10:44 | `20261027T104402Z.tar.gz` | `20261027-1044-673d0f9` | Prod: stejný build, banner se na produkci nezobrazuje | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-27 11:03 | `20261027T110339Z.tar.gz` (stage APP_DIR) | `20261027-1103-543b301` | Beta: první uživatelské info k nodu se zveřejní, další změny čekají na schválení; admin schvaluje/zamítá v `/admin/node-info` | `node-info.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, testy, `.env.example`, `README.md`, `CONTEXT.md` |
 | 2026-10-27 11:04 | `20261027T110405Z.tar.gz` | `20261027-1104-543b301` | Prod: stejné schvalování změn uživatelského info | `node-info.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, testy, `.env.example`, `README.md`, `CONTEXT.md` |
+| 2026-10-27 11:14 | `20261027T111448Z.tar.gz` (stage APP_DIR) | `20261027-1114-0017ea9` | Beta: heslo pro ověření autora změn uživatelského info (scrypt hash); starší záznamy bez hesla lze při úpravě převzít a čekají na schválení | `node-info.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, testy, `.env.example`, `README.md`, `CONTEXT.md` |
+| 2026-10-27 11:15 | `20261027T111509Z.tar.gz` | `20261027-1115-0017ea9` | Prod: stejné heslo pro úpravy uživatelského info | `node-info.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, testy, `.env.example`, `README.md`, `CONTEXT.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
