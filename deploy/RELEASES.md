@@ -233,6 +233,8 @@
 | 2026-10-27 08:37 | `20261027T083755Z.tar.gz` | `20261027-0837-60f30cd` | Prod: stejné uživatelské info k nodům | `node-info.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, `.env.example`, deploy skripty, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-27 08:56 | `20261027T085652Z.tar.gz` (stage APP_DIR) | `20261027-0856-fe570ec` | Beta: hint přepínače fotek bez „schválené“ – „Zobrazí pouze nody s fotkou.“ | `index.html`, `src/i18n.js`, `CONTEXT.md` |
 | 2026-10-27 08:57 | `20261027T085711Z.tar.gz` | `20261027-0857-fe570ec` | Prod: stejný hint přepínače fotek | `index.html`, `src/i18n.js`, `CONTEXT.md` |
+| 2026-10-27 10:43 | `20261027T104328Z.tar.gz` (stage APP_DIR) | `20261027-1043-673d0f9` | Beta: výrazný banner v HUD „BETA VERZE“ s upozorněním a tlačítkem na produkci | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
+| 2026-10-27 10:44 | `20261027T104402Z.tar.gz` | `20261027-1044-673d0f9` | Prod: stejný build, banner se na produkci nezobrazuje | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
