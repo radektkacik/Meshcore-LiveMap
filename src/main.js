@@ -2048,10 +2048,19 @@ function renderPhotoPreviews(files) {
   for (const file of files) {
     const url = URL.createObjectURL(file);
     state.photoPreviewUrls.push(url);
+    const item = document.createElement("div");
+    item.className = "photo-preview-item";
     const image = document.createElement("img");
     image.alt = t("photos.previewAlt");
     image.src = url;
-    elements.photoPreviewWrap.appendChild(image);
+    const caption = document.createElement("input");
+    caption.type = "text";
+    caption.className = "photo-caption-input";
+    caption.maxLength = 240;
+    caption.placeholder = t("photos.captionPlaceholder");
+    caption.setAttribute("aria-label", t("photos.caption"));
+    item.append(image, caption);
+    elements.photoPreviewWrap.appendChild(item);
   }
 }
 
@@ -6245,9 +6254,12 @@ elements.photoForm.addEventListener("submit", async (event) => {
         continue;
       }
       try {
+        const caption = elements.photoPreviewWrap
+          .querySelectorAll(".photo-caption-input")[index]?.value.trim() || "";
         const headers = {
           "Content-Type": blob.type,
           "X-Photo-Author": encodeURIComponent(elements.photoAuthor.value.trim()),
+          "X-Photo-Caption": encodeURIComponent(caption),
           "X-Photo-Batch-Index": String(index),
           "X-Photo-Batch-Size": String(files.length),
           "X-Photo-Consent": "1",

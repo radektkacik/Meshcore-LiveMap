@@ -128,8 +128,8 @@ přihlašovací údaje zůstávají pouze na serveru.
   /api/photos/nodes` vrací počty schválených fotek podle nodů pro přepínač
   „Jen nody s fotkami“ v HUD. `POST /api/photos`
   přijímá binární JPEG/PNG/WebP (max 5 MB) s hlavičkami `X-Photo-Key`,
-  `X-Photo-Author` a `X-Photo-Consent: 1`; volitelný `X-Photo-Caption` API
-  stále přijímá, ale UI popis už nezadává. Klient umožní vybrat až 5 fotek
+  `X-Photo-Author` a `X-Photo-Consent: 1`; volitelný `X-Photo-Caption` lze
+  zadat u každé fotky (např. hardware, baterie, panel). Klient umožní vybrat až 5 fotek
   najednou a posílá je postupně s `X-Photo-Batch-Size`, `X-Photo-Batch-Index`
   a `X-Photo-Batch-Id`; server mezi fotkami stejné dávky přeskočí 10s pauzu
   a Telegram notifikaci pošle jednou za dávku. Ve výchozím stavu se fotka
