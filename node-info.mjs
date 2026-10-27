@@ -64,6 +64,7 @@ export function createNodeInfoStore(dbPath) {
       text TEXT NOT NULL,
       author TEXT,
       ip_hash TEXT,
+      edit_password_hash TEXT,
       created_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS node_info_pending_created ON node_info_pending (created_at DESC);
@@ -71,6 +72,12 @@ export function createNodeInfoStore(dbPath) {
 
   try {
     db.exec("ALTER TABLE node_info ADD COLUMN edit_password_hash TEXT");
+  } catch {
+    // Column already exists.
+  }
+
+  try {
+    db.exec("ALTER TABLE node_info_pending ADD COLUMN edit_password_hash TEXT");
   } catch {
     // Column already exists.
   }
@@ -103,12 +110,13 @@ export function createNodeInfoStore(dbPath) {
   `);
   const countPendingRows = db.prepare("SELECT COUNT(*) AS total FROM node_info_pending");
   const upsertPending = db.prepare(`
-    INSERT INTO node_info_pending (node_key, text, author, ip_hash, created_at)
-    VALUES (@node_key, @text, @author, @ip_hash, @created_at)
+    INSERT INTO node_info_pending (node_key, text, author, ip_hash, edit_password_hash, created_at)
+    VALUES (@node_key, @text, @author, @ip_hash, @edit_password_hash, @created_at)
     ON CONFLICT(node_key) DO UPDATE SET
       text = excluded.text,
       author = excluded.author,
       ip_hash = excluded.ip_hash,
+      edit_password_hash = excluded.edit_password_hash,
       created_at = excluded.created_at
   `);
   const deletePending = db.prepare("DELETE FROM node_info_pending WHERE node_key = ?");
@@ -146,7 +154,7 @@ export function createNodeInfoStore(dbPath) {
           author: pending.author,
           nodeKey: key,
           text: pending.text,
-        }, now, current?.edit_password_hash || null);
+        }, now, pending.edit_password_hash || current?.edit_password_hash || null);
         deletePending.run(key);
         return published;
       })();
@@ -179,13 +187,25 @@ export function createNodeInfoStore(dbPath) {
           status: "published",
         };
       }
-      if (!current.edit_password_hash) return { error: "password_missing" };
+      if (!current.edit_password_hash) {
+        if (!validPassword(entry?.password)) return { error: "password_required" };
+        upsertPending.run({
+          author: value.author,
+          created_at: now,
+          edit_password_hash: hashPassword(entry.password),
+          ip_hash: String(entry?.ipHash || "").slice(0, 32),
+          node_key: value.nodeKey,
+          text: value.text,
+        });
+        return { info: mapPendingRow(selectPendingOne.get(value.nodeKey)), status: "pending" };
+      }
       if (!passwordMatches(entry?.password, current.edit_password_hash)) {
         return { error: "bad_password" };
       }
       upsertPending.run({
         author: value.author,
         created_at: now,
+        edit_password_hash: null,
         ip_hash: String(entry?.ipHash || "").slice(0, 32),
         node_key: value.nodeKey,
         text: value.text,
