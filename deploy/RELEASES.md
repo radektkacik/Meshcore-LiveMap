@@ -227,6 +227,8 @@
 | 2026-10-27 08:20 | `20261027T082050Z.tar.gz` | `20261027-0820-a7c5cdb` | Prod: stejné okamžité zveřejnění fotek s možností dodatečného smazání | `.env.example`, `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, testy, `README.md`, `CONTEXT.md` |
 | 2026-10-27 08:24 | `20261027T082459Z.tar.gz` (stage APP_DIR) | `20261027-0824-ee388fd` | Beta: volitelný popis u každé fotky (hardware, baterie, panel…), zobrazený v galerii, lightboxu a administraci | `src/main.js`, `src/i18n.js`, `src/style.css`, `README.md`, `CONTEXT.md` |
 | 2026-10-27 08:25 | `20261027T082519Z.tar.gz` | `20261027-0825-ee388fd` | Prod: stejné volitelné popisy fotek | `src/main.js`, `src/i18n.js`, `src/style.css`, `README.md`, `CONTEXT.md` |
+| 2026-10-27 08:27 | `20261027T082715Z.tar.gz` (stage APP_DIR) | `20261027-0827-0828bb1` | Beta: přepínač přejmenován na „Jen nody s fotkou“ (jednotné číslo) | `index.html`, `src/i18n.js`, `README.md`, `CONTEXT.md` |
+| 2026-10-27 08:27 | `20261027T082733Z.tar.gz` | `20261027-0827-0828bb1` | Prod: stejný popisek přepínače | `index.html`, `src/i18n.js`, `README.md`, `CONTEXT.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
