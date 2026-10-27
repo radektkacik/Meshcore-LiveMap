@@ -236,13 +236,36 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     });
     assert.equal(saveInfo.status, 200);
     const savedInfo = await saveInfo.json();
+    assert.equal(savedInfo.status, "published");
     assert.equal(savedInfo.info.nodeKey, infoKey);
     assert.match(savedInfo.info.text, /Baterie/);
     const readInfo = await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json();
     assert.equal(readInfo.info.author, "Tester");
+    const changeInfo = await fetch(`http://127.0.0.1:${appPort}/api/node-info`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ author: "Jana", key: infoKey, text: "Anténa: 5 dBi" }),
+    });
+    assert.equal(changeInfo.status, 200);
+    assert.equal((await changeInfo.json()).status, "pending");
+    const pendingRead = await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json();
+    assert.equal(pendingRead.info.text, "Hardware: RAK v2\nBaterie: 10 Ah\nPanel: 20 W");
     const adminNodeInfo = await fetch(`http://127.0.0.1:${appPort}/admin/node-info`, { headers: { cookie: adminCookie } });
     assert.equal(adminNodeInfo.status, 200);
-    assert.match(await adminNodeInfo.text(), /Hardware: RAK v2/);
+    const adminNodeInfoHtml = await adminNodeInfo.text();
+    assert.match(adminNodeInfoHtml, /Změny ke schválení/);
+    assert.match(adminNodeInfoHtml, /Anténa: 5 dBi/);
+    const approveInfo = await fetch(`http://127.0.0.1:${appPort}/admin/node-info/moderate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        cookie: adminCookie,
+      },
+      body: `key=${infoKey}&action=approve`,
+      redirect: "manual",
+    });
+    assert.equal(approveInfo.status, 303);
+    assert.equal((await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json()).info.text, "Anténa: 5 dBi");
     const deleteInfo = await fetch(`http://127.0.0.1:${appPort}/admin/node-info/delete`, {
       method: "POST",
       headers: {

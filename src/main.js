@@ -6488,15 +6488,19 @@ elements.nodeInfoForm.addEventListener("submit", async (event) => {
       key: target.key,
       text,
     });
-    const info = data.info || null;
-    state.nodeInfoCache.set(target.key, { at: Date.now(), info });
-    for (const section of document.querySelectorAll(`.node-user-info[data-node-key="${target.key}"]`)) {
-      renderNodeInfoSection(section, info);
+    if (data.status === "pending") {
+      setNodeInfoStatus(t("nodeInfo.pending"));
+    } else {
+      const info = data.info || null;
+      state.nodeInfoCache.set(target.key, { at: Date.now(), info });
+      for (const section of document.querySelectorAll(`.node-user-info[data-node-key="${target.key}"]`)) {
+        renderNodeInfoSection(section, info);
+      }
+      setNodeInfoStatus(t("nodeInfo.saved"));
     }
-    setNodeInfoStatus(t("nodeInfo.saved"));
     setTimeout(() => {
       if (elements.nodeInfoDialog.open) elements.nodeInfoDialog.close();
-    }, 1_200);
+    }, 1_500);
   } catch (error) {
     setNodeInfoStatus(error.message || t("nodeInfo.failed"), true);
   } finally {

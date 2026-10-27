@@ -82,12 +82,13 @@ přihlašovací údaje zůstávají pouze na serveru.
   packets, packets today, avg hops/SNR, přímé observery, poslední adverty,
   trasy přes nod a clock skew. Při výpadku vrátí poslední cache s
   `X-Data-Stale: 1`.
-- `GET /api/node-info?key=<public_key>` vrací volitelný uživatelský text k nodu
+- `GET /api/node-info?key=<public_key>` vrací zveřejněný uživatelský text k nodu
   (hardware, baterie, panel, anténa…). `POST /api/node-info` s JSON
-  `{key, text, author}` jej uloží nebo upraví; text má 5–1000 znaků, autor je
-  nepovinný. Text se zobrazuje veřejně v detailu nodu, ukládá se do
-  `data/node-info.sqlite` a správce jej může smazat v `/admin/node-info`.
-  Platí limit 10 úprav/h, 50/den a 15s pauza na IP.
+  `{key, text, author}` jej uloží; první text u nodu se zveřejní ihned,
+  každá další změna čeká na schválení správcem (`status: "pending"`) a veřejný
+  text se nemění, dokud ji správce neschválí. Text má 5–1000 znaků, autor je
+  nepovinný. Ukládá se do `data/node-info.sqlite`; správce schvaluje, zamítá
+  nebo maže v `/admin/node-info`. Platí limit 10 úprav/h, 50/den a 5s pauza na IP.
 - `/api/recent?seconds=30` vrací posledních N sekund živých paketů z paměťového
   kruhového bufferu (max. 120 s) jako jeden JSON. Klient ho načte paralelně
   s nody, všechny prefixy vyřeší jedním dávkovým requestem a trasy vykreslí

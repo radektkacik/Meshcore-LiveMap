@@ -644,7 +644,7 @@ function checkPhotoReport(ip, now = Date.now()) {
 const nodeInfoRate = new Map();
 const nodeInfoRateLimit = Math.max(1, Number(process.env.NODE_INFO_RATE_LIMIT || 10));
 const nodeInfoDailyLimit = Math.max(1, Number(process.env.NODE_INFO_DAILY_LIMIT || 50));
-const nodeInfoCooldownMs = Math.max(0, Number(process.env.NODE_INFO_COOLDOWN_MS || 15_000));
+const nodeInfoCooldownMs = Math.max(0, Number(process.env.NODE_INFO_COOLDOWN_MS || 5_000));
 
 function checkNodeInfo(ip, now = Date.now()) {
   const hourStart = now - 60 * 60 * 1000;
@@ -962,16 +962,19 @@ function notifyNewReport({ contact, message, photo, reason }) {
   notifyTelegram(lines.join("\n"));
 }
 
-function notifyNodeInfo(info) {
+function notifyNodeInfo(info, status = "published") {
   if (!telegramNotifier.enabled || !telegramNotifyNodeInfo || !info) return;
   const name = photoNodeNames().get(info.nodeKey) || info.nodeKey.slice(0, 8);
-  const text = info.text.length > 320 ? `${info.text.slice(0, 320)}…` : info.text;
+  const text = String(info.text || "");
+  const preview = text.length > 320 ? `${text.slice(0, 320)}…` : text;
   const lines = [
-    "📝 Uživatelské info nodu bylo upraveno",
+    status === "pending"
+      ? "📝 Změna uživatelského info čeká na schválení"
+      : "📝 Uživatelské info nodu bylo zveřejněno",
     `Nod: ${name}`,
   ];
   if (info.author) lines.push(`Autor: ${info.author}`);
-  lines.push(text);
+  lines.push(preview);
   const url = telegramAdminUrl("/api/node-info");
   if (url) lines.push(url);
   notifyTelegram(lines.join("\n"));
@@ -1713,7 +1716,7 @@ function adminLayout({ active = "", content = "", title = "Administrace" }) {
     ["photos", adminPath("/photos"), "Fotky"],
     ["reports", adminPath("/photos?status=reports"), "Žádosti"],
     ["feedback", adminPath("/feedback"), "Zpětná vazba"],
-    ["nodeinfo", adminPath("/node-info"), "Info nodů"],
+    ["nodeinfo", adminPath("/node-info"), `Info nodů${nodeInfoStore.pendingCount() ? ` (${nodeInfoStore.pendingCount()})` : ""}`],
   ].map(([key, href, label]) => `<a class="${active === key ? "active" : ""}" href="${href}">${label}</a>`).join("");
   return `<!doctype html>
 <html lang="cs">
@@ -1806,6 +1809,7 @@ function adminDashboardPage() {
   const visits = visitStore.report(Date.now(), 14);
   const feedbackCount = feedbackStore.count();
   const nodeInfoCount = nodeInfoStore.count();
+  const nodeInfoPending = nodeInfoStore.pendingCount();
   const uptime = Math.floor(process.uptime());
   const uptimeLabel = `${Math.floor(uptime / 3600)} h ${Math.floor((uptime % 3600) / 60)} min`;
   return adminLayout({
@@ -1819,7 +1823,7 @@ function adminDashboardPage() {
   <div class="card"><div class="label">Otevřené žádosti</div><a href="${adminPath("/photos?status=reports")}"><div class="value">${formatAdminNumber(stats.reports)}</div></a><small>o smazání / nahlášení</small></div>
   <div class="card"><div class="label">Fotky celkem</div><a href="${adminPath("/photos?status=all")}"><div class="value">${formatAdminNumber(stats.total)}</div></a><small>${formatAdminNumber(stats.bytes)} B</small></div>
   <div class="card"><div class="label">Zpětná vazba</div><a href="${adminPath("/feedback")}"><div class="value">${formatAdminNumber(feedbackCount)}</div></a><small>uložených zpráv</small></div>
-  <div class="card"><div class="label">Info nodů</div><a href="${adminPath("/node-info")}"><div class="value">${formatAdminNumber(nodeInfoCount)}</div></a><small>uživatelských popisů</small></div>
+  <div class="card"><div class="label">Info nodů</div><a href="${adminPath("/node-info")}"><div class="value">${formatAdminNumber(nodeInfoCount)}</div></a><small>${nodeInfoPending ? `${formatAdminNumber(nodeInfoPending)} změn ke schválení` : "uživatelských popisů"}</small></div>
   <div class="card"><div class="label">Dnes návštěv</div><div class="value">${formatAdminNumber(visits.today.visits)}</div><small>${formatAdminNumber(visits.today.uniqueVisitors)} unikátních · peak ${formatAdminNumber(visits.today.peakViewers)}</small></div>
   <div class="card"><div class="label">MQTT</div><div class="value ${mqttConnected ? "online" : "offline"}">${mqttConnected ? "online" : "offline"}</div><small>${packetStreams.size} připojených klientů</small></div>
 </div>
@@ -1976,7 +1980,26 @@ ${entries.length ? `<ul class="list feedback">${rows}</ul>` : '<p class="empty">
 
 function adminNodeInfoPage() {
   const entries = nodeInfoStore.list(500);
+  const pending = nodeInfoStore.listPending(500);
   const names = photoNodeNames();
+  const pendingRows = pending.map((info) => {
+    const node = names.get(info.nodeKey);
+    const nodeLabel = node ? `${node} · ${info.nodeKey.slice(0, 8)}` : info.nodeKey.slice(0, 16);
+    return `
+    <li>
+      <div class="meta">${escapeHtml(new Date(info.createdAt).toLocaleString("cs-CZ"))}${info.author ? ` · ${escapeHtml(info.author)}` : ""}</div>
+      <div class="node"><a href="${sitePath("/")}?node=${encodeURIComponent(info.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(nodeLabel)}</a></div>
+      <div class="meta">Aktuální zveřejněný text</div>
+      <p>${escapeHtml(info.currentText || "—")}</p>
+      <div class="meta">Navrhovaná změna</div>
+      <p>${escapeHtml(info.text)}</p>
+      <form class="actions" method="post" action="${adminPath("/node-info/moderate")}">
+        <input type="hidden" name="key" value="${escapeHtml(info.nodeKey)}" />
+        <button class="approve" name="action" value="approve" type="submit">Schválit změnu</button>
+        <button class="delete" name="action" value="reject" type="submit">Zamítnout</button>
+      </form>
+    </li>`;
+  }).join("");
   const rows = entries.map((info) => {
     const node = names.get(info.nodeKey);
     const nodeLabel = node ? `${node} · ${info.nodeKey.slice(0, 8)}` : info.nodeKey.slice(0, 16);
@@ -1996,7 +2019,9 @@ function adminNodeInfoPage() {
     title: "Info nodů",
     content: `
 <h1>Info nodů</h1>
-<p class="sub">${formatAdminNumber(entries.length)} uživatelských popisů (nejnovější první).</p>
+<p class="sub">${formatAdminNumber(entries.length)} zveřejněných popisů${pending.length ? ` · ${formatAdminNumber(pending.length)} změn ke schválení` : ""}.</p>
+${pending.length ? `<h2>Změny ke schválení</h2><ul class="list feedback">${pendingRows}</ul>` : ""}
+<h2>Zveřejněné info</h2>
 ${entries.length ? `<ul class="list feedback">${rows}</ul>` : '<p class="empty">Zatím žádné uživatelské info.</p>'}`,
   });
 }
@@ -2130,6 +2155,14 @@ async function handleAdminRequest(request, response, url) {
       const id = Number(form.get("id"));
       if (Number.isFinite(id)) feedbackStore.setHidden(id, form.get("hidden") === "1");
       redirectAdmin(response, `${adminBasePath}/feedback`);
+      return;
+    }
+    if (path === "/admin/node-info/moderate") {
+      const key = form.get("key");
+      const action = form.get("action");
+      if (action === "approve") nodeInfoStore.approve(key);
+      else if (action === "reject") nodeInfoStore.reject(key);
+      redirectAdmin(response, `${adminBasePath}/node-info`);
       return;
     }
     if (path === "/admin/node-info/delete") {
@@ -2275,13 +2308,18 @@ async function handleRequest(request, response) {
       sendJson(response, 400, { error: "Info musí mít 5 až 1000 znaků." });
       return;
     }
-    const info = nodeInfoStore.upsert({ author, nodeKey: key, text });
-    if (!info) {
+    const result = nodeInfoStore.submit({
+      author,
+      ipHash: createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16),
+      nodeKey: key,
+      text,
+    });
+    if (!result) {
       sendJson(response, 400, { error: "Info se nepodařilo uložit." });
       return;
     }
-    notifyNodeInfo(info);
-    sendJson(response, 200, { info, ok: true });
+    notifyNodeInfo(result.info, result.status);
+    sendJson(response, 200, { info: result.info, ok: true, status: result.status });
     return;
   }
 
