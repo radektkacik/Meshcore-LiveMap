@@ -251,6 +251,8 @@
 | 2026-10-27 16:32 | `20261027T163241Z.tar.gz` | `20261027-1632-51cbaa5` | Prod: přepínač „Jen nody s fotkou“ bez pomocného textu | `index.html`, `src/i18n.js` |
 | 2026-10-28 08:49 | `20261028T084947Z.tar.gz` (stage APP_DIR) | `20261028-0849-4863c19` | Beta: malý náhled první schválené fotky v tooltipu při najetí na nod; `/api/photos/nodes` vrací `coverId` | `photos.mjs`, `src/main.js`, `src/style.css`, testy, `README.md` |
 | 2026-10-28 08:50 | `20261028T085011Z.tar.gz` | `20261028-0850-4863c19` | Prod: stejný náhled fotky v tooltipu nodu | `photos.mjs`, `src/main.js`, `src/style.css`, testy, `README.md` |
+| 2026-10-28 09:13 | `20261028T091315Z.tar.gz` (stage APP_DIR) | `20261028-0913-50b8d88` | Beta: admin může u schválené fotky zvolit „Nastavit jako náhled“; volba se ukládá per nod, při skrytí/smazání se použije další fotka | `photos.mjs`, `server.mjs`, testy, `README.md` |
+| 2026-10-28 09:13 | `20261028T091335Z.tar.gz` | `20261028-0913-50b8d88` | Prod: stejná volba náhledové fotky v `/admin/photos` | `photos.mjs`, `server.mjs`, testy, `README.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
