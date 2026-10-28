@@ -1,49 +1,78 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
-import { parseReleases, releasesForEnvironment, renderChangelog } from "../scripts/build-changelog.mjs";
+import { entriesForEnvironment, parseChangelog, renderChangelog } from "../scripts/build-changelog.mjs";
 
-test("changelog parser keeps only deployments with build and sorts newest first", () => {
-  const rows = parseReleases(`
-| Datum (UTC) | Release ID / záloha | Build | Změna | Soubory |
-| --- | --- | --- | --- | --- |
-| 2026-10-27 11:53 | \`20261027T115342Z.tar.gz\` (stage APP_DIR) | \`20261027-1153-c992da8\` | Beta fix: první změna | \`server.mjs\` |
-| 2026-10-27 11:54 | \`20261027T115403Z.tar.gz\` | \`20261027-1154-c992da8\` | Prod fix: druhá změna | \`server.mjs\` |
-| 2026-10-27 11:55 | \`20261027T115500Z.tar.gz\` (stage APP_DIR) | \`20261027-1155-c992da8\` | Beta: třetí změna | \`server.mjs\` |
-| 2026-09-27 15:39 | \`20260927T153912Z.tar.gz\` | externí nasazení |
+test("changelog parser reads curated entries and environment metadata", () => {
+  const entries = parseChangelog(`
+# Changelog
+
+## 2026-10-28 — Nová funkce
+- Prostředí: produkce i beta
+- Build: 20261028-1200-abcdef0
+- První bod.
+- Druhý bod s \`kódem\`.
+
+## 2026-10-27 — Beta změna
+- Prostředí: beta
+- Build: 20261027-1200-abcdef0
+- Pouze beta.
 `);
-  assert.equal(rows.length, 3);
-  assert.equal(rows[0].build, "20261027-1155-c992da8");
-  assert.equal(rows[0].environment, "Beta");
-  assert.equal(rows[0].text, "třetí změna");
-  assert.equal(rows[1].environment, "Produkce");
-  assert.equal(rows[1].text, "druhá změna");
-  assert.equal(rows[2].environment, "Beta");
-  assert.equal(rows[2].text, "první změna");
+  assert.equal(entries.length, 2);
+  assert.equal(entries[0].title, "Nová funkce");
+  assert.equal(entries[0].environment, "both");
+  assert.equal(entries[0].build, "20261028-1200-abcdef0");
+  assert.deepEqual(entries[0].points, ["První bod.", "Druhý bod s `kódem`."]);
+  assert.equal(entries[1].environment, "beta");
 });
 
-test("changelog filters production and beta entries separately", () => {
-  const rows = parseReleases(`
-| 2026-10-27 11:53 | \`release-a\` | \`20261027-1153-a\` | Beta: beta změna | \`server.mjs\` |
-| 2026-10-27 11:54 | \`release-b\` | \`20261027-1154-b\` | Prod: produkční změna | \`server.mjs\` |
-| 2026-10-27 11:55 | \`release-c\` | \`20261027-1155-c\` | Bez prostředí | \`server.mjs\` |
+test("changelog keeps shared entries on both environments", () => {
+  const entries = parseChangelog(`
+## 2026-10-28 — Společná
+- Prostředí: produkce i beta
+- Build: 20261028-1200-abcdef0
+- Text.
+
+## 2026-10-28 — Produkční
+- Prostředí: produkce
+- Build: 20261028-1200-abcdef0
+- Text.
+
+## 2026-10-28 — Beta
+- Prostředí: beta
+- Build: 20261028-1200-abcdef0
+- Text.
 `);
-  assert.deepEqual(releasesForEnvironment(rows, "Produkce").map((row) => row.text), ["produkční změna"]);
-  assert.deepEqual(releasesForEnvironment(rows, "Beta").map((row) => row.text), ["beta změna"]);
+  assert.deepEqual(entriesForEnvironment(entries, "Produkce").map((entry) => entry.title), ["Společná", "Produkční"]);
+  assert.deepEqual(entriesForEnvironment(entries, "Beta").map((entry) => entry.title), ["Společná", "Beta"]);
 });
 
-test("changelog HTML escapes release text", () => {
+test("changelog HTML escapes curated text", () => {
   const html = renderChangelog({
-    buildId: "20261027-1200-test",
+    buildId: "20261028-1200-test",
     environment: "Produkce",
     rows: [{
-      build: "20261027-1200-test",
-      date: "2026-10-27 12:00",
-      environment: "Produkce",
-      release: "release",
-      text: "<script>alert(1)</script>",
+      build: "20261028-1200-test",
+      date: "2026-10-28",
+      environment: "both",
+      points: ["<script>alert(1)</script>"],
+      time: "12:00",
+      title: "<b>Nebezpečný název</b>",
     }],
   });
   assert.match(html, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
   assert.doesNotMatch(html, /<script>alert\(1\)<\/script>/);
-  assert.match(html, /20261027-1200-test/);
+  assert.match(html, /&lt;b&gt;Nebezpečný název&lt;\/b&gt;/);
+});
+
+test("curated changelog has valid recent entries", () => {
+  const entries = parseChangelog(readFileSync("CHANGELOG.md", "utf8"));
+  assert.ok(entries.length >= 10);
+  for (const entry of entries) {
+    assert.match(entry.date, /^\d{4}-\d{2}-\d{2}$/);
+    assert.ok(entry.title);
+    assert.match(entry.build, /^\d{8}-\d{4}-[a-f0-9]{7}$/);
+    assert.ok(entry.points.length > 0);
+    assert.ok(["both", "beta", "production"].includes(entry.environment));
+  }
 });
