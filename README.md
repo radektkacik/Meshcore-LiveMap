@@ -153,8 +153,10 @@ přihlašovací údaje zůstávají pouze na serveru.
   `X-Photo-Author` a `X-Photo-Consent: 1`; volitelný `X-Photo-Caption` lze
   zadat u každé fotky (např. hardware, baterie, panel). Klient umožní vybrat až 5 fotek
   najednou a posílá je postupně s `X-Photo-Batch-Size`, `X-Photo-Batch-Index`
-  a `X-Photo-Batch-Id`; server mezi fotkami stejné dávky přeskočí 10s pauzu
-  a Telegram notifikaci pošle jednou za dávku. Ve výchozím stavu se fotka
+  a `X-Photo-Batch-Id`; volitelná hlavička `X-Photo-Cover: 1` označí fotku,
+  která má být náhledem nodu. U pending fotky se náhled nastaví po schválení;
+  správce může volbu kdykoli přepsat. Server mezi fotkami stejné dávky
+  přeskočí 10s pauzu a Telegram notifikaci pošle jednou za dávku. Ve výchozím stavu se fotka
   uloží jako `pending` a zobrazí se až po schválení. S `PHOTO_AUTO_APPROVE=1`
   se ihned uloží jako `approved`, zobrazí se v galerii a správce ji může
   dodatečně smazat. `GET /api/photos/config` vrací `{ autoApprove }`.

@@ -2491,6 +2491,7 @@ async function handleRequest(request, response) {
         nodeKey: key,
         status: photoAutoApprove ? "approved" : "pending",
       });
+      if (request.headers["x-photo-cover"] === "1") photoStore.requestCover(photo.id);
       queueNewPhotoNotification(
         photo,
         String(request.headers["x-photo-batch-id"] || "").slice(0, 64),

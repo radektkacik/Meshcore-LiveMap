@@ -163,6 +163,42 @@ test("photo store lists approved node counts", () => {
   }
 });
 
+test("pending cover request applies when the photo is approved", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
+  const store = createPhotoStore(directory);
+  const nodeKey = "3".repeat(64);
+  try {
+    const requested = store.create({ buffer: pngBuffer(), nodeKey });
+    const newer = store.create({ buffer: pngBuffer(), nodeKey });
+    store.setStatus(newer.id, "approved");
+    assert.equal(store.listApprovedNodeCounts()[0].coverId, newer.id);
+    assert.equal(store.requestCover(requested.id), true);
+    store.setStatus(requested.id, "approved");
+    assert.equal(store.listApprovedNodeCounts()[0].coverId, requested.id);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("admin cover selection overrides a pending cover request", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
+  const store = createPhotoStore(directory);
+  const nodeKey = "4".repeat(64);
+  try {
+    const requested = store.create({ buffer: pngBuffer(), nodeKey });
+    const newer = store.create({ buffer: pngBuffer(), nodeKey });
+    store.setStatus(newer.id, "approved");
+    store.requestCover(requested.id);
+    store.setCover(newer.id);
+    store.setStatus(requested.id, "approved");
+    assert.equal(store.listApprovedNodeCounts()[0].coverId, newer.id);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("photo reports are stored, listed and resolved with the photo", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
   const store = createPhotoStore(directory);

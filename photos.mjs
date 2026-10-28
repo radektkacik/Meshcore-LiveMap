@@ -149,6 +149,11 @@ export function createPhotoStore(rootDir, {
       updated_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS photo_covers_photo ON photo_covers (photo_id);
+    CREATE TABLE IF NOT EXISTS photo_cover_requests (
+      node_key TEXT PRIMARY KEY,
+      photo_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS photo_reports (
       id TEXT PRIMARY KEY,
       photo_id TEXT NOT NULL,
@@ -216,6 +221,14 @@ export function createPhotoStore(rootDir, {
     ON CONFLICT(node_key) DO UPDATE SET photo_id = excluded.photo_id, updated_at = excluded.updated_at
   `);
   const deleteCoverByPhoto = db.prepare("DELETE FROM photo_covers WHERE photo_id = ?");
+  const upsertCoverRequest = db.prepare(`
+    INSERT INTO photo_cover_requests (node_key, photo_id, created_at)
+    VALUES (?, ?, ?)
+    ON CONFLICT(node_key) DO UPDATE SET photo_id = excluded.photo_id, created_at = excluded.created_at
+  `);
+  const selectCoverRequestByPhoto = db.prepare("SELECT node_key, photo_id FROM photo_cover_requests WHERE photo_id = ?");
+  const deleteCoverRequestByNode = db.prepare("DELETE FROM photo_cover_requests WHERE node_key = ?");
+  const deleteCoverRequestByPhoto = db.prepare("DELETE FROM photo_cover_requests WHERE photo_id = ?");
   const insertReport = db.prepare(`
     INSERT INTO photo_reports (id, photo_id, reason, message, contact, ip_hash, status, created_at)
     VALUES (@id, @photo_id, @reason, @message, @contact, @ip_hash, 'open', @created_at)
@@ -250,6 +263,11 @@ export function createPhotoStore(rootDir, {
 
   function get(id) {
     return mapRow(selectById.get(String(id || "")));
+  }
+
+  function applyCover(nodeKey, photoId, now = Date.now()) {
+    upsertCover.run(nodeKey, photoId, now);
+    deleteCoverRequestByNode.run(nodeKey);
   }
 
   return {
@@ -359,6 +377,7 @@ export function createPhotoStore(rootDir, {
       const row = selectById.get(String(id || ""));
       if (!row) return false;
       deleteCoverByPhoto.run(String(id));
+      deleteCoverRequestByPhoto.run(String(id));
       deleteRow.run(String(id));
       resolvePhotoReports.run(Date.now(), String(id));
       const absolute = absolutePath(row);
@@ -367,17 +386,35 @@ export function createPhotoStore(rootDir, {
     },
     resolvePhotoReports: (photoId) => resolvePhotoReports.run(Date.now(), String(photoId || "")).changes,
     resolveReport: (id) => resolveReport.run(Date.now(), String(id || "")).changes > 0,
+    requestCover(id) {
+      const row = selectById.get(String(id || ""));
+      if (!row) return false;
+      if (row.status === "approved") {
+        applyCover(row.node_key, row.id);
+        return true;
+      }
+      if (row.status !== "pending") return false;
+      upsertCoverRequest.run(row.node_key, row.id, Date.now());
+      return true;
+    },
     setCover(id) {
       const row = selectById.get(String(id || ""));
       if (!row || row.status !== "approved") return false;
-      upsertCover.run(row.node_key, row.id, Date.now());
+      applyCover(row.node_key, row.id);
       return true;
     },
     setStatus(id, status) {
       if (!PHOTO_STATUSES.includes(status)) return false;
       const changed = updateStatus.run(status, Date.now(), String(id || "")).changes > 0;
-      if (changed && status !== "approved") deleteCoverByPhoto.run(String(id || ""));
-      return changed;
+      if (!changed) return false;
+      if (status === "approved") {
+        const request = selectCoverRequestByPhoto.get(String(id || ""));
+        if (request) applyCover(request.node_key, request.photo_id);
+      } else {
+        deleteCoverByPhoto.run(String(id || ""));
+        deleteCoverRequestByPhoto.run(String(id || ""));
+      }
+      return true;
     },
     stats: () => ({
       bytes: sumBytes.get().total,

@@ -363,6 +363,10 @@ const cs = {
   "photos.uploading": "Nahrávám…",
   "photos.uploadingFile": "Nahrávám {current}/{total}…",
   "photos.tooMany": "Vybráno je více než 5 fotek. Nahraje se prvních 5.",
+  "photos.coverPick": "Náhled",
+  "photos.coverPickTitle": "Volitelné: tato fotka bude náhledem nodu.",
+  "photos.coverPending": "Náhled se nastaví po schválení fotky.",
+  "photos.coverNotUploaded": "Vybraný náhled se nepodařilo nahrát.",
   "photos.partial": "Nahráno {created} z {total} fotek. {failed} se nepodařilo nahrát.",
   "photos.pending": "Fotka čeká na schválení správcem.",
   "photos.pendingCount": {
@@ -771,6 +775,10 @@ const en = {
   "photos.uploading": "Uploading…",
   "photos.uploadingFile": "Uploading {current}/{total}…",
   "photos.tooMany": "More than 5 photos selected. The first 5 will be uploaded.",
+  "photos.coverPick": "Cover",
+  "photos.coverPickTitle": "Optional: this photo will be the node cover.",
+  "photos.coverPending": "The cover will be set after the photo is approved.",
+  "photos.coverNotUploaded": "The selected cover photo could not be uploaded.",
   "photos.partial": "Uploaded {created} of {total} photos. {failed} failed.",
   "photos.pending": "The photo is waiting for administrator approval.",
   "photos.pendingCount": {

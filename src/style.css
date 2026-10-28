@@ -685,6 +685,8 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 .photo-preview-item { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .photo-preview-wrap img { display: block; width: 100%; aspect-ratio: 1; border-radius: 6px; object-fit: cover; }
 .photo-caption-input { width: 100%; padding: 5px 6px; border: 1px solid var(--line); border-radius: 5px; color: #263b31; background: #fff; font: 11px Manrope, sans-serif; }
+.photo-cover-pick { display: flex; align-items: center; gap: 5px; color: #3f584e; font: 10px "DM Mono", monospace; cursor: pointer; }
+.photo-cover-pick input { width: 13px; height: 13px; margin: 0; accent-color: var(--green); }
 .photo-note { margin: 0; color: var(--muted); font: 10px/1.45 "DM Mono", monospace; }
 .photo-lightbox { position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 16px 12px 18px; overflow: hidden; border: 0; border-radius: 0; color: #fff; background: #0b0f12; }
 .photo-lightbox[open] { display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; }
@@ -812,6 +814,7 @@ html[data-theme="dark"] .photo-dialog select { color: #e6ecef; background: #1b23
 html[data-theme="dark"] .photo-dialog label.feedback-check { color: #cfd9dd; }
 html[data-theme="dark"] .photo-preview-wrap { background: #1b232b; border-color: var(--line); }
 html[data-theme="dark"] .photo-caption-input { color: #e6ecef; background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .photo-cover-pick { color: #cfd9dd; }
 html[data-theme="dark"] .node-analytics-head h4,
 html[data-theme="dark"] .node-analytics-details summary { color: #cfd9dd; }
 html[data-theme="dark"] .node-analytics-grid strong { color: #eef4f6; }

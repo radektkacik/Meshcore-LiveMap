@@ -2200,7 +2200,8 @@ function renderPhotoPreviews(files) {
   resetPhotoPreview();
   if (!files.length) return;
   elements.photoPreviewWrap.hidden = false;
-  for (const file of files) {
+  const showCoverChoice = files.length > 1;
+  files.forEach((file, index) => {
     const url = URL.createObjectURL(file);
     state.photoPreviewUrls.push(url);
     const item = document.createElement("div");
@@ -2215,8 +2216,22 @@ function renderPhotoPreviews(files) {
     caption.placeholder = t("photos.captionPlaceholder");
     caption.setAttribute("aria-label", t("photos.caption"));
     item.append(image, caption);
+    if (showCoverChoice) {
+      const cover = document.createElement("label");
+      cover.className = "photo-cover-pick";
+      cover.title = t("photos.coverPickTitle");
+      const radio = document.createElement("input");
+      radio.type = "radio";
+      radio.name = "photo-cover";
+      radio.value = String(index);
+      radio.setAttribute("aria-label", t("photos.coverPickTitle"));
+      const text = document.createElement("span");
+      text.textContent = t("photos.coverPick");
+      cover.append(radio, text);
+      item.appendChild(cover);
+    }
     elements.photoPreviewWrap.appendChild(item);
-  }
+  });
 }
 
 function photoNoteText() {
@@ -6404,6 +6419,10 @@ elements.photoForm.addEventListener("submit", async (event) => {
   const batchId = files.length > 1
     ? (globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`)
     : "";
+  const coverChoice = elements.photoPreviewWrap.querySelector('input[name="photo-cover"]:checked');
+  const coverIndex = coverChoice ? Number(coverChoice.value) : -1;
+  let coverUploaded = false;
+  let coverPending = false;
   try {
     for (let index = 0; index < files.length; index += 1) {
       setPhotoStatus(t("photos.uploadingFile", { current: index + 1, total: files.length }));
@@ -6433,6 +6452,7 @@ elements.photoForm.addEventListener("submit", async (event) => {
           "X-Photo-Key": target.key,
         };
         if (batchId) headers["X-Photo-Batch-Id"] = batchId;
+        if (index === coverIndex) headers["X-Photo-Cover"] = "1";
         const response = await fetch(appPath("/api/photos"), {
           method: "POST",
           headers,
@@ -6452,6 +6472,10 @@ elements.photoForm.addEventListener("submit", async (event) => {
         created += 1;
         if (data.status === "approved") published += 1;
         else pending += 1;
+        if (index === coverIndex) {
+          coverUploaded = true;
+          coverPending = data.status !== "approved";
+        }
       } catch (error) {
         failed += 1;
         lastError = error?.message || t("photos.failed");
@@ -6463,6 +6487,10 @@ elements.photoForm.addEventListener("submit", async (event) => {
       else if (published === created) statusText = tCount("photos.publishedCount", published);
       else if (pending === created) statusText = tCount("photos.pendingCount", pending);
       else statusText = t("photos.mixed", { pending, published });
+      if (coverIndex >= 0 && created > 0) {
+        if (!coverUploaded) statusText = `${statusText} ${t("photos.coverNotUploaded")}`;
+        else if (coverPending) statusText = `${statusText} ${t("photos.coverPending")}`;
+      }
       setPhotoStatus(statusText, failed > 0);
       if (published > 0) {
         state.photoCache.delete(target.key);
