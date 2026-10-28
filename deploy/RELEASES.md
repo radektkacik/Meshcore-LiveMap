@@ -253,6 +253,8 @@
 | 2026-10-28 08:50 | `20261028T085011Z.tar.gz` | `20261028-0850-4863c19` | Prod: stejný náhled fotky v tooltipu nodu | `photos.mjs`, `src/main.js`, `src/style.css`, testy, `README.md` |
 | 2026-10-28 09:13 | `20261028T091315Z.tar.gz` (stage APP_DIR) | `20261028-0913-50b8d88` | Beta: admin může u schválené fotky zvolit „Nastavit jako náhled“; volba se ukládá per nod, při skrytí/smazání se použije další fotka | `photos.mjs`, `server.mjs`, testy, `README.md` |
 | 2026-10-28 09:13 | `20261028T091335Z.tar.gz` | `20261028-0913-50b8d88` | Prod: stejná volba náhledové fotky v `/admin/photos` | `photos.mjs`, `server.mjs`, testy, `README.md` |
+| 2026-10-28 09:17 | `20261028T091743Z.tar.gz` (stage APP_DIR) | `20261028-0917-5f9442a` | Beta: veřejný changelog se generuje z ručně udržovaného `CHANGELOG.md`; jen významné funkční změny, ne každý build | `CHANGELOG.md`, `scripts/build-changelog.mjs`, testy, `README.md`, `deploy/RELEASES.md` |
+| 2026-10-28 09:18 | `20261028T091806Z.tar.gz` | `20261028-0918-5f9442a` | Prod: stejný kurátorovaný changelog | `CHANGELOG.md`, `scripts/build-changelog.mjs`, testy, `README.md`, `deploy/RELEASES.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
