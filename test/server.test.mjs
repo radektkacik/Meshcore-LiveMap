@@ -321,7 +321,7 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(photoList.photos.length, 1);
     const nodeCounts = await (await fetch(`http://127.0.0.1:${appPort}/api/photos/nodes`)).json();
     assert.equal(nodeCounts.total, 1);
-    assert.deepEqual(nodeCounts.nodes, [{ count: 1, nodeKey: photoKey }]);
+    assert.deepEqual(nodeCounts.nodes, [{ count: 1, coverId: uploaded.id, nodeKey: photoKey }]);
     const photoFile = await fetch(`http://127.0.0.1:${appPort}/api/photos/${uploaded.id}`);
     assert.equal(photoFile.status, 200);
     assert.equal(photoFile.headers.get("content-type"), "image/png");

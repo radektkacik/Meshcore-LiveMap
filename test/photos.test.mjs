@@ -148,11 +148,11 @@ test("photo store lists approved node counts", () => {
     store.setStatus(a2.id, "approved");
     store.setStatus(b.id, "approved");
     assert.deepEqual(store.listApprovedNodeCounts(), [
-      { count: 2, nodeKey: first },
-      { count: 1, nodeKey: second },
+      { count: 2, coverId: a2.id, nodeKey: first },
+      { count: 1, coverId: b.id, nodeKey: second },
     ]);
     store.setStatus(b.id, "hidden");
-    assert.deepEqual(store.listApprovedNodeCounts(), [{ count: 2, nodeKey: first }]);
+    assert.deepEqual(store.listApprovedNodeCounts(), [{ count: 2, coverId: a2.id, nodeKey: first }]);
   } finally {
     store.close();
     rmSync(directory, { recursive: true, force: true });

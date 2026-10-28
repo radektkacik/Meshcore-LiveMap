@@ -421,6 +421,7 @@ const state = {
   observersLoading: false,
   hideRoutes: localStorage.getItem("meshcoreHideRoutes") === "true",
   photoCache: new Map(),
+  photoCoverCache: new Map(),
   photoNodeKeys: new Set(),
   photoNodesLoadedAt: 0,
   photoNodesLoading: false,
@@ -1971,7 +1972,14 @@ async function loadPhotoNodes(force = false) {
   state.photoNodesLoading = true;
   try {
     const data = await getJson("/api/photos/nodes");
-    state.photoNodeKeys = new Set((data.nodes || []).map((item) => String(item.nodeKey || "").toUpperCase()));
+    state.photoNodeKeys = new Set();
+    state.photoCoverCache = new Map();
+    for (const item of data.nodes || []) {
+      const key = String(item.nodeKey || "").toUpperCase();
+      if (!key) continue;
+      state.photoNodeKeys.add(key);
+      if (item.coverId) state.photoCoverCache.set(key, String(item.coverId));
+    }
     state.photoNodesLoadedAt = Date.now();
   } catch (error) {
     console.error("Nody s fotkami se nepodařilo načíst", error);
@@ -2565,7 +2573,12 @@ function setDataFreshness(stale) {
 }
 
 function nodeTooltip(node) {
-  return `<strong>${escapeHtml(node.name || t("common.unknownNode"))}</strong><br>${escapeHtml(roleLabel(node.role))}`;
+  const key = String(node.public_key || "").toUpperCase();
+  const coverId = state.photoCoverCache.get(key);
+  const photo = coverId
+    ? `<img class="node-tooltip-photo" src="${appPath(`/api/photos/${encodeURIComponent(coverId)}`)}" alt="" loading="lazy" decoding="async" />`
+    : "";
+  return `<span class="node-tooltip-body">${photo}<span><strong>${escapeHtml(node.name || t("common.unknownNode"))}</strong><br>${escapeHtml(roleLabel(node.role))}</span></span>`;
 }
 
 function refreshOpenNodePopup(entry) {
@@ -2601,7 +2614,7 @@ function refreshNodePresentation(entry) {
   const { marker, node } = entry;
   entry.active = isNodeActive(node, nowMs(), NODE_ACTIVE_MS);
   if (validCoords(node.lat, node.lon)) marker.setLatLng([node.lat, node.lon]);
-  marker.setTooltipContent(nodeTooltip(node));
+  marker.setTooltipContent(() => nodeTooltip(node));
   applyNodeStyle(entry, entry.tier);
   const role = node.role || "unknown";
   if (entry.stackRole !== role) {
@@ -2668,8 +2681,15 @@ function addNodeMarker(node) {
     ...nodeMarkerStyle(node),
     pane: "markerPane",
   })
-    .bindTooltip(nodeTooltip(node), {
+    .bindTooltip(() => nodeTooltip(node), {
       className: "node-tooltip",
+    })
+    .on("tooltipopen", (event) => {
+      const image = event.tooltip.getElement()?.querySelector(".node-tooltip-photo");
+      if (!image) return;
+      const hideBroken = () => image.remove();
+      if (image.complete && image.naturalWidth === 0) hideBroken();
+      else image.addEventListener("error", hideBroken, { once: true });
     })
     .bindPopup(() => nodePopup(entry.node, isNodeActive(entry.node, nowMs(), NODE_ACTIVE_MS)), {
       className: "node-popup",
@@ -6773,6 +6793,7 @@ async function start() {
     return null;
   });
   const nodesPromise = loadNodes();
+  void loadPhotoNodes();
   void loadStats();
   setInterval(() => loadBaseData().catch((error) => console.error("Obnova dat selhala", error)), BASE_DATA_REFRESH_MS);
   setInterval(refreshNodeState, 60_000);

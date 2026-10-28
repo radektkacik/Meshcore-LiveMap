@@ -171,7 +171,14 @@ export function createPhotoStore(rootDir, {
     ORDER BY created_at DESC LIMIT ?
   `);
   const selectApprovedNodeCounts = db.prepare(`
-    SELECT node_key, COUNT(*) AS total FROM photos
+    SELECT node_key, COUNT(*) AS total,
+      (
+        SELECT p2.id FROM photos p2
+        WHERE p2.node_key = photos.node_key AND p2.status = 'approved'
+        ORDER BY p2.created_at DESC, p2.rowid DESC
+        LIMIT 1
+      ) AS cover_id
+    FROM photos
     WHERE status = 'approved'
     GROUP BY node_key
     ORDER BY total DESC, node_key ASC
@@ -304,6 +311,7 @@ export function createPhotoStore(rootDir, {
     listApprovedNodeCounts(limit = 5000) {
       return selectApprovedNodeCounts.all(Math.min(Math.max(1, Number(limit) || 5000), 10_000)).map((row) => ({
         count: row.total,
+        coverId: row.cover_id || null,
         nodeKey: row.node_key,
       }));
     },
