@@ -763,7 +763,7 @@ function renderPhotoPage(entries, reports, token, status, openReports) {
     <li class="photo ${escapeHtml(photo.status)}">
       <a class="thumb" href="${imageUrl}" target="_blank" rel="noreferrer"><img src="${imageUrl}" alt="" loading="lazy" /></a>
       <div class="body">
-        <div class="meta">${escapeHtml(photo.status)} · ${escapeHtml(new Date(photo.createdAt).toLocaleString("cs-CZ"))} · ${escapeHtml(photo.bytes)} B · ${photo.width || "?"}×${photo.height || "?"}</div>
+        <div class="meta">${isCover ? '<span class="cover-badge">Náhled</span>' : ""}${escapeHtml(photo.status)} · ${escapeHtml(new Date(photo.createdAt).toLocaleString("cs-CZ"))} · ${escapeHtml(photo.bytes)} B · ${photo.width || "?"}×${photo.height || "?"}</div>
         <div class="node"><a href="../../?node=${encodeURIComponent(photo.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(nodeLabel)}</a></div>
         ${photo.author ? `<div class="author">${escapeHtml(photo.author)}</div>` : ""}
         ${photo.caption ? `<p>${escapeHtml(photo.caption)}</p>` : ""}
@@ -1777,7 +1777,9 @@ p { margin:4px 0; white-space:pre-wrap; }
 .actions button { padding:5px 10px; border:1px solid rgba(30,65,49,.2); border-radius:6px; background:#fff; font:12px Manrope, system-ui, sans-serif; cursor:pointer; }
 .actions button:hover { border-color:#078e62; color:#078e62; }
 .actions button.approve { color:#078e62; border-color:rgba(7,142,98,.45); }
+.actions button.cover { color:#078e62; border-color:rgba(7,142,98,.45); }
 .actions button.hide { color:#b27616; border-color:rgba(178,118,22,.4); }
+.cover-badge { display:inline-block; margin-right:6px; padding:1px 6px; border-radius:999px; color:#078e62; background:rgba(7,142,98,.12); font:700 9px "DM Mono", monospace; letter-spacing:.04em; text-transform:uppercase; }
 .actions button.delete { color:#c0392b; border-color:rgba(192,57,43,.4); }
 .actions a.edit { padding:5px 10px; border:1px solid rgba(7,142,98,.45); border-radius:6px; color:#078e62; background:#fff; font:12px Manrope, system-ui, sans-serif; text-decoration:none; }
 .actions a.edit:hover { color:#fff; background:#078e62; }
@@ -1862,14 +1864,18 @@ function formatAdminNumber(value) {
   return new Intl.NumberFormat("cs-CZ").format(Number(value) || 0);
 }
 
-function adminPhotoRows(entries, names, status) {
+function adminPhotoRows(entries, names, status, covers = new Map()) {
   return entries.map((photo) => {
     const node = names.get(photo.nodeKey);
+    const isCover = covers.get(photo.nodeKey) === photo.id;
     const nodeLabel = node ? `${node} · ${photo.nodeKey.slice(0, 8)}` : photo.nodeKey.slice(0, 16);
     const imageUrl = sitePath(`/api/photos/${encodeURIComponent(photo.id)}`);
     const actions = [
       photo.status !== "approved"
         ? '<button class="approve" name="action" value="approve" type="submit">Schválit</button>'
+        : "",
+      photo.status === "approved" && !isCover
+        ? '<button class="cover" name="action" value="cover" type="submit">Nastavit jako náhled</button>'
         : "",
       photo.status !== "hidden"
         ? '<button class="hide" name="action" value="hide" type="submit">Skrýt</button>'
@@ -1880,7 +1886,7 @@ function adminPhotoRows(entries, names, status) {
     <li class="photo ${escapeHtml(photo.status)}">
       <a class="thumb" href="${imageUrl}" target="_blank" rel="noreferrer"><img src="${imageUrl}" alt="" loading="lazy" /></a>
       <div class="body">
-        <div class="meta">${escapeHtml(photo.status)} · ${escapeHtml(new Date(photo.createdAt).toLocaleString("cs-CZ"))} · ${escapeHtml(photo.bytes)} B · ${photo.width || "?"}×${photo.height || "?"}</div>
+        <div class="meta">${isCover ? '<span class="cover-badge">Náhled</span>' : ""}${escapeHtml(photo.status)} · ${escapeHtml(new Date(photo.createdAt).toLocaleString("cs-CZ"))} · ${escapeHtml(photo.bytes)} B · ${photo.width || "?"}×${photo.height || "?"}</div>
         <div class="node"><a href="${sitePath("/")}?node=${encodeURIComponent(photo.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(nodeLabel)}</a></div>
         ${photo.author ? `<div class="author">${escapeHtml(photo.author)}</div>` : ""}
         ${photo.caption ? `<p>${escapeHtml(photo.caption)}</p>` : ""}
@@ -1898,6 +1904,7 @@ function adminPhotoPage(status) {
   const entries = status === "reports" ? [] : photoStore.listAdmin(status, 300);
   const reports = status === "reports" ? photoStore.listReports("open", 300) : [];
   const names = photoNodeNames();
+  const covers = new Map(photoStore.listApprovedNodeCounts(10_000).map((node) => [node.nodeKey, node.coverId]));
   const stats = photoStore.stats();
   const labels = {
     all: "Vše",
@@ -1957,7 +1964,7 @@ function adminPhotoPage(status) {
 <nav class="tabs">${tabs}</nav>
 ${status === "reports"
   ? (reports.length ? `<ul class="list">${reportRows}</ul>` : '<p class="empty">Žádné otevřené žádosti.</p>')
-  : (entries.length ? `<ul class="list">${adminPhotoRows(entries, names, status)}</ul>` : '<p class="empty">Žádné fotky v této kategorii.</p>')}`,
+  : (entries.length ? `<ul class="list">${adminPhotoRows(entries, names, status, covers)}</ul>` : '<p class="empty">Žádné fotky v této kategorii.</p>')}`,
   });
 }
 
@@ -2194,6 +2201,7 @@ async function handleAdminRequest(request, response, url) {
         : "pending";
       if (action === "delete") photoStore.remove(id);
       else if (action === "approve") photoStore.setStatus(id, "approved");
+      else if (action === "cover") photoStore.setCover(id);
       else if (action === "hide") photoStore.setStatus(id, "hidden");
       else if (action === "dismiss") photoStore.resolveReport(reportId);
       redirectAdmin(response, `${adminBasePath}/photos?status=${encodeURIComponent(status)}`);

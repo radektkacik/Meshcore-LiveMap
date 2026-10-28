@@ -319,6 +319,16 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(approve.status, 303);
     const photoList = await (await fetch(`http://127.0.0.1:${appPort}/api/photos?key=${photoKey}`)).json();
     assert.equal(photoList.photos.length, 1);
+    const setCover = await fetch(`http://127.0.0.1:${appPort}/admin/photos/moderate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        cookie: adminCookie,
+      },
+      body: `id=${uploaded.id}&status=approved&action=cover`,
+      redirect: "manual",
+    });
+    assert.equal(setCover.status, 303);
     const nodeCounts = await (await fetch(`http://127.0.0.1:${appPort}/api/photos/nodes`)).json();
     assert.equal(nodeCounts.total, 1);
     assert.deepEqual(nodeCounts.nodes, [{ count: 1, coverId: uploaded.id, nodeKey: photoKey }]);

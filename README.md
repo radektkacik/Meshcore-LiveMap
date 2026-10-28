@@ -144,8 +144,10 @@ přihlašovací údaje zůstávají pouze na serveru.
   `GET /api/feedback?token=<FEEDBACK_TOKEN>` (JSON). Bez správného tokenu vrací 404.
 - `GET /api/photos?key=<public_key>` vrací schválené fotky nodu. `GET
   /api/photos/nodes` vrací počty schválených fotek podle nodů (`nodeKey`,
-  `count`, `coverId` první fotky) pro přepínač „Jen nody s fotkou“ v HUD
-  a malý náhled v tooltipu při najetí na nod. `POST /api/photos`
+  `count`, `coverId` zvolené fotky) pro přepínač „Jen nody s fotkou“ v HUD
+  a malý náhled v tooltipu při najetí na nod. Správce může v `/admin/photos`
+  u schválené fotky zvolit „Nastavit jako náhled“; bez volby se použije
+  nejnovější schválená fotka. `POST /api/photos`
   přijímá binární JPEG/PNG/WebP (max 5 MB) s hlavičkami `X-Photo-Key`,
   `X-Photo-Author` a `X-Photo-Consent: 1`; volitelný `X-Photo-Caption` lze
   zadat u každé fotky (např. hardware, baterie, panel). Klient umožní vybrat až 5 fotek
@@ -162,7 +164,8 @@ přihlašovací údaje zůstávají pouze na serveru.
   (čekající/schválené/skryté/vše/žádosti) a zpětná vazba. Staré tokenové URL
   `/api/photos/view?token=…` a `/api/feedback/view?token=…` zůstávají funkční.
 - Moderace fotek je i nadále dostupná na `GET /api/photos/view?token=<PHOTO_TOKEN>`
-  (fallback `FEEDBACK_TOKEN`), odkud lze fotky schválit, skrýt nebo smazat. Soubory i
+  (fallback `FEEDBACK_TOKEN`), odkud lze fotky schválit, skrýt nebo smazat; volba
+  náhledu je v nové administraci `/admin/photos`. Soubory i
   `photos.sqlite` jsou v `uploads/` mimo `data/`, takže se nedostanou do záloh.
   Platí limity: 8 fotek/hodinu na IP, 30/den, 8 fotek na nod, 2 GB celkem
   a max. 2400 px na delší straně (klient posílá max. 2000 px).

@@ -143,6 +143,12 @@ export function createPhotoStore(rootDir, {
     );
     CREATE INDEX IF NOT EXISTS photos_node ON photos (node_key, status, created_at);
     CREATE INDEX IF NOT EXISTS photos_status ON photos (status, created_at);
+    CREATE TABLE IF NOT EXISTS photo_covers (
+      node_key TEXT PRIMARY KEY,
+      photo_id TEXT NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS photo_covers_photo ON photo_covers (photo_id);
     CREATE TABLE IF NOT EXISTS photo_reports (
       id TEXT PRIMARY KEY,
       photo_id TEXT NOT NULL,
@@ -171,17 +177,25 @@ export function createPhotoStore(rootDir, {
     ORDER BY created_at DESC LIMIT ?
   `);
   const selectApprovedNodeCounts = db.prepare(`
-    SELECT node_key, COUNT(*) AS total,
-      (
-        SELECT p2.id FROM photos p2
-        WHERE p2.node_key = photos.node_key AND p2.status = 'approved'
-        ORDER BY p2.created_at DESC, p2.rowid DESC
-        LIMIT 1
+    SELECT p.node_key, COUNT(*) AS total,
+      COALESCE(
+        (
+          SELECT c.photo_id FROM photo_covers c
+          JOIN photos cp ON cp.id = c.photo_id
+          WHERE c.node_key = p.node_key AND cp.status = 'approved'
+          LIMIT 1
+        ),
+        (
+          SELECT p2.id FROM photos p2
+          WHERE p2.node_key = p.node_key AND p2.status = 'approved'
+          ORDER BY p2.created_at DESC, p2.rowid DESC
+          LIMIT 1
+        )
       ) AS cover_id
-    FROM photos
-    WHERE status = 'approved'
-    GROUP BY node_key
-    ORDER BY total DESC, node_key ASC
+    FROM photos p
+    WHERE p.status = 'approved'
+    GROUP BY p.node_key
+    ORDER BY total DESC, p.node_key ASC
     LIMIT ?
   `);
   const selectByStatus = db.prepare(`
@@ -196,6 +210,12 @@ export function createPhotoStore(rootDir, {
   const countPending = db.prepare("SELECT COUNT(*) AS total FROM photos WHERE status = 'pending'");
   const updateStatus = db.prepare("UPDATE photos SET status = ?, reviewed_at = ? WHERE id = ?");
   const deleteRow = db.prepare("DELETE FROM photos WHERE id = ?");
+  const upsertCover = db.prepare(`
+    INSERT INTO photo_covers (node_key, photo_id, updated_at)
+    VALUES (?, ?, ?)
+    ON CONFLICT(node_key) DO UPDATE SET photo_id = excluded.photo_id, updated_at = excluded.updated_at
+  `);
+  const deleteCoverByPhoto = db.prepare("DELETE FROM photo_covers WHERE photo_id = ?");
   const insertReport = db.prepare(`
     INSERT INTO photo_reports (id, photo_id, reason, message, contact, ip_hash, status, created_at)
     VALUES (@id, @photo_id, @reason, @message, @contact, @ip_hash, 'open', @created_at)
@@ -338,6 +358,7 @@ export function createPhotoStore(rootDir, {
     remove(id) {
       const row = selectById.get(String(id || ""));
       if (!row) return false;
+      deleteCoverByPhoto.run(String(id));
       deleteRow.run(String(id));
       resolvePhotoReports.run(Date.now(), String(id));
       const absolute = absolutePath(row);
@@ -346,9 +367,17 @@ export function createPhotoStore(rootDir, {
     },
     resolvePhotoReports: (photoId) => resolvePhotoReports.run(Date.now(), String(photoId || "")).changes,
     resolveReport: (id) => resolveReport.run(Date.now(), String(id || "")).changes > 0,
+    setCover(id) {
+      const row = selectById.get(String(id || ""));
+      if (!row || row.status !== "approved") return false;
+      upsertCover.run(row.node_key, row.id, Date.now());
+      return true;
+    },
     setStatus(id, status) {
       if (!PHOTO_STATUSES.includes(status)) return false;
-      return updateStatus.run(status, Date.now(), String(id || "")).changes > 0;
+      const changed = updateStatus.run(status, Date.now(), String(id || "")).changes > 0;
+      if (changed && status !== "approved") deleteCoverByPhoto.run(String(id || ""));
+      return changed;
     },
     stats: () => ({
       bytes: sumBytes.get().total,
