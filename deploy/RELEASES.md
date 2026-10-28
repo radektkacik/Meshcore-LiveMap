@@ -255,6 +255,8 @@
 | 2026-10-28 09:13 | `20261028T091335Z.tar.gz` | `20261028-0913-50b8d88` | Prod: stejná volba náhledové fotky v `/admin/photos` | `photos.mjs`, `server.mjs`, testy, `README.md` |
 | 2026-10-28 09:17 | `20261028T091743Z.tar.gz` (stage APP_DIR) | `20261028-0917-5f9442a` | Beta: veřejný changelog se generuje z ručně udržovaného `CHANGELOG.md`; jen významné funkční změny, ne každý build | `CHANGELOG.md`, `scripts/build-changelog.mjs`, testy, `README.md`, `deploy/RELEASES.md` |
 | 2026-10-28 09:18 | `20261028T091806Z.tar.gz` | `20261028-0918-5f9442a` | Prod: stejný kurátorovaný changelog | `CHANGELOG.md`, `scripts/build-changelog.mjs`, testy, `README.md`, `deploy/RELEASES.md` |
+| 2026-10-28 16:07 | `20261028T160751Z.tar.gz` (stage APP_DIR) | `20261028-1607-47316e5` | Beta: uživatel může při nahrání 2–5 fotek zvolit „Náhled“; u pending fotky se náhled nastaví po schválení, admin může přepsat | `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, testy, `README.md` |
+| 2026-10-28 16:08 | `20261028T160813Z.tar.gz` | `20261028-1608-47316e5` | Prod: stejná volba náhledu při nahrávání fotek | `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, testy, `README.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):

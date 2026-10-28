@@ -3,6 +3,12 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-10-28 — Uživatel volí náhled fotky
+- Prostředí: produkce i beta
+- Build: 20261028-1608-47316e5
+- Při nahrání dvou až pěti fotek lze u jedné zvolit „Náhled“.
+- U fotky čekající na schválení se náhled nastaví po schválení; správce může volbu kdykoli přepsat.
+
 ## 2026-10-28 — Fotky v tooltipu a volba náhledu
 - Prostředí: produkce i beta
 - Build: 20261028-0913-50b8d88
