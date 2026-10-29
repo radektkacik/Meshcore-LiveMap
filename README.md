@@ -101,6 +101,11 @@ přihlašovací údaje zůstávají pouze na serveru.
   ihned a zruší případný čekající návrh). Platí limit 10 úprav/h, 50/den
   a 5s pauza na IP. Zapomenuté heslo se neobnovuje; správce může info smazat
   a uživatel jej založí znovu.
+- `GET /api/comments?key=<public_key>` vrací komentáře k nodu, `POST /api/comments`
+  s JSON `{key, text, author}` je zveřejní ihned. Text má 2–500 znaků, autor je
+  nepovinný; platí limit 10 komentářů/h, 200/den a 15s pauza na IP. Data jsou
+  v `data/comments.sqlite`. Správce je může mazat v `/admin/comments`; nový
+  komentář mu přijde i do Telegramu.
 - `/api/recent?seconds=30` vrací posledních N sekund živých paketů z paměťového
   kruhového bufferu (max. 120 s) jako jeden JSON. Klient ho načte paralelně
   s nody, všechny prefixy vyřeší jedním dávkovým requestem a trasy vykreslí
@@ -181,7 +186,8 @@ přihlašovací údaje zůstávají pouze na serveru.
 - Volitelné Telegram notifikace pro správce: `TELEGRAM_BOT_TOKEN` a
   `TELEGRAM_CHAT_ID`. Upozornění chodí na novou fotku čekající na schválení,
   žádost o smazání fotky a volitelně (`TELEGRAM_NOTIFY_FEEDBACK=1`) i na novou
-  zprávu v knize návštěv. Zprávy obsahují počty čekajících položek; odkaz
+  zprávu v knize návštěv a nový komentář k nodu (`TELEGRAM_NOTIFY_COMMENTS=0`
+  notifikace vypne). Zprávy obsahují počty čekajících položek; odkaz
   do administrace lze zapnout přes `TELEGRAM_ADMIN_LINK=1` (odkaz už neobsahuje
   token, vede na `/admin`). U automaticky zveřejněných fotek notifikace vede
   na schválené fotky a obsahuje upozornění, že je možné je smazat.

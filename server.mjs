@@ -11,6 +11,7 @@ import { createVisitStatsStore } from "./visit-stats.mjs";
 import { createFeedbackStore } from "./feedback.mjs";
 import { createPhotoStore, detectImage, PhotoError } from "./photos.mjs";
 import { createNodeInfoStore } from "./node-info.mjs";
+import { createCommentStore } from "./comments.mjs";
 import { createTelegramNotifier } from "./notify.mjs";
 
 const port = Number(process.env.PORT || 4173);
@@ -44,6 +45,8 @@ const feedbackDbPath = process.env.FEEDBACK_DB_PATH || join(process.cwd(), "data
 const feedbackStore = createFeedbackStore(feedbackDbPath);
 const nodeInfoDbPath = process.env.NODE_INFO_DB_PATH || join(process.cwd(), "data", "node-info.sqlite");
 const nodeInfoStore = createNodeInfoStore(nodeInfoDbPath);
+const commentsDbPath = process.env.COMMENTS_DB_PATH || join(process.cwd(), "data", "comments.sqlite");
+const commentStore = createCommentStore(commentsDbPath);
 const feedbackToken = process.env.FEEDBACK_TOKEN || "";
 const adminPassword = process.env.ADMIN_PASSWORD || feedbackToken || process.env.PHOTO_TOKEN || "";
 const adminSessionSecret = process.env.ADMIN_SESSION_SECRET || adminPassword;
@@ -93,6 +96,7 @@ const telegramNotifyPhotos = process.env.TELEGRAM_NOTIFY_PHOTOS !== "0";
 const telegramNotifyReports = process.env.TELEGRAM_NOTIFY_REPORTS !== "0";
 const telegramNotifyFeedback = process.env.TELEGRAM_NOTIFY_FEEDBACK === "1";
 const telegramNotifyNodeInfo = process.env.TELEGRAM_NOTIFY_NODE_INFO !== "0";
+const telegramNotifyComments = process.env.TELEGRAM_NOTIFY_COMMENTS !== "0";
 const telegramAdminLink = process.env.TELEGRAM_ADMIN_LINK === "1";
 const telegramSilent = process.env.TELEGRAM_SILENT === "1";
 if (telegramNotifier.enabled) {
@@ -501,6 +505,42 @@ function startOfUtcDay(now) {
   return Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth(), new Date(now).getUTCDate());
 }
 
+const commentRate = new Map();
+const commentRateLimit = Math.max(1, Number(process.env.COMMENT_RATE_LIMIT || 10));
+const commentDailyLimit = Math.max(10, Number(process.env.COMMENT_DAILY_LIMIT || 200));
+const commentMaxRows = Math.max(100, Number(process.env.COMMENT_MAX_ROWS || 5000));
+const commentCooldownMs = Math.max(0, Number(process.env.COMMENT_COOLDOWN_MS || 15_000));
+
+function checkComment(ip, now = Date.now()) {
+  const windowStart = now - 60 * 60 * 1000;
+  const stamps = (commentRate.get(ip) || []).filter((stamp) => stamp > windowStart);
+  const last = stamps[stamps.length - 1];
+  if (last != null && now - last < commentCooldownMs) {
+    commentRate.set(ip, stamps);
+    return {
+      ok: false,
+      retryAfter: Math.max(1, Math.ceil((commentCooldownMs - (now - last)) / 1000)),
+      message: "Mezi komentáři je krátká pauza, zkuste to prosím za chvíli.",
+    };
+  }
+  if (stamps.length >= commentRateLimit) {
+    commentRate.set(ip, stamps);
+    return {
+      ok: false,
+      retryAfter: Math.max(1, Math.ceil((stamps[0] + 60 * 60 * 1000 - now) / 1000)),
+      message: "Příliš mnoho komentářů za hodinu, zkuste to později.",
+    };
+  }
+  stamps.push(now);
+  commentRate.set(ip, stamps);
+  if (commentRate.size > 5000) {
+    for (const [key, value] of commentRate) {
+      if (!value.some((stamp) => stamp > windowStart)) commentRate.delete(key);
+    }
+  }
+  return { ok: true };
+}
+
 function readBody(request, limit = 16_384) {
   return new Promise((resolve, reject) => {
     let size = 0;
@@ -875,6 +915,7 @@ function telegramAdminUrl(path) {
   if (!telegramAdminLink) return null;
   if (path.startsWith("/api/feedback")) return `${publicBaseUrl}/admin/feedback`;
   if (path.startsWith("/api/node-info")) return `${publicBaseUrl}/admin/node-info`;
+  if (path.startsWith("/admin/")) return `${publicBaseUrl}${path}`;
   if (path.endsWith("/reports")) return `${publicBaseUrl}/admin/photos?status=reports`;
   if (path.endsWith("/approved")) return `${publicBaseUrl}/admin/photos?status=approved`;
   return `${publicBaseUrl}/admin/photos`;
@@ -976,6 +1017,20 @@ function notifyNodeInfo(info, status = "published") {
   if (info.author) lines.push(`Autor: ${info.author}`);
   lines.push(preview);
   const url = telegramAdminUrl("/api/node-info");
+  if (url) lines.push(url);
+  notifyTelegram(lines.join("\n"));
+}
+
+function notifyNewComment({ author, nodeKey, text }) {
+  if (!telegramNotifier.enabled || !telegramNotifyComments) return;
+  const name = photoNodeNames().get(nodeKey) || nodeKey.slice(0, 8);
+  const lines = [
+    "💬 Nový komentář k nodu",
+    `Nod: ${name}`,
+  ];
+  if (author) lines.push(`Autor: ${author}`);
+  lines.push(text.length > 500 ? `${text.slice(0, 500)}…` : text);
+  const url = telegramAdminUrl("/admin/comments");
   if (url) lines.push(url);
   notifyTelegram(lines.join("\n"));
 }
@@ -1716,6 +1771,7 @@ function adminLayout({ active = "", content = "", title = "Administrace" }) {
     ["photos", adminPath("/photos"), "Fotky"],
     ["reports", adminPath("/photos?status=reports"), "Žádosti"],
     ["feedback", adminPath("/feedback"), "Zpětná vazba"],
+    ["comments", adminPath("/comments"), `Komentáře${commentStore.count() ? ` (${commentStore.count()})` : ""}`],
     ["nodeinfo", adminPath("/node-info"), `Info nodů${nodeInfoStore.pendingCount() ? ` (${nodeInfoStore.pendingCount()})` : ""}`],
   ].map(([key, href, label]) => `<a class="${active === key ? "active" : ""}" href="${href}">${label}</a>`).join("");
   return `<!doctype html>
@@ -1780,6 +1836,11 @@ p { margin:4px 0; white-space:pre-wrap; }
 .actions button.cover { color:#078e62; border-color:rgba(7,142,98,.45); }
 .actions button.hide { color:#b27616; border-color:rgba(178,118,22,.4); }
 .cover-badge { display:inline-block; margin-right:6px; padding:1px 6px; border-radius:999px; color:#078e62; background:rgba(7,142,98,.12); font:700 9px "DM Mono", monospace; letter-spacing:.04em; text-transform:uppercase; }
+.admin-comment { padding:11px 13px; border:1px solid rgba(30,65,49,.14); border-radius:10px; background:#fff; }
+.admin-comment .meta { margin-bottom:3px; color:#667b70; font:11px "DM Mono", monospace; }
+.admin-comment .node a { color:#182820; text-decoration:none; }
+.admin-comment .node a:hover { color:#078e62; }
+.admin-comment p { margin:5px 0; white-space:pre-wrap; }
 .actions button.delete { color:#c0392b; border-color:rgba(192,57,43,.4); }
 .actions a.edit { padding:5px 10px; border:1px solid rgba(7,142,98,.45); border-radius:6px; color:#078e62; background:#fff; font:12px Manrope, system-ui, sans-serif; text-decoration:none; }
 .actions a.edit:hover { color:#fff; background:#078e62; }
@@ -1820,6 +1881,7 @@ function adminDashboardPage() {
   const stats = photoStore.stats();
   const visits = visitStore.report(Date.now(), 14);
   const feedbackCount = feedbackStore.count();
+  const commentCount = commentStore.count();
   const nodeInfoCount = nodeInfoStore.count();
   const nodeInfoPending = nodeInfoStore.pendingCount();
   const uptime = Math.floor(process.uptime());
@@ -1835,6 +1897,7 @@ function adminDashboardPage() {
   <div class="card"><div class="label">Otevřené žádosti</div><a href="${adminPath("/photos?status=reports")}"><div class="value">${formatAdminNumber(stats.reports)}</div></a><small>o smazání / nahlášení</small></div>
   <div class="card"><div class="label">Fotky celkem</div><a href="${adminPath("/photos?status=all")}"><div class="value">${formatAdminNumber(stats.total)}</div></a><small>${formatAdminNumber(stats.bytes)} B</small></div>
   <div class="card"><div class="label">Zpětná vazba</div><a href="${adminPath("/feedback")}"><div class="value">${formatAdminNumber(feedbackCount)}</div></a><small>uložených zpráv</small></div>
+  <div class="card"><div class="label">Komentáře</div><a href="${adminPath("/comments")}"><div class="value">${formatAdminNumber(commentCount)}</div></a><small>u nodů</small></div>
   <div class="card"><div class="label">Info nodů</div><a href="${adminPath("/node-info")}"><div class="value">${formatAdminNumber(nodeInfoCount)}</div></a><small>${nodeInfoPending ? `${formatAdminNumber(nodeInfoPending)} změn ke schválení` : "uživatelských popisů"}</small></div>
   <div class="card"><div class="label">Dnes návštěv</div><div class="value">${formatAdminNumber(visits.today.visits)}</div><small>${formatAdminNumber(visits.today.uniqueVisitors)} unikátních · peak ${formatAdminNumber(visits.today.peakViewers)}</small></div>
   <div class="card"><div class="label">MQTT</div><div class="value ${mqttConnected ? "online" : "offline"}">${mqttConnected ? "online" : "offline"}</div><small>${packetStreams.size} připojených klientů</small></div>
@@ -1846,6 +1909,7 @@ function adminDashboardPage() {
       <a href="${adminPath("/photos?status=pending")}">Schvalovat fotky</a>
       <a href="${adminPath("/photos?status=reports")}">Řešit žádosti</a>
       <a href="${adminPath("/feedback")}">Projít zpětnou vazbu</a>
+      <a href="${adminPath("/comments")}">Projít komentáře</a>
       <a href="${adminPath("/node-info")}">Kontrolovat info nodů</a>
       <a href="${sitePath("/api/health")}" target="_blank" rel="noreferrer">Health JSON</a>
     </div>
@@ -1965,6 +2029,32 @@ function adminPhotoPage(status) {
 ${status === "reports"
   ? (reports.length ? `<ul class="list">${reportRows}</ul>` : '<p class="empty">Žádné otevřené žádosti.</p>')
   : (entries.length ? `<ul class="list">${adminPhotoRows(entries, names, status, covers)}</ul>` : '<p class="empty">Žádné fotky v této kategorii.</p>')}`,
+  });
+}
+
+function adminCommentsPage() {
+  const entries = commentStore.listAdmin(300);
+  const names = photoNodeNames();
+  const rows = entries.map((comment) => {
+    const name = names.get(comment.nodeKey) || comment.nodeKey.slice(0, 16);
+    return `
+    <li class="admin-comment">
+      <div class="meta">${escapeHtml(new Date(comment.createdAt).toLocaleString("cs-CZ"))}${comment.author ? ` · ${escapeHtml(comment.author)}` : ""}</div>
+      <div class="node"><a href="${sitePath("/")}?node=${encodeURIComponent(comment.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(name)}</a></div>
+      <p>${escapeHtml(comment.text)}</p>
+      <form class="actions" method="post" action="${adminPath("/comments/delete")}">
+        <input type="hidden" name="id" value="${escapeHtml(comment.id)}" />
+        <button class="delete" type="submit">Smazat komentář</button>
+      </form>
+    </li>`;
+  }).join("");
+  return adminLayout({
+    active: "comments",
+    title: "Komentáře",
+    content: `
+<h1>Komentáře</h1>
+<p class="sub">${formatAdminNumber(entries.length)} komentářů. Zveřejňují se ihned; zde je můžete smazat.</p>
+${entries.length ? `<ul class="list">${rows}</ul>` : '<p class="empty">Zatím žádné komentáře.</p>'}`,
   });
 }
 
@@ -2155,6 +2245,11 @@ async function handleAdminRequest(request, response, url) {
       response.end(adminPhotoPage(status));
       return;
     }
+    if (path === "/admin/comments") {
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(adminCommentsPage());
+      return;
+    }
     if (path === "/admin/feedback") {
       response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       response.end(adminFeedbackPage());
@@ -2205,6 +2300,11 @@ async function handleAdminRequest(request, response, url) {
       else if (action === "hide") photoStore.setStatus(id, "hidden");
       else if (action === "dismiss") photoStore.resolveReport(reportId);
       redirectAdmin(response, `${adminBasePath}/photos?status=${encodeURIComponent(status)}`);
+      return;
+    }
+    if (path === "/admin/comments/delete") {
+      commentStore.remove(form.get("id"));
+      redirectAdmin(response, adminBasePath + "/comments");
       return;
     }
     if (path === "/admin/feedback/moderate") {
@@ -2671,6 +2771,66 @@ async function handleRequest(request, response) {
       "Cache-Control": "no-store",
     });
     response.end(JSON.stringify(visitStore.report(Date.now(), days)));
+    return;
+  }
+
+  if (url.pathname === "/api/comments") {
+    if (request.method !== "GET" && request.method !== "HEAD" && request.method !== "POST") {
+      response.writeHead(405, { Allow: "GET, HEAD, POST" }).end("Method Not Allowed");
+      return;
+    }
+    if (request.method === "GET" || request.method === "HEAD") {
+      const key = String(url.searchParams.get("key") || "").trim().toLowerCase();
+      if (!/^[0-9a-f]{64}$/.test(key)) {
+        sendJson(response, 400, { error: "Neplatný klíč nodu." });
+        return;
+      }
+      const comments = commentStore.list(key);
+      sendJson(response, 200, { comments, total: comments.length });
+      return;
+    }
+    const ip = clientIp(request);
+    const rate = checkComment(ip);
+    if (!rate.ok) {
+      sendJson(response, 429, { error: rate.message }, { "Retry-After": String(rate.retryAfter) });
+      return;
+    }
+    let payload;
+    try {
+      payload = JSON.parse(await readBody(request));
+    } catch {
+      sendJson(response, 400, { error: "Neplatný požadavek." });
+      return;
+    }
+    const key = String(payload?.key || url.searchParams.get("key") || "").trim().toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(key)) {
+      sendJson(response, 400, { error: "Neplatný klíč nodu." });
+      return;
+    }
+    const text = String(payload?.text || "").trim();
+    const author = String(payload?.author || "").trim().slice(0, 60);
+    if (text.length < 2 || text.length > 500) {
+      sendJson(response, 400, { error: "Komentář musí mít 2 až 500 znaků." });
+      return;
+    }
+    const now = Date.now();
+    if (commentStore.countSince(startOfUtcDay(now)) >= commentDailyLimit) {
+      sendJson(response, 429, { error: "Denní limit komentářů vyčerpán." }, { "Retry-After": "3600" });
+      return;
+    }
+    const comment = commentStore.create({
+      author,
+      ipHash: createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16),
+      nodeKey: key,
+      text,
+    }, now);
+    if (!comment) {
+      sendJson(response, 400, { error: "Komentář se nepodařilo vytvořit." });
+      return;
+    }
+    commentStore.pruneTo(commentMaxRows);
+    notifyNewComment(comment);
+    sendJson(response, 200, { comment, ok: true });
     return;
   }
 
@@ -3159,6 +3319,7 @@ function shutdown() {
   visitStore.close();
   feedbackStore.close();
   nodeInfoStore.close();
+  commentStore.close();
   photoStore.close?.();
   server.close();
   process.exit(0);

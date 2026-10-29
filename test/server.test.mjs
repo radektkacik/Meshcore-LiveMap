@@ -106,6 +106,8 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       NODES_CACHE_PATH: join(directory, "nodes-cache.json"),
       NODE_INFO_DB_PATH: join(directory, "node-info.sqlite"),
       NODE_INFO_COOLDOWN_MS: "0",
+      COMMENTS_DB_PATH: join(directory, "comments.sqlite"),
+      COMMENT_COOLDOWN_MS: "0",
       PACKET_DB_PATH: join(directory, "packets.sqlite"),
       PHOTO_DIR: join(directory, "uploads"),
       PHOTO_AUTO_APPROVE: "0",
@@ -220,6 +222,37 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.match(await adminFeedback.text(), /Zpětná vazba/);
     const pendingImage = await fetch(`http://127.0.0.1:${appPort}/api/photos/${uploaded.id}`, { headers: { cookie: adminCookie } });
     assert.equal(pendingImage.status, 200);
+
+    const commentsKey = "e".repeat(64);
+    const emptyComments = await fetch(`http://127.0.0.1:${appPort}/api/comments?key=${commentsKey}`);
+    assert.equal(emptyComments.status, 200);
+    assert.deepEqual((await emptyComments.json()).comments, []);
+    const createComment = await fetch(`http://127.0.0.1:${appPort}/api/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ author: "Tester", key: commentsKey, text: "Testovací komentář" }),
+    });
+    assert.equal(createComment.status, 200);
+    const createdComment = (await createComment.json()).comment;
+    assert.equal(createdComment.text, "Testovací komentář");
+    const comments = await fetch(`http://127.0.0.1:${appPort}/api/comments?key=${commentsKey}`);
+    assert.deepEqual((await comments.json()).comments.map((comment) => comment.text), ["Testovací komentář"]);
+    assert.ok(telegramMessages.some((text) => text.includes("Nový komentář k nodu")));
+    const adminComments = await fetch(`http://127.0.0.1:${appPort}/admin/comments`, { headers: { cookie: adminCookie } });
+    assert.equal(adminComments.status, 200);
+    assert.match(await adminComments.text(), /Smazat komentář/);
+    const deleteComment = await fetch(`http://127.0.0.1:${appPort}/admin/comments/delete`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        cookie: adminCookie,
+      },
+      body: `id=${createdComment.id}`,
+      redirect: "manual",
+    });
+    assert.equal(deleteComment.status, 303);
+    const commentsAfterDelete = await fetch(`http://127.0.0.1:${appPort}/api/comments?key=${commentsKey}`);
+    assert.deepEqual((await commentsAfterDelete.json()).comments, []);
 
     const infoKey = "c".repeat(64);
     const emptyInfo = await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`);

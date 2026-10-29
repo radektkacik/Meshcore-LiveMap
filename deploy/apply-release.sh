@@ -16,7 +16,7 @@ APP_USER=${APP_USER:-meshcore-map}
 APP_GROUP=${APP_GROUP:-meshcore-map}
 ROLLBACK_SCRIPT=${ROLLBACK_SCRIPT:-/root/rollback-meshcore.sh}
 
-for file in server.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs visit-stats.mjs feedback.mjs photos.mjs node-info.mjs notify.mjs package.json package-lock.json dist/index.html \
+for file in server.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs visit-stats.mjs feedback.mjs photos.mjs node-info.mjs comments.mjs notify.mjs package.json package-lock.json dist/index.html \
   rollback-vps.sh \
   "$STORAGE_CONF_NAME" \
   node_modules/@michaelhart/meshcore-decoder/package.json \
@@ -33,6 +33,7 @@ node --check visit-stats.mjs
 node --check feedback.mjs
 node --check photos.mjs
 node --check node-info.mjs
+node --check comments.mjs
 node --check notify.mjs
 node --input-type=module -e 'import("@michaelhart/meshcore-decoder")'
 node --input-type=module -e 'import("better-sqlite3")'
@@ -65,7 +66,7 @@ rollback() {
   if [[ "$keep_node_modules" != true ]]; then
     rm -rf "$APP_DIR/node_modules"
   fi
-  rm -f "$APP_DIR/backend-utils.mjs" "$APP_DIR/node-metrics.mjs" "$APP_DIR/packet-store.mjs" "$APP_DIR/visit-stats.mjs" "$APP_DIR/feedback.mjs" "$APP_DIR/photos.mjs" "$APP_DIR/node-info.mjs" "$APP_DIR/notify.mjs"
+  rm -f "$APP_DIR/backend-utils.mjs" "$APP_DIR/node-metrics.mjs" "$APP_DIR/packet-store.mjs" "$APP_DIR/visit-stats.mjs" "$APP_DIR/feedback.mjs" "$APP_DIR/photos.mjs" "$APP_DIR/node-info.mjs" "$APP_DIR/comments.mjs" "$APP_DIR/notify.mjs"
   tar -xzf "$BACKUP_FILE" -C "$APP_DIR"
   if [[ ! -d "$APP_DIR/node_modules" ]]; then
     echo "Závislosti nejsou v záloze ani v aplikaci; instaluji z package-lock.json" >&2
@@ -121,6 +122,9 @@ fi
 if [[ -f "$APP_DIR/node-info.mjs" ]]; then
   backup_paths+=(node-info.mjs)
 fi
+if [[ -f "$APP_DIR/comments.mjs" ]]; then
+  backup_paths+=(comments.mjs)
+fi
 if [[ -f "$APP_DIR/notify.mjs" ]]; then
   backup_paths+=(notify.mjs)
 fi
@@ -151,6 +155,7 @@ install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/visit-stats.mjs" "$APP_DIR
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/feedback.mjs" "$APP_DIR/feedback.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/photos.mjs" "$APP_DIR/photos.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/node-info.mjs" "$APP_DIR/node-info.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/comments.mjs" "$APP_DIR/comments.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/notify.mjs" "$APP_DIR/notify.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/package.json" "$APP_DIR/package.json"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/package-lock.json" "$APP_DIR/package-lock.json"

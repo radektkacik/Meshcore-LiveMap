@@ -344,6 +344,33 @@
         </form>
       </dialog>
 
+      <dialog id="comments-dialog" class="photo-dialog comments-dialog" aria-labelledby="comments-title">
+        <button id="comments-close" class="feedback-close" type="button">×</button>
+        <header>
+          <h2 id="comments-title"></h2>
+          <p id="comments-node"></p>
+        </header>
+        <div class="comments-list-wrap">
+          <ol id="comments-list" class="comments-list"></ol>
+        </div>
+        <form id="comments-form">
+          <label>
+            <span id="comments-name-label"></span>
+            <input id="comments-name" type="text" maxlength="60" />
+          </label>
+          <label>
+            <span id="comments-text-label"></span>
+            <textarea id="comments-text" rows="4" maxlength="500" required></textarea>
+          </label>
+          <p id="comments-status" class="feedback-status" role="status"></p>
+          <p id="comments-note" class="photo-note"></p>
+          <div class="feedback-actions">
+            <button type="button" id="comments-cancel"></button>
+            <button type="submit" id="comments-submit"></button>
+          </div>
+        </form>
+      </dialog>
+
       <dialog id="photo-lightbox" class="photo-lightbox" aria-label="Fotka nodu">
         <button id="photo-lightbox-close" class="qr-dialog-close" type="button">×</button>
         <button id="photo-lightbox-prev" class="photo-lightbox-nav prev" type="button">‹</button>

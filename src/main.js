@@ -295,6 +295,20 @@ const elements = {
   nodeInfoText: document.querySelector("#node-info-text"),
   nodeInfoTextLabel: document.querySelector("#node-info-text-label"),
   nodeInfoTitle: document.querySelector("#node-info-title"),
+  commentsCancel: document.querySelector("#comments-cancel"),
+  commentsClose: document.querySelector("#comments-close"),
+  commentsDialog: document.querySelector("#comments-dialog"),
+  commentsForm: document.querySelector("#comments-form"),
+  commentsList: document.querySelector("#comments-list"),
+  commentsName: document.querySelector("#comments-name"),
+  commentsNameLabel: document.querySelector("#comments-name-label"),
+  commentsNode: document.querySelector("#comments-node"),
+  commentsNote: document.querySelector("#comments-note"),
+  commentsStatus: document.querySelector("#comments-status"),
+  commentsSubmit: document.querySelector("#comments-submit"),
+  commentsText: document.querySelector("#comments-text"),
+  commentsTextLabel: document.querySelector("#comments-text-label"),
+  commentsTitle: document.querySelector("#comments-title"),
   nodeLabelsToggle: document.querySelector("#node-labels-toggle"),
   photosOnlyToggle: document.querySelector("#photos-only-toggle"),
   observersToggle: document.querySelector("#observers-toggle"),
@@ -412,6 +426,8 @@ const state = {
   nodeHistoryCache: new Map(),
   nodeInfoCache: new Map(),
   nodeInfoSaving: false,
+  commentsTarget: null,
+  commentsSaving: false,
   nodeAnalyticsCache: new Map(),
   nodeMarkerByKey: new Map(),
   nodeMarkers: [],
@@ -1420,6 +1436,11 @@ function setupNodePopup(popup, node) {
     event.stopPropagation();
     void openNodeInfoDialog(node);
   });
+  root.querySelector(".node-comments-open")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openCommentsDialog(node);
+  });
 
   qrButton?.addEventListener("click", async (event) => {
     event.preventDefault();
@@ -1582,6 +1603,18 @@ function nodeUserInfo(node) {
         <button class="node-user-info-edit" type="button">${t("nodeInfo.edit")}</button>
       </div>
       <div class="node-user-info-body"><p class="node-user-info-empty">${t("nodeInfo.loading")}</p></div>
+    </section>
+  `;
+}
+
+function nodeComments(node) {
+  if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
+  return `
+    <section class="node-comments" data-node-key="${escapeHtml(node.public_key.toLowerCase())}">
+      <div class="node-comments-head">
+        <span>${t("comments.titleShort")}</span>
+        <button class="node-comments-open" type="button">${t("comments.open")}</button>
+      </div>
     </section>
   `;
 }
@@ -1846,6 +1879,7 @@ function nodePopupContent(node, active) {
     </header>
     ${nodePhotos(node)}
     ${nodeUserInfo(node)}
+    ${nodeComments(node)}
     ${basicDetails}
     ${trafficDetails}
     ${networkDetails}
@@ -2255,6 +2289,91 @@ function resetPhotoDialog() {
   resetPhotoPreview();
   elements.photoSubmit.disabled = false;
   state.photoUploading = false;
+}
+
+function setCommentsStatus(text, isError = false) {
+  elements.commentsStatus.textContent = text;
+  elements.commentsStatus.classList.toggle("error", Boolean(isError));
+}
+
+function renderCommentsDialog() {
+  elements.commentsTitle.textContent = t("comments.dialogTitle");
+  elements.commentsClose.setAttribute("aria-label", t("comments.cancel"));
+  elements.commentsNameLabel.textContent = t("comments.name");
+  elements.commentsName.placeholder = t("comments.namePlaceholder");
+  elements.commentsTextLabel.textContent = t("comments.text");
+  elements.commentsText.placeholder = t("comments.textPlaceholder");
+  elements.commentsNote.textContent = t("comments.note");
+  elements.commentsSubmit.textContent = t("comments.submit");
+  elements.commentsCancel.textContent = t("comments.cancel");
+  const target = state.commentsTarget;
+  elements.commentsNode.textContent = target
+    ? `${target.name || t("common.unknownNode")} · ${target.key.slice(0, 8).toUpperCase()}`
+    : "";
+}
+
+function renderComments(comments) {
+  elements.commentsList.replaceChildren();
+  if (!comments.length) {
+    const empty = document.createElement("li");
+    empty.className = "comments-empty";
+    empty.textContent = t("comments.empty");
+    elements.commentsList.appendChild(empty);
+    return;
+  }
+  for (const comment of comments) {
+    const item = document.createElement("li");
+    item.className = "comment";
+    const head = document.createElement("div");
+    head.className = "comment-head";
+    const author = document.createElement("strong");
+    author.textContent = comment.author || t("comments.anonymous");
+    const time = document.createElement("time");
+    const date = new Date(comment.createdAt);
+    if (!Number.isNaN(date.getTime())) time.dateTime = date.toISOString();
+    time.textContent = formatNodeDate(comment.createdAt);
+    head.append(author, time);
+    const text = document.createElement("p");
+    text.textContent = comment.text;
+    item.append(head, text);
+    elements.commentsList.appendChild(item);
+  }
+}
+
+async function loadComments() {
+  const target = state.commentsTarget;
+  if (!target) return;
+  elements.commentsList.replaceChildren();
+  const loading = document.createElement("li");
+  loading.className = "comments-empty";
+  loading.textContent = t("comments.loading");
+  elements.commentsList.appendChild(loading);
+  try {
+    const data = await getJson(`/api/comments?key=${encodeURIComponent(target.key)}`);
+    if (state.commentsTarget?.key !== target.key) return;
+    renderComments(Array.isArray(data.comments) ? data.comments : []);
+  } catch (error) {
+    console.error("Komentáře se nepodařilo načíst", error);
+    if (state.commentsTarget?.key !== target.key) return;
+    elements.commentsList.replaceChildren();
+    const failed = document.createElement("li");
+    failed.className = "comments-empty";
+    failed.textContent = t("comments.loadFailed");
+    elements.commentsList.appendChild(failed);
+  }
+}
+
+function openCommentsDialog(node) {
+  const key = String(node.public_key || "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(key)) return;
+  state.commentsTarget = { key, name: node.name || t("common.unknownNode") };
+  state.commentsSaving = false;
+  elements.commentsForm.reset();
+  elements.commentsSubmit.disabled = false;
+  setCommentsStatus("");
+  renderCommentsDialog();
+  if (!elements.commentsDialog.open) elements.commentsDialog.showModal();
+  void loadComments();
 }
 
 function renderPhotoDialog() {
@@ -6518,6 +6637,61 @@ elements.photoForm.addEventListener("submit", async (event) => {
   } finally {
     state.photoUploading = false;
     elements.photoSubmit.disabled = false;
+  }
+});
+
+elements.commentsClose.addEventListener("click", () => elements.commentsDialog.close());
+elements.commentsCancel.addEventListener("click", () => elements.commentsDialog.close());
+elements.commentsDialog.addEventListener("click", (event) => {
+  if (event.target === elements.commentsDialog) elements.commentsDialog.close();
+});
+elements.commentsDialog.addEventListener("close", () => {
+  state.commentsTarget = null;
+  state.commentsSaving = false;
+  setCommentsStatus("");
+});
+elements.commentsForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (state.commentsSaving) return;
+  const target = state.commentsTarget;
+  if (!target) return;
+  const text = elements.commentsText.value.trim();
+  if (text.length < 2) {
+    setCommentsStatus(t("comments.tooShort"), true);
+    return;
+  }
+  if (text.length > 500) {
+    setCommentsStatus(t("comments.tooLong"), true);
+    return;
+  }
+  state.commentsSaving = true;
+  elements.commentsSubmit.disabled = true;
+  setCommentsStatus(t("comments.sending"));
+  try {
+    const response = await fetch(appPath("/api/comments"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        key: target.key,
+        text,
+        author: elements.commentsName.value.trim(),
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setCommentsStatus(data.error || t("comments.failed"), true);
+      return;
+    }
+    elements.commentsForm.reset();
+    setCommentsStatus(t("comments.published"));
+    await loadComments();
+  } catch (error) {
+    setCommentsStatus(t("comments.failed"), true);
+    console.error("Komentář se nepodařilo odeslat", error);
+  } finally {
+    state.commentsSaving = false;
+    elements.commentsSubmit.disabled = false;
   }
 });
 
