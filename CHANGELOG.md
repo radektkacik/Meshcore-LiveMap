@@ -8,7 +8,7 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 - Build: 20261029-0649-4e2748e
 - V detailu nodu je tlačítko „Zobrazit komentáře“ s vlastním dialogem.
 - Komentáře se zveřejňují ihned, jméno je nepovinné a text má 2–500 znaků.
-- Správce je může mazat v `/admin/comments`; nový komentář mu přijde do Telegramu.
+- Správce je může mazat v `/admin/comments`.
 
 ## 2026-10-28 — Uživatel volí náhled fotky
 - Prostředí: produkce i beta
