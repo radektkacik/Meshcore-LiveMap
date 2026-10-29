@@ -21,7 +21,8 @@ npm start
 Aktuální VPS instance běží jako systemd služba `meshcore-live-map` v adresáři
 `/opt/meshcore-live-map` a Nginx ji zpřístupňuje na
 `https://mapa.meshcore.cz/` (root). Beta instance běží jako
-`meshcore-live-map-stage` na `https://2b.meshcore.cz/map/`. Reprodukovatelné
+`meshcore-live-map-stage` na `https://2b.meshcore.cz/betamap/`; stará adresa
+`https://2b.meshcore.cz/map/` přesměrovává na produkci. Reprodukovatelné
 konfigurace jsou v adresáři [`deploy`](deploy/). Produkční frontend pro root se
 sestaví příkazem:
 
@@ -29,13 +30,13 @@ sestaví příkazem:
 npm run build
 ```
 
-Beta build pro `/map/`:
+Beta build pro `/betamap/`:
 
 ```bash
-VITE_BASE_PATH=/map/ npm run build
+VITE_BASE_PATH=/betamap/ npm run build
 ```
 
-Build zároveň vygeneruje stránku `/changelog` (na betě `/map/changelog`)
+Build zároveň vygeneruje stránku `/changelog` (na betě `/betamap/changelog`)
 z ručně udržovaného [`CHANGELOG.md`](CHANGELOG.md). Ten obsahuje jen významné
 funkční změny, ne každý build; technický seznam všech nasazení zůstává
 v [`deploy/RELEASES.md`](deploy/RELEASES.md). Odkaz „Změny verzí“ je v patičce
@@ -165,7 +166,7 @@ přihlašovací údaje zůstávají pouze na serveru.
   uloží jako `pending` a zobrazí se až po schválení. S `PHOTO_AUTO_APPROVE=1`
   se ihned uloží jako `approved`, zobrazí se v galerii a správce ji může
   dodatečně smazat. `GET /api/photos/config` vrací `{ autoApprove }`.
-- Administrace je na `GET /admin` (beta `/map/admin`). Přihlašuje se heslem
+- Administrace je na `GET /admin` (beta `/betamap/admin`). Přihlašuje se heslem
   `ADMIN_PASSWORD`; když není nastavené, použije se `FEEDBACK_TOKEN`, případně
   `PHOTO_TOKEN`. Po přihlášení drží server HttpOnly session cookie 12 hodin
   (`ADMIN_SESSION_SECRET`, `ADMIN_SESSION_TTL_MS`). Sekce: přehled, fotky
@@ -191,7 +192,7 @@ přihlašovací údaje zůstávají pouze na serveru.
   do administrace lze zapnout přes `TELEGRAM_ADMIN_LINK=1` (odkaz už neobsahuje
   token, vede na `/admin`). U automaticky zveřejněných fotek notifikace vede
   na schválené fotky a obsahuje upozornění, že je možné je smazat.
-  `PUBLIC_BASE_URL` určuje základ odkazu (u bety `https://2b.meshcore.cz/map`).
+  `PUBLIC_BASE_URL` určuje základ odkazu (u bety `https://2b.meshcore.cz/betamap`).
 - Animace tras je ve výchozím stavu řešená canvas rendererem (jedna kresba,
   posun `lineDashOffset` bez CSS animací). Méně výkonnou SVG variantu s CSS
   animací `stroke-dashoffset` lze zapnout parametrem `?anim=svg`. Animaci lze

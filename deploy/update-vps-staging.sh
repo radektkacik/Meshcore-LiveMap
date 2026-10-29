@@ -9,8 +9,8 @@ if [[ -z "${DEPLOY_HOST:-}" && -f "$ROOT_DIR/.deploy.env" ]]; then
 fi
 SSH_KEY=${SSH_KEY:-"$ROOT_DIR/cntb"}
 DEPLOY_HOST=${DEPLOY_HOST:?Set DEPLOY_HOST, e.g. root@your-server}
-PUBLIC_URL=${PUBLIC_URL:-"https://2b.meshcore.cz/map/"}
-VITE_BASE_PATH=${VITE_BASE_PATH:-/map/}
+PUBLIC_URL=${PUBLIC_URL:-"https://2b.meshcore.cz/betamap/"}
+VITE_BASE_PATH=${VITE_BASE_PATH:-/betamap/}
 RELEASE_ID=$(date -u +%Y%m%dT%H%M%SZ)
 REMOTE_STAGE="/tmp/meshcore-live-map-stage-$RELEASE_ID"
 BUILD_DIR=$(mktemp -d)

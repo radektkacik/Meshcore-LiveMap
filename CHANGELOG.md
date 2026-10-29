@@ -3,6 +3,12 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-10-29 — Beta na nové adrese
+- Prostředí: beta
+- Build: 20261029-0756-86b61ad
+- Beta je nově na `https://2b.meshcore.cz/betamap/`.
+- Původní `https://2b.meshcore.cz/map/` přesměrovává na produkci `https://mapa.meshcore.cz/`.
+
 ## 2026-10-29 — Komentáře k nodům
 - Prostředí: produkce i beta
 - Build: 20261029-0649-4e2748e
