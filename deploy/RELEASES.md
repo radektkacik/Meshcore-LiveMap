@@ -263,6 +263,8 @@
 | 2026-10-29 06:49 | `20261029T064924Z.tar.gz` | `20261029-0649-4e2748e` | Prod: stejné komentáře k nodům | `comments.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, deploy skripty, testy, `README.md`, `.env.example` |
 | 2026-10-29 06:50 | `20261029T065018Z.tar.gz` (stage APP_DIR) | `20261029-0650-d14f1bd` | Beta: publikace záznamu o komentářích v changelogu | `CHANGELOG.md`, `deploy/RELEASES.md` |
 | 2026-10-29 06:50 | `20261029T065038Z.tar.gz` | `20261029-0650-d14f1bd` | Prod: stejný záznam v changelogu | `CHANGELOG.md`, `deploy/RELEASES.md` |
+| 2026-10-29 07:00 | `20261029T070036Z.tar.gz` (stage APP_DIR) | `20261029-0700-6e22620` | Beta: z changelogu odstraněna zmínka o Telegram notifikaci komentářů | `CHANGELOG.md` |
+| 2026-10-29 07:00 | `20261029T070057Z.tar.gz` | `20261029-0700-6e22620` | Prod: stejná úprava changelogu | `CHANGELOG.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
