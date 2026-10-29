@@ -259,6 +259,8 @@
 | 2026-10-28 16:08 | `20261028T160813Z.tar.gz` | `20261028-1608-47316e5` | Prod: stejná volba náhledu při nahrávání fotek | `photos.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, testy, `README.md` |
 | 2026-10-28 16:08 | `20261028T160852Z.tar.gz` (stage APP_DIR) | `20261028-1608-275402c` | Beta: publikace záznamu o volbě náhledu v kurátorovaném changelogu | `CHANGELOG.md`, `deploy/RELEASES.md` |
 | 2026-10-28 16:09 | `20261028T160911Z.tar.gz` | `20261028-1609-275402c` | Prod: stejný záznam v changelogu | `CHANGELOG.md`, `deploy/RELEASES.md` |
+| 2026-10-29 06:48 | `20261029T064859Z.tar.gz` (stage APP_DIR) | `20261029-0648-4e2748e` | Beta: komentáře k nodům s okamžitým zveřejněním, Telegram notifikací a mazáním v `/admin/comments` | `comments.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, deploy skripty, testy, `README.md`, `.env.example` |
+| 2026-10-29 06:49 | `20261029T064924Z.tar.gz` | `20261029-0649-4e2748e` | Prod: stejné komentáře k nodům | `comments.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `index.html`, deploy skripty, testy, `README.md`, `.env.example` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
