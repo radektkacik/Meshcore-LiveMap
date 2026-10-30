@@ -72,8 +72,8 @@ const MAX_LIVE_RENDERED = 350;
 const MAX_LIVE_STORED = 3000;
 const MAX_ROUTE_HOP_KM = 170;
 const MAX_ROUTE_PATH_LENGTH = 32;
-const ROUTE_RETENTION_MS = 60_000;
-const SELECTED_ROUTE_MS = 20_000;
+const DEFAULT_ROUTE_RETENTION_MS = 30_000;
+const ROUTE_RETENTION_OPTIONS = [15_000, 30_000, 60_000, 120_000];
 const ROUTE_HISTORY_LIMIT = 1200;
 const NODE_ACTIVE_MS = 60 * 60 * 1000;
 const NODE_RANKING_ACTIVE_MS = 24 * 60 * 60 * 1000;
@@ -334,6 +334,7 @@ const elements = {
   qrTitle: document.querySelector("#node-qr-title"),
   roleToggles: ["repeater", "companion", "room", "sensor", "unknown"]
     .map((role) => document.querySelector(`#role-toggle-${role}`)),
+  routeRetention: document.querySelector("#route-retention"),
   routeCount: document.querySelector("#route-count"),
   routeCacheBadge: document.querySelector("#route-cache-badge"),
   sizeToggles: [1, 2, 3].map((size) => document.querySelector(`#size-toggle-${size}`)),
@@ -385,6 +386,14 @@ langButton.addEventListener("click", () => {
 });
 elements.themeToggle.after(langButton);
 elements.animationToggle.checked = localStorage.getItem("meshcoreAnimateRoutes") !== "false";
+
+function initialRouteRetentionMs() {
+  const stored = Number(localStorage.getItem("meshcoreRouteRetentionMs"));
+  return ROUTE_RETENTION_OPTIONS.includes(stored) ? stored : DEFAULT_ROUTE_RETENTION_MS;
+}
+
+const initialRetentionMs = initialRouteRetentionMs();
+elements.routeRetention.value = String(initialRetentionMs);
 
 const state = {
   activeRoutes: new Map(),
@@ -460,7 +469,7 @@ const state = {
   prefixCache: new Map(),
   prefixCacheAt: new Map(),
   prefixRequests: new Map(),
-  retentionMs: ROUTE_RETENTION_MS,
+  retentionMs: initialRetentionMs,
   routeHistoryLoaded: false,
   routeHistoryLoading: false,
   routeWindowMs: 0,
@@ -509,7 +518,7 @@ function applyInitialFilters() {
 
 applyInitialFilters();
 const routeStore = new RouteStore({
-  retentionMs: ROUTE_RETENTION_MS,
+  retentionMs: initialRetentionMs,
   feedLimit: FEED_SOURCE_LIMIT,
   capacity: MAX_LIVE_STORED,
 });
@@ -839,7 +848,7 @@ function showRouteOnMap(route) {
 
   map.closePopup();
   map.fitBounds(L.latLngBounds(latLngs), { maxZoom: 11, padding: [40, 40] });
-  state.selectedRouteTimeout = setTimeout(clearSelectedRoute, SELECTED_ROUTE_MS);
+  state.selectedRouteTimeout = setTimeout(clearSelectedRoute, state.retentionMs);
 }
 
 function routeDetailHtml(route) {
@@ -4755,6 +4764,17 @@ function refreshAfterFilterChange() {
   else syncRoutePresentation();
   if (feedState.mode === "history") renderHistoryFeed();
 }
+
+elements.routeRetention.addEventListener("change", () => {
+  const value = Number(elements.routeRetention.value);
+  if (!ROUTE_RETENTION_OPTIONS.includes(value)) return;
+  state.retentionMs = value;
+  routeStore.retentionMs = value;
+  try {
+    localStorage.setItem("meshcoreRouteRetentionMs", String(value));
+  } catch {}
+  refreshAfterFilterChange();
+});
 
 for (const toggle of elements.sizeToggles) {
   toggle.addEventListener("change", () => {

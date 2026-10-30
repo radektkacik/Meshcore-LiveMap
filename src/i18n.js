@@ -888,6 +888,7 @@ export const STATIC_EN = {
   "Satelitní": "Satellite",
   "Časové okno": "Time window",
   "Časové okno tras": "Route time window",
+  "Zobrazení tras": "Route display",
   "Velikost hashe": "Hash size",
   "Role nodu": "Node role",
   "Typ nodu": "Node type",
