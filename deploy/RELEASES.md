@@ -268,6 +268,8 @@
 | 2026-10-29 07:56 | nginx (live) | – | 2b: `/map` a `/map/*` trvale přesměrovány na `https://mapa.meshcore.cz/` včetně cesty a query; beta nově na `/betamap/` → 4174; `/map-stage` → `/betamap/`. Záloha: `/root/nginx-2b-backup-20261029T075633Z/` | `/etc/nginx/snippets/meshcore-live-map-beta.conf`, `/etc/nginx/sites-available/meshcore`, `deploy/nginx-map-location.conf`, `deploy/nginx-betamap-location.conf`, `deploy/nginx-map-stage-location.conf` |
 | 2026-10-29 07:56 | `20261029T075640Z.tar.gz` (stage APP_DIR) | `20261029-0756-86b61ad` | Beta: build s base `/betamap/`, `PUBLIC_BASE_URL=https://2b.meshcore.cz/betamap`; produkce bez změny | `dist`, `deploy/update-vps-staging.sh`, `.env` (server), `README.md` |
 | 2026-10-29 07:57 | `20261029T075729Z.tar.gz` (stage APP_DIR) | `20261029-0757-1fc5ce1` | Beta: záznam o nové adrese v beta changelogu | `CHANGELOG.md`, `deploy/RELEASES.md` |
+| 2026-10-30 07:06 | `20261030T070630Z.tar.gz` (stage APP_DIR) | `20261030-0706-adc18cb` | Beta: kliknutí na zvýrazněnou trasu/paket otevře detail; zvětšená tolerance zásahu čáry (8 px) | `src/main.js` |
+| 2026-10-30 07:06 | `20261030T070654Z.tar.gz` | `20261030-0706-adc18cb` | Prod: stejná oprava klikání na trasy | `src/main.js` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
