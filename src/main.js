@@ -614,7 +614,7 @@ elements.hideRoutesToggle.checked = state.hideRoutes;
 const losLayer = L.layerGroup().addTo(map);
 const losMarkerLayer = L.layerGroup().addTo(map);
 const nodeLabelLayer = L.layerGroup().addTo(map);
-const routeRenderer = L.canvas({ padding: 0.3 });
+const routeRenderer = L.canvas({ padding: 0.3, tolerance: 8 });
 const routeSvgRenderer = L.svg({ padding: 0.3 });
 routeRenderer._dashOffset = 0;
 routeRenderer._fillStroke = function fillStroke(ctx, layer) {
@@ -809,13 +809,19 @@ function showRouteOnMap(route) {
   const latLngs = route.points.map((point) => [point.lat, point.lon]);
   const segments = routeSegments(route.points);
   for (const segment of segments) {
-    L.polyline(segment, {
+    const line = L.polyline(segment, {
+      renderer: routeRenderer,
       color: route.color,
+      interactive: true,
       lineCap: "round",
       lineJoin: "round",
       opacity: 0.95,
       weight: 5,
     }).addTo(selectedRouteLayer);
+    line.on("click", (event) => {
+      L.DomEvent.stopPropagation(event);
+      openRouteDetail(route, event.latlng);
+    });
   }
 
   route.points.forEach((point, index) => {
@@ -1204,18 +1210,25 @@ function showPacketOnMap(occurrences) {
   const bounds = L.latLngBounds([]);
   for (const route of [...occurrences].reverse()) {
     const highlighted = route === newest;
+    const openPacket = (event) => {
+      L.DomEvent.stopPropagation(event);
+      openPacketDetail(route, event.latlng);
+    };
     for (const segment of routeSegments(route.points)) {
-      L.polyline(segment, {
+      const line = L.polyline(segment, {
+        renderer: routeRenderer,
         color: route.color,
+        interactive: true,
         lineCap: "round",
         lineJoin: "round",
         opacity: highlighted ? 0.9 : 0.45,
         weight: highlighted ? 5 : 3,
       }).addTo(selectedRouteLayer);
+      line.on("click", openPacket);
     }
     const endpoint = route.points.at(-1);
     if (endpoint) {
-      L.circleMarker([endpoint.lat, endpoint.lon], {
+      const marker = L.circleMarker([endpoint.lat, endpoint.lon], {
         radius: highlighted ? 5 : 4,
         color: route.color,
         weight: 2,
@@ -1227,6 +1240,7 @@ function showPacketOnMap(occurrences) {
           direction: "top",
         })
         .addTo(selectedRouteLayer);
+      marker.on("click", openPacket);
     }
     for (const point of route.points) bounds.extend([point.lat, point.lon]);
   }
