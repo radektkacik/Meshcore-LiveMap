@@ -270,6 +270,8 @@
 | 2026-10-29 07:57 | `20261029T075729Z.tar.gz` (stage APP_DIR) | `20261029-0757-1fc5ce1` | Beta: záznam o nové adrese v beta changelogu | `CHANGELOG.md`, `deploy/RELEASES.md` |
 | 2026-10-30 07:06 | `20261030T070630Z.tar.gz` (stage APP_DIR) | `20261030-0706-adc18cb` | Beta: kliknutí na zvýrazněnou trasu/paket otevře detail; zvětšená tolerance zásahu čáry (8 px) | `src/main.js` |
 | 2026-10-30 07:06 | `20261030T070654Z.tar.gz` | `20261030-0706-adc18cb` | Prod: stejná oprava klikání na trasy | `src/main.js` |
+| 2026-10-30 15:34 | `20261030T153424Z.tar.gz` (stage APP_DIR) | `20261030-1534-5b9203d` | Beta: volitelná doba zobrazení live tras (15/30/60/120 s), výchozí 30 s; stejná doba i pro zvýrazněnou trasu; volba se pamatuje | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
+| 2026-10-30 15:34 | `20261030T153448Z.tar.gz` | `20261030-1534-5b9203d` | Prod: stejná volba doby zobrazení tras | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
