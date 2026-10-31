@@ -3,6 +3,15 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-10-31 — Beta: přehlednější mapa
+- Prostředí: beta
+- Build: 20261031-1308-232a0ef
+- Legenda doplněna o Direct a ostatní typy paketů.
+- Tlačítko „Sdílet pohled“ uloží kompletní filtry, vrstvy i přiblížení do odkazu.
+- Detail nodu má souhrn fotek, komentářů, infa a poslední aktivity.
+- Observerské shluky se na mobilu otevírají ve spodním panelu.
+- Beta má zapnutý provozní monitoring s upozorněními do Telegramu.
+
 ## 2026-10-31 — Větší přiblížení mapy
 - Prostředí: produkce i beta
 - Build: 20261031-1238-2672080
