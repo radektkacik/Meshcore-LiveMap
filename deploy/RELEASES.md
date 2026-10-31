@@ -272,6 +272,8 @@
 | 2026-10-30 07:06 | `20261030T070654Z.tar.gz` | `20261030-0706-adc18cb` | Prod: stejná oprava klikání na trasy | `src/main.js` |
 | 2026-10-30 15:34 | `20261030T153424Z.tar.gz` (stage APP_DIR) | `20261030-1534-5b9203d` | Beta: volitelná doba zobrazení live tras (15/30/60/120 s), výchozí 30 s; stejná doba i pro zvýrazněnou trasu; volba se pamatuje | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-10-30 15:34 | `20261030T153448Z.tar.gz` | `20261030-1534-5b9203d` | Prod: stejná volba doby zobrazení tras | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
+| 2026-10-31 11:44 | `20261031T114400Z.tar.gz` (stage APP_DIR) | `20261031-1144-4faa249` | Beta: počet komentářů přímo u tlačítka v detailu nodu; nový `GET /api/comments/count`, cache 60 s | `comments.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, testy, `README.md` |
+| 2026-10-31 11:44 | `20261031T114426Z.tar.gz` | `20261031-1144-4faa249` | Prod: stejný počet komentářů u nodu | `comments.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, testy, `README.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
