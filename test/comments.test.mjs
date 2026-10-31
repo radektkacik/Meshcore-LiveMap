@@ -15,9 +15,12 @@ test("comment store creates, lists and removes node comments", () => {
     assert.equal(first.author, "Petr");
     assert.equal(second.author, "");
     assert.equal(store.count(), 2);
+    assert.equal(store.countForNode(nodeKey), 2);
+    assert.equal(store.countForNode("d".repeat(64)), 0);
     assert.deepEqual(store.list(nodeKey).map((comment) => comment.text), ["Druhý komentář", "První komentář"]);
     assert.equal(store.remove(first.id), true);
     assert.equal(store.count(), 1);
+    assert.equal(store.countForNode(nodeKey), 1);
     assert.equal(store.remove(first.id), false);
   } finally {
     store.close();

@@ -237,6 +237,9 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(createdComment.text, "Testovací komentář");
     const comments = await fetch(`http://127.0.0.1:${appPort}/api/comments?key=${commentsKey}`);
     assert.deepEqual((await comments.json()).comments.map((comment) => comment.text), ["Testovací komentář"]);
+    const commentCount = await fetch(`http://127.0.0.1:${appPort}/api/comments/count?key=${commentsKey}`);
+    assert.equal(commentCount.status, 200);
+    assert.equal((await commentCount.json()).count, 1);
     assert.ok(telegramMessages.some((text) => text.includes("Nový komentář k nodu")));
     const adminComments = await fetch(`http://127.0.0.1:${appPort}/admin/comments`, { headers: { cookie: adminCookie } });
     assert.equal(adminComments.status, 200);
@@ -253,6 +256,8 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(deleteComment.status, 303);
     const commentsAfterDelete = await fetch(`http://127.0.0.1:${appPort}/api/comments?key=${commentsKey}`);
     assert.deepEqual((await commentsAfterDelete.json()).comments, []);
+    const countAfterDelete = await fetch(`http://127.0.0.1:${appPort}/api/comments/count?key=${commentsKey}`);
+    assert.equal((await countAfterDelete.json()).count, 0);
 
     const infoKey = "c".repeat(64);
     const emptyInfo = await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`);

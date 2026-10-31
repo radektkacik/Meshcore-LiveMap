@@ -50,6 +50,7 @@ export function createCommentStore(dbPath) {
   const selectAll = db.prepare("SELECT * FROM node_comments ORDER BY created_at DESC, id DESC LIMIT ?");
   const countRows = db.prepare("SELECT COUNT(*) AS total FROM node_comments");
   const countSince = db.prepare("SELECT COUNT(*) AS total FROM node_comments WHERE created_at >= ?");
+  const countNodeRows = db.prepare("SELECT COUNT(*) AS total FROM node_comments WHERE node_key = ?");
   const deleteRow = db.prepare("DELETE FROM node_comments WHERE id = ?");
   const pruneOverflow = db.prepare(`
     DELETE FROM node_comments WHERE id NOT IN (
@@ -60,6 +61,11 @@ export function createCommentStore(dbPath) {
   return {
     close: () => db.close(),
     count: () => countRows.get().total,
+    countForNode(nodeKey) {
+      const key = String(nodeKey || "").toLowerCase();
+      if (!validKey(key)) return 0;
+      return countNodeRows.get(key).total;
+    },
     countSince: (since) => countSince.get(Number(since) || 0).total,
     create(entry, now = Date.now()) {
       const nodeKey = String(entry?.nodeKey || "").toLowerCase();

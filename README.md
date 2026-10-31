@@ -102,7 +102,8 @@ přihlašovací údaje zůstávají pouze na serveru.
   ihned a zruší případný čekající návrh). Platí limit 10 úprav/h, 50/den
   a 5s pauza na IP. Zapomenuté heslo se neobnovuje; správce může info smazat
   a uživatel jej založí znovu.
-- `GET /api/comments?key=<public_key>` vrací komentáře k nodu, `POST /api/comments`
+- `GET /api/comments?key=<public_key>` vrací komentáře k nodu, `GET
+  /api/comments/count?key=<public_key>` jen jejich počet. `POST /api/comments`
   s JSON `{key, text, author}` je zveřejní ihned. Text má 2–500 znaků, autor je
   nepovinný; platí limit 10 komentářů/h, 200/den a 15s pauza na IP. Data jsou
   v `data/comments.sqlite`. Správce je může mazat v `/admin/comments`; nový

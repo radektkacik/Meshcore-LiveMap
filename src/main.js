@@ -437,6 +437,7 @@ const state = {
   nodeInfoSaving: false,
   commentsTarget: null,
   commentsSaving: false,
+  commentCountCache: new Map(),
   nodeAnalyticsCache: new Map(),
   nodeMarkerByKey: new Map(),
   nodeMarkers: [],
@@ -1454,6 +1455,7 @@ function setupNodePopup(popup, node) {
   const linkButton = root.querySelector(".node-link-copy");
 
   void loadNodeInfo(root, node);
+  void loadCommentCount(root, node);
   root.querySelector(".node-user-info-edit")?.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -1636,7 +1638,10 @@ function nodeComments(node) {
     <section class="node-comments" data-node-key="${escapeHtml(node.public_key.toLowerCase())}">
       <div class="node-comments-head">
         <span>${t("comments.titleShort")}</span>
-        <button class="node-comments-open" type="button">${t("comments.open")}</button>
+        <button class="node-comments-open" type="button">
+          ${t("comments.open")}
+          <span class="node-comments-count" title="">…</span>
+        </button>
       </div>
     </section>
   `;
@@ -2335,6 +2340,41 @@ function renderCommentsDialog() {
     : "";
 }
 
+function updateCommentCount(key, count, { touch = true } = {}) {
+  const value = Math.max(0, Number(count) || 0);
+  if (touch) state.commentCountCache.set(key, { at: Date.now(), count: value });
+  for (const section of document.querySelectorAll(".node-comments[data-node-key]")) {
+    if (section.dataset.nodeKey !== key) continue;
+    const badge = section.querySelector(".node-comments-count");
+    if (!badge) continue;
+    badge.textContent = value > 999 ? "999+" : String(value);
+    badge.classList.toggle("zero", value === 0);
+    badge.title = tCount("comments.count", value);
+  }
+}
+
+async function loadCommentCount(root, node) {
+  const key = String(node.public_key || "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(key) || !root.querySelector(".node-comments-count")) return;
+  const cached = state.commentCountCache.get(key);
+  if (cached && Date.now() - cached.at < 60_000) {
+    updateCommentCount(key, cached.count, { touch: false });
+    return;
+  }
+  try {
+    const data = await getJson(`/api/comments/count?key=${encodeURIComponent(key)}`);
+    updateCommentCount(key, data.count);
+  } catch (error) {
+    console.error("Počet komentářů se nepodařilo načíst", error);
+    if (!root.isConnected) return;
+    for (const section of document.querySelectorAll(".node-comments[data-node-key]")) {
+      if (section.dataset.nodeKey !== key) continue;
+      const badge = section.querySelector(".node-comments-count");
+      if (badge) badge.textContent = "?";
+    }
+  }
+}
+
 function renderComments(comments) {
   elements.commentsList.replaceChildren();
   if (!comments.length) {
@@ -2374,6 +2414,7 @@ async function loadComments() {
   try {
     const data = await getJson(`/api/comments?key=${encodeURIComponent(target.key)}`);
     if (state.commentsTarget?.key !== target.key) return;
+    updateCommentCount(target.key, data.total);
     renderComments(Array.isArray(data.comments) ? data.comments : []);
   } catch (error) {
     console.error("Komentáře se nepodařilo načíst", error);

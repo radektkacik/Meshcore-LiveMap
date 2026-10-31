@@ -2774,6 +2774,20 @@ async function handleRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/comments/count") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET, HEAD" }).end("Method Not Allowed");
+      return;
+    }
+    const key = String(url.searchParams.get("key") || "").trim().toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(key)) {
+      sendJson(response, 400, { error: "Neplatný klíč nodu." });
+      return;
+    }
+    sendJson(response, 200, { count: commentStore.countForNode(key) });
+    return;
+  }
+
   if (url.pathname === "/api/comments") {
     if (request.method !== "GET" && request.method !== "HEAD" && request.method !== "POST") {
       response.writeHead(405, { Allow: "GET, HEAD, POST" }).end("Method Not Allowed");
@@ -2786,7 +2800,7 @@ async function handleRequest(request, response) {
         return;
       }
       const comments = commentStore.list(key);
-      sendJson(response, 200, { comments, total: comments.length });
+      sendJson(response, 200, { comments, total: commentStore.countForNode(key) });
       return;
     }
     const ip = clientIp(request);
