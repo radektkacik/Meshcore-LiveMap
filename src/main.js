@@ -565,6 +565,7 @@ const rasterBaseLayers = {
     attribution: "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
     className: "satellite-layer",
     maxZoom: 19,
+    maxNativeZoom: 18,
   }),
   dark: L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "&copy; OpenStreetMap contributors",
