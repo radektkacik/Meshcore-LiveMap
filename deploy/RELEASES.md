@@ -278,6 +278,8 @@
 | 2026-10-31 12:38 | `20261031T123845Z.tar.gz` | `20261031-1238-2672080` | Prod: stejné zvýšení zoomu | `src/main.js` |
 | 2026-10-31 12:44 | `20261031T124402Z.tar.gz` (stage APP_DIR) | `20261031-1244-a1762b1` | Beta: záznam o zvýšení zoomu v changelogu | `CHANGELOG.md` |
 | 2026-10-31 12:44 | `20261031T124428Z.tar.gz` | `20261031-1244-a1762b1` | Prod: stejný záznam v changelogu | `CHANGELOG.md` |
+| 2026-10-31 12:50 | `20261031T125040Z.tar.gz` (stage APP_DIR) | `20261031-1250-3acefd1` | Beta: satelitní podklad používá native zoom max. 18 a nad ním dlaždice zvětšuje; oprava „Map not available“ při zoomu 19 | `src/main.js` |
+| 2026-10-31 12:51 | `20261031T125115Z.tar.gz` | `20261031-1251-3acefd1` | Prod: stejná oprava satelitních dlaždic | `src/main.js` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
