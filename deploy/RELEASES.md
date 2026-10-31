@@ -284,6 +284,7 @@
 | 2026-10-31 12:56 | `20261031T125621Z.tar.gz` | `20261031-1256-e90f3e8` | Prod: stejná oprava clusteru observerů | `src/main.js`, `src/style.css` |
 | 2026-10-31 13:08 | `20261031T130845Z.tar.gz` (stage APP_DIR) | `20261031-1308-232a0ef` | Beta: kompletní legenda, sdílení celého pohledu, souhrn nodu, mobilní sheet observerů a volitelný monitoring (MQTT, disk, health URL, TLS). Produkce nedotčena | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `server.mjs`, `.env.example`, `README.md` |
 | 2026-10-31 13:09 | `20261031T130928Z.tar.gz` (stage APP_DIR) | `20261031-1309-656ca4e` | Beta: záznam o nových funkcích v beta changelogu | `CHANGELOG.md` |
+| 2026-10-31 13:17 | `20261031T131702Z.tar.gz` | `20261031-1317-e90f3e8` | Prod: pouze malý odkaz „Beta“ v patičce na `https://2b.meshcore.cz/betamap/`; produkční kód zůstává bez beta funkcí | `index.html`, `dist/index.html` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
