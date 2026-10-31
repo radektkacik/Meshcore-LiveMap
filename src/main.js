@@ -68,6 +68,7 @@ const FEED_AUTO_RESUME_MS = 2_500;
 const FEED_SCROLL_RESUME_MS = 6_000;
 const NODE_HISTORY_TTL_MS = 5 * 60 * 1000;
 const NODE_ANALYTICS_TTL_MS = 5 * 60 * 1000;
+const MAX_MAP_ZOOM = 19;
 const MAX_LIVE_RENDERED = 350;
 const MAX_LIVE_STORED = 3000;
 const MAX_ROUTE_HOP_KM = 170;
@@ -530,7 +531,7 @@ const map = L.map("map", {
   center: [49.82, 15.45],
   zoom: 7,
   minZoom: 6,
-  maxZoom: 14,
+  maxZoom: MAX_MAP_ZOOM,
   zoomControl: false,
   preferCanvas: true,
 });
@@ -544,7 +545,7 @@ const initialLon = initialLonValue == null ? NaN : Number(initialLonValue);
 if (Number.isFinite(initialLat) && Number.isFinite(initialLon)
   && initialLat >= -90 && initialLat <= 90 && initialLon >= -180 && initialLon <= 180) {
   const initialViewZoom = INITIAL_PARAMS.has("z") && Number.isFinite(INITIAL_ZOOM)
-    ? Math.max(6, Math.min(14, INITIAL_ZOOM))
+    ? Math.max(6, Math.min(MAX_MAP_ZOOM, INITIAL_ZOOM))
     : map.getZoom();
   map.setView([initialLat, initialLon], initialViewZoom);
 }
@@ -556,7 +557,8 @@ const rasterBaseLayers = {
   }),
   topo: L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
     attribution: "Map data &copy; OpenStreetMap contributors, SRTM | Map style &copy; OpenTopoMap (CC-BY-SA)",
-    maxZoom: 17,
+    maxZoom: MAX_MAP_ZOOM,
+    maxNativeZoom: 17,
     subdomains: "abc",
   }),
   sat: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
@@ -2965,7 +2967,7 @@ function applyInitialNode() {
   }
   revealNodeMarker(entry);
   const zoom = INITIAL_PARAMS.has("z") && Number.isFinite(INITIAL_ZOOM)
-    ? Math.max(6, Math.min(14, INITIAL_ZOOM))
+    ? Math.max(6, Math.min(MAX_MAP_ZOOM, INITIAL_ZOOM))
     : 11;
   map.setView(entry.marker.getLatLng(), zoom);
   openNodeEntry(entry);
