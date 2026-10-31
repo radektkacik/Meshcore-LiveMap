@@ -3,6 +3,11 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-10-31 — Větší přiblížení mapy
+- Prostředí: produkce i beta
+- Build: 20261031-1238-2672080
+- Maximální zoom mapy je nově 19 místo 14.
+
 ## 2026-10-29 — Beta na nové adrese
 - Prostředí: beta
 - Build: 20261029-0756-86b61ad
