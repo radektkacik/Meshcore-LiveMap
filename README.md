@@ -185,6 +185,11 @@ přihlašovací údaje zůstávají pouze na serveru.
   založí žádost o smazání nebo nahlášení fotky. Žádosti se zobrazují v tabu
   „Žádosti“ v administraci fotek; správce může fotku smazat nebo žádost zamítnout.
   Limit je 5 žádostí za hodinu na IP.
+- Provozní monitoring: `MONITOR_ALERTS=1` zapne kontrolu MQTT, stáří paketů,
+  zaplnění disku, dostupnosti zadaných health URL a expirace TLS certifikátů.
+  Kontroly se posílají do Telegramu; seznam URL se nastavuje v `MONITOR_URLS`
+  (čárkou oddělené). Výchozí interval je 5 minut, opakování stejného alertu
+  po 1 hodině.
 - Volitelné Telegram notifikace pro správce: `TELEGRAM_BOT_TOKEN` a
   `TELEGRAM_CHAT_ID`. Upozornění chodí na novou fotku čekající na schválení,
   žádost o smazání fotky a volitelně (`TELEGRAM_NOTIFY_FEEDBACK=1`) i na novou

@@ -228,6 +228,7 @@ const elements = {
   exportSummary: document.querySelector("#export-summary"),
   exportTitle: document.querySelector("#export-title"),
   exportToggle: document.querySelector("#export-toggle"),
+  shareView: document.querySelector("#share-view"),
   photoAuthor: document.querySelector("#photo-author"),
   photoAuthorLabel: document.querySelector("#photo-author-label"),
   photoCancel: document.querySelector("#photo-cancel"),
@@ -389,6 +390,8 @@ elements.themeToggle.after(langButton);
 elements.animationToggle.checked = localStorage.getItem("meshcoreAnimateRoutes") !== "false";
 
 function initialRouteRetentionMs() {
+  const fromUrl = Number(INITIAL_PARAMS.get("retention")) * 1000;
+  if (ROUTE_RETENTION_OPTIONS.includes(fromUrl)) return fromUrl;
   const stored = Number(localStorage.getItem("meshcoreRouteRetentionMs"));
   return ROUTE_RETENTION_OPTIONS.includes(stored) ? stored : DEFAULT_ROUTE_RETENTION_MS;
 }
@@ -449,6 +452,7 @@ const state = {
   hideRoutes: localStorage.getItem("meshcoreHideRoutes") === "true",
   photoCache: new Map(),
   photoCoverCache: new Map(),
+  photoCountCache: new Map(),
   photoNodeKeys: new Set(),
   photoNodesLoadedAt: 0,
   photoNodesLoading: false,
@@ -516,6 +520,39 @@ function applyInitialFilters() {
       }
     }
   }
+  const readFlag = (name) => {
+    const value = INITIAL_PARAMS.get(name);
+    if (value === "1") return true;
+    if (value === "0") return false;
+    return null;
+  };
+  const otherTypes = readFlag("other");
+  if (otherTypes !== null) {
+    state.showOtherPacketTypes = otherTypes;
+    elements.otherTypesToggle.checked = otherTypes;
+  }
+  const labels = readFlag("labels");
+  if (labels !== null) {
+    state.showNodeLabels = labels;
+    elements.nodeLabelsToggle.checked = labels;
+  }
+  const hidden = readFlag("hide");
+  if (hidden !== null) {
+    state.hideRoutes = hidden;
+    elements.hideRoutesToggle.checked = hidden;
+  }
+  const animate = readFlag("animate");
+  if (animate !== null) {
+    state.animationEnabled = animate;
+    elements.animationToggle.checked = animate;
+  }
+  const photos = readFlag("photos");
+  if (photos !== null) {
+    state.photosOnly = photos;
+    elements.photosOnlyToggle.checked = photos;
+  }
+  const observers = readFlag("observers");
+  if (observers !== null) state.showObservers = observers;
 }
 
 applyInitialFilters();
@@ -576,8 +613,10 @@ const rasterBaseLayers = {
 const BASE_LAYER_KEY = "meshcoreBaseLayer";
 const BASE_KEYS = ["osm", "topo", "sat", "dark"];
 const storedBaseLayer = localStorage.getItem(BASE_LAYER_KEY);
-let activeBaseLayerKey = BASE_KEYS.includes(storedBaseLayer)
-  ? (storedBaseLayer === "dark" && document.documentElement.dataset.theme !== "dark" ? "osm" : storedBaseLayer)
+const requestedBaseLayer = INITIAL_PARAMS.get("base");
+const initialBaseLayer = BASE_KEYS.includes(requestedBaseLayer) ? requestedBaseLayer : storedBaseLayer;
+let activeBaseLayerKey = BASE_KEYS.includes(initialBaseLayer)
+  ? (initialBaseLayer === "dark" && document.documentElement.dataset.theme !== "dark" ? "osm" : initialBaseLayer)
   : (document.documentElement.dataset.theme === "dark" ? "dark" : "osm");
 let currentBaseLayer = null;
 let currentBaseLayerKey = null;
@@ -1147,6 +1186,10 @@ function renderObservers() {
         })
         .on("click", (event) => {
           L.DomEvent.stopPropagation(event);
+          if (isMobileSheet()) {
+            showMobileSheet(observerClusterPopupHtml(observers, position));
+            return;
+          }
           clusterMarker.openPopup();
         })
         .on("popupopen", (event) => {
@@ -1622,6 +1665,40 @@ function nodeNeighbors(node) {
   `;
 }
 
+function nodeOverview(node) {
+  if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
+  const key = node.public_key.toLowerCase();
+  return `
+    <div class="node-overview" data-node-key="${escapeHtml(key)}">
+      <span><small>${t("node.overviewPhotos")}</small><b data-overview-photos>…</b></span>
+      <span><small>${t("node.overviewComments")}</small><b data-overview-comments>…</b></span>
+      <span><small>${t("node.overviewInfo")}</small><b data-overview-info>…</b></span>
+      <span><small>${t("node.lastActivity")}</small><b>${escapeHtml(formatNodeDate(nodeLastActivity(node)))}</b></span>
+    </div>
+  `;
+}
+
+function updateNodeOverview(key) {
+  const normalized = String(key || "").toLowerCase();
+  if (!normalized) return;
+  const photoCount = state.photoCountCache.get(normalized);
+  const commentEntry = state.commentCountCache.get(normalized);
+  const infoEntry = state.nodeInfoCache.get(normalized);
+  for (const overview of document.querySelectorAll(".node-overview[data-node-key]")) {
+    if (overview.dataset.nodeKey !== normalized) continue;
+    const photos = overview.querySelector("[data-overview-photos]");
+    const comments = overview.querySelector("[data-overview-comments]");
+    const info = overview.querySelector("[data-overview-info]");
+    if (photos) photos.textContent = photoCount == null ? "…" : String(photoCount);
+    if (comments) comments.textContent = commentEntry ? String(commentEntry.count) : "…";
+    if (info) {
+      const hasInfo = Boolean(infoEntry?.info?.text);
+      info.textContent = infoEntry ? (hasInfo ? t("node.overviewInfoYes") : "—") : "…";
+      info.classList.toggle("positive", hasInfo);
+    }
+  }
+}
+
 function nodePhotos(node) {
   if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
   return `
@@ -1698,6 +1775,7 @@ async function loadNodeInfo(root, node) {
     const data = await getJson(`/api/node-info?key=${encodeURIComponent(key)}`);
     const info = data.info || null;
     state.nodeInfoCache.set(key, { at: Date.now(), info });
+    updateNodeOverview(key);
     if (root.isConnected) renderNodeInfoSection(root, info);
   } catch (error) {
     console.error("Uživatelské info nodu se nepodařilo načíst", error);
@@ -1921,6 +1999,7 @@ function nodePopupContent(node, active) {
       <div><small>${escapeHtml(roleLabel(node.role))}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
+    ${nodeOverview(node)}
     ${nodePhotos(node)}
     ${nodeUserInfo(node)}
     ${nodeComments(node)}
@@ -2052,13 +2131,18 @@ async function loadPhotoNodes(force = false) {
     const data = await getJson("/api/photos/nodes");
     state.photoNodeKeys = new Set();
     state.photoCoverCache = new Map();
+    state.photoCountCache = new Map();
     for (const item of data.nodes || []) {
       const key = String(item.nodeKey || "").toUpperCase();
       if (!key) continue;
       state.photoNodeKeys.add(key);
+      state.photoCountCache.set(key.toLowerCase(), Math.max(0, Number(item.count) || 0));
       if (item.coverId) state.photoCoverCache.set(key, String(item.coverId));
     }
     state.photoNodesLoadedAt = Date.now();
+    for (const overview of document.querySelectorAll(".node-overview[data-node-key]")) {
+      updateNodeOverview(overview.dataset.nodeKey);
+    }
   } catch (error) {
     console.error("Nody s fotkami se nepodařilo načíst", error);
     state.photosOnly = false;
@@ -2367,6 +2451,7 @@ function updateCommentCount(key, count, { touch = true } = {}) {
     badge.classList.toggle("zero", value === 0);
     badge.title = tCount("comments.count", value);
   }
+  updateNodeOverview(key);
 }
 
 async function loadCommentCount(root, node) {
@@ -3001,19 +3086,33 @@ function parseRouteWindowParam(value) {
   return [0, 300000, 3600000, 86400000].includes(number) ? number : null;
 }
 
-function shareUrlForNode(node) {
+function buildShareUrl(node = null) {
   const url = new URL(location.href);
-  url.searchParams.set("node", String(node.public_key || "").toUpperCase());
+  url.search = "";
+  url.hash = "";
   url.searchParams.set("lat", map.getCenter().lat.toFixed(5));
   url.searchParams.set("lon", map.getCenter().lng.toFixed(5));
   url.searchParams.set("z", String(map.getZoom()));
   url.searchParams.set("roles", [...state.allowedRoles].join(","));
   url.searchParams.set("sizes", [...state.allowedHashBytes].sort((a, b) => a - b).join(","));
   url.searchParams.set("lang", getLocale());
+  url.searchParams.set("base", activeBaseLayerKey);
+  url.searchParams.set("retention", String(Math.round(state.retentionMs / 1000)));
+  url.searchParams.set("other", state.showOtherPacketTypes ? "1" : "0");
+  url.searchParams.set("labels", state.showNodeLabels ? "1" : "0");
+  url.searchParams.set("hide", state.hideRoutes ? "1" : "0");
+  url.searchParams.set("animate", state.animationEnabled ? "1" : "0");
+  url.searchParams.set("photos", state.photosOnly ? "1" : "0");
+  url.searchParams.set("observers", state.showObservers ? "1" : "0");
+  if (state.animationMode === "svg") url.searchParams.set("anim", "svg");
   const windowValue = routeWindowParam(state.routeWindowMs);
   if (windowValue) url.searchParams.set("window", windowValue);
-  else url.searchParams.delete("window");
+  if (node) url.searchParams.set("node", String(node.public_key || "").toUpperCase());
   return url.toString();
+}
+
+function shareUrlForNode(node) {
+  return buildShareUrl(node);
 }
 
 function nodeStyleKey(node, tier) {
@@ -6570,6 +6669,14 @@ function downloadTextFile(name, text, mime) {
   setTimeout(() => URL.revokeObjectURL(url), 1_000);
 }
 
+elements.shareView.addEventListener("click", async () => {
+  const copied = await copyText(buildShareUrl());
+  elements.shareView.textContent = copied ? t("map.viewLinkCopied") : t("common.copyFailed");
+  setTimeout(() => {
+    elements.shareView.textContent = t("map.shareView");
+  }, 1_800);
+});
+
 elements.exportToggle.addEventListener("click", () => {
   renderExportDialog();
   if (!state.observersLoadedAt && !state.observersLoading) {
@@ -7075,6 +7182,12 @@ document.addEventListener("visibilitychange", updateRouteAnimation);
 
 const initialWindow = parseRouteWindowParam(INITIAL_PARAMS.get("window"));
 if (initialWindow != null && initialWindow !== 0) void setRouteWindow(initialWindow);
+if (INITIAL_PARAMS.get("photos") === "1") {
+  void loadPhotoNodes().then(() => refreshNodeState()).catch(() => {});
+}
+if (INITIAL_PARAMS.get("observers") === "1") {
+  void setObserversVisible(true).catch(() => {});
+}
 const initialLosLink = parseLosLink();
 
 async function start() {

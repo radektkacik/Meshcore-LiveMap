@@ -1,6 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { createReadStream, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, readFileSync, statfsSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
+import { connect as connectTls } from "node:tls";
 import { dirname, extname, join, normalize } from "node:path";
 import mqtt from "mqtt";
 import { MeshCorePacketDecoder } from "@michaelhart/meshcore-decoder";
@@ -99,6 +100,15 @@ const telegramNotifyNodeInfo = process.env.TELEGRAM_NOTIFY_NODE_INFO !== "0";
 const telegramNotifyComments = process.env.TELEGRAM_NOTIFY_COMMENTS !== "0";
 const telegramAdminLink = process.env.TELEGRAM_ADMIN_LINK === "1";
 const telegramSilent = process.env.TELEGRAM_SILENT === "1";
+const monitorAlertsEnabled = process.env.MONITOR_ALERTS === "1";
+const monitorIntervalMs = Math.max(60_000, Number(process.env.MONITOR_INTERVAL_MS || 300_000));
+const monitorRepeatMs = Math.max(60_000, Number(process.env.MONITOR_REPEAT_MS || 3_600_000));
+const monitorDiskPercent = Math.min(99, Math.max(1, Number(process.env.MONITOR_DISK_PERCENT || 90)));
+const monitorPacketAgeSec = Math.max(60, Number(process.env.MONITOR_PACKET_AGE_SEC || 600));
+const monitorUrls = String(process.env.MONITOR_URLS || "")
+  .split(",").map((value) => value.trim()).filter(Boolean);
+let monitorAlertKey = "";
+let monitorAlertedAt = 0;
 if (telegramNotifier.enabled) {
   console.log("Telegram admin notifications enabled");
 }
@@ -1196,6 +1206,84 @@ function cacheHealth(entry, softTtlMs) {
     present: true,
     stale: !at || ageMs > softTtlMs,
   };
+}
+
+function systemDiskUsage() {
+  try {
+    const stats = statfsSync(process.cwd());
+    const total = Number(stats.blocks) * Number(stats.bsize);
+    const free = Number(stats.bavail) * Number(stats.bsize);
+    return {
+      free,
+      total,
+      usedPercent: total > 0 ? ((total - free) / total) * 100 : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function certificateDays(host) {
+  return new Promise((resolve) => {
+    const socket = connectTls({ host, port: 443, servername: host, rejectUnauthorized: false });
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      socket.destroy();
+      resolve(value);
+    };
+    socket.setTimeout(8_000, () => finish(null));
+    socket.once("secureConnect", () => {
+      const certificate = socket.getPeerCertificate();
+      const expires = Date.parse(certificate?.valid_to || "");
+      finish(Number.isFinite(expires) ? Math.floor((expires - Date.now()) / 86_400_000) : null);
+    });
+    socket.once("error", () => finish(null));
+  });
+}
+
+async function checkOperationalAlerts() {
+  if (!monitorAlertsEnabled) return;
+  const issues = [];
+  if (mqttEnabled && !mqttConnected) {
+    issues.push("MQTT je odpojené");
+  } else if (mqttEnabled && lastMqttPacketAt && Date.now() - lastMqttPacketAt > monitorPacketAgeSec * 1000) {
+    issues.push(`z MQTT nepřišel paket ${Math.round((Date.now() - lastMqttPacketAt) / 60_000)} min`);
+  }
+  const disk = systemDiskUsage();
+  if (disk && disk.usedPercent >= monitorDiskPercent) {
+    issues.push(`disk je zaplněný z ${disk.usedPercent.toFixed(0)} % (volné ${(disk.free / 1e9).toFixed(1)} GB)`);
+  }
+  for (const url of monitorUrls) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(10_000), headers: { "User-Agent": "meshcore-monitor/1" } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) issues.push(`${url} vrací HTTP ${response.status}`);
+      else if (data.status && data.status !== "ok") issues.push(`${url} hlásí ${data.status}`);
+    } catch {
+      issues.push(`${url} není dostupné`);
+    }
+  }
+  const hosts = [...new Set(monitorUrls
+    .filter((value) => value.startsWith("https://"))
+    .map((value) => { try { return new URL(value).hostname; } catch { return null; } })
+    .filter(Boolean))];
+  for (const host of hosts) {
+    const days = await certificateDays(host);
+    if (days != null && days < 14) issues.push(`TLS certifikát ${host} vyprší za ${days} dní`);
+  }
+  if (!issues.length) {
+    if (monitorAlertKey) notifyTelegram("✅ Monitoring: všechny kontroly jsou v pořádku.");
+    monitorAlertKey = "";
+    monitorAlertedAt = 0;
+    return;
+  }
+  const key = issues.join("|");
+  if (key === monitorAlertKey && Date.now() - monitorAlertedAt < monitorRepeatMs) return;
+  monitorAlertKey = key;
+  monitorAlertedAt = Date.now();
+  notifyTelegram(`⚠️ Monitoring\n${issues.map((issue) => `• ${issue}`).join("\n")}`);
 }
 
 function healthPayload() {
@@ -3325,6 +3413,11 @@ const server = createServer((request, response) => {
 server.listen(port, host, () => {
   console.log(`MeshCore CZ map listening on http://${host}:${port}`);
 });
+
+if (monitorAlertsEnabled) {
+  setTimeout(() => { void checkOperationalAlerts(); }, 15_000).unref();
+  setInterval(() => { void checkOperationalAlerts(); }, monitorIntervalMs).unref();
+}
 
 function shutdown() {
   for (const client of packetStreams) closePacketStream(client);
