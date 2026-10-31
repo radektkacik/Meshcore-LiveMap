@@ -1124,13 +1124,15 @@ function renderObservers() {
       }).addTo(observerLayer);
     }
     if (observers.length > 1) {
-      L.marker([position.lat, position.lon], {
+      const clusterMarker = L.marker([position.lat, position.lon], {
         icon: L.divIcon({
           className: `observer-cluster-icon${position.approx ? "" : " exact"}`,
           html: `<span>${observers.length}</span>`,
-          iconSize: [26, 26],
-          iconAnchor: [13, 13],
+          iconSize: [30, 30],
+          iconAnchor: [15, 15],
         }),
+        interactive: true,
+        keyboard: true,
         pane: "markerPane",
       })
         .bindTooltip(`${position.approx ? `≈ ${observers[0].iata} · ` : ""}${tCount("units.observers", observers.length)}`, {
@@ -1142,6 +1144,17 @@ function renderObservers() {
           maxWidth: 330,
           minWidth: 260,
           autoPan: true,
+        })
+        .on("click", (event) => {
+          L.DomEvent.stopPropagation(event);
+          clusterMarker.openPopup();
+        })
+        .on("popupopen", (event) => {
+          const root = event.popup.getElement();
+          if (root) {
+            L.DomEvent.disableClickPropagation(root);
+            L.DomEvent.disableScrollPropagation(root);
+          }
         })
         .addTo(observerLayer);
       continue;
