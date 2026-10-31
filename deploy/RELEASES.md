@@ -282,6 +282,8 @@
 | 2026-10-31 12:51 | `20261031T125115Z.tar.gz` | `20261031-1251-3acefd1` | Prod: stejná oprava satelitních dlaždic | `src/main.js` |
 | 2026-10-31 12:55 | `20261031T125556Z.tar.gz` (stage APP_DIR) | `20261031-1255-e90f3e8` | Beta: spolehlivější otevírání clusteru observerů – větší terč 30 px, explicitní click a izolace klikání v popupu | `src/main.js`, `src/style.css` |
 | 2026-10-31 12:56 | `20261031T125621Z.tar.gz` | `20261031-1256-e90f3e8` | Prod: stejná oprava clusteru observerů | `src/main.js`, `src/style.css` |
+| 2026-10-31 13:08 | `20261031T130845Z.tar.gz` (stage APP_DIR) | `20261031-1308-232a0ef` | Beta: kompletní legenda, sdílení celého pohledu, souhrn nodu, mobilní sheet observerů a volitelný monitoring (MQTT, disk, health URL, TLS). Produkce nedotčena | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `server.mjs`, `.env.example`, `README.md` |
+| 2026-10-31 13:09 | `20261031T130928Z.tar.gz` (stage APP_DIR) | `20261031-1309-656ca4e` | Beta: záznam o nových funkcích v beta changelogu | `CHANGELOG.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
