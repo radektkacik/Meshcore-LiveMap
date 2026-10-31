@@ -119,6 +119,7 @@ const TYPE_LABELS = {
 };
 const APP_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const IS_BETA = import.meta.env.VITE_BETA === "1";
+if (IS_BETA) document.querySelector("#beta-footer-link")?.remove();
 
 function appPath(path) {
   return `${APP_BASE}${path}`;
