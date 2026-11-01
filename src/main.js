@@ -1831,10 +1831,27 @@ function renderNodeInfoSection(root, info) {
     body.appendChild(empty);
     return;
   }
+  const fullText = String(info.text);
+  const lines = fullText.split("\n");
+  const hasMore = lines.length > 5;
+  const collapseTo = () => `${lines.slice(0, 5).join("\n")}\n…`;
   const text = document.createElement("p");
   text.className = "node-user-info-text";
-  text.textContent = info.text;
+  text.textContent = hasMore ? collapseTo() : fullText;
   body.appendChild(text);
+  let expanded = false;
+  const toggleButton = hasMore ? document.createElement("button") : null;
+  if (toggleButton) {
+    toggleButton.type = "button";
+    toggleButton.className = "node-user-info-toggle";
+    toggleButton.textContent = t("nodeInfo.showAll");
+    toggleButton.addEventListener("click", () => {
+      expanded = !expanded;
+      text.textContent = expanded ? fullText : collapseTo();
+      toggleButton.textContent = expanded ? t("nodeInfo.showLess") : t("nodeInfo.showAll");
+    });
+    body.appendChild(toggleButton);
+  }
   const meta = document.createElement("small");
   meta.className = "node-user-info-meta";
   meta.textContent = [info.author, info.updatedAt ? formatNodeDate(info.updatedAt) : null]
@@ -2130,7 +2147,7 @@ function compactNodePopupContent(node, active) {
     ${nodeOverview(node)}
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
-    ${nodeUserInfoCompact(node)}
+    ${nodeUserInfo(node)}
     ${nodeComments(node)}
     <div class="node-compact-actions">
       <button class="node-detail-open" type="button">${t("nodeDetail.open")}</button>
