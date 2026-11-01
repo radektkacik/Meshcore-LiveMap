@@ -3698,23 +3698,27 @@ function syncNodes(nodes) {
   scheduleNodeRefresh();
 }
 
-let nodeRefreshActive = false;
+let nodeRefreshPromise = null;
 async function loadNodes() {
-  if (nodeRefreshActive) return null;
-  nodeRefreshActive = true;
+  if (nodeRefreshPromise) return nodeRefreshPromise;
+  nodeRefreshPromise = (async () => {
+    try {
+      const { data, response } = await getJsonWithResponse("/api/nodes?limit=2000");
+      setDataFreshness(response.headers.get("X-Data-Stale") === "1");
+      syncNodes(data.nodes || []);
+      applyInitialNode();
+      applyInitialDetail();
+      if (!state.routeHistoryLoaded && packetHandlingReady) void loadRouteHistory();
+      return true;
+    } catch (error) {
+      console.error("Nody se nepodařilo načíst", error);
+      return false;
+    }
+  })();
   try {
-    const { data, response } = await getJsonWithResponse("/api/nodes?limit=2000");
-    setDataFreshness(response.headers.get("X-Data-Stale") === "1");
-    syncNodes(data.nodes || []);
-    applyInitialNode();
-    applyInitialDetail();
-    if (!state.routeHistoryLoaded && packetHandlingReady) void loadRouteHistory();
-    return true;
-  } catch (error) {
-    console.error("Nody se nepodařilo načíst", error);
-    return false;
+    return await nodeRefreshPromise;
   } finally {
-    nodeRefreshActive = false;
+    nodeRefreshPromise = null;
   }
 }
 
@@ -5079,7 +5083,9 @@ function clearArchivePresentation() {
 
 async function loadArchiveWindow(windowMs) {
   const requestId = ++state.windowRequestId;
+  const nodesReady = state.nodeByKey.size ? Promise.resolve(true) : loadNodes();
   const data = await getJson(`/api/history?${archiveQuery(windowMs, nowMs())}`);
+  await nodesReady;
   if (requestId !== state.windowRequestId || state.routeWindowMs !== windowMs) return;
   const routes = new Map();
   for (const parent of data.packets || []) {
