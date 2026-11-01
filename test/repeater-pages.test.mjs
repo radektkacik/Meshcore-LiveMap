@@ -13,9 +13,10 @@ test("repeater slugs are derived from node names", () => {
 });
 
 test("repeater raw wiki is converted to safe plain text", () => {
-  const page = parseRepeaterRaw(`====== rip5.meshcore.cz ======\n  > ver\n  v1.14\n\nhttps://www.heywhatsthat.com/?view=MUCAVRWU\n{{:repeatery:img_4134.jpeg|}}`);
+  const page = parseRepeaterRaw(`====== rip5.meshcore.cz ======\n  > ver\n  v1.14\n\nhttps://www.heywhatsthat.com/?view=MUCAVRWU\n{{:repeatery:img_4134.jpeg?400|}}`);
   assert.equal(page.title, "rip5.meshcore.cz");
   assert.equal(page.imageCount, 1);
+  assert.deepEqual(page.images, ["img_4134.jpeg"]);
   assert.match(page.text, /v1\.14/);
   assert.match(page.text, /https:\/\/www\.heywhatsthat\.com/);
   assert.doesNotMatch(page.text, /\{\{|\}\}/);

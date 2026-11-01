@@ -64,7 +64,7 @@ function wikiToText(raw) {
 
 export function parseRepeaterRaw(raw) {
   const title = firstHeading(raw);
-  const images = [...String(raw || "").matchAll(/\{\{:\s*repeatery:([^}|\s]+)/gi)]
+  const images = [...String(raw || "").matchAll(/\{\{:\s*repeatery:([^}|\s?]+)/gi)]
     .map((match) => match[1])
     .filter(Boolean);
   let text = wikiToText(raw);
