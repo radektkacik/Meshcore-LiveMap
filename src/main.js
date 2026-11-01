@@ -130,7 +130,7 @@ function nodeDetailPathKey(pathname = location.pathname) {
   return match ? match[1].toLowerCase() : null;
 }
 
-const INITIAL_DETAIL_KEY = IS_BETA ? nodeDetailPathKey() : null;
+const INITIAL_DETAIL_KEY = nodeDetailPathKey();
 function nodeDetailPath(key) {
   return `${APP_BASE}/nod/${String(key || "").toLowerCase()}`;
 }
@@ -2127,6 +2127,7 @@ function nodePopupContent(node, active) {
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
     ${nodeOverview(node)}
+    ${nodeScoreSummary(node)}
     ${nodePhotos(node)}
     ${nodeUserInfo(node)}
     ${nodeComments(node, true)}
@@ -2145,6 +2146,21 @@ function nodePopupContent(node, active) {
   `;
 }
 
+function nodeScoreSummary(node) {
+  if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
+  const score = nodeMetric(node, "usefulness_score");
+  const rank = rankNodeMetric([...state.nodeByKey.values()], node, "usefulness_score");
+  const scoreText = score == null ? "—" : `${usefulnessGrade(score)} · ${formatScore(score)}`;
+  const rankText = rank ? `#${formatNumber(rank.rank)} / ${formatNumber(rank.total)}` : "—";
+  return `
+    <div class="node-score-summary">
+      <span><small>${t("node.score")}</small><b>${escapeHtml(scoreText)}</b></span>
+      <span><small>${t("node.rank")}</small><b>${escapeHtml(rankText)}</b></span>
+      <span class="node-key-summary"><small>${t("node.publicKey")}</small><b><code title="${escapeHtml(node.public_key)}">${escapeHtml(node.public_key.slice(0, 10))}…${escapeHtml(node.public_key.slice(-6))}</code></b><button class="node-key-copy" type="button">${t("common.copy")}</button></span>
+    </div>
+  `;
+}
+
 function compactNodePopupContent(node, active) {
   return `
     <header>
@@ -2158,9 +2174,9 @@ function compactNodePopupContent(node, active) {
     ${nodeComments(node)}
     ${nodeNeighbors(node)}
     ${nodeActionButtons(node)}
-    ${IS_BETA ? `<div class="node-compact-actions">
+    <div class="node-compact-actions">
       <button class="node-detail-open" type="button">${t("nodeDetail.open")}</button>
-    </div>` : ""}
+    </div>
   `;
 }
 
@@ -2254,7 +2270,6 @@ function closeNodeDetail({ fromHistory = false } = {}) {
 }
 
 function openNodeDetail(node, tab = "overview") {
-  if (!IS_BETA) return;
   const key = String(node.public_key || "").toLowerCase();
   if (!/^[0-9a-f]{64}$/.test(key)) return;
   const onDetailPath = Boolean(nodeDetailPathKey());
@@ -2270,7 +2285,7 @@ function openNodeDetail(node, tab = "overview") {
 }
 
 function applyInitialDetail() {
-  if (!IS_BETA || !INITIAL_DETAIL_KEY || state.initialDetailApplied) return;
+  if (!INITIAL_DETAIL_KEY || state.initialDetailApplied) return;
   const node = state.nodeByKey.get(INITIAL_DETAIL_KEY.toUpperCase());
   if (!node) return;
   state.initialDetailApplied = true;

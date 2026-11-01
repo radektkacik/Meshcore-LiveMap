@@ -290,6 +290,13 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-popup-card { max-height: min(680px, 78vh); overflow-y: auto; color: #263b33; }
 .node-popup-card.compact { max-height: min(680px, 78vh); overflow-y: auto; }
 .node-compact-info { padding: 9px 15px 10px; border-bottom: 1px solid var(--line); }
+.node-score-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 7px 14px; padding: 8px 15px; border-bottom: 1px solid var(--line); background: rgba(7, 142, 98, 0.035); }
+.node-score-summary > span { display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; }
+.node-score-summary small { color: var(--muted); font: 9px "DM Mono", monospace; letter-spacing: 0.04em; }
+.node-score-summary b { color: #263b31; font: 600 10px "DM Mono", monospace; }
+.node-key-summary { margin-left: auto; }
+.node-key-summary code { color: #49665b; font: 9px "DM Mono", monospace; }
+.node-key-summary .node-key-copy { padding: 2px 5px; font-size: 8px; }
 .node-compact-info-text { margin: 0; color: #3f584e; font-size: 12px; line-height: 1.45; }
 .node-compact-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; padding: 10px 15px 14px; }
 .node-compact-actions button { min-height: 30px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; color: #3f584e; background: #fff; font: 10px "DM Mono", monospace; cursor: pointer; }
@@ -880,6 +887,9 @@ html[data-theme="dark"] .node-photo-add { color: #5fd0a5; background: rgba(7, 14
 html[data-theme="dark"] .node-user-info-edit { color: #5fd0a5; background: rgba(7, 142, 98, 0.16); border-color: rgba(7, 142, 98, 0.4); }
 html[data-theme="dark"] .node-user-info-text { color: #e6ecef; }
 html[data-theme="dark"] .node-overview span { background: rgba(7, 142, 98, 0.06); }
+html[data-theme="dark"] .node-score-summary { background: rgba(7, 142, 98, 0.07); }
+html[data-theme="dark"] .node-score-summary b { color: #e6ecef; }
+html[data-theme="dark"] .node-key-summary code { color: #b9c9d2; }
 html[data-theme="dark"] .node-overview b { color: #e6ecef; }
 html[data-theme="dark"] .node-overview b.positive { color: #5fd0a5; }
 html[data-theme="dark"] .node-comments-open { color: #5fd0a5; background: rgba(7, 142, 98, 0.16); border-color: rgba(7, 142, 98, 0.4); }
