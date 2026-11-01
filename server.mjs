@@ -1871,7 +1871,7 @@ function adminLayout({ active = "", content = "", title = "Administrace" }) {
     ["feedback", adminPath("/feedback"), "Zpětná vazba"],
     ["comments", adminPath("/comments"), `Komentáře${commentStore.count() ? ` (${commentStore.count()})` : ""}`],
     ["nodeinfo", adminPath("/node-info"), `Info nodů${nodeInfoStore.pendingCount() ? ` (${nodeInfoStore.pendingCount()})` : ""}`],
-    ...(repeaterImportEnabled ? [["import", adminPath("/repeater-import"), "Import z wiki"], ["sync", adminPath("/repeater-sync"), "Sync z wiki"]] : []),
+    ...(repeaterImportEnabled ? [["import", adminPath("/repeater-import"), "Import z wiki"], ["sync", adminPath("/repeater-sync"), "Sync z wiki"], ["syncall", adminPath("/repeater-sync-all"), "Sync vše"]] : []),
   ].map(([key, href, label]) => `<a class="${active === key ? "active" : ""}" href="${href}">${label}</a>`).join("");
   return `<!doctype html>
 <html lang="cs">
@@ -1947,6 +1947,11 @@ p { margin:4px 0; white-space:pre-wrap; }
 .sync-photos { display:grid; gap:5px; margin:6px 0 12px; padding:0; list-style:none; }
 .sync-photos label, .sync-check { display:flex; align-items:center; gap:7px; font-size:12px; }
 .sync-photos input, .sync-check input { accent-color:#078e62; }
+.sync-all-list { margin:10px 0 14px; }
+.sync-all-list li { padding:10px 12px; border:1px solid rgba(30,65,49,.14); border-radius:8px; background:#fff; }
+.sync-all-list li + li { margin-top:7px; }
+.sync-all-list .sync-check { display:flex; align-items:center; gap:8px; }
+.sync-preview { max-height:180px; margin:5px 0 8px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font:10px/1.4 "DM Mono", monospace; }
 @media (max-width:700px) { .sync-compare { grid-template-columns:1fr; } }
 .actions button.delete { color:#c0392b; border-color:rgba(192,57,43,.4); }
 .actions a.edit { padding:5px 10px; border:1px solid rgba(7,142,98,.45); border-radius:6px; color:#078e62; background:#fff; font:12px Manrope, system-ui, sans-serif; text-decoration:none; }
@@ -2313,6 +2318,57 @@ ${preview}`,
   });
 }
 
+async function repeaterSyncPlan(info, nodeName) {
+  const slug = repeaterPageSlug(info?.sourceUrl);
+  if (!slug) return null;
+  const page = await fetchRepeaterPage(slug);
+  if (!page) return { error: "Wiki stránka není dostupná.", info, nodeName };
+  const existing = photoStore.listApproved(info.nodeKey, 12);
+  const captions = new Set(existing.map((photo) => photo.caption));
+  const missing = page.images.filter((file) => !captions.has(`${page.title || page.slug} · ${file}`));
+  return {
+    error: "",
+    info,
+    missing,
+    nodeName,
+    page,
+    textChanged: String(info.text || "") !== String(page.text || ""),
+  };
+}
+
+function adminRepeaterSyncAllPage({ plans = [], message = "", error = "" } = {}) {
+  const changed = plans.filter((plan) => !plan.error && (plan.textChanged || plan.missing.length));
+  const rows = plans.map((plan) => {
+    const name = plan.nodeName || plan.info.nodeKey.slice(0, 12);
+    if (plan.error) {
+      return `<li><strong>${escapeHtml(name)}</strong><p class="sub">${escapeHtml(plan.error)}</p></li>`;
+    }
+    const changes = [
+      plan.textChanged ? "text se změnil" : "text bez změny",
+      plan.missing.length ? `${plan.missing.length} nových obrázků` : "žádné nové obrázky",
+    ].join(" · ");
+    const selectable = plan.textChanged || plan.missing.length;
+    return `<li>
+      <label class="sync-check"><input type="checkbox" name="key" value="${escapeHtml(plan.info.nodeKey)}" ${selectable ? "checked" : ""} ${selectable ? "" : "disabled"} />
+        <strong>${escapeHtml(name)}</strong></label>
+      <p class="sub">${escapeHtml(changes)}</p>
+      <details><summary>Zobrazit text z wiki</summary><pre class="sync-preview">${escapeHtml(plan.page.text || "—")}</pre></details>
+      <a class="edit" href="${adminPath(`/repeater-sync?key=${encodeURIComponent(plan.info.nodeKey)}`)}">Detailní sync</a>
+    </li>`;
+  }).join("");
+  return adminLayout({
+    active: "syncall",
+    title: "Hromadný sync z wiki",
+    content: `
+<h1>Hromadný sync z wiki</h1>
+<p class="sub">Porovnání všech importovaných nodů s aktuální wiki. Vyber nody a potvrď hromadný sync. Nic se nespouští automaticky.</p>
+${message ? `<p class="sub imported">${escapeHtml(message)}</p>` : ""}
+${error ? `<p class="feedback-status error">${escapeHtml(error)}</p>` : ""}
+${changed.length ? `<form method="post" action="${adminPath("/repeater-sync-all")}"><ul class="list sync-all-list">${rows}</ul><div class="feedback-actions"><button type="submit">Synchronizovat vybrané (${formatAdminNumber(changed.length)})</button></div></form>` : '<p class="empty">Vše je aktuální, žádné změny k synchronizaci.</p>'}
+`,
+  });
+}
+
 function adminRepeaterSyncPage({ node = null, page = null, current = null, keyValue = "", error = "", message = "" } = {}) {
   const currentText = String(current?.text || "");
   const existingPhotos = node ? photoStore.listApproved(node.key, 12) : [];
@@ -2348,6 +2404,7 @@ function adminRepeaterSyncPage({ node = null, page = null, current = null, keyVa
     content: `
 <h1>Ruční sync z meshcore.cz</h1>
 <p class="sub">Porovná uložené uživatelské info s aktuální wiki stránkou. Nic se nespouští automaticky; změny potvrdíte tlačítkem.</p>
+<p class="sub"><a href="${adminPath("/repeater-sync-all")}">Přejít na hromadný sync</a></p>
 ${message ? `<p class="sub imported">${escapeHtml(message)}</p>` : ""}
 ${error ? `<p class="feedback-status error">${escapeHtml(error)}</p>` : ""}
 <section class="panel">
@@ -2541,6 +2598,37 @@ async function handleAdminRequest(request, response, url) {
     if (path === "/admin/node-info") {
       response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       response.end(adminNodeInfoPage(url.searchParams.get("imported") === "1", url.searchParams.get("synced") === "1"));
+      return;
+    }
+    if (path === "/admin/repeater-sync-all" && repeaterImportEnabled) {
+      const names = photoNodeNames();
+      const infos = nodeInfoStore.list(500).filter((info) => info.sourceUrl);
+      const plans = [];
+      for (const info of infos) plans.push(await repeaterSyncPlan(info, names.get(info.nodeKey) || info.nodeKey.slice(0, 12)));
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(adminRepeaterSyncAllPage({ plans }));
+      return;
+    }
+    if (path === "/admin/repeater-sync-all" && repeaterImportEnabled) {
+      const names = photoNodeNames();
+      let synced = 0;
+      for (const key of form.getAll("key").map(String)) {
+        const info = nodeInfoStore.get(key);
+        if (!info?.sourceUrl) continue;
+        const plan = await repeaterSyncPlan(info, names.get(info.nodeKey) || info.nodeKey.slice(0, 12));
+        if (!plan?.page) continue;
+        if (plan.page.text.trim().length >= 5) {
+          nodeInfoStore.importText(info.nodeKey, {
+            author: "meshcore.cz",
+            sourceTitle: plan.page.title || plan.page.slug,
+            sourceUrl: plan.page.sourceUrl,
+            text: plan.page.text,
+          });
+        }
+        for (const fileName of plan.missing) await importRepeaterPhoto(info.nodeKey, plan.page, fileName);
+        synced += 1;
+      }
+      redirectAdmin(response, `${adminBasePath}/node-info?synced=1`);
       return;
     }
     if (path === "/admin/repeater-sync" && repeaterImportEnabled) {
