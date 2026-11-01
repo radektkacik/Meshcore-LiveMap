@@ -297,6 +297,7 @@
 | 2026-11-01 08:08 | `20261101T080838Z.tar.gz` (stage APP_DIR) | `20261101-0808-91339dd` | Beta přesunuta na `https://mapa.meshcore.cz/beta/` (base `/beta/`, `PUBLIC_BASE_URL`); nginx na `mapa` přidán `/beta/` → 4174; záloha nginx `/root/nginx-beta-move-backup-20261101T080825Z/` | `deploy/update-vps-staging.sh`, `deploy/nginx-mapa-beta-location.conf`, nginx, `.env` (server) |
 | 2026-11-01 08:09 | `20261101T080941Z.tar.gz` | `20261101-0809-e90f3e8` | Prod: odkaz v patičce změněn na `mapa.meshcore.cz/beta/`; monitor beta URL změněn; produkční UI bez beta funkcí | `index.html`, `dist/index.html`, `.env` (server) |
 | 2026-11-01 08:10 | `20261101T081053Z.tar.gz` (stage APP_DIR) | `20261101-0810-0be125d` | Beta: záznam o nové adrese v beta changelogu; build ověřen na `mapa.meshcore.cz/beta/` | `CHANGELOG.md`, `deploy/RELEASES.md` |
+| 2026-11-01 08:17 | `beta-info-photos-backup-20261101T081714Z.tar.gz` | – | Beta: zkopírováno 21 zveřejněných uživatelských info a 35 schválených fotek z produkce; uploads srovnány s produkcí, záloha před kopií v `/root/` | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
