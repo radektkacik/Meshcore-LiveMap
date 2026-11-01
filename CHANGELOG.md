@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-01 — Beta: detail nodu
+- Prostředí: beta
+- Build: 20261101-0803-c6ee71c
+- Popup nodu na mapě je zkrácený na přehled a krátký výňatek info.
+- Plné info, fotky, komentáře a síťové údaje jsou na `/nod/<public_key>` v tabech.
+- Detail má vlastní adresu, tlačítko zpět a na mobilu celoobrazovkový režim.
+
 ## 2026-11-01 — Beta: import z meshcore.cz
 - Prostředí: beta
 - Build: 20261101-0748-101ba4f
