@@ -2221,10 +2221,11 @@ function renderNodeDetail(node, active, initialTab = "overview") {
     for (const element of source) panels.get(panelName)?.appendChild(element);
   };
   move(".node-overview", "overview");
+  move(".node-score-summary", "overview");
   move(".node-user-info", "info");
   move(".node-photos", "photos");
   move(".node-comments", "comments");
-  move(".node-details", "network", true);
+  move(".node-popup-details", "network", true);
   move(".node-analytics", "network", true);
   move(".node-last-route", "network", true);
   move(".node-neighbors", "overview", true);
