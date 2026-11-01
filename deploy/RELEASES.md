@@ -314,6 +314,8 @@
 | 2026-11-01 09:07 | `20261101T090733Z.tar.gz` (stage APP_DIR) | `20261101-0907-2364917` | Beta: záznam o ručním syncu z wiki v changelogu | `CHANGELOG.md`, `deploy/RELEASES.md` |
 | 2026-11-01 09:09 | `20261101T090925Z.tar.gz` | `20261101-0909-2af7416` | Prod: záznam o novém popupu nodu a převzatých wiki datech v produkčním changelogu; produkční UI beze změny | `CHANGELOG.md`, `dist`, `deploy/RELEASES.md` |
 | 2026-11-01 09:09 | `20261101T090951Z.tar.gz` (stage APP_DIR) | `20261101-0909-2af7416` | Beta: stejný záznam v beta changelogu | `CHANGELOG.md`, `deploy/RELEASES.md` |
+| 2026-11-01 09:44 | `20261101T094457Z.tar.gz` | `20261101-0945-a1b4163` | Prod: základní skóre + pořadí v síti a zkrácený veřejný klíč s kopírováním přímo v popupu; plný detail `/nod/<key>` s taby Síť/analytika povolen i na produkci | `src/main.js`, `src/i18n.js`, `src/style.css` |
+| 2026-11-01 09:45 | `20261101T094528Z.tar.gz` (stage APP_DIR) | `20261101-0945-a1b4163` | Beta: stejné doplnění skóre, klíče a detailu | `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
