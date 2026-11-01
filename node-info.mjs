@@ -28,6 +28,8 @@ function mapRow(row) {
     createdAt: row.created_at,
     nodeKey: row.node_key,
     protected: Boolean(row.edit_password_hash),
+    sourceTitle: row.source_title || "",
+    sourceUrl: row.source_url || "",
     text: row.text || "",
     updatedAt: row.updated_at,
   };
@@ -57,7 +59,9 @@ export function createNodeInfoStore(dbPath) {
       author TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
-      edit_password_hash TEXT
+      edit_password_hash TEXT,
+      source_url TEXT,
+      source_title TEXT
     );
     CREATE INDEX IF NOT EXISTS node_info_updated ON node_info (updated_at DESC);
     CREATE TABLE IF NOT EXISTS node_info_pending (
@@ -76,6 +80,16 @@ export function createNodeInfoStore(dbPath) {
   } catch {
     // Column already exists.
   }
+  try {
+    db.exec("ALTER TABLE node_info ADD COLUMN source_url TEXT");
+  } catch {
+    // Column already exists.
+  }
+  try {
+    db.exec("ALTER TABLE node_info ADD COLUMN source_title TEXT");
+  } catch {
+    // Column already exists.
+  }
 
   try {
     db.exec("ALTER TABLE node_info_pending ADD COLUMN edit_password_hash TEXT");
@@ -87,13 +101,15 @@ export function createNodeInfoStore(dbPath) {
   const selectAll = db.prepare("SELECT * FROM node_info ORDER BY updated_at DESC LIMIT ?");
   const countRows = db.prepare("SELECT COUNT(*) AS total FROM node_info");
   const upsertRow = db.prepare(`
-    INSERT INTO node_info (node_key, text, author, created_at, updated_at, edit_password_hash)
-    VALUES (@node_key, @text, @author, @created_at, @updated_at, @edit_password_hash)
+    INSERT INTO node_info (node_key, text, author, created_at, updated_at, edit_password_hash, source_url, source_title)
+    VALUES (@node_key, @text, @author, @created_at, @updated_at, @edit_password_hash, @source_url, @source_title)
     ON CONFLICT(node_key) DO UPDATE SET
       text = excluded.text,
       author = excluded.author,
       updated_at = excluded.updated_at,
-      edit_password_hash = excluded.edit_password_hash
+      edit_password_hash = excluded.edit_password_hash,
+      source_url = excluded.source_url,
+      source_title = excluded.source_title
   `);
   const deleteRow = db.prepare("DELETE FROM node_info WHERE node_key = ?");
   const updatePublished = db.prepare(`
@@ -131,8 +147,10 @@ export function createNodeInfoStore(dbPath) {
     const nodeKey = String(entry?.nodeKey || "").toLowerCase();
     const text = String(entry?.text || "").trim();
     const author = String(entry?.author || "").trim().slice(0, 60);
+    const sourceUrl = String(entry?.sourceUrl || "").trim().slice(0, 500);
+    const sourceTitle = String(entry?.sourceTitle || "").trim().slice(0, 200);
     if (!/^[0-9a-f]{64}$/.test(nodeKey) || !text) return null;
-    return { author, nodeKey, text };
+    return { author, nodeKey, sourceTitle, sourceUrl, text };
   }
 
   function publish(entry, now = Date.now(), passwordHash = null) {
@@ -143,6 +161,8 @@ export function createNodeInfoStore(dbPath) {
       created_at: now,
       edit_password_hash: passwordHash,
       node_key: value.nodeKey,
+      source_title: value.sourceTitle,
+      source_url: value.sourceUrl,
       text: value.text,
       updated_at: now,
     });
@@ -159,6 +179,26 @@ export function createNodeInfoStore(dbPath) {
         updatePublished.run({
           author: value.author,
           node_key: value.nodeKey,
+          text: value.text,
+          updated_at: now,
+        });
+        deletePending.run(value.nodeKey);
+        return mapRow(selectOne.get(value.nodeKey));
+      })();
+      return info;
+    },
+    importText: (nodeKey, entry, now = Date.now()) => {
+      const value = validEntry({ ...entry, nodeKey });
+      if (!value) return null;
+      const current = selectOne.get(value.nodeKey);
+      const info = db.transaction(() => {
+        upsertRow.run({
+          author: value.author,
+          created_at: current?.created_at || now,
+          edit_password_hash: current?.edit_password_hash || null,
+          node_key: value.nodeKey,
+          source_title: value.sourceTitle,
+          source_url: value.sourceUrl,
           text: value.text,
           updated_at: now,
         });

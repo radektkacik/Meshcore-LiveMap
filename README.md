@@ -102,6 +102,11 @@ přihlašovací údaje zůstávají pouze na serveru.
   ihned a zruší případný čekající návrh). Platí limit 10 úprav/h, 50/den
   a 5s pauza na IP. Zapomenuté heslo se neobnovuje; správce může info smazat
   a uživatel jej založí znovu.
+- `GET /admin/repeater-import` je ruční import textu z veřejné DokuWiki
+  stránky `meshcore.cz/repeatery:<slug>`. Server zkusí odvodit slug z názvu
+  nodu, zobrazí náhled a správce potvrdí uložení. Importuje se jen text,
+  ne fotky; zdroj a licence se zobrazují u nodu. Adresa je omezená na
+  `meshcore.cz` a namespace `repeatery`.
 - `GET /api/comments?key=<public_key>` vrací komentáře k nodu, `GET
   /api/comments/count?key=<public_key>` jen jejich počet. `POST /api/comments`
   s JSON `{key, text, author}` je zveřejní ihned. Text má 2–500 znaků, autor je

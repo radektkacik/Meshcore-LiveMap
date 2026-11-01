@@ -62,6 +62,32 @@ test("node info publishes the first text and requires approval for changes", () 
   }
 });
 
+test("node info can import text with an external source and preserve protection", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-node-info-"));
+  const store = createNodeInfoStore(join(directory, "node-info.sqlite"));
+  const key = "f".repeat(64);
+  try {
+    store.submit({ nodeKey: key, password: "tajne123", text: "Původní text" }, 1000);
+    store.submit({ nodeKey: key, password: "tajne123", text: "Čekající návrh" }, 2000);
+    const imported = store.importText(key, {
+      author: "meshcore.cz",
+      sourceTitle: "rip5.meshcore.cz",
+      sourceUrl: "https://meshcore.cz/doku.php?id=repeatery:rip5",
+      text: "Importovaný text z wiki",
+    }, 4000);
+    assert.equal(imported.text, "Importovaný text z wiki");
+    assert.equal(imported.sourceTitle, "rip5.meshcore.cz");
+    assert.equal(imported.sourceUrl, "https://meshcore.cz/doku.php?id=repeatery:rip5");
+    assert.equal(imported.author, "meshcore.cz");
+    assert.equal(imported.protected, true);
+    assert.equal(imported.createdAt, 1000);
+    assert.equal(store.pendingCount(), 0);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("node info can reject a pending change and keeps the published text", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-node-info-"));
   const store = createNodeInfoStore(join(directory, "node-info.sqlite"));

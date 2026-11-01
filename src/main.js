@@ -1762,6 +1762,15 @@ function renderNodeInfoSection(root, info) {
     .filter(Boolean)
     .join(" · ");
   body.appendChild(meta);
+  if (info.sourceUrl) {
+    const source = document.createElement("a");
+    source.className = "node-user-info-source";
+    source.href = info.sourceUrl;
+    source.target = "_blank";
+    source.rel = "noreferrer";
+    source.textContent = `${t("nodeInfo.source")}: ${info.sourceTitle || "meshcore.cz"}`;
+    body.appendChild(source);
+  }
 }
 
 async function loadNodeInfo(root, node) {

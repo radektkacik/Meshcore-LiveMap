@@ -13,6 +13,7 @@ import { createFeedbackStore } from "./feedback.mjs";
 import { createPhotoStore, detectImage, PhotoError } from "./photos.mjs";
 import { createNodeInfoStore } from "./node-info.mjs";
 import { createCommentStore } from "./comments.mjs";
+import { fetchRepeaterPage, findRepeaterPage, validRepeaterSlug } from "./repeater-pages.mjs";
 import { createTelegramNotifier } from "./notify.mjs";
 
 const port = Number(process.env.PORT || 4173);
@@ -1867,6 +1868,7 @@ function adminLayout({ active = "", content = "", title = "Administrace" }) {
     ["feedback", adminPath("/feedback"), "Zpětná vazba"],
     ["comments", adminPath("/comments"), `Komentáře${commentStore.count() ? ` (${commentStore.count()})` : ""}`],
     ["nodeinfo", adminPath("/node-info"), `Info nodů${nodeInfoStore.pendingCount() ? ` (${nodeInfoStore.pendingCount()})` : ""}`],
+    ["import", adminPath("/repeater-import"), "Import z wiki"],
   ].map(([key, href, label]) => `<a class="${active === key ? "active" : ""}" href="${href}">${label}</a>`).join("");
   return `<!doctype html>
 <html lang="cs">
@@ -2005,6 +2007,7 @@ function adminDashboardPage() {
       <a href="${adminPath("/feedback")}">Projít zpětnou vazbu</a>
       <a href="${adminPath("/comments")}">Projít komentáře</a>
       <a href="${adminPath("/node-info")}">Kontrolovat info nodů</a>
+      <a href="${adminPath("/repeater-import")}">Import z meshcore.cz</a>
       <a href="${sitePath("/api/health")}" target="_blank" rel="noreferrer">Health JSON</a>
     </div>
     <p class="sub" style="margin-top:16px; margin-bottom:0;">Provoz aplikace: ${escapeHtml(uptimeLabel)}.</p>
@@ -2179,7 +2182,82 @@ ${entries.length ? `<ul class="list feedback">${rows}</ul>` : '<p class="empty">
   });
 }
 
-function adminNodeInfoPage() {
+function resolveImportNode(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return { error: "Zadejte klíč nebo název nodu." };
+  const names = photoNodeNames();
+  if (/^[0-9a-f]{64}$/i.test(raw)) {
+    const key = raw.toLowerCase();
+    return { key, name: names.get(key) || "" };
+  }
+  const wanted = raw.toLowerCase();
+  const exact = [...names.entries()].filter(([, name]) => String(name).toLowerCase() === wanted);
+  if (exact.length === 1) return { key: exact[0][0], name: exact[0][1] };
+  const partial = [...names.entries()].filter(([, name]) => String(name).toLowerCase().includes(wanted));
+  if (partial.length === 1) return { key: partial[0][0], name: partial[0][1] };
+  if (partial.length > 1) return { error: `Název odpovídá ${partial.length} nodům; zadejte veřejný klíč.` };
+  return { error: "Nod nebyl nalezen." };
+}
+
+function trustedRepeaterSourceUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    const pageId = url.searchParams.get("id") || "";
+    const slug = pageId.startsWith("repeatery:") ? pageId.slice("repeatery:".length) : "";
+    if (url.protocol !== "https:" || url.hostname !== "meshcore.cz"
+      || url.pathname !== "/doku.php" || !validRepeaterSlug(slug)) return null;
+    return `https://meshcore.cz/doku.php?id=repeatery:${encodeURIComponent(slug)}`;
+  } catch {
+    return null;
+  }
+}
+
+function adminRepeaterImportPage({ node = null, page = null, slug = "", keyValue = "", error = "" } = {}) {
+  const nodeLabel = node ? `${node.name || "Nod"} · ${node.key.slice(0, 8)}` : "";
+  const preview = page && node ? `
+    <section class="panel">
+      <h2>Náhled stránky</h2>
+      <p class="sub"><a href="${escapeHtml(page.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(page.title || page.slug)}</a>
+        · ${formatAdminNumber(page.imageCount)} obrázků (import fotek zatím není zapnutý)</p>
+      ${String(page.text || "").trim().length < 5 ? '<p class="feedback-status error">Stránka neobsahuje použitelný text k importu. Můžete použít jen odkaz ze stránky.</p>' : `
+      <form class="admin-edit-form" method="post" action="${adminPath("/repeater-import")}">
+        <input type="hidden" name="key" value="${escapeHtml(node.key)}" />
+        <input type="hidden" name="sourceUrl" value="${escapeHtml(page.sourceUrl)}" />
+        <input type="hidden" name="sourceTitle" value="${escapeHtml(page.title || page.slug)}" />
+        <label>Text k importu
+          <textarea name="text" rows="14" maxlength="1000" required>${escapeHtml(page.text)}</textarea>
+        </label>
+        <p class="sub">Zdroj: ${escapeHtml(page.sourceUrl)} · licence stránky je CC BY-SA, u fotek ji ověřte zvlášť.</p>
+        <div class="feedback-actions">
+          <a href="${adminPath("/node-info")}">Zrušit</a>
+          <button type="submit">Uložit a zveřejnit info</button>
+        </div>
+      </form>`}
+    </section>` : "";
+  return adminLayout({
+    active: "import",
+    title: "Import z meshcore.cz",
+    content: `
+<h1>Import z meshcore.cz</h1>
+<p class="sub">Načte text z veřejné stránky repeateru v namespace <code>repeatery</code>. Před uložením se zobrazí náhled; fotky se zatím neimportují.</p>
+${error ? `<p class="feedback-status error">${escapeHtml(error)}</p>` : ""}
+<section class="panel">
+  <form class="admin-edit-form" method="get" action="${adminPath("/repeater-import")}">
+    <label>Klíč nebo název nodu
+      <input type="text" name="key" value="${escapeHtml(keyValue)}" placeholder="např. rip5.meshcore.cz" required />
+    </label>
+    <label>Stránka (slug, nepovinné)
+      <input type="text" name="slug" value="${escapeHtml(slug)}" placeholder="rip5" />
+    </label>
+    <div class="feedback-actions"><button type="submit">Načíst náhled</button></div>
+  </form>
+  ${node ? `<p class="sub">Vybraný nod: <strong>${escapeHtml(nodeLabel)}</strong></p>` : ""}
+</section>
+${preview}`,
+  });
+}
+
+function adminNodeInfoPage(imported = false) {
   const entries = nodeInfoStore.list(500);
   const pending = nodeInfoStore.listPending(500);
   const names = photoNodeNames();
@@ -2211,6 +2289,7 @@ function adminNodeInfoPage() {
       <p>${escapeHtml(info.text)}</p>
       <div class="actions">
         <a class="edit" href="${adminPath(`/node-info/edit?key=${encodeURIComponent(info.nodeKey)}`)}">Upravit</a>
+        <a class="edit" href="${adminPath(`/repeater-import?key=${encodeURIComponent(info.nodeKey)}`)}">Import z wiki</a>
         <form method="post" action="${adminPath("/node-info/delete")}">
           <input type="hidden" name="key" value="${escapeHtml(info.nodeKey)}" />
           <button class="delete" type="submit">Smazat info</button>
@@ -2224,6 +2303,7 @@ function adminNodeInfoPage() {
     content: `
 <h1>Info nodů</h1>
 <p class="sub">${formatAdminNumber(entries.length)} zveřejněných popisů${pending.length ? ` · ${formatAdminNumber(pending.length)} změn ke schválení` : ""}.</p>
+${imported ? '<p class="sub imported">Import z meshcore.cz byl uložen.</p>' : ""}
 ${pending.length ? `<h2>Změny ke schválení</h2><ul class="list feedback">${pendingRows}</ul>` : ""}
 <h2>Zveřejněné info</h2>
 ${entries.length ? `<ul class="list feedback">${rows}</ul>` : '<p class="empty">Zatím žádné uživatelské info.</p>'}`,
@@ -2351,7 +2431,30 @@ async function handleAdminRequest(request, response, url) {
     }
     if (path === "/admin/node-info") {
       response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      response.end(adminNodeInfoPage());
+      response.end(adminNodeInfoPage(url.searchParams.get("imported") === "1"));
+      return;
+    }
+    if (path === "/admin/repeater-import") {
+      const keyValue = String(url.searchParams.get("key") || "").trim();
+      const slug = String(url.searchParams.get("slug") || "").trim().toLowerCase();
+      if (!keyValue) {
+        response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        response.end(adminRepeaterImportPage({ keyValue, slug }));
+        return;
+      }
+      const node = resolveImportNode(keyValue);
+      let page = null;
+      let error = node.error || "";
+      if (!error) {
+        if (slug && !validRepeaterSlug(slug)) error = "Neplatný slug stránky.";
+        else if (slug) page = await fetchRepeaterPage(slug);
+        else page = await findRepeaterPage(node.name || node.key);
+        if (!page && !error) error = slug
+          ? "Stránka nebyla nalezena nebo neobsahuje čitelný text."
+          : "Stránka nebyla automaticky nalezena; zadejte slug ručně.";
+      }
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(adminRepeaterImportPage({ error, keyValue, node, page, slug }));
       return;
     }
     if (path === "/admin/node-info/edit") {
@@ -2379,6 +2482,23 @@ async function handleAdminRequest(request, response, url) {
     const form = await readAdminForm(request);
     if (!form) {
       response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Bad Request");
+      return;
+    }
+    if (path === "/admin/repeater-import") {
+      const key = String(form.get("key") || "").trim().toLowerCase();
+      const text = String(form.get("text") || "").trim();
+      const sourceUrl = trustedRepeaterSourceUrl(form.get("sourceUrl"));
+      if (!/^[0-9a-f]{64}$/.test(key) || text.length < 5 || text.length > 1000 || !sourceUrl) {
+        response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Neplatný import.");
+        return;
+      }
+      const sourceTitle = String(form.get("sourceTitle") || "meshcore.cz").trim().slice(0, 200);
+      const info = nodeInfoStore.importText(key, { author: "meshcore.cz", sourceTitle, sourceUrl, text });
+      if (!info) {
+        response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Import se nepodařilo uložit.");
+        return;
+      }
+      redirectAdmin(response, `${adminBasePath}/node-info?imported=1`);
       return;
     }
     if (path === "/admin/photos/moderate") {

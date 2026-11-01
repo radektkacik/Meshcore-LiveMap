@@ -324,6 +324,22 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     const adminEditedInfo = await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json();
     assert.equal(adminEditedInfo.info.text, "Text upravený adminem");
     assert.equal(adminEditedInfo.info.author, "Admin");
+    const importInfo = await fetch(`http://127.0.0.1:${appPort}/admin/repeater-import`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        cookie: adminCookie,
+      },
+      body: `key=${infoKey}&sourceUrl=${encodeURIComponent("https://meshcore.cz/doku.php?id=repeatery:test")}`
+        + `&sourceTitle=${encodeURIComponent("test.meshcore.cz")}&text=${encodeURIComponent("Text importovaný z wiki")}`,
+      redirect: "manual",
+    });
+    assert.equal(importInfo.status, 303);
+    const importedInfo = await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json();
+    assert.equal(importedInfo.info.text, "Text importovaný z wiki");
+    assert.equal(importedInfo.info.author, "meshcore.cz");
+    assert.equal(importedInfo.info.sourceTitle, "test.meshcore.cz");
+    assert.equal(importedInfo.info.sourceUrl, "https://meshcore.cz/doku.php?id=repeatery:test");
     const deleteInfo = await fetch(`http://127.0.0.1:${appPort}/admin/node-info/delete`, {
       method: "POST",
       headers: {
