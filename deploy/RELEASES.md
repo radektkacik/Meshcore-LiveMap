@@ -318,6 +318,8 @@
 | 2026-11-01 09:45 | `20261101T094528Z.tar.gz` (stage APP_DIR) | `20261101-0945-a1b4163` | Beta: stejné doplnění skóre, klíče a detailu | `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-11-01 09:49 | `20261101T094916Z.tar.gz` | `20261101-0949-a39106a` | Prod: zrušen horní souhrnný řádek; počet fotek je u fotek, komentářů u komentářů; skóre a pořadí na jednom řádku, klíč zkrácený s kopírováním | `src/main.js`, `src/style.css` |
 | 2026-11-01 09:49 | `20261101T094945Z.tar.gz` (stage APP_DIR) | `20261101-0949-a39106a` | Beta: stejná kompaktní úprava popupu | `src/main.js`, `src/style.css` |
+| 2026-11-01 10:03 | `20261101T100325Z.tar.gz` | `20261101-1003-d557689` | Prod: oprava detailu – základní/provozní/síťové údaje, užitečnost, pokrytí, bridge, kritičnost a help ikony se znovu zobrazují v tabu Síť; skóre v Přehledu | `src/main.js` |
+| 2026-11-01 10:03 | `20261101T100355Z.tar.gz` (stage APP_DIR) | `20261101-1003-d557689` | Beta: stejná oprava detailu | `src/main.js` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
