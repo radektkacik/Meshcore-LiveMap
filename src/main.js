@@ -3258,6 +3258,7 @@ function refreshOpenNodePopup(entry) {
     status.className = active ? "active" : "inactive";
     status.textContent = active ? t("common.active") : t("common.inactive");
   }
+  updateNodeActivityDisplay(root, node);
   const lastRoute = root.querySelector(".node-last-route");
   if (lastRoute) lastRoute.outerHTML = nodeLastRoute(node);
   const neighbors = root.querySelector(".node-neighbors");
@@ -3274,6 +3275,7 @@ function refreshOpenNodeDetailStatus() {
   const active = nodeIsActive(node, nowMs(), NODE_ACTIVE_MS);
   status.className = active ? "active" : "inactive";
   status.textContent = active ? t("common.active") : t("common.inactive");
+  updateNodeActivityDisplay(elements.nodeDetailPage, node);
 }
 
 let popupRefreshTimer = null;
@@ -3360,6 +3362,16 @@ function nodeObserverLastSeen(node) {
 
 function nodeActivityAt(node) {
   return Math.max(nodeLastActivity(node), nodeObserverLastSeen(node));
+}
+
+function updateNodeActivityDisplay(root, node) {
+  for (const row of root.querySelectorAll(".node-popup-details dl div")) {
+    const label = row.querySelector("dt")?.firstChild?.textContent?.trim();
+    if (label !== t("node.lastActivity")) continue;
+    const value = row.querySelector("dd");
+    if (value) value.textContent = formatNodeDate(nodeActivityAt(node));
+    break;
+  }
 }
 
 function nodeIsActive(node, now = nowMs(), activeMs = NODE_ACTIVE_MS) {
