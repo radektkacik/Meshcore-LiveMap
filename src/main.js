@@ -330,6 +330,7 @@ const elements = {
   commentsText: document.querySelector("#comments-text"),
   commentsTextLabel: document.querySelector("#comments-text-label"),
   commentsTitle: document.querySelector("#comments-title"),
+  inactiveOnlyToggle: document.querySelector("#inactive-only-toggle"),
   nodeLabelsToggle: document.querySelector("#node-labels-toggle"),
   photosOnlyToggle: document.querySelector("#photos-only-toggle"),
   observersToggle: document.querySelector("#observers-toggle"),
@@ -472,6 +473,7 @@ const state = {
   observersLoadedAt: 0,
   observersLoading: false,
   hideRoutes: localStorage.getItem("meshcoreHideRoutes") === "true",
+  inactiveOnly: false,
   photoCache: new Map(),
   photoCoverCache: new Map(),
   photoCountCache: new Map(),
@@ -575,6 +577,11 @@ function applyInitialFilters() {
   if (photos !== null) {
     state.photosOnly = photos;
     elements.photosOnlyToggle.checked = photos;
+  }
+  const inactive = readFlag("inactive");
+  if (inactive !== null) {
+    state.inactiveOnly = inactive;
+    elements.inactiveOnlyToggle.checked = inactive;
   }
   const observers = readFlag("observers");
   if (observers !== null) state.showObservers = observers;
@@ -3328,6 +3335,14 @@ function openNodeStack(entries, latlng) {
     .openOn(map);
 }
 
+function nodePassesFilters(node) {
+  const key = String(node.public_key || "").toUpperCase();
+  if (!isNodeRoleAllowed(node, state.allowedRoles)) return false;
+  if (state.photosOnly && !state.photoNodeKeys.has(key)) return false;
+  if (state.inactiveOnly && isNodeActive(node, nowMs(), NODE_ACTIVE_MS)) return false;
+  return true;
+}
+
 function addNodeMarker(node) {
   const entry = { active: isNodeActive(node, nowMs(), NODE_ACTIVE_MS), marker: null, node, shown: false, stackRole: node.role || "unknown", styleKey: null, tier: null };
   const marker = L.circleMarker([node.lat, node.lon], {
@@ -3375,8 +3390,7 @@ function addNodeMarker(node) {
     });
   marker.off("click", marker._openPopup, marker);
   const key = node.public_key?.toUpperCase();
-  const allowed = isNodeRoleAllowed(node, state.allowedRoles)
-    && (!state.photosOnly || state.photoNodeKeys.has(key));
+  const allowed = nodePassesFilters(node);
   if (allowed) {
     marker.addTo(nodeLayer);
     applyNodeStacking(marker, node);
@@ -3457,6 +3471,7 @@ function buildShareUrl(node = null) {
   url.searchParams.set("hide", state.hideRoutes ? "1" : "0");
   url.searchParams.set("animate", state.animationEnabled ? "1" : "0");
   url.searchParams.set("photos", state.photosOnly ? "1" : "0");
+  url.searchParams.set("inactive", state.inactiveOnly ? "1" : "0");
   url.searchParams.set("observers", state.showObservers ? "1" : "0");
   if (state.animationMode === "svg") url.searchParams.set("anim", "svg");
   const windowValue = routeWindowParam(state.routeWindowMs);
@@ -3484,9 +3499,7 @@ function applyNodeStyle(entry, tier) {
 function applyNodeMembership() {
   const bounds = map.getBounds().pad(NODE_CULL_PAD);
   for (const entry of state.nodeMarkers) {
-    const key = String(entry.node.public_key || "").toUpperCase();
-    const allowed = isNodeRoleAllowed(entry.node, state.allowedRoles)
-      && (!state.photosOnly || state.photoNodeKeys.has(key));
+    const allowed = nodePassesFilters(entry.node);
     const shouldShow = allowed
       && (entry.marker.isPopupOpen() || bounds.contains([entry.node.lat, entry.node.lon]));
     const shown = nodeLayer.hasLayer(entry.marker);
@@ -3517,7 +3530,6 @@ function applyNodeTiers() {
 function refreshNodeState() {
   const now = nowMs();
   applyNodeTiers();
-  applyNodeMembership();
   for (const entry of state.nodeMarkers) {
     const active = isNodeActive(entry.node, now, NODE_ACTIVE_MS);
     if (entry.active !== active) {
@@ -3525,6 +3537,7 @@ function refreshNodeState() {
       scheduleOpenNodePopupRefresh(entry);
     }
   }
+  applyNodeMembership();
   if (!elements.statsPanel.hidden) renderStats();
   scheduleNodeLabels();
 }
@@ -3557,7 +3570,7 @@ function rebuildNodeLabels() {
     if (count >= LABEL_MAX) break;
     const { node } = entry;
     if (!node.name) continue;
-    if (!isNodeRoleAllowed(node, state.allowedRoles)) continue;
+    if (!nodePassesFilters(node)) continue;
     if (!validCoords(node.lat, node.lon)) continue;
     if (!bounds.contains([node.lat, node.lon])) continue;
     L.marker([node.lat, node.lon], {
@@ -6221,6 +6234,10 @@ elements.nodeLabelsToggle.addEventListener("change", () => {
 });
 elements.photosOnlyToggle.addEventListener("change", () => {
   void setPhotosOnly(elements.photosOnlyToggle.checked);
+});
+elements.inactiveOnlyToggle.addEventListener("change", () => {
+  state.inactiveOnly = elements.inactiveOnlyToggle.checked;
+  refreshNodeState();
 });
 elements.hideRoutesToggle.addEventListener("change", () => {
   setRoutesHidden(elements.hideRoutesToggle.checked);
