@@ -3,6 +3,14 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-01 — Přehlednější popup nodu na produkci
+- Prostředí: produkce i beta
+- Build: 20261101-0848-beadd9a
+- Popup nodu zobrazuje základní info a fotky přímo na hlavním panelu.
+- Uživatelské info má viditelných prvních 5 řádků, zbytek se rozbaluje.
+- Přibyli sousedé a tlačítka Odkaz / QR kontakt / Otevřít v Analyzeru.
+- Z meshcore.cz bylo převzato 18 textů a 47 fotek; fotky jsou lokální, zmenšené a se zdrojem.
+
 ## 2026-11-01 — Ruční sync z meshcore.cz
 - Prostředí: beta
 - Build: 20261101-0904-30f2482
