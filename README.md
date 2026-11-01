@@ -107,6 +107,9 @@ přihlašovací údaje zůstávají pouze na serveru.
   nodu, zobrazí náhled a správce potvrdí uložení. Importuje se jen text,
   ne fotky; zdroj a licence se zobrazují u nodu. Adresa je omezená na
   `meshcore.cz` a namespace `repeatery`.
+- `GET /admin/repeater-sync` je ruční porovnání uloženého info s aktuální
+  wiki stránkou (beta). Zobrazí rozdíly textu a nové obrázky; správce potvrdí,
+  co se má převzít. Nic se nespouští automaticky ani pravidelně.
 - `GET /api/comments?key=<public_key>` vrací komentáře k nodu, `GET
   /api/comments/count?key=<public_key>` jen jejich počet. `POST /api/comments`
   s JSON `{key, text, author}` je zveřejní ihned. Text má 2–500 znaků, autor je

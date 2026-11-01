@@ -1,7 +1,9 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { createReadStream, existsSync, mkdirSync, readFileSync, statfsSync, statSync, writeFileSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statfsSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { connect as connectTls } from "node:tls";
+import { execFileSync } from "node:child_process";
+import { tmpdir } from "node:os";
 import { dirname, extname, join, normalize } from "node:path";
 import mqtt from "mqtt";
 import { MeshCorePacketDecoder } from "@michaelhart/meshcore-decoder";
@@ -1869,7 +1871,7 @@ function adminLayout({ active = "", content = "", title = "Administrace" }) {
     ["feedback", adminPath("/feedback"), "Zpětná vazba"],
     ["comments", adminPath("/comments"), `Komentáře${commentStore.count() ? ` (${commentStore.count()})` : ""}`],
     ["nodeinfo", adminPath("/node-info"), `Info nodů${nodeInfoStore.pendingCount() ? ` (${nodeInfoStore.pendingCount()})` : ""}`],
-    ...(repeaterImportEnabled ? [["import", adminPath("/repeater-import"), "Import z wiki"]] : []),
+    ...(repeaterImportEnabled ? [["import", adminPath("/repeater-import"), "Import z wiki"], ["sync", adminPath("/repeater-sync"), "Sync z wiki"]] : []),
   ].map(([key, href, label]) => `<a class="${active === key ? "active" : ""}" href="${href}">${label}</a>`).join("");
   return `<!doctype html>
 <html lang="cs">
@@ -1938,6 +1940,14 @@ p { margin:4px 0; white-space:pre-wrap; }
 .admin-comment .node a { color:#182820; text-decoration:none; }
 .admin-comment .node a:hover { color:#078e62; }
 .admin-comment p { margin:5px 0; white-space:pre-wrap; }
+.sync-compare { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0; }
+.sync-compare > div { min-width:0; padding:9px; border:1px solid rgba(30,65,49,.14); border-radius:8px; background:#fffef9; }
+.sync-compare strong { display:block; margin-bottom:5px; color:#667b70; font:10px "DM Mono", monospace; text-transform:uppercase; }
+.sync-compare pre { max-height:220px; margin:0; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; font:11px/1.45 Manrope, system-ui, sans-serif; }
+.sync-photos { display:grid; gap:5px; margin:6px 0 12px; padding:0; list-style:none; }
+.sync-photos label, .sync-check { display:flex; align-items:center; gap:7px; font-size:12px; }
+.sync-photos input, .sync-check input { accent-color:#078e62; }
+@media (max-width:700px) { .sync-compare { grid-template-columns:1fr; } }
 .actions button.delete { color:#c0392b; border-color:rgba(192,57,43,.4); }
 .actions a.edit { padding:5px 10px; border:1px solid rgba(7,142,98,.45); border-radius:6px; color:#078e62; background:#fff; font:12px Manrope, system-ui, sans-serif; text-decoration:none; }
 .actions a.edit:hover { color:#fff; background:#078e62; }
@@ -2213,6 +2223,51 @@ function trustedRepeaterSourceUrl(value) {
   }
 }
 
+function repeaterPageSlug(sourceUrl) {
+  try {
+    const url = new URL(String(sourceUrl || ""));
+    const id = url.searchParams.get("id") || "";
+    const slug = id.startsWith("repeatery:") ? id.slice("repeatery:".length) : "";
+    return validRepeaterSlug(slug) ? slug : "";
+  } catch {
+    return "";
+  }
+}
+
+async function importRepeaterPhoto(nodeKey, page, fileName) {
+  if (!page?.images?.includes(fileName)) return { error: "invalid_photo" };
+  const caption = `${page.title || page.slug} · ${fileName}`.slice(0, 240);
+  const existing = photoStore.listApproved(nodeKey, 12);
+  if (existing.some((photo) => photo.caption === caption)) return { skipped: true };
+  if (existing.length >= 8) return { error: "node_limit" };
+  const temp = mkdtempSync(join(tmpdir(), "meshcore-sync-photo-"));
+  try {
+    const response = await fetch(`https://meshcore.cz/_media/repeatery:${encodeURIComponent(fileName)}`, {
+      headers: { "User-Agent": "meshcore-map-sync/1" },
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!response.ok || !String(response.headers.get("content-type") || "").startsWith("image/")) {
+      return { error: "download" };
+    }
+    const input = join(temp, "input.img");
+    const output = join(temp, "output.webp");
+    writeFileSync(input, Buffer.from(await response.arrayBuffer()));
+    execFileSync("convert", [input, "-auto-orient", "-resize", "2000x2000>", "-strip", "-quality", "82", output], { stdio: "ignore" });
+    const photo = photoStore.create({
+      author: "meshcore.cz",
+      buffer: readFileSync(output),
+      caption,
+      nodeKey,
+      status: "approved",
+    });
+    return { photo };
+  } catch (error) {
+    return { error: error?.message || "photo_failed" };
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
+}
+
 function adminRepeaterImportPage({ node = null, page = null, slug = "", keyValue = "", error = "" } = {}) {
   const nodeLabel = node ? `${node.name || "Nod"} · ${node.key.slice(0, 8)}` : "";
   const preview = page && node ? `
@@ -2258,7 +2313,57 @@ ${preview}`,
   });
 }
 
-function adminNodeInfoPage(imported = false) {
+function adminRepeaterSyncPage({ node = null, page = null, current = null, keyValue = "", error = "", message = "" } = {}) {
+  const currentText = String(current?.text || "");
+  const existingPhotos = node ? photoStore.listApproved(node.key, 12) : [];
+  const existingCaptions = new Set(existingPhotos.map((photo) => photo.caption));
+  const missing = page ? page.images.filter((file) => !existingCaptions.has(`${page.title || page.slug} · ${file}`)) : [];
+  const nodeLabel = node ? `${node.name || "Nod"} · ${node.key.slice(0, 8)}` : "";
+  const preview = page && node ? `
+    <section class="panel">
+      <h2>Stránka na meshcore.cz</h2>
+      <p class="sub"><a href="${escapeHtml(page.sourceUrl)}" target="_blank" rel="noreferrer">${escapeHtml(page.title || page.slug)}</a>
+        · ${formatAdminNumber(page.imageCount)} obrázků</p>
+      <div class="sync-compare">
+        <div><strong>Aktuální uložené info</strong><pre>${escapeHtml(currentText || "—")}</pre></div>
+        <div><strong>Text na wiki</strong><pre>${escapeHtml(page.text || "—")}</pre></div>
+      </div>
+      <form class="admin-edit-form" method="post" action="${adminPath("/repeater-sync")}">
+        <input type="hidden" name="key" value="${escapeHtml(node.key)}" />
+        <input type="hidden" name="slug" value="${escapeHtml(page.slug)}" />
+        <input type="hidden" name="sourceUrl" value="${escapeHtml(page.sourceUrl)}" />
+        <input type="hidden" name="sourceTitle" value="${escapeHtml(page.title || page.slug)}" />
+        <label class="sync-check"><input type="checkbox" name="syncText" value="1" ${current?.sourceUrl ? "checked" : ""} /> Aktualizovat text z wiki</label>
+        ${missing.length ? `<h3>Nové obrázky</h3><ul class="sync-photos">${missing.map((file) => `
+          <li><label><input type="checkbox" name="photo" value="${escapeHtml(file)}" checked /> ${escapeHtml(file)}</label></li>`).join("")}</ul>` : '<p class="sub">Na wiki nejsou žádné nové obrázky.</p>'}
+        <div class="feedback-actions">
+          <a href="${adminPath("/node-info")}">Zrušit</a>
+          <button type="submit">Provést ruční sync</button>
+        </div>
+      </form>
+    </section>` : "";
+  return adminLayout({
+    active: "sync",
+    title: "Sync z wiki",
+    content: `
+<h1>Ruční sync z meshcore.cz</h1>
+<p class="sub">Porovná uložené uživatelské info s aktuální wiki stránkou. Nic se nespouští automaticky; změny potvrdíte tlačítkem.</p>
+${message ? `<p class="sub imported">${escapeHtml(message)}</p>` : ""}
+${error ? `<p class="feedback-status error">${escapeHtml(error)}</p>` : ""}
+<section class="panel">
+  <form class="admin-edit-form" method="get" action="${adminPath("/repeater-sync")}">
+    <label>Klíč nebo název nodu
+      <input type="text" name="key" value="${escapeHtml(keyValue)}" placeholder="např. rip5.meshcore.cz" required />
+    </label>
+    <div class="feedback-actions"><button type="submit">Načíst rozdíly</button></div>
+  </form>
+  ${node ? `<p class="sub">Vybraný nod: <strong>${escapeHtml(nodeLabel)}</strong></p>` : ""}
+</section>
+${preview}`,
+  });
+}
+
+function adminNodeInfoPage(imported = false, synced = false) {
   const entries = nodeInfoStore.list(500);
   const pending = nodeInfoStore.listPending(500);
   const names = photoNodeNames();
@@ -2290,7 +2395,9 @@ function adminNodeInfoPage(imported = false) {
       <p>${escapeHtml(info.text)}</p>
       <div class="actions">
         <a class="edit" href="${adminPath(`/node-info/edit?key=${encodeURIComponent(info.nodeKey)}`)}">Upravit</a>
-        ${repeaterImportEnabled ? `<a class="edit" href="${adminPath(`/repeater-import?key=${encodeURIComponent(info.nodeKey)}`)}">Import z wiki</a>` : ""}
+        ${repeaterImportEnabled ? (info.sourceUrl
+          ? `<a class="edit" href="${adminPath(`/repeater-sync?key=${encodeURIComponent(info.nodeKey)}`)}">Sync z wiki</a>`
+          : `<a class="edit" href="${adminPath(`/repeater-import?key=${encodeURIComponent(info.nodeKey)}`)}">Import z wiki</a>`) : ""}
         <form method="post" action="${adminPath("/node-info/delete")}">
           <input type="hidden" name="key" value="${escapeHtml(info.nodeKey)}" />
           <button class="delete" type="submit">Smazat info</button>
@@ -2305,6 +2412,7 @@ function adminNodeInfoPage(imported = false) {
 <h1>Info nodů</h1>
 <p class="sub">${formatAdminNumber(entries.length)} zveřejněných popisů${pending.length ? ` · ${formatAdminNumber(pending.length)} změn ke schválení` : ""}.</p>
 ${imported ? '<p class="sub imported">Import z meshcore.cz byl uložen.</p>' : ""}
+${synced ? '<p class="sub imported">Sync z meshcore.cz byl uložen.</p>' : ""}
 ${pending.length ? `<h2>Změny ke schválení</h2><ul class="list feedback">${pendingRows}</ul>` : ""}
 <h2>Zveřejněné info</h2>
 ${entries.length ? `<ul class="list feedback">${rows}</ul>` : '<p class="empty">Zatím žádné uživatelské info.</p>'}`,
@@ -2432,7 +2540,28 @@ async function handleAdminRequest(request, response, url) {
     }
     if (path === "/admin/node-info") {
       response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      response.end(adminNodeInfoPage(url.searchParams.get("imported") === "1"));
+      response.end(adminNodeInfoPage(url.searchParams.get("imported") === "1", url.searchParams.get("synced") === "1"));
+      return;
+    }
+    if (path === "/admin/repeater-sync" && repeaterImportEnabled) {
+      const keyValue = String(url.searchParams.get("key") || "").trim();
+      if (!keyValue) {
+        response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        response.end(adminRepeaterSyncPage({ keyValue }));
+        return;
+      }
+      const node = resolveImportNode(keyValue);
+      let error = node.error || "";
+      let page = null;
+      let current = null;
+      if (!error) {
+        current = nodeInfoStore.get(node.key);
+        const slug = repeaterPageSlug(current?.sourceUrl);
+        page = slug ? await fetchRepeaterPage(slug) : await findRepeaterPage(node.name || node.key);
+        if (!page) error = "Pro tento nod nebyla nalezena wiki stránka.";
+      }
+      response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      response.end(adminRepeaterSyncPage({ current, error, keyValue, node, page }));
       return;
     }
     if (path === "/admin/repeater-import" && repeaterImportEnabled) {
@@ -2483,6 +2612,33 @@ async function handleAdminRequest(request, response, url) {
     const form = await readAdminForm(request);
     if (!form) {
       response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Bad Request");
+      return;
+    }
+    if (path === "/admin/repeater-sync" && repeaterImportEnabled) {
+      const key = String(form.get("key") || "").trim().toLowerCase();
+      const slug = String(form.get("slug") || "").trim().toLowerCase();
+      if (!/^[0-9a-f]{64}$/.test(key) || !validRepeaterSlug(slug)) {
+        response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Neplatný sync.");
+        return;
+      }
+      const page = await fetchRepeaterPage(slug);
+      if (!page) {
+        response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Wiki stránka není dostupná.");
+        return;
+      }
+      if (form.get("syncText") === "1") {
+        nodeInfoStore.importText(key, {
+          author: "meshcore.cz",
+          sourceTitle: page.title || slug,
+          sourceUrl: page.sourceUrl,
+          text: page.text,
+        });
+      }
+      const selectedPhotos = new Set(form.getAll("photo").map(String));
+      for (const fileName of page.images) {
+        if (selectedPhotos.has(fileName)) await importRepeaterPhoto(key, page, fileName);
+      }
+      redirectAdmin(response, `${adminBasePath}/node-info?synced=1`);
       return;
     }
     if (path === "/admin/repeater-import" && repeaterImportEnabled) {
