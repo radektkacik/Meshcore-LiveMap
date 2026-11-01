@@ -300,6 +300,7 @@
 | 2026-11-01 08:17 | `beta-info-photos-backup-20261101T081714Z.tar.gz` | – | Beta: zkopírováno 21 zveřejněných uživatelských info a 35 schválených fotek z produkce; uploads srovnány s produkcí, záloha před kopií v `/root/` | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-11-01 08:21 | `20261101T082124Z.tar.gz` (stage APP_DIR) | `20261101-0821-4d1aef7` | Beta: základní info a fotky přímo v popupu nodu, uživatelské info rozbalovací, detail zůstává pro síť/analytiku | `src/main.js`, `src/style.css`, `src/i18n.js` |
 | 2026-11-01 08:28 | `20261101T082825Z.tar.gz` (stage APP_DIR) | `20261101-0828-a7eec20` | Beta: oprava parseru médií (odstranění `?400` apod.) a ověření importovaných fotek | `repeater-pages.mjs`, `test/repeater-pages.test.mjs` |
+| 2026-11-01 08:32 | `20261101T083205Z.tar.gz` (stage APP_DIR) | `20261101-0832-38e7bb0` | Beta: uživatelské info zobrazuje prvních 5 řádků přímo v popupu, zbytek se rozbaluje tlačítkem | `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
