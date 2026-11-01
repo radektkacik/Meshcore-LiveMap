@@ -322,6 +322,8 @@
 | 2026-11-01 10:03 | `20261101T100355Z.tar.gz` (stage APP_DIR) | `20261101-1003-d557689` | Beta: stejná oprava detailu | `src/main.js` |
 | 2026-11-01 10:11 | `20261101T101129Z.tar.gz` | `20261101-1011-c2bd30c` | Prod: oprava typografie detailu – tabulky základních/provozních/síťových údajů používají původní 12px písmo a grid layout | `src/style.css` |
 | 2026-11-01 10:11 | `20261101T101157Z.tar.gz` (stage APP_DIR) | `20261101-1011-c2bd30c` | Beta: stejná oprava typografie detailu | `src/style.css` |
+| 2026-11-01 10:16 | `20261101T101627Z.tar.gz` | `20261101-1016-283e5e3` | Prod: oprava výšky tabů detailu – tlačítka mají pevných 28 px, text se už nepřekrývá | `src/style.css` |
+| 2026-11-01 10:16 | `20261101T101653Z.tar.gz` (stage APP_DIR) | `20261101-1016-283e5e3` | Beta: stejná oprava tabů | `src/style.css` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
