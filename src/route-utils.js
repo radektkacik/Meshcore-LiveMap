@@ -1,4 +1,10 @@
 export const PRIMARY_PACKET_TYPES = new Set([2, 4, 5, 9]);
+export const DEFAULT_MAX_HOP_KM = 170;
+export const MULTI_BYTE_MAX_HOP_KM = 200;
+
+export function maxRouteHopKm(hashBytes) {
+  return Number(hashBytes) >= 2 ? MULTI_BYTE_MAX_HOP_KM : DEFAULT_MAX_HOP_KM;
+}
 
 export function parsePath(packet) {
   try {

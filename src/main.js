@@ -6,6 +6,7 @@ import {
   archiveQuery,
   isRouteVisible,
   liveRouteCreatedAt,
+  maxRouteHopKm,
   packetPathHashBytes,
   parsePath,
   resolveCandidateChain,
@@ -71,7 +72,6 @@ const NODE_ANALYTICS_TTL_MS = 5 * 60 * 1000;
 const MAX_MAP_ZOOM = 19;
 const MAX_LIVE_RENDERED = 350;
 const MAX_LIVE_STORED = 3000;
-const MAX_ROUTE_HOP_KM = 170;
 const MAX_ROUTE_PATH_LENGTH = 32;
 const DEFAULT_ROUTE_RETENTION_MS = 30_000;
 const ROUTE_RETENTION_OPTIONS = [15_000, 30_000, 60_000, 120_000];
@@ -3898,7 +3898,8 @@ function haversineKm(latA, lonA, latB, lonB) {
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function packetPoints(packet, path) {
+function packetPoints(packet, path, hashBytes = packetPathHashBytes(packet, path)) {
+  const maxHopKm = maxRouteHopKm(hashBytes);
   const decoded = parseDecoded(packet);
   const points = [];
   let breakNext = false;
@@ -3947,8 +3948,8 @@ function packetPoints(packet, path) {
   for (const candidateSets of blocks) {
     const last = points.at(-1);
     const start = last ? { lat: last.lat, lon: last.lon } : null;
-    let chain = resolveCandidateChain(candidateSets, { maxHopKm: MAX_ROUTE_HOP_KM, start, end });
-    if (!chain && end) chain = resolveCandidateChain(candidateSets, { maxHopKm: MAX_ROUTE_HOP_KM, start });
+    let chain = resolveCandidateChain(candidateSets, { maxHopKm, start, end });
+    if (!chain && end) chain = resolveCandidateChain(candidateSets, { maxHopKm, start });
     if (!chain) {
       breakNext = true;
       continue;
@@ -3968,7 +3969,7 @@ function packetPoints(packet, path) {
   if (!isDirectRoute && observerKey.length >= 4 && observerNode && validCoords(observerNode.lat, observerNode.lon)) {
     const last = points.at(-1);
     const plausibleDistance = !last
-      || haversineKm(last.lat, last.lon, observerNode.lat, observerNode.lon) <= MAX_ROUTE_HOP_KM;
+      || haversineKm(last.lat, last.lon, observerNode.lat, observerNode.lon) <= maxHopKm;
     const distinct = !last || last.lat !== observerNode.lat || last.lon !== observerNode.lon;
     if (plausibleDistance && distinct) {
       pushPoint(observerNode.lat, observerNode.lon, observerNode.name || packet.observer_name || "Observer", observerNode.public_key);
@@ -4022,7 +4023,8 @@ function routeColor(packetType) {
   return ROUTE_COLORS[packetType] || ROUTE_COLORS.default;
 }
 
-function historyRoutePoints(packet) {
+function historyRoutePoints(packet, hashBytes = packetPathHashBytes(packet)) {
+  const maxHopKm = maxRouteHopKm(hashBytes);
   const resolved = packet.resolved_path || packet._resolvedPath || [];
   const points = [];
   const seen = new Set();
@@ -4040,7 +4042,7 @@ function historyRoutePoints(packet) {
     }
     if (seen.has(key)) continue;
     const previous = points.at(-1);
-    if (previous && haversineKm(previous.lat, previous.lon, node.lat, node.lon) > MAX_ROUTE_HOP_KM) {
+    if (previous && haversineKm(previous.lat, previous.lon, node.lat, node.lon) > maxHopKm) {
       breakNext = true;
       continue;
     }
@@ -4118,7 +4120,7 @@ async function historyRoutesFromPackets(packets) {
     const hashBytes = packetPathHashBytes(packet, path);
     if (!path.length) continue;
     const resolved = Array.isArray(packet.resolved_path) ? packet.resolved_path : [];
-    const points = resolved.some(Boolean) ? historyRoutePoints(packet) : packetPoints(packet, path);
+    const points = resolved.some(Boolean) ? historyRoutePoints(packet, hashBytes) : packetPoints(packet, path, hashBytes);
     if (!routeSegments(points).length) continue;
     const id = `${packet.hash || packet.id}:${packet.observer_id || "history"}`;
     routes.push(routeRecord(
@@ -4939,7 +4941,7 @@ async function loadArchiveWindow(windowMs) {
       if (!path.length || path.length > MAX_ROUTE_PATH_LENGTH) continue;
       const hashBytes = packetPathHashBytes(packet, path);
       if (!isRouteVisible(Number(packet.payload_type), hashBytes, state)) continue;
-      const points = historyRoutePoints(packet);
+      const points = historyRoutePoints(packet, hashBytes);
       if (!routeSegments(points).length) continue;
       const observedAt = routeTimestamp(packet, 0);
       const id = `${packet.hash || "archive"}:${packet.observer_id || "archive"}`;
@@ -5139,7 +5141,7 @@ async function handlePacket(packet) {
     const versionId = `${routeId}:${JSON.stringify(path)}`;
     await routeVersions.run(versionId, async () => {
       await resolvePrefixes(path);
-      const points = packetPoints(packet, path);
+      const points = packetPoints(packet, path, hashBytes);
       if (!routeSegments(points).length) return false;
       routeStore.addLive(routeRecord(packet, points, hashBytes, routeId, versionId, createdAt));
       if (!suppressRoutePresentation) syncRoutePresentation();

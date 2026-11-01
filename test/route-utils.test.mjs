@@ -5,6 +5,7 @@ import {
   isPrimaryPacketType,
   isRouteVisible,
   liveRouteCreatedAt,
+  maxRouteHopKm,
   packetPathHashBytes,
   parsePath,
   pathHashBytes,
@@ -99,4 +100,11 @@ test("candidate chain respects a start anchor and the hop limit", () => {
   assert.deepEqual(chain.map((candidate) => candidate.name), ["near", "next"]);
   assert.equal(resolveCandidateChain([[{ name: "far", lat: 51.5, lon: 16.5 }]], { maxHopKm: 50, start }), null);
   assert.equal(resolveCandidateChain([], { maxHopKm: 50 }), null);
+});
+
+test("allows a longer hop only for routes with at least two hash bytes", () => {
+  assert.equal(maxRouteHopKm(0), 170);
+  assert.equal(maxRouteHopKm(1), 170);
+  assert.equal(maxRouteHopKm(2), 200);
+  assert.equal(maxRouteHopKm(3), 200);
 });
