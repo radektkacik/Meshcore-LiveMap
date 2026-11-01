@@ -407,10 +407,10 @@ html[data-theme="dark"] .node-history-tip { color: #17271f; background: #e6ecef;
 .node-photo img { display: block; width: 96px; height: 72px; object-fit: cover; background: #eef2ef; }
 .node-photo small { display: block; overflow: hidden; padding: 4px 5px; color: var(--muted); font: 9px "DM Mono", monospace; text-overflow: ellipsis; white-space: nowrap; }
 .node-photos-empty { margin: 0; color: var(--muted); font-size: 11px; }
-.node-overview { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; padding: 9px 15px; border-bottom: 1px solid var(--line); }
-.node-overview span { min-width: 0; padding: 6px 7px; border: 1px solid var(--line); border-radius: 7px; background: rgba(7, 142, 98, 0.045); }
-.node-overview small { display: block; overflow: hidden; color: var(--muted); font: 9px "DM Mono", monospace; text-overflow: ellipsis; white-space: nowrap; }
-.node-overview b { display: block; margin-top: 2px; color: #263b31; font-size: 12px; }
+.node-overview { display: flex; flex-wrap: wrap; align-items: baseline; gap: 5px 13px; padding: 8px 15px; border-bottom: 1px solid var(--line); }
+.node-overview span { display: inline-flex; align-items: baseline; gap: 4px; min-width: 0; }
+.node-overview small { color: var(--muted); font: 9px "DM Mono", monospace; letter-spacing: 0.04em; }
+.node-overview b { color: #263b31; font: 600 11px "DM Mono", monospace; }
 .node-overview b.positive { color: #087a57; }
 .node-user-info { padding: 10px 15px; border-top: 1px solid var(--line); }
 .node-user-info-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }

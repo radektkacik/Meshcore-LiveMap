@@ -1705,7 +1705,6 @@ function nodeOverview(node) {
       <span><small>${t("node.overviewPhotos")}</small><b data-overview-photos>…</b></span>
       <span><small>${t("node.overviewComments")}</small><b data-overview-comments>…</b></span>
       <span><small>${t("node.overviewInfo")}</small><b data-overview-info>…</b></span>
-      <span><small>${t("node.lastActivity")}</small><b>${escapeHtml(formatNodeDate(nodeLastActivity(node)))}</b></span>
     </div>
   `;
 }
@@ -1725,7 +1724,8 @@ function updateNodeOverview(key) {
     if (comments) comments.textContent = commentEntry ? String(commentEntry.count) : "…";
     if (info) {
       const hasInfo = Boolean(infoEntry?.info?.text);
-      info.textContent = infoEntry ? (hasInfo ? t("node.overviewInfoYes") : "—") : "…";
+      info.textContent = infoEntry ? (hasInfo ? "✓" : "—") : "…";
+      info.title = hasInfo ? t("node.overviewInfoYes") : "";
       info.classList.toggle("positive", hasInfo);
     }
   }
