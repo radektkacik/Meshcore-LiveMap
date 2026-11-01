@@ -316,7 +316,7 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-detail-close { width: 30px; height: 30px; flex: 0 0 auto; padding: 0; border: 0; border-radius: 8px; color: #667b70; background: #e9eee9; font-size: 21px; line-height: 30px; cursor: pointer; }
 .node-detail-close:hover { color: #b03024; background: #f3e9e7; }
 .node-detail-tabs { display: flex; gap: 4px; padding: 8px 12px; overflow-x: auto; border-bottom: 1px solid var(--line); background: #fbfcf8; }
-.node-detail-tabs button { flex: 0 0 auto; padding: 6px 9px; border: 1px solid transparent; border-radius: 6px; color: #49665b; background: transparent; font: 10px "DM Mono", monospace; cursor: pointer; }
+.node-detail-tabs button { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; min-height: 28px; padding: 6px 9px; border: 1px solid transparent; border-radius: 6px; color: #49665b; background: transparent; font: 10px/1.2 "DM Mono", monospace; white-space: nowrap; cursor: pointer; box-sizing: border-box; }
 .node-detail-tabs button:hover { color: var(--green); background: #edf7f1; }
 .node-detail-tabs button.active { color: #fff; background: var(--green); border-color: var(--green); }
 .node-detail-panels { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
