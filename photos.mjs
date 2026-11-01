@@ -177,6 +177,11 @@ export function createPhotoStore(rootDir, {
     )
   `);
   const selectById = db.prepare("SELECT * FROM photos WHERE id = ?");
+  const selectCover = db.prepare("SELECT photo_id FROM photo_covers WHERE node_key = ?");
+  const selectLatestApproved = db.prepare(`
+    SELECT id FROM photos WHERE node_key = ? AND status = 'approved'
+    ORDER BY created_at DESC, rowid DESC LIMIT 1
+  `);
   const selectApproved = db.prepare(`
     SELECT * FROM photos WHERE node_key = ? AND status = 'approved'
     ORDER BY created_at DESC LIMIT ?
@@ -292,6 +297,11 @@ export function createPhotoStore(rootDir, {
       if (countNode.get(nodeKey).total >= maxPerNode) {
         throw new PhotoError("node_limit", "Tento nod už má maximální počet fotek.");
       }
+      // Keep the current effective cover when a new photo is added.
+      if (!selectCover.get(nodeKey)) {
+        const latest = selectLatestApproved.get(nodeKey);
+        if (latest) upsertCover.run(nodeKey, latest.id, Date.now());
+      }
       const id = randomUUID();
       const status = PHOTO_STATUSES.includes(entry?.status) ? entry.status : "pending";
       const file = join(nodeKey.slice(0, 2), nodeKey, `${id}.${image.ext}`);
@@ -312,6 +322,9 @@ export function createPhotoStore(rootDir, {
         status,
         width: image.width,
       });
+      if (status === "approved" && !selectCover.get(nodeKey)) {
+        upsertCover.run(nodeKey, id, Date.now());
+      }
       return get(id);
     },
     createReport(entry) {
@@ -405,11 +418,19 @@ export function createPhotoStore(rootDir, {
     },
     setStatus(id, status) {
       if (!PHOTO_STATUSES.includes(status)) return false;
+      const row = selectById.get(String(id || ""));
+      if (!row) return false;
+      const hadCover = Boolean(selectCover.get(row.node_key));
+      const latestBefore = selectLatestApproved.get(row.node_key);
       const changed = updateStatus.run(status, Date.now(), String(id || "")).changes > 0;
       if (!changed) return false;
       if (status === "approved") {
         const request = selectCoverRequestByPhoto.get(String(id || ""));
         if (request) applyCover(request.node_key, request.photo_id);
+        else if (!hadCover) {
+          if (latestBefore) applyCover(row.node_key, latestBefore.id);
+          else applyCover(row.node_key, row.id);
+        }
       } else {
         deleteCoverByPhoto.run(String(id || ""));
         deleteCoverRequestByPhoto.run(String(id || ""));
