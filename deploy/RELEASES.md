@@ -311,6 +311,7 @@
 | 2026-11-01 08:55 | `prod-node-info-backup-20261101T085543Z.sqlite` | – | Prod: převzato zbývajících 12 textů z wiki (i konfigurační výpisy); produkce má 39 info. Beta stejně, záloha `beta-node-info-backup-20261101T085556Z.sqlite` | `data/node-info.sqlite` (prod + beta) |
 | 2026-11-01 09:02 | `20261101T090226Z.tar.gz` (stage APP_DIR) | `20261101-0902-db655bb` | Beta: ruční sync z wiki (`/admin/repeater-sync`) – porovnání textu, výběr nových obrázků, potvrzení; žádný automatický ani pravidelný režim. Produkce bez této funkce | `server.mjs`, `README.md` |
 | 2026-11-01 09:04 | `20261101T090453Z.tar.gz` (stage APP_DIR) | `20261101-0904-30f2482` | Beta: hromadný sync z wiki (`/admin/repeater-sync-all`) – porovná všechny importované nody, zobrazí změny a umožní vybrané synchronizovat | `server.mjs`, `README.md` |
+| 2026-11-01 09:07 | `20261101T090733Z.tar.gz` (stage APP_DIR) | `20261101-0907-2364917` | Beta: záznam o ručním syncu z wiki v changelogu | `CHANGELOG.md`, `deploy/RELEASES.md` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
