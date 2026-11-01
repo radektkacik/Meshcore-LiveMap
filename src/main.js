@@ -158,6 +158,7 @@ document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) === "da
 const elements = {
   activityNew: document.querySelector("#activity-new"),
   activityChannels: document.querySelector("#activity-channels"),
+  archiveFilterHint: document.querySelector("#archive-filter-hint"),
   archiveFocusBar: document.querySelector("#archive-focus-bar"),
   archiveFocusClose: document.querySelector("#archive-focus-close"),
   archiveFocusCount: document.querySelector("#archive-focus-count"),
@@ -3292,7 +3293,10 @@ function nodeTooltip(node) {
   const photo = coverId
     ? `<img class="node-tooltip-photo" src="${appPath(`/api/photos/${encodeURIComponent(coverId)}`)}" alt="" loading="lazy" decoding="async" />`
     : "";
-  return `<span class="node-tooltip-body">${photo}<span><strong>${escapeHtml(node.name || t("common.unknownNode"))}</strong><br>${escapeHtml(roleLabel(node.role))}</span></span>`;
+  const archiveHint = state.routeWindowMs
+    ? `<small class="node-tooltip-hint">${escapeHtml(t("archive.nodeHint"))}</small>`
+    : "";
+  return `<span class="node-tooltip-body">${photo}<span><strong>${escapeHtml(node.name || t("common.unknownNode"))}</strong><br>${escapeHtml(roleLabel(node.role))}${archiveHint}</span></span>`;
 }
 
 function refreshOpenNodePopup(entry) {
@@ -5151,7 +5155,14 @@ function archiveRoutesSorted() {
   return filtered.sort((a, b) => b.timestamp - a.timestamp);
 }
 
+function updateArchiveHint() {
+  const show = state.routeWindowMs !== 0 && !state.archiveNodeFilterKey;
+  elements.archiveFilterHint.hidden = !show;
+  if (show) elements.archiveFilterHint.textContent = t("archive.clickHint");
+}
+
 function updateArchiveFocusBar() {
+  updateArchiveHint();
   const key = state.archiveNodeFilterKey;
   const node = key ? state.nodeByKey.get(key) : null;
   if (state.routeWindowMs === 0 || !key || !node) {
