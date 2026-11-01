@@ -495,6 +495,9 @@ html[data-theme="dark"] .node-user-info-toggle { color: #5fd0a5; background: rgb
 .node-popup-actions { display: flex; flex-direction: column; gap: 7px; }
 .node-link-copy { width: 100%; padding: 9px 10px; border: 1px solid rgba(40, 127, 201, 0.3); border-radius: 7px; color: #246aa6; background: #eef6fc; font-size: 11px; font-weight: 700; cursor: pointer; }
 .node-link-copy:hover { border-color: #287fc9; background: #e2eff9; }
+.node-archive-filter { width: 100%; padding: 9px 10px; border: 1px solid rgba(7, 142, 98, 0.32); border-radius: 7px; color: #087a57; background: #edf7f1; font-size: 11px; font-weight: 700; cursor: pointer; }
+.node-archive-filter:hover { border-color: var(--green); background: #e4f3ea; }
+.node-archive-filter.active { color: #fff; background: var(--green); border-color: var(--green); }
 .node-analyzer-link { display: block; padding: 9px 10px; border: 1px solid var(--line); border-radius: 7px; color: #3f584e; background: #fff; font-size: 11px; font-weight: 700; text-align: center; text-decoration: none; }
 .node-analyzer-link:hover { color: var(--green); border-color: rgba(7, 142, 98, 0.4); }
 .node-stack-popup .leaflet-popup-content-wrapper { overflow: hidden; padding: 0; border: 1px solid rgba(30, 65, 49, 0.18); border-radius: 11px; background: #fffef9; box-shadow: 0 12px 32px rgba(32, 54, 44, 0.2); }
@@ -973,6 +976,8 @@ html[data-theme="dark"] .node-public-key code,
 html[data-theme="dark"] .node-key-copy { color: #c3d0d6; }
 html[data-theme="dark"] .node-key-copy { background: #1b232b; }
 html[data-theme="dark"] .node-qr-toggle { color: #5fd0a5; background: rgba(7, 142, 98, 0.16); border-color: rgba(7, 142, 98, 0.4); }
+html[data-theme="dark"] .node-archive-filter { color: #7de0b8; background: rgba(7, 142, 98, 0.16); border-color: rgba(7, 142, 98, 0.4); }
+html[data-theme="dark"] .node-archive-filter.active { color: #fff; background: var(--green); }
 html[data-theme="dark"] .qr-dialog,
 html[data-theme="dark"] .feedback-dialog { color: #e6ecef; background: #161d24; border-color: var(--line); }
 html[data-theme="dark"] .qr-dialog-code { background: #1b232b; border-color: var(--line); }
@@ -1088,7 +1093,12 @@ html[data-theme="dark"] .node-label { background: rgba(15, 20, 24, 0.85); color:
 .packet-focus-bar button:hover { background: #e8f2fb; }
 .packet-focus-bar .packet-focus-analyzer { flex: 0 0 auto; padding: 4px 8px; border: 1px solid rgba(40, 127, 201, 0.45); border-radius: 6px; color: #1f6fb2; background: #fff; font: 10px "DM Mono", monospace; text-decoration: none; }
 .packet-focus-bar .packet-focus-analyzer:hover { background: #e8f2fb; }
+.archive-focus-bar { top: 68px; color: #0b7654; border-color: rgba(7, 142, 98, 0.45); background: rgba(240, 255, 248, 0.96); }
+.archive-focus-bar button { color: #087a57; background: #f6fffa; border-color: rgba(7, 142, 98, 0.45); }
+.archive-focus-bar button:hover { background: #e4f3ea; }
 html[data-theme="dark"] .packet-focus-bar { color: #9fd1f5; background: rgba(20, 32, 42, 0.96); border-color: rgba(95, 167, 224, 0.45); }
+html[data-theme="dark"] .archive-focus-bar { color: #7de0b8; background: rgba(16, 32, 26, 0.96); border-color: rgba(95, 208, 165, 0.45); }
+html[data-theme="dark"] .archive-focus-bar button { color: #7de0b8; background: #16221c; border-color: rgba(95, 208, 165, 0.45); }
 html[data-theme="dark"] .packet-focus-bar button { color: #9fd1f5; background: #16222c; border-color: rgba(95, 167, 224, 0.45); }
 html[data-theme="dark"] .packet-focus-bar .packet-focus-analyzer { color: #9fd1f5; background: #16222c; border-color: rgba(95, 167, 224, 0.45); }
 html[data-theme="dark"] .neighbor-focus-bar { color: #5fd0a5; background: rgba(16, 32, 26, 0.96); border-color: rgba(95, 208, 165, 0.45); }
@@ -1099,6 +1109,7 @@ html[data-theme="dark"] .route-break-marker { color: #ffc46b; background: #2a231
 html[data-theme="dark"] .route-snr-label { background: rgba(15, 20, 24, 0.92); }
 @media (max-width: 600px) {
   .packet-focus-bar { top: 8px; left: 50%; right: auto; bottom: auto; max-width: calc(100vw - 18px); transform: translateX(-50%); }
+  .archive-focus-bar { top: 58px; }
 }
 html[data-theme="dark"] .map-status { background: rgba(18, 24, 30, 0.92); }
 

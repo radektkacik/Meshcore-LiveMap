@@ -158,6 +158,11 @@ document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) === "da
 const elements = {
   activityNew: document.querySelector("#activity-new"),
   activityChannels: document.querySelector("#activity-channels"),
+  archiveFocusBar: document.querySelector("#archive-focus-bar"),
+  archiveFocusClose: document.querySelector("#archive-focus-close"),
+  archiveFocusCount: document.querySelector("#archive-focus-count"),
+  archiveFocusName: document.querySelector("#archive-focus-name"),
+  archiveFocusTitle: document.querySelector("#archive-focus-title"),
   activityClose: document.querySelector("#activity-close"),
   activityHistory: document.querySelector("#activity-history"),
   channelTabs: document.querySelector("#channel-tabs"),
@@ -427,6 +432,7 @@ const state = {
   animationMode: new URLSearchParams(location.search).get("anim") === "svg" ? "svg" : "canvas",
   allowedHashBytes: new Set([2, 3]),
   allowedRoles: new Set(ALL_NODE_ROLES),
+  archiveNodeFilterKey: null,
   archiveRendered: new Map(),
   archiveRoutes: new Map(),
   cachedRendered: [],
@@ -1515,6 +1521,7 @@ function openRouteDetail(route, latlng = null) {
 map.on("click", () => {
   if (!state.packetFocus) clearSelectedRoute();
   if (state.neighborFocusKey) clearNeighborFocus();
+  if (state.archiveNodeFilterKey) clearArchiveNodeFilter();
 });
 map.on("click", (event) => {
   if (state.coverageMode) void handleCoverageClick(event.latlng);
@@ -1569,6 +1576,11 @@ function setupNodePopup(popup, node) {
     event.preventDefault();
     event.stopPropagation();
     openNodeDetail(node);
+  });
+  root.querySelector(".node-archive-filter")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleArchiveNodeFilter(node);
   });
   for (const button of root.querySelectorAll(".node-detail-tab-button")) {
     button.addEventListener("click", (event) => {
@@ -2095,9 +2107,13 @@ function nodeAnalytics(node) {
 
 function nodeActionButtons(node, { close = false } = {}) {
   if (!node.public_key) return "";
+  const archiveKey = String(node.public_key).toUpperCase();
+  const archiveCount = state.routeWindowMs ? archiveRouteCountForNode(archiveKey) : 0;
+  const archiveActive = state.archiveNodeFilterKey === archiveKey;
   return `
     <div class="node-popup-actions">
       <button class="node-link-copy" type="button">${t("node.copyLink")}</button>
+      ${archiveCount || archiveActive ? `<button class="node-archive-filter${archiveActive ? " active" : ""}" type="button">${archiveActive ? t("archive.clearFilter") : t("archive.showNodeRoutes")}</button>` : ""}
       ${/^[0-9a-f]{64}$/i.test(node.public_key) ? `<button class="node-qr-toggle" type="button">${t("node.showQr")}</button>` : ""}
       ${/^[0-9a-f]{64}$/i.test(node.public_key) ? `<a class="node-analyzer-link" href="https://analyzer.meshcore.cz/#/nodes/${encodeURIComponent(node.public_key.toLowerCase())}" target="_blank" rel="noreferrer">${t("node.openAnalyzer")}</a>` : ""}
       ${close ? `<button class="node-popup-close popup-close-button" type="button">${t("common.close")}</button>` : ""}
@@ -4906,6 +4922,7 @@ function resumeFeedAfterInteraction(delay = FEED_AUTO_RESUME_MS) {
 
 elements.packetFocusClose.addEventListener("click", exitPacketFocus);
 elements.neighborFocusClose.addEventListener("click", clearNeighborFocus);
+elements.archiveFocusClose.addEventListener("click", () => clearArchiveNodeFilter());
 elements.activityHistory.addEventListener("click", () => {
   setFeedMode(feedState.mode === "history" ? "live" : "history");
 });
@@ -5001,7 +5018,7 @@ function scheduleViewportRender() {
 
 function updateRouteCount() {
   const count = state.routeWindowMs !== 0
-    ? state.archiveRoutes.size
+    ? archiveRoutesSorted().length
     : (state.liveRouteCount || state.cachedRoutes.length);
   elements.routeCount.textContent = formatNumber(count);
   updateMapStatus();
@@ -5074,8 +5091,64 @@ function updateArchiveLayers(routes) {
   }
 }
 
+function routeHasNode(route, key) {
+  const wanted = String(key || "").toUpperCase();
+  return Boolean(wanted && route.points.some((point) => String(point.publicKey || "").toUpperCase() === wanted));
+}
+
+function archiveRouteCountForNode(key) {
+  const wanted = String(key || "").toUpperCase();
+  if (!wanted) return 0;
+  let count = 0;
+  for (const route of state.archiveRoutes.values()) {
+    if (routeHasNode(route, wanted)) count += 1;
+  }
+  return count;
+}
+
 function archiveRoutesSorted() {
-  return [...state.archiveRoutes.values()].sort((a, b) => b.timestamp - a.timestamp);
+  const routes = [...state.archiveRoutes.values()];
+  const filtered = state.archiveNodeFilterKey
+    ? routes.filter((route) => routeHasNode(route, state.archiveNodeFilterKey))
+    : routes;
+  return filtered.sort((a, b) => b.timestamp - a.timestamp);
+}
+
+function updateArchiveFocusBar() {
+  const key = state.archiveNodeFilterKey;
+  const node = key ? state.nodeByKey.get(key) : null;
+  if (state.routeWindowMs === 0 || !key || !node) {
+    elements.archiveFocusBar.hidden = true;
+    return;
+  }
+  elements.archiveFocusTitle.textContent = t("archive.focusTitle");
+  elements.archiveFocusName.textContent = node.name || t("common.unknownNode");
+  elements.archiveFocusCount.textContent = tCount("packet.focusRoutes", archiveRoutesSorted().length);
+  elements.archiveFocusClose.textContent = t("archive.clearFilter");
+  elements.archiveFocusBar.hidden = false;
+}
+
+function clearArchiveNodeFilter({ render = true } = {}) {
+  if (!state.archiveNodeFilterKey) {
+    updateArchiveFocusBar();
+    return;
+  }
+  state.archiveNodeFilterKey = null;
+  updateArchiveFocusBar();
+  if (render && state.routeWindowMs !== 0) renderArchive();
+}
+
+function toggleArchiveNodeFilter(node) {
+  const key = String(node.public_key || "").toUpperCase();
+  if (!key || state.routeWindowMs === 0) return;
+  if (state.archiveNodeFilterKey === key) {
+    clearArchiveNodeFilter();
+    return;
+  }
+  if (state.packetFocus) exitPacketFocus();
+  if (state.neighborFocusKey) clearNeighborFocus();
+  state.archiveNodeFilterKey = key;
+  renderArchive();
 }
 
 function renderArchive() {
@@ -5083,6 +5156,7 @@ function renderArchive() {
   const viewport = map.getBounds().pad(0.25);
   updateArchiveLayers(routes.filter((route) => routeVisibleIn(viewport, route)).slice(0, ARCHIVE_MAX_ROUTES));
   updateRouteCount();
+  updateArchiveFocusBar();
   rebuildNeighborIndex();
   updateFeed(routes.slice(0, FEED_SOURCE_LIMIT));
   updatePerfGauges();
@@ -5100,6 +5174,8 @@ async function setRouteWindow(windowMs) {
   const requestedWindowMs = Number(windowMs);
   clearCachedRoutes();
   state.routeWindowMs = requestedWindowMs;
+  state.archiveNodeFilterKey = null;
+  updateArchiveFocusBar();
   for (const button of elements.windowButtons) {
     button.classList.toggle("active", Number(button.dataset.windowMs) === state.routeWindowMs);
   }
@@ -6271,6 +6347,7 @@ document.addEventListener("keydown", (event) => {
   else if (elements.packetHistoryDialog.open) elements.packetHistoryDialog.close();
   else if (state.packetFocus) exitPacketFocus();
   else if (state.neighborFocusKey) clearNeighborFocus();
+  else if (state.archiveNodeFilterKey) clearArchiveNodeFilter();
 });
 
 elements.otherTypesToggle.addEventListener("change", () => {
