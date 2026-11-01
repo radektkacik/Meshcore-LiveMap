@@ -59,7 +59,7 @@ test("archive query maps windows to since and limit", () => {
   const now = Date.UTC(2026, 8, 12, 12, 0, 0);
   assert.equal(archiveQuery(5 * 60_000, now), `since=${now - 5 * 60_000}&limit=600`);
   assert.equal(archiveQuery(60 * 60_000, now), `since=${now - 60 * 60_000}&limit=2500`);
-  assert.equal(archiveQuery(24 * 60 * 60_000, now), `since=${now - 24 * 60 * 60_000}&limit=8000`);
+  assert.equal(archiveQuery(24 * 60 * 60_000, now), `since=${now - 24 * 60 * 60_000}&limit=20000`);
 });
 
 test("hash size set overrides the single one-byte toggle", () => {

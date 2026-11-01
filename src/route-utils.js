@@ -49,7 +49,7 @@ export function liveRouteCreatedAt(packetTime, now, retentionMs) {
 }
 
 export function archiveQuery(windowMs, now = Date.now()) {
-  const limit = windowMs <= 5 * 60_000 ? 600 : windowMs <= 60 * 60_000 ? 2500 : 8000;
+  const limit = windowMs <= 5 * 60_000 ? 600 : windowMs <= 60 * 60_000 ? 2500 : 20000;
   return `since=${Math.floor(now - windowMs)}&limit=${limit}`;
 }
 
