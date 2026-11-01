@@ -431,6 +431,7 @@ html[data-theme="dark"] .node-user-info-source { color: #5fd0a5; }
 .node-comments-open:hover { border-color: var(--green); background: #e4f3ea; }
 .comments-dialog { width: min(560px, calc(100vw - 28px)); }
 .comments-list-wrap { max-height: 42vh; margin-bottom: 12px; overflow-y: auto; overscroll-behavior: contain; }
+.node-detail-comments-list { max-height: 280px; margin-top: 8px; padding-right: 2px; overflow-y: auto; }
 .comments-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .comment { padding: 8px 0; border-bottom: 1px solid var(--line); }
 .comment:last-child { border-bottom: 0; }

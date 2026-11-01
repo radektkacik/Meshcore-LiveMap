@@ -1768,6 +1768,7 @@ function nodeComments(node) {
           <span class="node-comments-count" title="">…</span>
         </button>
       </div>
+      <ol class="comments-list node-detail-comments-list" data-detail-comments></ol>
     </section>
   `;
 }
@@ -2173,6 +2174,7 @@ function renderNodeDetail(node, active, initialTab = "overview") {
     closeNodeDetail();
   });
   setupNodePopup({ getElement: () => shell, close: closeNodeDetail }, node);
+  void loadDetailComments(shell, node);
   if (!elements.nodeDetailPage.open) elements.nodeDetailPage.showModal();
 }
 
@@ -2658,13 +2660,13 @@ async function loadCommentCount(root, node) {
   }
 }
 
-function renderComments(comments) {
-  elements.commentsList.replaceChildren();
+function renderComments(comments, list = elements.commentsList) {
+  list.replaceChildren();
   if (!comments.length) {
     const empty = document.createElement("li");
     empty.className = "comments-empty";
     empty.textContent = t("comments.empty");
-    elements.commentsList.appendChild(empty);
+    list.appendChild(empty);
     return;
   }
   for (const comment of comments) {
@@ -2682,7 +2684,7 @@ function renderComments(comments) {
     const text = document.createElement("p");
     text.textContent = comment.text;
     item.append(head, text);
-    elements.commentsList.appendChild(item);
+    list.appendChild(item);
   }
 }
 
@@ -2698,7 +2700,7 @@ async function loadComments() {
     const data = await getJson(`/api/comments?key=${encodeURIComponent(target.key)}`);
     if (state.commentsTarget?.key !== target.key) return;
     updateCommentCount(target.key, data.total);
-    renderComments(Array.isArray(data.comments) ? data.comments : []);
+    renderComments(Array.isArray(data.comments) ? data.comments : [], elements.commentsList);
   } catch (error) {
     console.error("Komentáře se nepodařilo načíst", error);
     if (state.commentsTarget?.key !== target.key) return;
@@ -2707,6 +2709,20 @@ async function loadComments() {
     failed.className = "comments-empty";
     failed.textContent = t("comments.loadFailed");
     elements.commentsList.appendChild(failed);
+  }
+}
+
+async function loadDetailComments(root, node) {
+  const list = root.querySelector("[data-detail-comments]");
+  const key = String(node.public_key || "").toLowerCase();
+  if (!list || !/^[0-9a-f]{64}$/.test(key)) return;
+  try {
+    const data = await getJson(`/api/comments?key=${encodeURIComponent(key)}`);
+    updateCommentCount(key, data.total);
+    if (list.isConnected) renderComments(Array.isArray(data.comments) ? data.comments : [], list);
+  } catch (error) {
+    console.error("Komentáře v detailu se nepodařilo načíst", error);
+    if (list.isConnected) list.textContent = t("comments.loadFailed");
   }
 }
 
