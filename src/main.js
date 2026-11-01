@@ -25,7 +25,6 @@ import {
 import { createPerfMonitor } from "./perf.js";
 import { observerAnchor } from "./observer-locations.js";
 import {
-  isNodeActive,
   isNodeRoleAllowed,
   nodeLastActivity,
   nodeMatchesQuery,
@@ -79,6 +78,7 @@ const ROUTE_HISTORY_LIMIT = 1200;
 const NODE_ACTIVE_MS = 60 * 60 * 1000;
 const NODE_RANKING_ACTIVE_MS = 24 * 60 * 60 * 1000;
 const BASE_DATA_REFRESH_MS = 15 * 60 * 1000;
+const OBSERVER_REFRESH_MS = 5 * 60 * 1000;
 const BUILD_CHECK_MS = 60_000;
 const BUILD_RELOAD_KEY = "meshcoreAutoReloadBuild";
 const API_TIMEOUT_MS = 20_000;
@@ -1261,14 +1261,20 @@ function renderObservers() {
 
 async function loadObservers(force = false) {
   if (state.observersLoading) return;
-  if (!force && state.observersLoadedAt && Date.now() - state.observersLoadedAt < 5 * 60 * 1000) return;
+  if (!force && state.observersLoadedAt && Date.now() - state.observersLoadedAt < OBSERVER_REFRESH_MS) return;
   state.observersLoading = true;
   try {
     const data = await getJson("/api/observers");
     state.observers = Array.isArray(data.observers) ? data.observers : [];
+    state.observerByKey = new Map();
+    for (const observer of state.observers) {
+      const key = String(observer.id || "").toUpperCase();
+      if (key) state.observerByKey.set(key, observer);
+    }
     state.observersLoadedAt = Date.now();
     if (state.showObservers) renderObservers();
     if (!elements.statsPanel.hidden) renderNetworkSummary();
+    if (state.nodeMarkers.length) refreshNodeState();
   } catch (error) {
     console.error("Observery se nepodařilo načíst", error);
   } finally {
@@ -1422,7 +1428,7 @@ function openNodeEntry(entry) {
     entry.marker.openPopup();
     return;
   }
-  showMobileSheet(nodePopup(entry.node, isNodeActive(entry.node, nowMs(), NODE_ACTIVE_MS)));
+  showMobileSheet(nodePopup(entry.node, nodeIsActive(entry.node, nowMs(), NODE_ACTIVE_MS)));
   setupNodePopup({ getElement: () => elements.mobileSheetContent }, entry.node);
 }
 
@@ -1799,7 +1805,7 @@ async function loadNodeRelayStats(root, node) {
 }
 
 function nodeBasicDetails(node) {
-  const lastActivity = nodeLastActivity(node);
+  const lastActivity = nodeActivityAt(node);
   const hashSize = (() => {
     const maxBytes = Number(node.multi_byte_max_hash_size) || 0;
     const baseBytes = Number(node.hash_size) || 0;
@@ -1813,7 +1819,7 @@ function nodeBasicDetails(node) {
   const regionBasis = region.basis ? t(`node.regionBasis.${region.basis}`) : "";
   const regionText = [regionNames, regionBasis].filter(Boolean).join(" · ") || null;
   return renderNodeDetails(t("node.basicDetails"), [
-    [t("node.lastActivity"), formatNodeDate(lastActivity)],
+    [t("node.lastActivity"), formatNodeDate(lastActivity), t("node.lastActivityHelp")],
     [t("node.lastAdvert"), formatNodeDate(node.last_seen || node.last_heard)],
     [t("node.firstSeen"), node.first_seen ? formatNodeDate(node.first_seen) : null, t("node.firstSeenHelp")],
     [t("node.coordinates"), `${Number(node.lat).toFixed(6)}, ${Number(node.lon).toFixed(6)}`],
@@ -2099,7 +2105,7 @@ function nodeActionButtons(node, { close = false } = {}) {
 }
 
 function nodePopupContent(node, active) {
-  const lastActivity = nodeLastActivity(node);
+  const lastActivity = nodeActivityAt(node);
   const rankNodes = [...state.nodeByKey.values()];
   const hashSize = (() => {
     const maxBytes = Number(node.multi_byte_max_hash_size) || 0;
@@ -2114,7 +2120,7 @@ function nodePopupContent(node, active) {
   const regionBasis = region.basis ? t(`node.regionBasis.${region.basis}`) : "";
   const regionText = [regionNames, regionBasis].filter(Boolean).join(" · ") || null;
   const basicDetails = renderNodeDetails(t("node.basicDetails"), [
-    [t("node.lastActivity"), formatNodeDate(lastActivity)],
+    [t("node.lastActivity"), formatNodeDate(lastActivity), t("node.lastActivityHelp")],
     [t("node.lastAdvert"), formatNodeDate(node.last_seen || node.last_heard)],
     [t("node.lastRelay"), formatNodeDate(node.last_relayed)],
     [t("node.firstSeen"), node.first_seen ? formatNodeDate(node.first_seen) : null, t("node.firstSeenHelp")],
@@ -2326,7 +2332,7 @@ function openNodeDetail(node, tab = "overview") {
   } else {
     state.nodeDetailPushed = false;
   }
-  renderNodeDetail(node, isNodeActive(node, nowMs(), NODE_ACTIVE_MS), tab);
+  renderNodeDetail(node, nodeIsActive(node, nowMs(), NODE_ACTIVE_MS), tab);
 }
 
 function applyInitialDetail() {
@@ -3248,7 +3254,7 @@ function refreshOpenNodePopup(entry) {
   if (!root) return;
   const status = root.querySelector(".node-popup-card header > span");
   if (status) {
-    const active = isNodeActive(node, nowMs(), NODE_ACTIVE_MS);
+    const active = nodeIsActive(node, nowMs(), NODE_ACTIVE_MS);
     status.className = active ? "active" : "inactive";
     status.textContent = active ? t("common.active") : t("common.inactive");
   }
@@ -3258,6 +3264,16 @@ function refreshOpenNodePopup(entry) {
   if (neighbors) neighbors.outerHTML = nodeNeighbors(node);
   bindNodeRouteButton(root.querySelector(".node-route-show"), node);
   root.querySelectorAll(".node-neighbor").forEach(bindNodeNeighborButton);
+}
+
+function refreshOpenNodeDetailStatus() {
+  if (!elements.nodeDetailPage.open || !state.nodeDetailKey) return;
+  const node = state.nodeByKey.get(String(state.nodeDetailKey).toUpperCase());
+  const status = elements.nodeDetailPage.querySelector(".node-detail-header > div > span");
+  if (!node || !status) return;
+  const active = nodeIsActive(node, nowMs(), NODE_ACTIVE_MS);
+  status.className = active ? "active" : "inactive";
+  status.textContent = active ? t("common.active") : t("common.inactive");
 }
 
 let popupRefreshTimer = null;
@@ -3272,7 +3288,7 @@ function scheduleOpenNodePopupRefresh(entry) {
 
 function refreshNodePresentation(entry) {
   const { marker, node } = entry;
-  entry.active = isNodeActive(node, nowMs(), NODE_ACTIVE_MS);
+  entry.active = nodeIsActive(node, nowMs(), NODE_ACTIVE_MS);
   if (validCoords(node.lat, node.lon)) marker.setLatLng([node.lat, node.lon]);
   marker.setTooltipContent(() => nodeTooltip(node));
   applyNodeStyle(entry, entry.tier);
@@ -3335,16 +3351,31 @@ function openNodeStack(entries, latlng) {
     .openOn(map);
 }
 
+function nodeObserverLastSeen(node) {
+  const key = String(node.public_key || "").toUpperCase();
+  const observer = state.observerByKey.get(key);
+  const timestamp = Date.parse(observer?.last_seen || "");
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function nodeActivityAt(node) {
+  return Math.max(nodeLastActivity(node), nodeObserverLastSeen(node));
+}
+
+function nodeIsActive(node, now = nowMs(), activeMs = NODE_ACTIVE_MS) {
+  return now - nodeActivityAt(node) < activeMs;
+}
+
 function nodePassesFilters(node) {
   const key = String(node.public_key || "").toUpperCase();
   if (!isNodeRoleAllowed(node, state.allowedRoles)) return false;
   if (state.photosOnly && !state.photoNodeKeys.has(key)) return false;
-  if (state.inactiveOnly && isNodeActive(node, nowMs(), NODE_ACTIVE_MS)) return false;
+  if (state.inactiveOnly && nodeIsActive(node)) return false;
   return true;
 }
 
 function addNodeMarker(node) {
-  const entry = { active: isNodeActive(node, nowMs(), NODE_ACTIVE_MS), marker: null, node, shown: false, stackRole: node.role || "unknown", styleKey: null, tier: null };
+  const entry = { active: nodeIsActive(node, nowMs(), NODE_ACTIVE_MS), marker: null, node, shown: false, stackRole: node.role || "unknown", styleKey: null, tier: null };
   const marker = L.circleMarker([node.lat, node.lon], {
     ...nodeMarkerStyle(node),
     pane: "markerPane",
@@ -3359,7 +3390,7 @@ function addNodeMarker(node) {
       if (image.complete && image.naturalWidth === 0) hideBroken();
       else image.addEventListener("error", hideBroken, { once: true });
     })
-    .bindPopup(() => nodePopup(entry.node, isNodeActive(entry.node, nowMs(), NODE_ACTIVE_MS)), {
+    .bindPopup(() => nodePopup(entry.node, nodeIsActive(entry.node, nowMs(), NODE_ACTIVE_MS)), {
       className: "node-popup",
       maxWidth: 380,
       minWidth: 300,
@@ -3531,12 +3562,13 @@ function refreshNodeState() {
   const now = nowMs();
   applyNodeTiers();
   for (const entry of state.nodeMarkers) {
-    const active = isNodeActive(entry.node, now, NODE_ACTIVE_MS);
+    const active = nodeIsActive(entry.node, now, NODE_ACTIVE_MS);
     if (entry.active !== active) {
       entry.active = active;
       scheduleOpenNodePopupRefresh(entry);
     }
   }
+  refreshOpenNodeDetailStatus();
   applyNodeMembership();
   if (!elements.statsPanel.hidden) renderStats();
   scheduleNodeLabels();
@@ -5445,8 +5477,8 @@ function losRepeaterMatches(value) {
   return state.nodeMarkers
     .filter((entry) => (entry.node.role || "unknown") === "repeater")
     .filter((entry) => nodeMatchesQuery(entry.node, query, hexQuery))
-    .sort((a, b) => Number(isNodeActive(b.node, nowMs(), NODE_ACTIVE_MS))
-      - Number(isNodeActive(a.node, nowMs(), NODE_ACTIVE_MS))
+    .sort((a, b) => Number(nodeIsActive(b.node, nowMs(), NODE_ACTIVE_MS))
+      - Number(nodeIsActive(a.node, nowMs(), NODE_ACTIVE_MS))
       || String(a.node.name || "").localeCompare(String(b.node.name || ""), getLocale()))
     .slice(0, 8);
 }
@@ -5463,7 +5495,7 @@ function renderLosResults(index, entries) {
     for (const entry of entries) {
       const button = document.createElement("button");
       button.type = "button";
-      const active = isNodeActive(entry.node, nowMs(), NODE_ACTIVE_MS);
+      const active = nodeIsActive(entry.node, nowMs(), NODE_ACTIVE_MS);
       button.innerHTML = `<strong>${escapeHtml(entry.node.name || t("common.unknownNode"))}</strong><small>${escapeHtml(roleLabel(entry.node.role))} · ${active ? t("common.active") : t("common.inactive")}</small>`;
       button.addEventListener("click", () => {
         LOS_NODE_INPUTS[index].value = entry.node.name || t("common.unknownNode");
@@ -6937,7 +6969,7 @@ function buildExportPayload(dataset, format) {
     let features = [];
     if (dataset === "nodes") {
       features = exportableNodes().map((node) => pointFeature(node.lon, node.lat, {
-        active: isNodeActive(node, nowMs(), NODE_ACTIVE_MS),
+        active: nodeIsActive(node, nowMs(), NODE_ACTIVE_MS),
         name: node.name || "",
         public_key: node.public_key || "",
         role: node.role || "unknown",
@@ -7593,8 +7625,10 @@ async function start() {
   });
   const nodesPromise = loadNodes();
   void loadPhotoNodes();
+  void loadObservers();
   void loadStats();
   setInterval(() => loadBaseData().catch((error) => console.error("Obnova dat selhala", error)), BASE_DATA_REFRESH_MS);
+  setInterval(() => loadObservers(true), OBSERVER_REFRESH_MS);
   setInterval(checkServerBuild, BUILD_CHECK_MS);
   setInterval(refreshNodeState, 60_000);
   setInterval(syncRoutePresentation, 1_000);
