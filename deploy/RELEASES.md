@@ -326,6 +326,8 @@
 | 2026-11-01 10:16 | `20261101T101653Z.tar.gz` (stage APP_DIR) | `20261101-1016-283e5e3` | Beta: stejná oprava tabů | `src/style.css` |
 | 2026-11-01 11:35 | `20261101T113502Z.tar.gz` | `20261101-1135-abec8d6` | Prod: nová fotka už automaticky nemění náhledovku nodu; stávající efektivní cover se před přidáním fotky zamkne | `photos.mjs`, `test/photos.test.mjs` |
 | 2026-11-01 11:35 | `20261101T113532Z.tar.gz` (stage APP_DIR) | `20261101-1135-abec8d6` | Beta: stejná ochrana náhledové fotky | `photos.mjs`, `test/photos.test.mjs` |
+| 2026-11-01 11:38 | `20261101T113756Z.tar.gz` | `20261101-1138-63aad49` | Prod: relay statistiky a poslední relay pouze z 2B+ paths; 1B se ignoruje, poslední aktivita už nezahrnuje relay; nový `/api/node-relay` | `packet-store.mjs`, `server.mjs`, `src/main.js`, `src/node-model.js`, `src/i18n.js`, `src/style.css`, testy |
+| 2026-11-01 11:38 | `20261101T113822Z.tar.gz` (stage APP_DIR) | `20261101-1138-63aad49` | Beta: stejná relay oprava | `packet-store.mjs`, `server.mjs`, `src/main.js`, `src/node-model.js`, `src/i18n.js`, `src/style.css`, testy |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
