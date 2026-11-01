@@ -62,7 +62,10 @@ export function createPacketStore(dbPath, {
       route_type = excluded.route_type,
       path_hash_bytes = excluded.path_hash_bytes,
       path_json = excluded.path_json,
-      resolved_path = excluded.resolved_path,
+      resolved_path = CASE
+        WHEN excluded.resolved_path != '[]' THEN excluded.resolved_path
+        ELSE packet_routes.resolved_path
+      END,
       observer_name = excluded.observer_name,
       observer_iata = excluded.observer_iata,
       scope_name = COALESCE(excluded.scope_name, packet_routes.scope_name),

@@ -1434,6 +1434,8 @@ if (mqttEnabled) {
       if (packet?.hash) {
         lastMqttPacketAt = Date.now();
         recentPackets.add(packet);
+        const stored = toStoreRow(packet, lastMqttPacketAt);
+        if (stored) packetStore.record([stored]);
         broadcast("packet", packet);
       }
     } catch (error) {

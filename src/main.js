@@ -5091,7 +5091,8 @@ async function loadArchiveWindow(windowMs) {
   const data = await getJson(`/api/history?${archiveQuery(windowMs, nowMs())}`);
   await nodesReady;
   if (requestId !== state.windowRequestId || state.routeWindowMs !== windowMs) return;
-  const routes = new Map();
+  const packets = [];
+  const pendingPrefixes = new Set();
   for (const parent of data.packets || []) {
     const observations = parent.observations?.length ? parent.observations : [parent];
     for (const observation of observations) {
@@ -5100,12 +5101,23 @@ async function loadArchiveWindow(windowMs) {
       if (!path.length || path.length > MAX_ROUTE_PATH_LENGTH) continue;
       const hashBytes = packetPathHashBytes(packet, path);
       if (!isRouteVisible(Number(packet.payload_type), hashBytes, state)) continue;
-      const points = historyRoutePoints(packet, hashBytes);
-      if (!routeSegments(points).length) continue;
-      const observedAt = routeTimestamp(packet, 0);
-      const id = `${packet.hash || "archive"}:${packet.observer_id || "archive"}`;
-      routes.set(id, routeRecord(packet, points, hashBytes, id, `archive:${id}`, observedAt));
+      const resolved = Array.isArray(packet.resolved_path) ? packet.resolved_path : [];
+      if (!resolved.some(Boolean)) {
+        for (const prefix of path) pendingPrefixes.add(prefix);
+      }
+      packets.push({ hashBytes, packet, path, resolved: resolved.some(Boolean) });
     }
+  }
+  if (pendingPrefixes.size) await resolvePrefixes([...pendingPrefixes]);
+  if (requestId !== state.windowRequestId || state.routeWindowMs !== windowMs) return;
+  const routes = new Map();
+  for (const { hashBytes, packet, path, resolved } of packets) {
+    let points = resolved ? historyRoutePoints(packet, hashBytes) : [];
+    if (!routeSegments(points).length) points = packetPoints(packet, path, hashBytes);
+    if (!routeSegments(points).length) continue;
+    const observedAt = routeTimestamp(packet, 0);
+    const id = `${packet.hash || "archive"}:${packet.observer_id || "archive"}`;
+    routes.set(id, routeRecord(packet, points, hashBytes, id, `archive:${id}`, observedAt));
   }
   state.archiveRoutes.clear();
   for (const route of groupTraceObservations([...routes.values()])) {

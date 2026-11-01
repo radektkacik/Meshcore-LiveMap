@@ -167,3 +167,16 @@ test("relay stats count only paths with at least two hash bytes", () => {
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("keeps a resolved path when a newer unresolved live row arrives", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-packets-"));
+  const store = createPacketStore(join(directory, "packets.sqlite"), { retentionMs: 60_000 });
+  try {
+    store.record([row({ resolved_path: '["AAAA","BBBB"]', observed_at: 1_000 })]);
+    store.record([row({ resolved_path: "[]", observed_at: 2_000 })]);
+    assert.deepEqual(store.querySince(0)[0].resolved_path, ["AAAA", "BBBB"]);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
