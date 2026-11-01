@@ -109,7 +109,9 @@ přihlašovací údaje zůstávají pouze na serveru.
   `meshcore.cz` a namespace `repeatery`.
 - `GET /admin/repeater-sync` je ruční porovnání uloženého info s aktuální
   wiki stránkou (beta). Zobrazí rozdíly textu a nové obrázky; správce potvrdí,
-  co se má převzít. Nic se nespouští automaticky ani pravidelně.
+  co se má převzít. `GET /admin/repeater-sync-all` udělá stejné porovnání pro
+  všechny importované nody a umožní hromadný sync. Nic se nespouští automaticky
+  ani pravidelně.
 - `GET /api/comments?key=<public_key>` vrací komentáře k nodu, `GET
   /api/comments/count?key=<public_key>` jen jejich počet. `POST /api/comments`
   s JSON `{key, text, author}` je zveřejní ihned. Text má 2–500 znaků, autor je
