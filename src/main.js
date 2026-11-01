@@ -5204,10 +5204,13 @@ function renderArchiveViewport() {
 
 async function setRouteWindow(windowMs) {
   const requestedWindowMs = Number(windowMs);
+  const previousWindowMs = state.routeWindowMs;
   clearCachedRoutes();
   state.routeWindowMs = requestedWindowMs;
-  state.archiveNodeFilterKey = null;
-  updateArchiveFocusBar();
+  if (previousWindowMs !== requestedWindowMs) {
+    state.archiveNodeFilterKey = null;
+    updateArchiveFocusBar();
+  }
   for (const button of elements.windowButtons) {
     button.classList.toggle("active", Number(button.dataset.windowMs) === state.routeWindowMs);
   }
