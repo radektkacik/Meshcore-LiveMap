@@ -1577,11 +1577,7 @@ function setupNodePopup(popup, node) {
     event.stopPropagation();
     openNodeDetail(node);
   });
-  root.querySelector(".node-archive-filter")?.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    toggleArchiveNodeFilter(node);
-  });
+  bindArchiveFilterButton(root.querySelector(".node-archive-filter"), node);
   for (const button of root.querySelectorAll(".node-detail-tab-button")) {
     button.addEventListener("click", (event) => {
       event.preventDefault();
@@ -2105,20 +2101,55 @@ function nodeAnalytics(node) {
   `;
 }
 
+function archiveFilterButtonHtml(node) {
+  const key = String(node.public_key || "").toUpperCase();
+  if (!state.routeWindowMs || !key) return "";
+  const count = archiveRouteCountForNode(key);
+  const active = state.archiveNodeFilterKey === key;
+  if (!count && !active && state.archiveRoutes.size) return "";
+  return `<button class="node-archive-filter${active ? " active" : ""}" type="button">${active ? t("archive.clearFilter") : t("archive.showNodeRoutes")}</button>`;
+}
+
 function nodeActionButtons(node, { close = false } = {}) {
   if (!node.public_key) return "";
-  const archiveKey = String(node.public_key).toUpperCase();
-  const archiveCount = state.routeWindowMs ? archiveRouteCountForNode(archiveKey) : 0;
-  const archiveActive = state.archiveNodeFilterKey === archiveKey;
   return `
     <div class="node-popup-actions">
       <button class="node-link-copy" type="button">${t("node.copyLink")}</button>
-      ${archiveCount || archiveActive ? `<button class="node-archive-filter${archiveActive ? " active" : ""}" type="button">${archiveActive ? t("archive.clearFilter") : t("archive.showNodeRoutes")}</button>` : ""}
+      ${archiveFilterButtonHtml(node)}
       ${/^[0-9a-f]{64}$/i.test(node.public_key) ? `<button class="node-qr-toggle" type="button">${t("node.showQr")}</button>` : ""}
       ${/^[0-9a-f]{64}$/i.test(node.public_key) ? `<a class="node-analyzer-link" href="https://analyzer.meshcore.cz/#/nodes/${encodeURIComponent(node.public_key.toLowerCase())}" target="_blank" rel="noreferrer">${t("node.openAnalyzer")}</a>` : ""}
       ${close ? `<button class="node-popup-close popup-close-button" type="button">${t("common.close")}</button>` : ""}
     </div>
   `;
+}
+
+function bindArchiveFilterButton(button, node) {
+  button?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    toggleArchiveNodeFilter(node);
+  });
+}
+
+function refreshOpenNodePopupActions() {
+  for (const entry of state.nodeMarkers) {
+    if (!entry.marker.isPopupOpen()) continue;
+    const root = entry.marker.getPopup().getElement();
+    const actions = root?.querySelector(".node-popup-actions");
+    if (!actions) continue;
+    const current = actions.querySelector(".node-archive-filter");
+    const html = archiveFilterButtonHtml(entry.node);
+    if (!html) {
+      current?.remove();
+      continue;
+    }
+    const holder = document.createElement("div");
+    holder.innerHTML = html;
+    const next = holder.firstElementChild;
+    if (current) current.replaceWith(next);
+    else actions.insertBefore(next, actions.children[1] || null);
+    bindArchiveFilterButton(next, entry.node);
+  }
 }
 
 function nodePopupContent(node, active) {
@@ -5157,6 +5188,7 @@ function renderArchive() {
   updateArchiveLayers(routes.filter((route) => routeVisibleIn(viewport, route)).slice(0, ARCHIVE_MAX_ROUTES));
   updateRouteCount();
   updateArchiveFocusBar();
+  refreshOpenNodePopupActions();
   rebuildNeighborIndex();
   updateFeed(routes.slice(0, FEED_SOURCE_LIMIT));
   updatePerfGauges();
