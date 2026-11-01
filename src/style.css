@@ -287,6 +287,33 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-popup .leaflet-popup-tip { background: #fffef9; }
 .node-popup .leaflet-popup-close-button { top: 7px !important; right: 7px !important; width: 25px !important; height: 25px !important; color: #667b70 !important; font-size: 19px !important; }
 .node-popup-card { max-height: min(680px, 78vh); overflow-y: auto; color: #263b33; }
+.node-popup-card.compact { max-height: none; }
+.node-compact-info { padding: 9px 15px 10px; border-bottom: 1px solid var(--line); }
+.node-compact-info-text { margin: 0; color: #3f584e; font-size: 12px; line-height: 1.45; }
+.node-compact-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; padding: 10px 15px 14px; }
+.node-compact-actions button { min-height: 30px; padding: 5px 7px; border: 1px solid var(--line); border-radius: 6px; color: #3f584e; background: #fff; font: 10px "DM Mono", monospace; cursor: pointer; }
+.node-compact-actions button:hover { border-color: rgba(7, 142, 98, 0.4); color: var(--green); }
+.node-compact-actions .node-detail-open { color: #087a57; background: #edf7f1; border-color: rgba(7, 142, 98, 0.32); }
+.node-detail-page { width: min(920px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 0; overflow: hidden; border: 1px solid rgba(30, 65, 49, 0.2); border-radius: 16px; color: #263b33; background: #fffef9; box-shadow: 0 24px 80px rgba(20, 42, 32, 0.3); }
+.node-detail-page::backdrop { background: rgba(12, 24, 18, 0.48); backdrop-filter: blur(2px); }
+.node-detail-shell { display: flex; flex-direction: column; max-height: calc(100dvh - 34px); }
+.node-detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 15px 18px 12px; border-bottom: 1px solid var(--line); background: #f3f7f3; }
+.node-detail-header small { display: block; color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: 0.09em; text-transform: uppercase; }
+.node-detail-header h2 { margin: 3px 0 0; font-size: 18px; line-height: 1.25; }
+.node-detail-header > div > span { display: inline-block; margin-top: 5px; padding: 2px 6px; border-radius: 5px; color: #fff; font: 500 10px "DM Mono", monospace; text-transform: uppercase; }
+.node-detail-header > div > span.active { background: var(--green); }
+.node-detail-header > div > span.inactive { background: #899990; }
+.node-detail-close { width: 30px; height: 30px; flex: 0 0 auto; padding: 0; border: 0; border-radius: 8px; color: #667b70; background: #e9eee9; font-size: 21px; line-height: 30px; cursor: pointer; }
+.node-detail-close:hover { color: #b03024; background: #f3e9e7; }
+.node-detail-tabs { display: flex; gap: 4px; padding: 8px 12px; overflow-x: auto; border-bottom: 1px solid var(--line); background: #fbfcf8; }
+.node-detail-tabs button { flex: 0 0 auto; padding: 6px 9px; border: 1px solid transparent; border-radius: 6px; color: #49665b; background: transparent; font: 10px "DM Mono", monospace; cursor: pointer; }
+.node-detail-tabs button:hover { color: var(--green); background: #edf7f1; }
+.node-detail-tabs button.active { color: #fff; background: var(--green); border-color: var(--green); }
+.node-detail-panels { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.node-detail-panel[hidden] { display: none; }
+.node-detail-panel > .node-overview { border-bottom: 0; }
+.node-detail-panel > .node-user-info, .node-detail-panel > .node-photos, .node-detail-panel > .node-comments { border-top: 0; }
+.node-detail-panel > .node-popup-actions { padding-top: 14px; }
 .node-popup-card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 15px 42px 12px 15px; border-bottom: 1px solid var(--line); background: #f3f7f3; }
 .node-popup-card header small, .node-public-key span { display: block; color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: 0.09em; text-transform: uppercase; }
 .node-popup-card h3 { margin: 3px 0 0; font-size: 16px; line-height: 1.25; }
@@ -773,6 +800,11 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 .mobile-sheet-content .route-popup-card { max-height: none; }
 
 @media (max-width: 700px) {
+  .node-detail-page { width: 100vw; height: 100dvh; max-height: none; border: 0; border-radius: 0; }
+  .node-detail-shell { max-height: 100dvh; }
+  .node-detail-header { padding-top: max(14px, env(safe-area-inset-top)); }
+  .node-compact-actions { grid-template-columns: 1fr 1fr; }
+  .node-compact-actions .node-detail-open { grid-column: 1 / -1; }
   .hud { top: 9px; left: 9px; width: min(330px, calc(100vw - 18px)); max-height: calc(100vh - 18px); max-height: calc(100dvh - 18px); }
   .hud-body { max-height: none; overflow-y: auto; }
   .activity-panel { right: 9px; bottom: 21px; width: min(300px, calc(100vw - 18px)); max-height: 260px; }
@@ -887,6 +919,16 @@ html[data-theme="dark"] .node-popup .leaflet-popup-content-wrapper,
 html[data-theme="dark"] .node-popup .leaflet-popup-tip { background: #161d24; border-color: var(--line); }
 html[data-theme="dark"] .node-popup .leaflet-popup-close-button { color: #9fb0b8 !important; }
 html[data-theme="dark"] .node-popup-card { color: #e6ecef; }
+html[data-theme="dark"] .node-detail-page { color: #e6ecef; background: #161d24; border-color: var(--line); }
+html[data-theme="dark"] .node-detail-header { background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .node-detail-close { color: #cfd9dd; background: #26323a; }
+html[data-theme="dark"] .node-detail-close:hover { color: #ff9c91; background: #3a2424; }
+html[data-theme="dark"] .node-detail-tabs { background: #141b21; border-color: var(--line); }
+html[data-theme="dark"] .node-detail-tabs button { color: #b9c9d2; }
+html[data-theme="dark"] .node-detail-tabs button.active { color: #fff; }
+html[data-theme="dark"] .node-compact-actions button { color: #cdd9de; background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .node-compact-actions .node-detail-open { color: #5fd0a5; background: rgba(7, 142, 98, 0.16); border-color: rgba(7, 142, 98, 0.4); }
+html[data-theme="dark"] .node-compact-info-text { color: #cfd9dd; }
 html[data-theme="dark"] .node-popup-card header { background: #1b232b; border-color: var(--line); }
 html[data-theme="dark"] .node-popup-card dl div { border-color: rgba(255, 255, 255, 0.08); }
 html[data-theme="dark"] .node-popup-card dd { color: #e6ecef; }

@@ -172,6 +172,9 @@ přihlašovací údaje zůstávají pouze na serveru.
   uloží jako `pending` a zobrazí se až po schválení. S `PHOTO_AUTO_APPROVE=1`
   se ihned uloží jako `approved`, zobrazí se v galerii a správce ji může
   dodatečně smazat. `GET /api/photos/config` vrací `{ autoApprove }`.
+- Detail nodu je dostupný na `/nod/<public_key>` (beta `/betamap/nod/<public_key>`).
+  Popup na mapě je zkrácený; plné info, fotky, komentáře a síťové údaje jsou
+  v podstránce s taby.
 - Administrace je na `GET /admin` (beta `/betamap/admin`). Přihlašuje se heslem
   `ADMIN_PASSWORD`; když není nastavené, použije se `FEEDBACK_TOKEN`, případně
   `PHOTO_TOKEN`. Po přihlášení drží server HttpOnly session cookie 12 hodin

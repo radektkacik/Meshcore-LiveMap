@@ -120,6 +120,20 @@ const TYPE_LABELS = {
 const APP_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const IS_BETA = import.meta.env.VITE_BETA === "1";
 if (IS_BETA) document.querySelector("#beta-footer-link")?.remove();
+const MAP_PATH = APP_BASE ? `${APP_BASE}/` : "/";
+
+function nodeDetailPathKey(pathname = location.pathname) {
+  const rest = APP_BASE && pathname.startsWith(APP_BASE)
+    ? pathname.slice(APP_BASE.length)
+    : pathname;
+  const match = rest.match(/^\/nod\/([0-9a-f]{64})\/?$/i);
+  return match ? match[1].toLowerCase() : null;
+}
+
+const INITIAL_DETAIL_KEY = nodeDetailPathKey();
+function nodeDetailPath(key) {
+  return `${APP_BASE}/nod/${String(key || "").toLowerCase()}`;
+}
 
 function appPath(path) {
   return `${APP_BASE}${path}`;
@@ -278,6 +292,8 @@ const elements = {
   mobileSheet: document.querySelector("#mobile-sheet"),
   mobileSheetClose: document.querySelector("#mobile-sheet-close"),
   mobileSheetContent: document.querySelector("#mobile-sheet-content"),
+  nodeDetailCard: document.querySelector("#node-detail-card"),
+  nodeDetailPage: document.querySelector("#node-detail-page"),
   neighborFocusBar: document.querySelector("#neighbor-focus-bar"),
   neighborFocusClose: document.querySelector("#neighbor-focus-close"),
   neighborFocusCount: document.querySelector("#neighbor-focus-count"),
@@ -497,6 +513,9 @@ const state = {
   statsMetric: "relay",
   statsWindow: "24h",
   initialNodeApplied: false,
+  initialDetailApplied: false,
+  nodeDetailKey: null,
+  nodeDetailPushed: false,
   windowRequestId: 0,
 };
 
@@ -1526,6 +1545,18 @@ function setupNodePopup(popup, node) {
     event.stopPropagation();
     openCommentsDialog(node);
   });
+  root.querySelector(".node-detail-open")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openNodeDetail(node);
+  });
+  for (const button of root.querySelectorAll(".node-detail-tab-button")) {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openNodeDetail(node, button.dataset.nodeDetailTab || "overview");
+    });
+  }
 
   qrButton?.addEventListener("click", async (event) => {
     event.preventDefault();
@@ -1741,6 +1772,15 @@ function nodeComments(node) {
   `;
 }
 
+function renderNodeInfoPreview(root, info) {
+  const preview = root.querySelector(".node-compact-info-text");
+  if (!preview) return;
+  const text = String(info?.text || "").replace(/\s+/g, " ").trim();
+  preview.textContent = text
+    ? (text.length > 190 ? `${text.slice(0, 190).replace(/\s+\S*$/, "")}…` : text)
+    : t("nodeInfo.compactEmpty");
+}
+
 function renderNodeInfoSection(root, info) {
   const body = root.querySelector(".node-user-info-body");
   if (!body) return;
@@ -1775,10 +1815,16 @@ function renderNodeInfoSection(root, info) {
 
 async function loadNodeInfo(root, node) {
   const key = String(node.public_key || "").toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(key) || !root.querySelector(".node-user-info")) return;
+  const body = root.querySelector(".node-user-info-body");
+  const preview = root.querySelector(".node-compact-info-text");
+  if (!/^[0-9a-f]{64}$/.test(key) || (!body && !preview)) return;
+  const render = (info) => {
+    if (body) renderNodeInfoSection(root, info);
+    renderNodeInfoPreview(root, info);
+  };
   const cached = state.nodeInfoCache.get(key);
   if (cached && Date.now() - cached.at < 60_000) {
-    renderNodeInfoSection(root, cached.info);
+    render(cached.info);
     return;
   }
   try {
@@ -1786,12 +1832,13 @@ async function loadNodeInfo(root, node) {
     const info = data.info || null;
     state.nodeInfoCache.set(key, { at: Date.now(), info });
     updateNodeOverview(key);
-    if (root.isConnected) renderNodeInfoSection(root, info);
+    if (!root.isConnected) return;
+    render(info);
   } catch (error) {
     console.error("Uživatelské info nodu se nepodařilo načíst", error);
     if (!root.isConnected) return;
-    const body = root.querySelector(".node-user-info-body");
     if (body) body.textContent = t("nodeInfo.failed");
+    if (preview) preview.textContent = t("nodeInfo.failed");
   }
 }
 
@@ -2035,8 +2082,133 @@ function nodePopupContent(node, active) {
   `;
 }
 
+function compactNodePopupContent(node, active) {
+  return `
+    <header>
+      <div><small>${escapeHtml(roleLabel(node.role))}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
+      <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
+    </header>
+    ${nodeOverview(node)}
+    <div class="node-compact-info">
+      <p class="node-compact-info-text">${t("nodeInfo.loading")}</p>
+    </div>
+    <div class="node-compact-actions">
+      <button class="node-detail-open" type="button">${t("nodeDetail.open")}</button>
+      <button class="node-detail-tab-button" type="button" data-node-detail-tab="photos">${t("nodeDetail.photos")}</button>
+      <button class="node-detail-tab-button" type="button" data-node-detail-tab="comments">${t("nodeDetail.comments")}</button>
+    </div>
+  `;
+}
+
 function nodePopup(node, active) {
-  return `<section class="node-popup-card">${nodePopupContent(node, active)}</section>`;
+  return `<section class="node-popup-card compact">${compactNodePopupContent(node, active)}</section>`;
+}
+
+function nodeDetailShell(node, active) {
+  const tabs = [
+    ["overview", t("nodeDetail.overview")],
+    ["info", t("nodeDetail.info")],
+    ["photos", t("nodeDetail.photos")],
+    ["comments", t("nodeDetail.comments")],
+    ["network", t("nodeDetail.network")],
+  ];
+  return `
+    <header class="node-detail-header">
+      <div>
+        <small>${escapeHtml(roleLabel(node.role))}</small>
+        <h2 id="node-detail-title">${escapeHtml(node.name || t("common.unknownNode"))}</h2>
+        <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
+      </div>
+      <button class="node-detail-close" type="button" aria-label="${t("nodeDetail.close")}">×</button>
+    </header>
+    <nav class="node-detail-tabs" aria-label="${t("nodeDetail.tabs")}">
+      ${tabs.map(([key, label], index) => `<button type="button" data-node-detail-tab="${key}" class="${index === 0 ? "active" : ""}">${label}</button>`).join("")}
+    </nav>
+    <div class="node-detail-panels">
+      ${tabs.map(([key]) => `<section class="node-detail-panel" data-node-detail-panel="${key}"${key === "overview" ? "" : " hidden"}></section>`).join("")}
+    </div>
+  `;
+}
+
+function renderNodeDetail(node, active, initialTab = "overview") {
+  const temp = document.createElement("div");
+  temp.innerHTML = nodePopupContent(node, active);
+  temp.querySelector("header")?.remove();
+  elements.nodeDetailPage.replaceChildren();
+  const shell = document.createElement("section");
+  shell.className = "node-detail-shell";
+  shell.innerHTML = nodeDetailShell(node, active);
+  elements.nodeDetailPage.appendChild(shell);
+  const panels = new Map([...shell.querySelectorAll("[data-node-detail-panel]")]
+    .map((panel) => [panel.dataset.nodeDetailPanel, panel]));
+  const move = (selector, panelName, all = false) => {
+    const source = all ? temp.querySelectorAll(selector) : [temp.querySelector(selector)].filter(Boolean);
+    for (const element of source) panels.get(panelName)?.appendChild(element);
+  };
+  move(".node-overview", "overview");
+  move(".node-user-info", "info");
+  move(".node-photos", "photos");
+  move(".node-comments", "comments");
+  move(".node-details", "network", true);
+  move(".node-analytics", "network", true);
+  move(".node-last-route", "network", true);
+  move(".node-neighbors", "network", true);
+  move(".node-history", "network", true);
+  move(".node-public-key", "network", true);
+  move(".node-popup-actions", "network", true);
+  shell.querySelector(".node-popup-close")?.remove();
+  const selectTab = (tab) => {
+    const next = panels.has(tab) ? tab : "overview";
+    for (const button of shell.querySelectorAll("[data-node-detail-tab]")) {
+      button.classList.toggle("active", button.dataset.nodeDetailTab === next);
+    }
+    for (const [key, panel] of panels) panel.hidden = key !== next;
+  };
+  for (const button of shell.querySelectorAll("[data-node-detail-tab]")) {
+    button.addEventListener("click", () => selectTab(button.dataset.nodeDetailTab));
+  }
+  selectTab(initialTab);
+  shell.querySelector(".node-detail-close")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    closeNodeDetail();
+  });
+  setupNodePopup({ getElement: () => shell, close: closeNodeDetail }, node);
+  if (!elements.nodeDetailPage.open) elements.nodeDetailPage.showModal();
+}
+
+function closeNodeDetail({ fromHistory = false } = {}) {
+  if (elements.nodeDetailPage.open) elements.nodeDetailPage.close();
+  state.nodeDetailKey = null;
+  if (fromHistory || !state.nodeDetailPushed) {
+    if (!fromHistory && nodeDetailPathKey()) history.replaceState({}, "", MAP_PATH);
+    state.nodeDetailPushed = false;
+    return;
+  }
+  state.nodeDetailPushed = false;
+  history.back();
+}
+
+function openNodeDetail(node, tab = "overview") {
+  const key = String(node.public_key || "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(key)) return;
+  const onDetailPath = Boolean(nodeDetailPathKey());
+  map.closePopup();
+  state.nodeDetailKey = key;
+  if (!onDetailPath) {
+    history.pushState({ nodeDetail: key }, "", nodeDetailPath(key));
+    state.nodeDetailPushed = true;
+  } else {
+    state.nodeDetailPushed = false;
+  }
+  renderNodeDetail(node, isNodeActive(node, nowMs(), NODE_ACTIVE_MS), tab);
+}
+
+function applyInitialDetail() {
+  if (!INITIAL_DETAIL_KEY || state.initialDetailApplied) return;
+  const node = state.nodeByKey.get(INITIAL_DETAIL_KEY.toUpperCase());
+  if (!node) return;
+  state.initialDetailApplied = true;
+  openNodeDetail(node);
 }
 
 function renderNodeHistory(root, samples) {
@@ -3258,6 +3430,7 @@ async function loadNodes() {
     setDataFreshness(response.headers.get("X-Data-Stale") === "1");
     syncNodes(data.nodes || []);
     applyInitialNode();
+    applyInitialDetail();
     if (!state.routeHistoryLoaded && packetHandlingReady) void loadRouteHistory();
     return true;
   } catch (error) {
@@ -7098,6 +7271,17 @@ elements.mobileSheet.addEventListener("click", (event) => {
 elements.mobileSheet.addEventListener("close", () => elements.mobileSheetContent.replaceChildren());
 mobileSheetQuery.addEventListener("change", (event) => {
   if (!event.matches) closeMobileSheet();
+});
+
+elements.nodeDetailPage.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeNodeDetail();
+});
+elements.nodeDetailPage.addEventListener("click", (event) => {
+  if (event.target === elements.nodeDetailPage) closeNodeDetail();
+});
+window.addEventListener("popstate", () => {
+  if (!nodeDetailPathKey()) closeNodeDetail({ fromHistory: true });
 });
 
 elements.qrClose.addEventListener("click", () => elements.qrDialog.close());
