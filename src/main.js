@@ -1738,7 +1738,7 @@ function nodePhotos(node) {
   return `
     <div class="node-photos" data-node-key="${escapeHtml(node.public_key.toLowerCase())}">
       <div class="node-photos-head">
-        <span>${t("photos.title")}</span>
+        <span>${t("photos.title")} <b class="node-photos-count">…</b></span>
         <button class="node-photo-add" type="button">${t("photos.add")}</button>
       </div>
       <div class="node-photos-list"><p class="node-photos-empty">${t("photos.loading")}</p></div>
@@ -1802,11 +1802,8 @@ function nodeComments(node, withList = false) {
   return `
     <section class="node-comments" data-node-key="${escapeHtml(node.public_key.toLowerCase())}">
       <div class="node-comments-head">
-        <span>${t("comments.titleShort")}</span>
-        <button class="node-comments-open" type="button">
-          ${t("comments.open")}
-          <span class="node-comments-count" title="">…</span>
-        </button>
+        <span>${t("comments.titleShort")} <b class="node-comments-count" title="">…</b></span>
+        <button class="node-comments-open" type="button">${t("comments.open")}</button>
       </div>
       ${withList ? '<ol class="comments-list node-detail-comments-list" data-detail-comments></ol>' : ""}
     </section>
@@ -2126,7 +2123,6 @@ function nodePopupContent(node, active) {
       <div><small>${escapeHtml(roleLabel(node.role))}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
-    ${nodeOverview(node)}
     ${nodeScoreSummary(node)}
     ${nodePhotos(node)}
     ${nodeUserInfo(node)}
@@ -2154,9 +2150,8 @@ function nodeScoreSummary(node) {
   const rankText = rank ? `#${formatNumber(rank.rank)} / ${formatNumber(rank.total)}` : "—";
   return `
     <div class="node-score-summary">
-      <span><small>${t("node.score")}</small><b>${escapeHtml(scoreText)}</b></span>
-      <span><small>${t("node.rank")}</small><b>${escapeHtml(rankText)}</b></span>
-      <span class="node-key-summary"><small>${t("node.publicKey")}</small><b><code title="${escapeHtml(node.public_key)}">${escapeHtml(node.public_key.slice(0, 10))}…${escapeHtml(node.public_key.slice(-6))}</code></b><button class="node-key-copy" type="button">${t("common.copy")}</button></span>
+      <span class="node-score-line"><small>${t("node.score")}</small> <b>${escapeHtml(scoreText)}</b> <b class="node-rank-line" title="${t("node.rank")}">${escapeHtml(rankText)}</b></span>
+      <span class="node-key-summary"><code title="${escapeHtml(node.public_key)}">${t("node.publicKey")}: ${escapeHtml(node.public_key.slice(0, 10))}…${escapeHtml(node.public_key.slice(-6))}</code><button class="node-key-copy" type="button">${t("common.copy")}</button></span>
     </div>
   `;
 }
@@ -2167,7 +2162,6 @@ function compactNodePopupContent(node, active) {
       <div><small>${escapeHtml(roleLabel(node.role))}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
-    ${nodeOverview(node)}
     ${nodeScoreSummary(node)}
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
@@ -2461,6 +2455,9 @@ async function loadNodePhotos(root, node) {
 }
 
 function renderNodePhotos(list, photos, node) {
+  const section = list.closest(".node-photos");
+  const count = section?.querySelector(".node-photos-count");
+  if (count) count.textContent = String(photos.length);
   list.replaceChildren();
   if (!photos.length) {
     const empty = document.createElement("p");
