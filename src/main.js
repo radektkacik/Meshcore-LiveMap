@@ -130,7 +130,7 @@ function nodeDetailPathKey(pathname = location.pathname) {
   return match ? match[1].toLowerCase() : null;
 }
 
-const INITIAL_DETAIL_KEY = nodeDetailPathKey();
+const INITIAL_DETAIL_KEY = IS_BETA ? nodeDetailPathKey() : null;
 function nodeDetailPath(key) {
   return `${APP_BASE}/nod/${String(key || "").toLowerCase()}`;
 }
@@ -415,6 +415,10 @@ function initialRouteRetentionMs() {
 
 const initialRetentionMs = initialRouteRetentionMs();
 elements.routeRetention.value = String(initialRetentionMs);
+if (!IS_BETA) {
+  elements.shareView?.remove();
+  for (const item of document.querySelectorAll(".beta-legend")) item.remove();
+}
 
 const state = {
   activeRoutes: new Map(),
@@ -1206,7 +1210,7 @@ function renderObservers() {
         })
         .on("click", (event) => {
           L.DomEvent.stopPropagation(event);
-          if (isMobileSheet()) {
+          if (IS_BETA && isMobileSheet()) {
             showMobileSheet(observerClusterPopupHtml(observers, position));
             return;
           }
@@ -2156,9 +2160,9 @@ function compactNodePopupContent(node, active) {
     ${nodeComments(node)}
     ${nodeNeighbors(node)}
     ${nodeActionButtons(node)}
-    <div class="node-compact-actions">
+    ${IS_BETA ? `<div class="node-compact-actions">
       <button class="node-detail-open" type="button">${t("nodeDetail.open")}</button>
-    </div>
+    </div>` : ""}
   `;
 }
 
@@ -2252,6 +2256,7 @@ function closeNodeDetail({ fromHistory = false } = {}) {
 }
 
 function openNodeDetail(node, tab = "overview") {
+  if (!IS_BETA) return;
   const key = String(node.public_key || "").toLowerCase();
   if (!/^[0-9a-f]{64}$/.test(key)) return;
   const onDetailPath = Boolean(nodeDetailPathKey());
@@ -2267,7 +2272,7 @@ function openNodeDetail(node, tab = "overview") {
 }
 
 function applyInitialDetail() {
-  if (!INITIAL_DETAIL_KEY || state.initialDetailApplied) return;
+  if (!IS_BETA || !INITIAL_DETAIL_KEY || state.initialDetailApplied) return;
   const node = state.nodeByKey.get(INITIAL_DETAIL_KEY.toUpperCase());
   if (!node) return;
   state.initialDetailApplied = true;

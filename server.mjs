@@ -79,6 +79,7 @@ const publicBasePath = (() => {
   }
 })();
 const adminBasePath = `${publicBasePath}/admin` || "/admin";
+const repeaterImportEnabled = publicBasePath === "/beta" || process.env.REPEATER_IMPORT === "1";
 
 function sitePath(path = "/") {
   return `${publicBasePath}${path}`;
@@ -1868,7 +1869,7 @@ function adminLayout({ active = "", content = "", title = "Administrace" }) {
     ["feedback", adminPath("/feedback"), "Zpětná vazba"],
     ["comments", adminPath("/comments"), `Komentáře${commentStore.count() ? ` (${commentStore.count()})` : ""}`],
     ["nodeinfo", adminPath("/node-info"), `Info nodů${nodeInfoStore.pendingCount() ? ` (${nodeInfoStore.pendingCount()})` : ""}`],
-    ["import", adminPath("/repeater-import"), "Import z wiki"],
+    ...(repeaterImportEnabled ? [["import", adminPath("/repeater-import"), "Import z wiki"]] : []),
   ].map(([key, href, label]) => `<a class="${active === key ? "active" : ""}" href="${href}">${label}</a>`).join("");
   return `<!doctype html>
 <html lang="cs">
@@ -2007,7 +2008,7 @@ function adminDashboardPage() {
       <a href="${adminPath("/feedback")}">Projít zpětnou vazbu</a>
       <a href="${adminPath("/comments")}">Projít komentáře</a>
       <a href="${adminPath("/node-info")}">Kontrolovat info nodů</a>
-      <a href="${adminPath("/repeater-import")}">Import z meshcore.cz</a>
+      ${repeaterImportEnabled ? `<a href="${adminPath("/repeater-import")}">Import z meshcore.cz</a>` : ""}
       <a href="${sitePath("/api/health")}" target="_blank" rel="noreferrer">Health JSON</a>
     </div>
     <p class="sub" style="margin-top:16px; margin-bottom:0;">Provoz aplikace: ${escapeHtml(uptimeLabel)}.</p>
@@ -2289,7 +2290,7 @@ function adminNodeInfoPage(imported = false) {
       <p>${escapeHtml(info.text)}</p>
       <div class="actions">
         <a class="edit" href="${adminPath(`/node-info/edit?key=${encodeURIComponent(info.nodeKey)}`)}">Upravit</a>
-        <a class="edit" href="${adminPath(`/repeater-import?key=${encodeURIComponent(info.nodeKey)}`)}">Import z wiki</a>
+        ${repeaterImportEnabled ? `<a class="edit" href="${adminPath(`/repeater-import?key=${encodeURIComponent(info.nodeKey)}`)}">Import z wiki</a>` : ""}
         <form method="post" action="${adminPath("/node-info/delete")}">
           <input type="hidden" name="key" value="${escapeHtml(info.nodeKey)}" />
           <button class="delete" type="submit">Smazat info</button>
@@ -2434,7 +2435,7 @@ async function handleAdminRequest(request, response, url) {
       response.end(adminNodeInfoPage(url.searchParams.get("imported") === "1"));
       return;
     }
-    if (path === "/admin/repeater-import") {
+    if (path === "/admin/repeater-import" && repeaterImportEnabled) {
       const keyValue = String(url.searchParams.get("key") || "").trim();
       const slug = String(url.searchParams.get("slug") || "").trim().toLowerCase();
       if (!keyValue) {
@@ -2484,7 +2485,7 @@ async function handleAdminRequest(request, response, url) {
       response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Bad Request");
       return;
     }
-    if (path === "/admin/repeater-import") {
+    if (path === "/admin/repeater-import" && repeaterImportEnabled) {
       const key = String(form.get("key") || "").trim().toLowerCase();
       const text = String(form.get("text") || "").trim();
       const sourceUrl = trustedRepeaterSourceUrl(form.get("sourceUrl"));
