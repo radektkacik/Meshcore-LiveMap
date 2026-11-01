@@ -351,6 +351,9 @@ html[data-theme="dark"] .node-history-dot { fill: #5fd0a5; stroke: #161d24; }
 html[data-theme="dark"] .node-history-cursor { background: rgba(230, 236, 239, 0.3); }
 html[data-theme="dark"] .node-history-tip { color: #17271f; background: #e6ecef; }
 .node-popup-details { padding: 8px 15px 5px; border-bottom: 1px solid var(--line); }
+.node-relay-stats { padding: 7px 15px; border-bottom: 1px solid var(--line); background: rgba(7, 142, 98, 0.025); }
+.node-relay-stats > span { color: var(--muted); font: 9px "DM Mono", monospace; letter-spacing: 0.06em; text-transform: uppercase; }
+.node-relay-stats-value { margin: 3px 0 0; color: #3f584e; font: 500 10px "DM Mono", monospace; }
 .node-popup-details-title { position: relative; min-height: 18px; }
 .node-popup-details h4 { margin: 0 0 3px; color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: 0.09em; text-transform: uppercase; }
 .node-popup-card dl, .node-detail-shell dl { margin: 0; padding: 0; }

@@ -8,7 +8,7 @@ export function nodeMetric(node, field) {
 }
 
 export function nodeLastActivity(node) {
-  const timestamps = [node.last_seen, node.last_heard, node.last_relayed]
+  const timestamps = [node.last_seen, node.last_heard]
     .map((value) => Date.parse(value || 0))
     .filter(Number.isFinite);
   return timestamps.length ? Math.max(...timestamps) : 0;

@@ -142,3 +142,28 @@ test("packet store prunes expired rows and overflow beyond the cap", () => {
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("relay stats count only paths with at least two hash bytes", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-packets-"));
+  const store = createPacketStore(join(directory, "packets.sqlite"), { retentionMs: 60_000 });
+  const now = Date.UTC(2026, 10, 1, 12);
+  try {
+    store.record([
+      row({ hash: "2b", observer_id: "o1", observed_at: now - 30 * 60 * 1000, path_hash_bytes: 2, path_json: '["BD75"]', scope_name: "#cz" }),
+      row({ hash: "3b", observer_id: "o2", observed_at: now - 20 * 60 * 1000, path_hash_bytes: 3, path_json: '["BD75AA"]', scope_name: "" }),
+      row({ hash: "1b", observer_id: "o3", observed_at: now - 10 * 60 * 1000, path_hash_bytes: 1, path_json: '["BD"]', scope_name: "#cz" }),
+    ]);
+    assert.deepEqual(store.relayStats("BD75", 2, now), {
+      hashBytes: 2,
+      lastRelayed: now - 20 * 60 * 1000,
+      prefix: "BD75",
+      relayActive: true,
+      relayCount1h: 2,
+      relayCount24h: 2,
+      unscopedRelay24h: 1,
+    });
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

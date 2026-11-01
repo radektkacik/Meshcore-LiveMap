@@ -86,6 +86,13 @@ export function createPacketStore(dbPath, {
     WHERE hash = ?
     ORDER BY observed_at DESC
   `);
+  const selectRelay = db.prepare(`
+    SELECT observed_at, path_json, scope_name
+    FROM packet_routes
+    WHERE observed_at >= ? AND path_hash_bytes >= ? AND path_json LIKE ?
+    ORDER BY observed_at DESC
+    LIMIT 20000
+  `);
   const searchHashPrefix = db.prepare(`
     SELECT hash, MAX(observed_at) AS observed_at, payload_type, observer_id, observer_name
     FROM packet_routes
@@ -136,6 +143,39 @@ export function createPacketStore(dbPath, {
       ...row,
       resolved_path: safeArray(row.resolved_path),
     })),
+    relayStats: (prefix, hashBytes = 2, now = Date.now()) => {
+      const value = String(prefix || "").toUpperCase();
+      const bytes = Math.max(2, Number(hashBytes) || 2);
+      if (!/^[0-9A-F]{4,6}$/.test(value)) return null;
+      const rows = selectRelay.all(now - 24 * 60 * 60 * 1000, bytes, `%${value}%`);
+      let lastRelayed = 0;
+      let relayCount1h = 0;
+      let relayCount24h = 0;
+      let unscopedRelay24h = 0;
+      for (const row of rows) {
+        let path = [];
+        try { path = JSON.parse(row.path_json || "[]"); } catch { path = []; }
+        if (!Array.isArray(path)) continue;
+        if (!path.some((hop) => {
+          const token = String(hop || "").toUpperCase();
+          return token.length >= bytes * 2 && token.startsWith(value);
+        })) continue;
+        const observed = Number(row.observed_at) || 0;
+        lastRelayed = Math.max(lastRelayed, observed);
+        relayCount24h += 1;
+        if (observed >= now - 60 * 60 * 1000) relayCount1h += 1;
+        if (!String(row.scope_name || "").trim()) unscopedRelay24h += 1;
+      }
+      return {
+        hashBytes: bytes,
+        lastRelayed: lastRelayed || null,
+        prefix: value,
+        relayActive: lastRelayed >= now - 60 * 60 * 1000,
+        relayCount1h,
+        relayCount24h,
+        unscopedRelay24h,
+      };
+    },
     searchHashPrefix: (prefix, limit = 20) => {
       const value = String(prefix || "").toLowerCase();
       if (!/^[0-9a-f]{2,64}$/.test(value)) return [];

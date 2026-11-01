@@ -19,8 +19,8 @@ const hour = 60 * 60 * 1000;
 test("node activity uses the newest valid activity timestamp", () => {
   const node = {
     last_seen: new Date(now - 2 * hour).toISOString(),
-    last_heard: "invalid",
-    last_relayed: new Date(now - 30 * 60 * 1000).toISOString(),
+    last_heard: new Date(now - 30 * 60 * 1000).toISOString(),
+    last_relayed: new Date(now - 5 * 60 * 1000).toISOString(),
   };
   assert.equal(nodeLastActivity(node), now - 30 * 60 * 1000);
   assert.equal(isNodeActive(node, now, hour), true);

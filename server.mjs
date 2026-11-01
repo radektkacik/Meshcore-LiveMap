@@ -908,6 +908,17 @@ ${status === "reports"
 </html>`;
 }
 
+function cachedNodeByKey(key) {
+  if (!nodesCache?.body) return null;
+  try {
+    const wanted = String(key || "").toLowerCase();
+    const data = JSON.parse(nodesCache.body);
+    return (data.nodes || []).find((node) => String(node.public_key || "").toLowerCase() === wanted) || null;
+  } catch {
+    return null;
+  }
+}
+
 function photoNodeNames() {
   const result = new Map();
   if (!nodesCache?.body) return result;
@@ -2898,6 +2909,25 @@ async function handleRequest(request, response) {
       "Cache-Control": "no-store",
     });
     response.end(body);
+    return;
+  }
+
+  if (url.pathname === "/api/node-relay") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET, HEAD" }).end("Method Not Allowed");
+      return;
+    }
+    const key = String(url.searchParams.get("key") || "").trim().toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(key)) {
+      sendJson(response, 400, { error: "Neplatný klíč nodu." });
+      return;
+    }
+    const node = cachedNodeByKey(key);
+    const declaredHashBytes = Math.max(Number(node?.hash_size) || 0, Number(node?.multi_byte_max_hash_size) || 0);
+    const hashBytes = declaredHashBytes >= 2 ? declaredHashBytes : 0;
+    const prefix = hashBytes && node?.public_key ? String(node.public_key).slice(0, hashBytes * 2).toUpperCase() : "";
+    const stats = prefix ? packetStore.relayStats(prefix, hashBytes) : null;
+    sendJson(response, 200, { key, ...(stats || { hashBytes, prefix, lastRelayed: null, relayActive: false, relayCount1h: 0, relayCount24h: 0, unscopedRelay24h: 0 }) });
     return;
   }
 
