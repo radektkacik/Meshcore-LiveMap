@@ -294,6 +294,8 @@
 | 2026-11-01 08:03 | `20261101T080350Z.tar.gz` (stage APP_DIR) | `20261101-0803-c6ee71c` | Beta: kompaktní popup nodu a podstránka `/nod/<key>` s taby Přehled/Info/Fotky/Komentáře/Síť, přímý odkaz a historie zpět | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css`, `README.md` |
 | 2026-11-01 08:05 | `20261101T080508Z.tar.gz` (stage APP_DIR) | `20261101-0805-ce34293` | Beta: záznam o detailu nodu v beta changelogu | `CHANGELOG.md`, `deploy/RELEASES.md` |
 | 2026-11-01 08:06 | `20261101T080606Z.tar.gz` (stage APP_DIR) | `20261101-0806-ade46d7` | Beta: komentáře se zobrazují přímo v tabu detailu nodu, nejen v dialogu | `src/main.js`, `src/style.css` |
+| 2026-11-01 08:08 | `20261101T080838Z.tar.gz` (stage APP_DIR) | `20261101-0808-91339dd` | Beta přesunuta na `https://mapa.meshcore.cz/beta/` (base `/beta/`, `PUBLIC_BASE_URL`); nginx na `mapa` přidán `/beta/` → 4174; záloha nginx `/root/nginx-beta-move-backup-20261101T080825Z/` | `deploy/update-vps-staging.sh`, `deploy/nginx-mapa-beta-location.conf`, nginx, `.env` (server) |
+| 2026-11-01 08:09 | `20261101T080941Z.tar.gz` | `20261101-0809-e90f3e8` | Prod: odkaz v patičce změněn na `mapa.meshcore.cz/beta/`; monitor beta URL změněn; produkční UI bez beta funkcí | `index.html`, `dist/index.html`, `.env` (server) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
