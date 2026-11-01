@@ -503,6 +503,7 @@ const state = {
   routeHistoryLoaded: false,
   routeHistoryLoading: false,
   routeWindowMs: 0,
+  archiveLoading: false,
   serverSkewMs: 0,
   packetFocus: null,
   packetHistoryHours: 24,
@@ -4964,6 +4965,11 @@ elements.feed.addEventListener("scroll", () => {
 setFeedPauseButton();
 
 function updateMapStatus() {
+  if (state.archiveLoading) {
+    elements.mapStatus.textContent = t("map.preparingArchive");
+    elements.mapStatus.hidden = false;
+    return;
+  }
   const show = state.routeWindowMs === 0 && state.liveRouteCount === 0;
   if (!show) {
     elements.mapStatus.hidden = true;
@@ -5091,27 +5097,36 @@ function renderArchiveViewport() {
 }
 
 async function setRouteWindow(windowMs) {
+  const requestedWindowMs = Number(windowMs);
   clearCachedRoutes();
-  state.routeWindowMs = Number(windowMs);
+  state.routeWindowMs = requestedWindowMs;
   for (const button of elements.windowButtons) {
     button.classList.toggle("active", Number(button.dataset.windowMs) === state.routeWindowMs);
   }
   clearSelectedRoute();
-  if (!state.routeWindowMs) {
+  if (!requestedWindowMs) {
+    state.archiveLoading = false;
     clearArchivePresentation();
+    updateRouteCount();
     updateFeed([], t("feed.empty"), { immediate: true });
     syncRoutePresentation();
     return;
   }
   state.windowRequestId += 1;
+  state.archiveLoading = true;
   clearLivePresentation();
   clearArchivePresentation();
   updateRouteCount();
   updateFeed([], t("feed.loadingHistory"), { immediate: true });
   try {
-    await loadArchiveWindow(state.routeWindowMs);
+    await loadArchiveWindow(requestedWindowMs);
   } catch (error) {
     console.error("Historii tras se nepodařilo načíst", error);
+  } finally {
+    if (state.routeWindowMs === requestedWindowMs) {
+      state.archiveLoading = false;
+      updateRouteCount();
+    }
   }
 }
 
