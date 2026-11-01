@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-01 — Beta: import z meshcore.cz
+- Prostředí: beta
+- Build: 20261101-0748-101ba4f
+- V administraci přibyl ruční import textu z veřejné wiki stránky repeateru.
+- Před uložením se zobrazí náhled a zdroj; fotky se zatím nekopírují.
+- Importovaný text má u nodu odkaz na původní stránku a uvádí zdroj.
+
 ## 2026-10-31 — Beta: přehlednější mapa
 - Prostředí: beta
 - Build: 20261031-1308-232a0ef
