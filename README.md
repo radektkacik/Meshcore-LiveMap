@@ -188,8 +188,8 @@ přihlašovací údaje zůstávají pouze na serveru.
 - Provozní monitoring: `MONITOR_ALERTS=1` zapne kontrolu MQTT, stáří paketů,
   zaplnění disku, dostupnosti zadaných health URL a expirace TLS certifikátů.
   Kontroly se posílají do Telegramu; seznam URL se nastavuje v `MONITOR_URLS`
-  (čárkou oddělené). Výchozí interval je 5 minut, opakování stejného alertu
-  po 1 hodině.
+  (čárkou oddělené). Výchozí interval je 5 minut, timeout 30 s a alert se
+  pošle až po dvou neúspěšných kontrolách; stejný alert se opakuje po 1 hodině.
 - Volitelné Telegram notifikace pro správce: `TELEGRAM_BOT_TOKEN` a
   `TELEGRAM_CHAT_ID`. Upozornění chodí na novou fotku čekající na schválení,
   žádost o smazání fotky a volitelně (`TELEGRAM_NOTIFY_FEEDBACK=1`) i na novou

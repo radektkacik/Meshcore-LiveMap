@@ -105,10 +105,13 @@ const monitorIntervalMs = Math.max(60_000, Number(process.env.MONITOR_INTERVAL_M
 const monitorRepeatMs = Math.max(60_000, Number(process.env.MONITOR_REPEAT_MS || 3_600_000));
 const monitorDiskPercent = Math.min(99, Math.max(1, Number(process.env.MONITOR_DISK_PERCENT || 90)));
 const monitorPacketAgeSec = Math.max(60, Number(process.env.MONITOR_PACKET_AGE_SEC || 600));
+const monitorTimeoutMs = Math.max(5_000, Number(process.env.MONITOR_TIMEOUT_MS || 30_000));
+const monitorFailureThreshold = Math.max(1, Number(process.env.MONITOR_FAILURES || 2));
 const monitorUrls = String(process.env.MONITOR_URLS || "")
   .split(",").map((value) => value.trim()).filter(Boolean);
 let monitorAlertKey = "";
 let monitorAlertedAt = 0;
+let monitorFailureStreak = 0;
 if (telegramNotifier.enabled) {
   console.log("Telegram admin notifications enabled");
 }
@@ -1257,7 +1260,7 @@ async function checkOperationalAlerts() {
   }
   for (const url of monitorUrls) {
     try {
-      const response = await fetch(url, { signal: AbortSignal.timeout(10_000), headers: { "User-Agent": "meshcore-monitor/1" } });
+      const response = await fetch(url, { signal: AbortSignal.timeout(monitorTimeoutMs), headers: { "User-Agent": "meshcore-monitor/1" } });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) issues.push(`${url} vrací HTTP ${response.status}`);
       else if (data.status && data.status !== "ok") issues.push(`${url} hlásí ${data.status}`);
@@ -1274,11 +1277,14 @@ async function checkOperationalAlerts() {
     if (days != null && days < 14) issues.push(`TLS certifikát ${host} vyprší za ${days} dní`);
   }
   if (!issues.length) {
+    monitorFailureStreak = 0;
     if (monitorAlertKey) notifyTelegram("✅ Monitoring: všechny kontroly jsou v pořádku.");
     monitorAlertKey = "";
     monitorAlertedAt = 0;
     return;
   }
+  monitorFailureStreak += 1;
+  if (monitorFailureStreak < monitorFailureThreshold) return;
   const key = issues.join("|");
   if (key === monitorAlertKey && Date.now() - monitorAlertedAt < monitorRepeatMs) return;
   monitorAlertKey = key;
