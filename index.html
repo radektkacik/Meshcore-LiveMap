@@ -82,7 +82,7 @@
               <button id="los-toggle" type="button" aria-pressed="false" title="Změřit přímou viditelnost mezi dvěma body">LOS</button>
               <button id="coverage-toggle" type="button" aria-pressed="false" title="Simulovat pokrytí terénu z jednoho bodu">Pokrytí</button>
               <button id="export-toggle" type="button" class="wide" title="Stáhnout nody, observery nebo trasy jako CSV či GeoJSON">Export</button>
-              <button id="share-view" type="button" class="wide" title="Zkopírovat odkaz na aktuální pohled mapy">Sdílet pohled</button>
+              <button id="share-view" type="button" class="wide" hidden title="Zkopírovat odkaz na aktuální pohled mapy">Sdílet pohled</button>
               <button id="feedback-toggle" type="button" class="wide">Kniha návštěv</button>
             </div>
 
@@ -167,8 +167,8 @@
               <span><i class="node repeater"></i> Repeater</span>
               <span><i class="node companion"></i> Companion</span>
               <span><i class="line advert"></i> Advert</span>
-              <span class="beta-legend"><i class="line direct"></i> Direct / zpráva</span>
-              <span class="beta-legend"><i class="line other"></i> Ostatní typy</span>
+              <span class="beta-legend" hidden><i class="line direct"></i> Direct / zpráva</span>
+              <span class="beta-legend" hidden><i class="line other"></i> Ostatní typy</span>
               <span><i class="line trace"></i> TRACE (barvy podle SNR)</span>
             </div>
 

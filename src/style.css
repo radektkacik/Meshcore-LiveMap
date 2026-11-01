@@ -59,6 +59,7 @@ button { color: inherit; }
 .hud-title { min-width: 0; flex: 1; margin-left: 10px; }
 .hud-title > div { display: flex; align-items: center; gap: 7px; }
 .hud-title strong { font-size: 16px; letter-spacing: -0.025em; }
+[hidden] { display: none !important; }
 .beta-badge { display: inline-block; padding: 1px 5px; border-radius: 4px; color: #fff; background: #d87412; font: 700 9px/1.4 "DM Mono", monospace; letter-spacing: 0.08em; }
 .beta-badge[hidden] { display: none; }
 .beta-notice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 8px 0 2px; padding: 10px; border: 1px solid #d87412; border-radius: 8px; color: #7a3e00; background: #fff4e6; }

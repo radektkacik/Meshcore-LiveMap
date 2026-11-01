@@ -415,10 +415,8 @@ function initialRouteRetentionMs() {
 
 const initialRetentionMs = initialRouteRetentionMs();
 elements.routeRetention.value = String(initialRetentionMs);
-if (!IS_BETA) {
-  elements.shareView?.remove();
-  for (const item of document.querySelectorAll(".beta-legend")) item.remove();
-}
+if (elements.shareView) elements.shareView.hidden = !IS_BETA;
+for (const item of document.querySelectorAll(".beta-legend")) item.hidden = !IS_BETA;
 
 const state = {
   activeRoutes: new Map(),
