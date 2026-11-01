@@ -290,6 +290,7 @@
 | 2026-11-01 06:42 | `20261101T064214Z.tar.gz` (stage APP_DIR) | `20261101-0642-55cd5bb` | Beta: monitoring timeout 30 s a alert až po 2 neúspěšných kontrolách; odstranění falešných alertů při krátkém zablokování event loopu | `server.mjs`, `.env.example`, `README.md` |
 | 2026-11-01 06:42 | `20261101T064258Z.tar.gz` | `20261101-0642-e90f3e8` | Prod: stejná úprava monitoringu; produkční UI zůstává bez beta funkcí | `server.mjs`, `dist/index.html` |
 | 2026-11-01 07:48 | `20261101T074825Z.tar.gz` (stage APP_DIR) | `20261101-0748-101ba4f` | Beta: ruční import textu z DokuWiki `meshcore.cz/repeatery:<slug>`, náhled před uložením, zdroj u nodu; fotky se neimportují | `repeater-pages.mjs`, `node-info.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, testy, `README.md`, deploy skripty |
+| 2026-11-01 07:49 | `20261101T074912Z.tar.gz` (stage APP_DIR) | `20261101-0749-2fcc379` | Beta: záznam o importu z meshcore.cz v beta changelogu | `CHANGELOG.md`, `deploy/RELEASES.md` |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
 Externí nasazení (ne z této evidence, obsah neznámý):
