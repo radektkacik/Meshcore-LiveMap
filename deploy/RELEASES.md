@@ -334,6 +334,9 @@
 | 2026-11-01 12:02 | `20261101T120238Z.tar.gz` | `20261101-1202-94e7d41` | Prod: stejná automatická obnova po nasazení | `vite.config.js`, `server.mjs`, `src/main.js`, `README.md` |
 | 2026-11-01 12:14 | `20261101T121418Z.tar.gz` (stage APP_DIR) | `20261101-1214-1857add` | Beta: filtr „Jen neaktivní nody“ (bez aktivity více než 1 h), sdílení filtru v URL, návaznost na filtry role/fotek | `index.html`, `src/main.js`, `src/i18n.js` |
 | 2026-11-01 12:15 | `20261101T121528Z.tar.gz` | `20261101-1215-1857add` | Prod: stejný filtr neaktivních nodů; ověřena automatická obnova otevřených stránek (`reload`) | `index.html`, `src/main.js`, `src/i18n.js` |
+| 2026-11-01 12:28 | `20261101T122804Z.tar.gz` (stage APP_DIR) | `20261101-1228-a80dd8f` | Beta: aktivita nodu zahrnuje i poslední aktivitu stejnojmenného observeru (např. companion Seismo); observer data se obnovují každých 5 min | `src/main.js`, `src/i18n.js` |
+| 2026-11-01 12:29 | `20261101T122913Z.tar.gz` (stage APP_DIR) | `20261101-1229-5197ea8` | Beta: po načtení observerů se aktualizuje i zobrazená poslední aktivita v popupu/detailu | `src/main.js` |
+| 2026-11-01 12:30 | `20261101T123000Z.tar.gz` | `20261101-1230-5197ea8` | Prod: aktivita nodu zahrnuje observer aktivitu a zobrazení se po načtení observerů aktualizuje | `src/main.js`, `src/i18n.js` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
