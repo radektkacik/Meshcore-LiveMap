@@ -79,6 +79,8 @@ const ROUTE_HISTORY_LIMIT = 1200;
 const NODE_ACTIVE_MS = 60 * 60 * 1000;
 const NODE_RANKING_ACTIVE_MS = 24 * 60 * 60 * 1000;
 const BASE_DATA_REFRESH_MS = 15 * 60 * 1000;
+const BUILD_CHECK_MS = 60_000;
+const BUILD_RELOAD_KEY = "meshcoreAutoReloadBuild";
 const API_TIMEOUT_MS = 20_000;
 const MAX_PENDING_PACKETS = 5_000;
 const MAX_RESOLVE_BATCH = 80;
@@ -3187,6 +3189,42 @@ function setDataFreshness(stale) {
   elements.dataStale.title = stale ? t("data.staleTitle") : "";
 }
 
+function reloadForServerBuild(serverBuild) {
+  const target = String(serverBuild || "").trim();
+  const current = typeof __BUILD_ID__ === "string" ? __BUILD_ID__.trim() : "";
+  if (!target || !current || current === "dev") return;
+  if (target === current) {
+    try {
+      sessionStorage.removeItem(BUILD_RELOAD_KEY);
+    } catch {}
+    return;
+  }
+  let attempted = "";
+  try {
+    attempted = sessionStorage.getItem(BUILD_RELOAD_KEY) || "";
+  } catch {}
+  if (attempted === target) return;
+  try {
+    sessionStorage.setItem(BUILD_RELOAD_KEY, target);
+  } catch {}
+  console.info(`Nová verze ${target}, obnovuji stránku (aktuální ${current}).`);
+  window.location.reload();
+}
+
+let buildCheckPending = false;
+async function checkServerBuild() {
+  if (buildCheckPending) return;
+  buildCheckPending = true;
+  try {
+    const data = await getJson("/api/version");
+    reloadForServerBuild(data.build);
+  } catch (error) {
+    console.warn("Kontrola verze serveru selhala", error);
+  } finally {
+    buildCheckPending = false;
+  }
+}
+
 function nodeTooltip(node) {
   const key = String(node.public_key || "").toUpperCase();
   const coverId = state.photoCoverCache.get(key);
@@ -5161,6 +5199,7 @@ function connectPacketStream() {
   state.packetSource = source;
   source.addEventListener("status", (event) => {
     const status = JSON.parse(event.data);
+    reloadForServerBuild(status.build);
     state.mqttConnected = Boolean(status.connected);
     setConnection(status.connected, status.connected ? t("connection.mqttOnline") : t("connection.mqttOffline"));
     updateMapStatus();
@@ -7509,6 +7548,12 @@ elements.feedbackForm.addEventListener("submit", async (event) => {
   }
 });
 document.addEventListener("visibilitychange", updateRouteAnimation);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") void checkServerBuild();
+});
+window.addEventListener("online", () => {
+  void checkServerBuild();
+});
 
 const initialWindow = parseRouteWindowParam(INITIAL_PARAMS.get("window"));
 if (initialWindow != null && initialWindow !== 0) void setRouteWindow(initialWindow);
@@ -7522,6 +7567,7 @@ const initialLosLink = parseLosLink();
 
 async function start() {
   console.info(`Route animation mode: ${state.animationMode}`);
+  void checkServerBuild();
   restoreRouteCache();
   connectPacketStream();
   const snapshotPromise = getJson("/api/recent?seconds=30").catch((error) => {
@@ -7532,6 +7578,7 @@ async function start() {
   void loadPhotoNodes();
   void loadStats();
   setInterval(() => loadBaseData().catch((error) => console.error("Obnova dat selhala", error)), BASE_DATA_REFRESH_MS);
+  setInterval(checkServerBuild, BUILD_CHECK_MS);
   setInterval(refreshNodeState, 60_000);
   setInterval(syncRoutePresentation, 1_000);
   setInterval(watchPacketStream, 30_000);

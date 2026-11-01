@@ -46,7 +46,9 @@ mapy; společná změna se zobrazí na produkci i betě.
 
 Aktualizace se provádí pouze skriptem, který před výměnou ověří build ve
 staging adresáři, připraví přesnou sadu produkčních závislostí, vytvoří backup
-a po restartu služby provede health check. Pokud se lockfile nezměnil, použije
+a po restartu služby provede health check. Build zapisuje `dist/build.json`;
+`/api/version` podle něj vrací aktuální build a otevřená stránka se po zjištění
+nové verze jednou automaticky obnoví. Pokud se lockfile nezměnil, použije
 již ověřené serverové závislosti a nestahuje je znovu:
 
 ```bash

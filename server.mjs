@@ -21,7 +21,16 @@ import { createTelegramNotifier } from "./notify.mjs";
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "0.0.0.0";
 const dist = join(process.cwd(), "dist");
+const buildManifestPath = join(dist, "build.json");
 const upstream = process.env.CORESCOPE_URL || "https://analyzer.meshcore.cz";
+
+function currentBuild() {
+  try {
+    const manifest = JSON.parse(readFileSync(buildManifestPath, "utf8"));
+    if (typeof manifest.build === "string" && manifest.build) return manifest.build;
+  } catch {}
+  return process.env.BUILD_ID || null;
+}
 const requestBase = "http://localhost";
 const upstreamTimeoutMs = Math.max(1, Number(process.env.UPSTREAM_TIMEOUT_MS || 15_000));
 const statsTimeoutMs = Math.max(1_000, Number(process.env.STATS_TIMEOUT_MS || 5_000));
@@ -423,7 +432,7 @@ async function fetchNodeDetail(key) {
 function sendFile(response, filePath) {
   response.writeHead(200, {
     "Content-Type": contentTypes[extname(filePath)] || "application/octet-stream",
-    "Cache-Control": extname(filePath) === ".html" ? "no-cache" : "public, max-age=31536000, immutable",
+    "Cache-Control": extname(filePath) === ".html" ? "no-store" : "public, max-age=31536000, immutable",
   });
   const stream = createReadStream(filePath);
   stream.on("error", () => {
@@ -1202,7 +1211,7 @@ function broadcast(event, data) {
 }
 
 function statusPayload() {
-  return { connected: mqttConnected, time: Date.now(), viewers: packetStreams.size };
+  return { build: currentBuild(), connected: mqttConnected, time: Date.now(), viewers: packetStreams.size };
 }
 
 function statBytes(path) {
@@ -1314,6 +1323,7 @@ function healthPayload() {
   const degraded = (mqttEnabled && !mqttConnected) || nodes.stale;
   return {
     status: degraded ? "degraded" : "ok",
+    build: currentBuild(),
     time: now,
     uptimeSec: Math.floor((now - serverStartedAt) / 1000),
     upstream,
@@ -2874,6 +2884,23 @@ async function handleRequest(request, response) {
       visitStore.updatePeak(packetStreams.size);
       broadcastStatus();
     });
+    return;
+  }
+
+  if (url.pathname === "/api/version") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      return;
+    }
+    const body = JSON.stringify({
+      build: currentBuild(),
+      environment: publicBasePath === "/beta" ? "beta" : "production",
+    });
+    response.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+    });
+    response.end(request.method === "HEAD" ? undefined : body);
     return;
   }
 

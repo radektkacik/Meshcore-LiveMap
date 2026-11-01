@@ -1,4 +1,6 @@
 import { execSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { defineConfig } from "vite";
 import { buildChangelog } from "./scripts/build-changelog.mjs";
 
@@ -27,6 +29,7 @@ function changelogPlugin() {
     },
     closeBundle() {
       buildChangelog(outDir, { buildId: currentBuildId, environment: changelogEnvironment });
+      writeFileSync(join(outDir, "build.json"), `${JSON.stringify({ build: currentBuildId }, null, 2)}\n`);
     },
   };
 }
