@@ -2168,6 +2168,7 @@ function compactNodePopupContent(node, active) {
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
     ${nodeOverview(node)}
+    ${nodeScoreSummary(node)}
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
     ${nodeUserInfo(node)}
