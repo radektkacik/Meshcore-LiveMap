@@ -1744,6 +1744,44 @@ function nodePhotos(node) {
   `;
 }
 
+function nodeBasicDetails(node) {
+  const lastActivity = nodeLastActivity(node);
+  const hashSize = (() => {
+    const maxBytes = Number(node.multi_byte_max_hash_size) || 0;
+    const baseBytes = Number(node.hash_size) || 0;
+    return Math.max(maxBytes, baseBytes) || null;
+  })();
+  const prefix = hashSize && node.public_key
+    ? node.public_key.slice(0, hashSize * 2).toUpperCase()
+    : null;
+  const region = node.region_placement || {};
+  const regionNames = Array.isArray(region.regions) ? region.regions.join(", ") : "";
+  const regionBasis = region.basis ? t(`node.regionBasis.${region.basis}`) : "";
+  const regionText = [regionNames, regionBasis].filter(Boolean).join(" · ") || null;
+  return renderNodeDetails(t("node.basicDetails"), [
+    [t("node.lastActivity"), formatNodeDate(lastActivity)],
+    [t("node.lastAdvert"), formatNodeDate(node.last_seen || node.last_heard)],
+    [t("node.lastRelay"), formatNodeDate(node.last_relayed)],
+    [t("node.firstSeen"), node.first_seen ? formatNodeDate(node.first_seen) : null, t("node.firstSeenHelp")],
+    [t("node.coordinates"), `${Number(node.lat).toFixed(6)}, ${Number(node.lon).toFixed(6)}`],
+    [t("node.region"), regionText, t("node.regionHelp")],
+    [t("node.prefix"), prefix, t("node.prefixHelp")],
+    [t("node.hashMode"), hashSize ? (hashSize >= 2 ? "2B+" : "1B") : null, t("node.hashModeHelp")],
+    [t("node.inconsistentHash"), node.hash_size_inconsistent ? t("common.yes") : null, t("node.inconsistentHashHelp")],
+  ]);
+}
+
+function nodeUserInfoCompact(node) {
+  if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
+  return `
+    <details class="node-user-info node-user-info-collapsible" data-node-key="${escapeHtml(node.public_key.toLowerCase())}">
+      <summary><span>${t("nodeInfo.title")}</span><small>${t("nodeInfo.open")}</small></summary>
+      <div class="node-user-info-body"><p class="node-user-info-empty">${t("nodeInfo.loading")}</p></div>
+      <button class="node-user-info-edit" type="button">${t("nodeInfo.edit")}</button>
+    </details>
+  `;
+}
+
 function nodeUserInfo(node) {
   if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
   return `
@@ -1757,7 +1795,7 @@ function nodeUserInfo(node) {
   `;
 }
 
-function nodeComments(node) {
+function nodeComments(node, withList = false) {
   if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
   return `
     <section class="node-comments" data-node-key="${escapeHtml(node.public_key.toLowerCase())}">
@@ -1768,7 +1806,7 @@ function nodeComments(node) {
           <span class="node-comments-count" title="">…</span>
         </button>
       </div>
-      <ol class="comments-list node-detail-comments-list" data-detail-comments></ol>
+      ${withList ? '<ol class="comments-list node-detail-comments-list" data-detail-comments></ol>' : ""}
     </section>
   `;
 }
@@ -2060,7 +2098,7 @@ function nodePopupContent(node, active) {
     ${nodeOverview(node)}
     ${nodePhotos(node)}
     ${nodeUserInfo(node)}
-    ${nodeComments(node)}
+    ${nodeComments(node, true)}
     ${basicDetails}
     ${trafficDetails}
     ${networkDetails}
@@ -2090,13 +2128,12 @@ function compactNodePopupContent(node, active) {
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
     ${nodeOverview(node)}
-    <div class="node-compact-info">
-      <p class="node-compact-info-text">${t("nodeInfo.loading")}</p>
-    </div>
+    ${nodePhotos(node)}
+    ${nodeBasicDetails(node)}
+    ${nodeUserInfoCompact(node)}
+    ${nodeComments(node)}
     <div class="node-compact-actions">
       <button class="node-detail-open" type="button">${t("nodeDetail.open")}</button>
-      <button class="node-detail-tab-button" type="button" data-node-detail-tab="photos">${t("nodeDetail.photos")}</button>
-      <button class="node-detail-tab-button" type="button" data-node-detail-tab="comments">${t("nodeDetail.comments")}</button>
     </div>
   `;
 }
