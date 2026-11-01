@@ -339,6 +339,8 @@
 | 2026-11-01 12:30 | `20261101T123000Z.tar.gz` | `20261101-1230-5197ea8` | Prod: aktivita nodu zahrnuje observer aktivitu a zobrazení se po načtení observerů aktualizuje | `src/main.js`, `src/i18n.js` |
 | 2026-11-01 12:31 | `20261101T123142Z.tar.gz` (stage APP_DIR) | `20261101-1231-98e1939` | Beta: zkrácený popisek filtru na „Jen neaktivní nody (1 h)“ | `index.html`, `src/i18n.js` |
 | 2026-11-01 12:32 | `20261101T123210Z.tar.gz` | `20261101-1232-98e1939` | Prod: stejný zkrácený popisek filtru | `index.html`, `src/i18n.js` |
+| 2026-11-01 14:44 | `20261101T144437Z.tar.gz` (stage APP_DIR) | `20261101-1444-c8e433b` | Beta: 24h okno načítá až 20 000 záznamů a vykresluje až 6 000 tras; počet tras v 24h vzrostl z ~2,5 tis. na ~5,4 tis. | `src/main.js`, `src/route-utils.js`, `test/route-utils.test.mjs` |
+| 2026-11-01 14:45 | `20261101T144527Z.tar.gz` | `20261101-1445-c8e433b` | Prod: stejné rozšíření 24h historie tras | `src/main.js`, `src/route-utils.js`, `test/route-utils.test.mjs` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
