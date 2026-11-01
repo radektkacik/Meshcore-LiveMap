@@ -332,6 +332,8 @@
 | 2026-11-01 11:49 | `20261101T114946Z.tar.gz` (stage APP_DIR) | `20261101-1149-1fb35b4` | Beta: stejný limit 200 km pro 2B+ trasy | `src/main.js`, `src/route-utils.js`, `test/route-utils.test.mjs`, `README.md` |
 | 2026-11-01 12:01 | `20261101T120150Z.tar.gz` (stage APP_DIR) | `20261101-1201-94e7d41` | Beta: automatická obnova otevřené stránky po změně serverového buildu, `/api/version`, `build.json`, HTML `no-store`; obnova nejvýše jednou na build | `vite.config.js`, `server.mjs`, `src/main.js`, `README.md` |
 | 2026-11-01 12:02 | `20261101T120238Z.tar.gz` | `20261101-1202-94e7d41` | Prod: stejná automatická obnova po nasazení | `vite.config.js`, `server.mjs`, `src/main.js`, `README.md` |
+| 2026-11-01 12:14 | `20261101T121418Z.tar.gz` (stage APP_DIR) | `20261101-1214-1857add` | Beta: filtr „Jen neaktivní nody“ (bez aktivity více než 1 h), sdílení filtru v URL, návaznost na filtry role/fotek | `index.html`, `src/main.js`, `src/i18n.js` |
+| 2026-11-01 12:15 | `20261101T121528Z.tar.gz` | `20261101-1215-1857add` | Prod: stejný filtr neaktivních nodů; ověřena automatická obnova otevřených stránek (`reload`) | `index.html`, `src/main.js`, `src/i18n.js` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
