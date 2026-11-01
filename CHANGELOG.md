@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-01 — Ruční sync z meshcore.cz
+- Prostředí: beta
+- Build: 20261101-0904-30f2482
+- V administraci lze porovnat uložené info s aktuální wiki stránkou.
+- Sync jde spustit jednotlivě i hromadně pro všechny importované nody.
+- Přenáší se text a nové obrázky; nic se nespouští automaticky ani pravidelně.
+
 ## 2026-11-01 — Beta na mapa.meshcore.cz/beta
 - Prostředí: beta
 - Build: 20261101-0808-91339dd
