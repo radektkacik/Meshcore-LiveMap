@@ -725,15 +725,16 @@ function roleColor(role) {
 const TOP_TIER_COLOR = "#df5064";
 const SECOND_TIER_COLOR = "#efa438";
 
-function nodeMarkerStyle(node, tier) {
+function nodeMarkerStyle(node, tier, active = true) {
   const color = roleColor(node.role);
+  const inactiveOutline = IS_BETA && !active;
   const base = {
     radius: node.role === "repeater" || node.role === "companion" ? 7 : 6,
-    color: "#202a33",
+    color: inactiveOutline ? "#9aa39d" : "#202a33",
     fillColor: color,
     fillOpacity: 1,
     opacity: 1,
-    weight: 1,
+    weight: inactiveOutline ? 2 : 1,
   };
   if (tier === "top") {
     return { ...base, fillColor: TOP_TIER_COLOR };
@@ -3452,9 +3453,10 @@ function nodePassesFilters(node) {
 }
 
 function addNodeMarker(node) {
-  const entry = { active: nodeIsActive(node, nowMs(), NODE_ACTIVE_MS), marker: null, node, shown: false, stackRole: node.role || "unknown", styleKey: null, tier: null };
+  const active = nodeIsActive(node, nowMs(), NODE_ACTIVE_MS);
+  const entry = { active, marker: null, node, shown: false, stackRole: node.role || "unknown", styleKey: nodeStyleKey(node, null, active), tier: null };
   const marker = L.circleMarker([node.lat, node.lon], {
-    ...nodeMarkerStyle(node),
+    ...nodeMarkerStyle(node, null, active),
     pane: "markerPane",
   })
     .bindTooltip(() => nodeTooltip(node), {
@@ -3505,7 +3507,6 @@ function addNodeMarker(node) {
   }
   entry.marker = marker;
   entry.shown = allowed;
-  entry.styleKey = nodeStyleKey(node, null);
   state.nodeMarkers.push(entry);
   if (key) state.nodeMarkerByKey.set(key, entry);
   return entry;
@@ -3592,16 +3593,16 @@ function shareUrlForNode(node) {
   return buildShareUrl(node);
 }
 
-function nodeStyleKey(node, tier) {
-  return `${node.role || "unknown"}:${tier || "none"}`;
+function nodeStyleKey(node, tier, active = true) {
+  return `${node.role || "unknown"}:${tier || "none"}:${active ? "active" : "inactive"}`;
 }
 
 function applyNodeStyle(entry, tier) {
   entry.tier = tier || null;
-  const styleKey = nodeStyleKey(entry.node, entry.tier);
+  const styleKey = nodeStyleKey(entry.node, entry.tier, entry.active);
   if (entry.styleKey === styleKey) return;
   entry.styleKey = styleKey;
-  entry.marker.setStyle(nodeMarkerStyle(entry.node, entry.tier));
+  entry.marker.setStyle(nodeMarkerStyle(entry.node, entry.tier, entry.active));
 }
 
 function applyNodeMembership() {
@@ -3637,7 +3638,6 @@ function applyNodeTiers() {
 
 function refreshNodeState() {
   const now = nowMs();
-  applyNodeTiers();
   for (const entry of state.nodeMarkers) {
     const active = nodeIsActive(entry.node, now, NODE_ACTIVE_MS);
     if (entry.active !== active) {
@@ -3645,6 +3645,7 @@ function refreshNodeState() {
       scheduleOpenNodePopupRefresh(entry);
     }
   }
+  applyNodeTiers();
   refreshOpenNodeDetailStatus();
   applyNodeMembership();
   if (!elements.statsPanel.hidden) renderStats();
