@@ -832,7 +832,7 @@ function countWithRank(value, nodes, node, field) {
   return `${formatNumber(value)}${rankSuffix(nodes, node, field)}`;
 }
 
-function renderNodeDetails(title, rows, help = "") {
+function renderNodeDetails(title, rows, help = "", className = "") {
   const details = rows
     .filter(([, value]) => value != null)
     .map(([label, value, description]) => `
@@ -843,7 +843,7 @@ function renderNodeDetails(title, rows, help = "") {
     `)
     .join("");
   return details ? `
-    <section class="node-popup-details">
+    <section class="node-popup-details${className ? ` ${className}` : ""}">
       <div class="node-popup-details-title"><h4>${escapeHtml(title)}</h4>${help}</div>
       <dl>${details}</dl>
     </section>
@@ -2178,12 +2178,12 @@ function nodePopupContent(node, active) {
     [t("node.prefix"), prefix, t("node.prefixHelp")],
     [t("node.hashMode"), hashSize ? (hashSize >= 2 ? "2B+" : "1B") : null, t("node.hashModeHelp")],
     [t("node.inconsistentHash"), node.hash_size_inconsistent ? t("common.yes") : null, t("node.inconsistentHashHelp")],
-  ]);
+  ], "", "node-basic-details");
   const trafficDetails = renderNodeDetails(t("node.trafficDetails"), [
     [t("node.advertPackets"), countWithRank(node.advert_count, rankNodes, node, "advert_count"), t("node.advertHelp")],
     [t("node.battery"), node.battery_mv == null ? null : `${node.battery_mv} mV`],
     [t("node.temperature"), node.temperature_c == null ? null : `${node.temperature_c} °C`],
-  ]);
+  ], "", "node-traffic-details");
   const usefulnessScore = nodeMetric(node, "usefulness_score");
   const usefulness = usefulnessScore == null
     ? null
@@ -2218,7 +2218,7 @@ function nodePopupContent(node, active) {
     [t("node.transportedScopes"), Array.isArray(node.transported_scopes) && node.transported_scopes.length
       ? node.transported_scopes.join(", ") : null, t("node.transportedScopesHelp")],
     [t("node.foreign"), node.foreign ? t("common.yes") : null, t("node.foreignHelp")],
-  ], scoreHelp);
+  ], scoreHelp, "node-network-details");
 
   return `
     <header>
@@ -2287,7 +2287,6 @@ function nodePopup(node, active) {
 function nodeDetailShell(node, active) {
   const tabs = [
     ["overview", t("nodeDetail.overview")],
-    ["info", t("nodeDetail.info")],
     ["photos", t("nodeDetail.photos")],
     ["comments", t("nodeDetail.comments")],
     ["network", t("nodeDetail.network")],
@@ -2327,12 +2326,13 @@ function renderNodeDetail(node, active, initialTab = "overview") {
   };
   move(".node-overview", "overview");
   move(".node-score-summary", "overview");
-  move(".node-user-info", "info");
+  move(".node-user-info", "overview");
   move(".node-photos", "photos");
   move(".node-comments", "comments");
-  move(".node-popup-details", "network", true);
+  move(".node-basic-details", "overview");
+  move(".node-popup-details:not(.node-basic-details)", "network", true);
   move(".node-analytics", "network", true);
-  move(".node-last-route", "network", true);
+  move(".node-last-route", "overview", true);
   move(".node-neighbors", "overview", true);
   move(".node-history", "network", true);
   move(".node-public-key", "network", true);
@@ -2616,6 +2616,8 @@ function renderNodeAnalytics(section, data) {
   const observers = Array.isArray(data.health?.observers) ? data.health.observers : [];
   const adverts = Array.isArray(data.detail?.recentAdverts) ? data.detail.recentAdverts : [];
   const paths = Array.isArray(data.paths?.paths) ? data.paths.paths : [];
+  const advertLimit = 10;
+  const pathLimit = 10;
   const skew = clock.recentMedianSkewSec ?? clock.medianSkewSec;
   const metrics = [
     [t("analytics.totalPackets"), analyticsCount(stats.totalPackets)],
@@ -2645,7 +2647,7 @@ function renderNodeAnalytics(section, data) {
     adverts.length ? `
       <details class="node-analytics-details">
         <summary>${t("analytics.recentAdverts")} (${adverts.length})</summary>
-        <ul>${adverts.slice(0, 20).map((advert) => {
+        <ul>${adverts.slice(0, advertLimit).map((advert) => {
           const kind = advert.advert_kind === "flood" ? t("analytics.flood") : t("analytics.direct");
           const observer = advert.observer_name || advert.observations?.[0]?.observer_name || t("packet.unknownObserver");
           const time = formatNodeDate(advert.timestamp || advert.first_seen);
@@ -2656,6 +2658,7 @@ function renderNodeAnalytics(section, data) {
             </li>
           `;
         }).join("")}</ul>
+        ${adverts.length > advertLimit ? `<p class="node-analytics-note">${escapeHtml(t("analytics.limited", { shown: advertLimit, total: adverts.length }))}</p>` : ""}
       </details>
     ` : "",
     paths.length ? `
@@ -2665,7 +2668,7 @@ function renderNodeAnalytics(section, data) {
           paths: analyticsCount(data.paths?.totalPaths ?? paths.length),
           transmissions: analyticsCount(data.paths?.totalTransmissions ?? 0),
         }))}</p>
-        <ul>${paths.map((path) => {
+        <ul>${paths.slice(0, pathLimit).map((path) => {
           const chain = path.hops.map((hop) => hop.name || hop.prefix || "?").join(" → ");
           return `
             <li>
@@ -2674,6 +2677,7 @@ function renderNodeAnalytics(section, data) {
             </li>
           `;
         }).join("")}</ul>
+        ${paths.length > pathLimit ? `<p class="node-analytics-note">${escapeHtml(t("analytics.limited", { shown: pathLimit, total: paths.length }))}</p>` : ""}
       </details>
     ` : "",
   ].filter(Boolean);
