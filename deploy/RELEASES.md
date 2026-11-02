@@ -366,6 +366,7 @@
 | 2026-11-02 12:14 | `20261102T121410Z.tar.gz` (stage APP_DIR) | `20261102-1214-f43e0be` | Beta experiment: sytější šedý obrys a výplň neaktivních nodů na 62 % | `src/main.js`, `src/style.css` |
 | 2026-11-02 12:34 | `20261102T123407Z.tar.gz` (stage APP_DIR) | `20261102-1234-a604ccb` | Beta experiment: neaktivní nody výrazně sytější, výplň 90 % a tmavší obrys | `src/main.js`, `src/style.css` |
 | 2026-11-02 12:49 | `20261102T124930Z.tar.gz` (stage APP_DIR) | `20261102-1249-6c39a93` | Beta experiment: legenda neaktivních nodů je dutý obrys místo šedého kolečka, aby se nepletla s Room | `index.html`, `src/style.css`, `src/i18n.js` |
+| 2026-11-02 13:01 | `20261102T130158Z.tar.gz` (stage APP_DIR) | `20261102-1301-b4d69d7` | Beta experiment: neaktivní nody mají černý obrys | `src/main.js`, `src/style.css` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
