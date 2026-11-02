@@ -731,9 +731,9 @@ function nodeMarkerStyle(node, tier, active = true) {
     radius: node.role === "repeater" || node.role === "companion" ? 7 : 6,
     color: inactiveOutline ? "#9aa39d" : "#202a33",
     fillColor: color,
-    fillOpacity: 1,
-    opacity: 1,
-    weight: inactiveOutline ? 2 : 1,
+    fillOpacity: inactiveOutline ? 0.45 : 1,
+    opacity: inactiveOutline ? 0.9 : 1,
+    weight: 1,
   };
   if (tier === "top") {
     return { ...base, fillColor: TOP_TIER_COLOR };

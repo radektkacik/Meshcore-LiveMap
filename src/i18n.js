@@ -969,6 +969,7 @@ export const STATIC_EN = {
   "Animovat trasy": "Animate routes",
   "Zobrazit názvy nodů": "Show node names",
   "Jen nody s fotkou": "Only nodes with a photo",
+  "Neaktivní": "Inactive",
   "Jen neaktivní nody (1 h)": "Only inactive nodes (1 h)",
   "Skrýt trasy": "Hide routes",
   "Legenda": "Legend",
