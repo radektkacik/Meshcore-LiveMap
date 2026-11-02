@@ -467,7 +467,6 @@ const state = {
   nodeByKey: new Map(),
   nodeHistoryCache: new Map(),
   nodeInfoCache: new Map(),
-  nodeRelayCache: new Map(),
   nodeInfoSaving: false,
   commentsTarget: null,
   commentsSaving: false,
@@ -1563,7 +1562,6 @@ function setupNodePopup(popup, node) {
 
   void loadNodeInfo(root, node);
   void loadCommentCount(root, node);
-  void loadNodeRelayStats(root, node);
   root.querySelector(".node-user-info-edit")?.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -1772,47 +1770,6 @@ function nodePhotos(node) {
       <div class="node-photos-list"><p class="node-photos-empty">${t("photos.loading")}</p></div>
     </div>
   `;
-}
-
-function nodeRelayStatsBlock(node) {
-  if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
-  return `
-    <div class="node-relay-stats" data-node-key="${escapeHtml(node.public_key.toLowerCase())}">
-      <span>${t("node.relayStats")}</span>
-      <p class="node-relay-stats-value">${t("node.relayLoading")}</p>
-    </div>
-  `;
-}
-
-function renderNodeRelayStats(data) {
-  return data?.hashBytes
-    ? t("node.relaySummary", {
-      day: formatNumber(data.relayCount24h),
-      hour: formatNumber(data.relayCount1h),
-      when: data.lastRelayed ? formatNodeDate(data.lastRelayed) : "—",
-    })
-    : t("node.relayUnavailable");
-}
-
-async function loadNodeRelayStats(root, node) {
-  const key = String(node.public_key || "").toLowerCase();
-  const sections = [...root.querySelectorAll(".node-relay-stats")];
-  if (!sections.length || !/^[0-9a-f]{64}$/.test(key)) return;
-  const cached = state.nodeRelayCache.get(key);
-  if (cached && Date.now() - cached.at < 60_000) {
-    for (const section of sections) section.querySelector(".node-relay-stats-value").textContent = renderNodeRelayStats(cached.data);
-    return;
-  }
-  try {
-    const data = await getJson(`/api/node-relay?key=${encodeURIComponent(key)}`);
-    state.nodeRelayCache.set(key, { at: Date.now(), data });
-    for (const section of root.querySelectorAll(".node-relay-stats")) {
-      section.querySelector(".node-relay-stats-value").textContent = renderNodeRelayStats(data);
-    }
-  } catch (error) {
-    console.error("Relay statistiky se nepodařilo načíst", error);
-    for (const section of sections) section.querySelector(".node-relay-stats-value").textContent = t("node.relayFailed");
-  }
 }
 
 function nodeBasicDetails(node) {
@@ -2232,7 +2189,6 @@ function nodePopupContent(node, active) {
     ${nodeComments(node, true)}
     ${basicDetails}
     ${trafficDetails}
-    ${nodeRelayStatsBlock(node)}
     ${networkDetails}
     ${nodeAnalytics(node)}
     ${nodeLastRoute(node)}
@@ -2269,7 +2225,6 @@ function compactNodePopupContent(node, active) {
     ${nodeScoreSummary(node)}
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
-    ${nodeRelayStatsBlock(node)}
     ${nodeUserInfo(node)}
     ${nodeComments(node)}
     ${nodeLastRoute(node)}
