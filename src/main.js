@@ -729,7 +729,7 @@ function nodeMarkerStyle(node, tier, active = true) {
   const inactiveOutline = IS_BETA && !active;
   const base = {
     radius: node.role === "repeater" || node.role === "companion" ? 7 : 6,
-    color: inactiveOutline ? "#5f6f67" : "#202a33",
+    color: inactiveOutline ? "#111111" : "#202a33",
     fillColor: color,
     fillOpacity: inactiveOutline ? 0.9 : 1,
     opacity: 1,
