@@ -724,14 +724,13 @@ function roleColor(role) {
 const TOP_TIER_COLOR = "#df5064";
 const SECOND_TIER_COLOR = "#efa438";
 
-function nodeMarkerStyle(node, tier, active = true) {
+function nodeMarkerStyle(node, tier) {
   const color = roleColor(node.role);
-  const inactiveOutline = IS_BETA && !active;
   const base = {
     radius: node.role === "repeater" || node.role === "companion" ? 7 : 6,
-    color: inactiveOutline ? "#111111" : "#202a33",
+    color: "#202a33",
     fillColor: color,
-    fillOpacity: inactiveOutline ? 0.7 : 1,
+    fillOpacity: 1,
     opacity: 1,
     weight: 1,
   };
@@ -3409,9 +3408,9 @@ function nodePassesFilters(node) {
 
 function addNodeMarker(node) {
   const active = nodeIsActive(node, nowMs(), NODE_ACTIVE_MS);
-  const entry = { active, marker: null, node, shown: false, stackRole: node.role || "unknown", styleKey: nodeStyleKey(node, null, active), tier: null };
+  const entry = { active, marker: null, node, shown: false, stackRole: node.role || "unknown", styleKey: nodeStyleKey(node, null), tier: null };
   const marker = L.circleMarker([node.lat, node.lon], {
-    ...nodeMarkerStyle(node, null, active),
+    ...nodeMarkerStyle(node, null),
     pane: "markerPane",
   })
     .bindTooltip(() => nodeTooltip(node), {
@@ -3548,16 +3547,16 @@ function shareUrlForNode(node) {
   return buildShareUrl(node);
 }
 
-function nodeStyleKey(node, tier, active = true) {
-  return `${node.role || "unknown"}:${tier || "none"}:${active ? "active" : "inactive"}`;
+function nodeStyleKey(node, tier) {
+  return `${node.role || "unknown"}:${tier || "none"}`;
 }
 
 function applyNodeStyle(entry, tier) {
   entry.tier = tier || null;
-  const styleKey = nodeStyleKey(entry.node, entry.tier, entry.active);
+  const styleKey = nodeStyleKey(entry.node, entry.tier);
   if (entry.styleKey === styleKey) return;
   entry.styleKey = styleKey;
-  entry.marker.setStyle(nodeMarkerStyle(entry.node, entry.tier, entry.active));
+  entry.marker.setStyle(nodeMarkerStyle(entry.node, entry.tier));
 }
 
 function applyNodeMembership() {

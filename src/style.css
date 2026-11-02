@@ -143,7 +143,6 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .legend { display: flex; flex-wrap: wrap; gap: 7px 11px; margin-top: 11px; padding-top: 10px; border-top: 1px solid var(--line); }
 .legend span { display: flex; align-items: center; gap: 5px; color: #53685e; font: 10px "DM Mono", monospace; }
 .legend i.node { width: 7px; height: 7px; border-radius: 50%; }
-.legend i.inactive { box-sizing: border-box; border: 1px solid #111111; background: transparent; }
 .legend i.top { background: #d1374d; }
 .legend i.second { background: #e3911c; }
 .legend i.repeater { background: #287fc9; }
