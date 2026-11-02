@@ -2266,12 +2266,12 @@ function compactNodePopupContent(node, active) {
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
     ${nodeScoreSummary(node)}
-    ${nodeLastRoute(node)}
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
     ${nodeRelayStatsBlock(node)}
     ${nodeUserInfo(node)}
     ${nodeComments(node)}
+    ${nodeLastRoute(node)}
     ${nodeNeighbors(node)}
     ${nodeActionButtons(node)}
     <div class="node-compact-actions">
