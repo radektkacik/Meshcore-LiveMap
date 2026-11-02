@@ -358,6 +358,7 @@
 | 2026-11-02 08:42 | `20261102T084209Z.tar.gz` (stage APP_DIR) | `20261102-0842-61bdf0a` | Beta: detail nodu zjednodušen; uživatelské info, základní údaje a poslední trasa v Přehledu, zrušen tab Info, analytické seznamy omezeny na 10 položek | `src/main.js`, `src/i18n.js` |
 | 2026-11-02 08:43 | `20261102T084338Z.tar.gz` (stage APP_DIR) | `20261102-0843-c122ea5` | Beta: poslední trasa v detailu se aktualizuje po načtení historie tras | `src/main.js` |
 | 2026-11-02 08:44 | `20261102T084430Z.tar.gz` | `20261102-0844-c122ea5` | Prod: zjednodušený detail nodu a živá aktualizace poslední trasy | `src/main.js`, `src/i18n.js` |
+| 2026-11-02 11:59 | `20261102T115934Z.tar.gz` (stage APP_DIR) | `20261102-1159-0bc660c` | Beta experiment: neaktivní nody mají šedý obrys kolečka; produkce beze změny | `src/main.js` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
