@@ -3333,6 +3333,14 @@ function refreshOpenNodeDetailStatus() {
   status.className = active ? "active" : "inactive";
   status.textContent = active ? t("common.active") : t("common.inactive");
   updateNodeActivityDisplay(elements.nodeDetailPage, node);
+  const lastRoute = elements.nodeDetailPage.querySelector(".node-last-route");
+  if (lastRoute) {
+    const next = nodeLastRoute(node);
+    if (lastRoute.outerHTML !== next) {
+      lastRoute.outerHTML = next;
+      bindNodeRouteButton(elements.nodeDetailPage.querySelector(".node-route-show"), node);
+    }
+  }
 }
 
 let popupRefreshTimer = null;
@@ -5333,6 +5341,7 @@ function syncRoutePresentationCore(now = nowMs()) {
       scheduleOpenNodePopupRefresh(entry);
     }
   }
+  refreshOpenNodeDetailStatus();
   updatePerfGauges();
 }
 
