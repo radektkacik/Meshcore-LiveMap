@@ -363,6 +363,7 @@
 | 2026-11-02 12:02 | `20261102T120206Z.tar.gz` | `20261102-1202-590c79c` | Prod: stejné odstranění oddílu Relay (2B+) | `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-11-02 12:05 | `20261102T120540Z.tar.gz` (stage APP_DIR) | `20261102-1205-57f3fd3` | Beta experiment: neaktivní nody mají tenký šedý obrys a ztlumenou výplň; legenda doplněna | `src/main.js`, `src/style.css`, `index.html`, `src/i18n.js` |
 | 2026-11-02 12:11 | `20261102T121115Z.tar.gz` (stage APP_DIR) | `20261102-1211-74b6bf4` | Beta experiment: výplň neaktivních nodů zvýšena z 45 % na 54 % | `src/main.js` |
+| 2026-11-02 12:14 | `20261102T121410Z.tar.gz` (stage APP_DIR) | `20261102-1214-f43e0be` | Beta experiment: sytější šedý obrys a výplň neaktivních nodů na 62 % | `src/main.js`, `src/style.css` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
