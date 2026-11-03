@@ -2228,14 +2228,14 @@ function compactNodePopupContent(node, active) {
       <div><small>${escapeHtml(roleLabel(node.role))}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
-    ${IS_BETA ? "" : nodeScoreSummary(node)}
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
     ${nodeUserInfo(node)}
     ${nodeComments(node)}
     ${nodeLastRoute(node)}
     ${nodeNeighbors(node)}
-    ${IS_BETA ? `${nodeHistory(node)}${nodeScoreSummary(node)}` : ""}
+    ${nodeHistory(node)}
+    ${nodeScoreSummary(node)}
     ${nodeActionButtons(node)}
     <div class="node-compact-actions">
       <button class="node-detail-open" type="button">${t("nodeDetail.open")}</button>
@@ -2288,7 +2288,6 @@ function renderNodeDetail(node, active, initialTab = "overview") {
     for (const element of source) panels.get(panelName)?.appendChild(element);
   };
   move(".node-overview", "overview");
-  if (!IS_BETA) move(".node-score-summary", "overview");
   move(".node-user-info", "overview");
   move(".node-photos", "photos");
   move(".node-comments", "comments");
@@ -2297,12 +2296,8 @@ function renderNodeDetail(node, active, initialTab = "overview") {
   move(".node-analytics", "network", true);
   move(".node-last-route", "overview", true);
   move(".node-neighbors", "overview", true);
-  if (IS_BETA) {
-    move(".node-history", "overview", true);
-    move(".node-score-summary", "overview", true);
-  } else {
-    move(".node-history", "network", true);
-  }
+  move(".node-history", "overview", true);
+  move(".node-score-summary", "overview", true);
   move(".node-public-key", "network", true);
   move(".node-popup-actions", "overview", true);
   shell.querySelector(".node-popup-close")?.remove();
