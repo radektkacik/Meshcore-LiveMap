@@ -373,6 +373,8 @@
 | 2026-11-03 08:48 | `20261103T084801Z.tar.gz` (stage APP_DIR) | `20261103-0848-cde2f64` | Beta: vráceno původní umístění — skóre v Přehledu, historie užitečnosti v Síti | `src/main.js`, `src/style.css` |
 | 2026-11-03 08:54 | `20261103T085420Z.tar.gz` (stage APP_DIR) | `20261103-0854-af86e1a` | Beta: skóre i historie užitečnosti v základní kartě a Přehledu v pořadí před záložkami, historie za sousedy | `src/main.js` |
 | 2026-11-03 10:44 | `20261103T104444Z.tar.gz` (stage APP_DIR) | `20261103-1044-88e2ff9` | Beta: skóre posunuto až za historii užitečnosti na konec Přehledu i základní karty | `src/main.js` |
+| 2026-11-03 10:49 | `20261103T104944Z.tar.gz` (stage APP_DIR) | `20261103-1049-3f07ee6` | Beta: nové pořadí karty nodu nasazeno i bez beta omezení | `src/main.js` |
+| 2026-11-03 10:50 | `20261103T105034Z.tar.gz` | `20261103-1050-3f07ee6` | Prod: skóre a historie užitečnosti dole v základní kartě i Přehledu, historie už není v Síti | `src/main.js` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
