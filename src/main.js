@@ -2192,10 +2192,7 @@ function nodePopupContent(node, active) {
     ${nodeAnalytics(node)}
     ${nodeLastRoute(node)}
     ${nodeNeighbors(node)}
-    ${node.public_key ? `<div class="node-history" data-node-key="${escapeHtml(node.public_key.toUpperCase())}">
-      <div class="node-history-head"><span>${t("node.historyTitle")}</span><small>${t("node.historyLoading")}</small></div>
-      <div class="node-history-chart"></div>
-    </div>` : ""}
+    ${nodeHistory(node)}
     ${node.public_key ? `<div class="node-public-key"><div><span>${t("node.publicKey")}</span><button class="node-key-copy" type="button">${t("common.copy")}</button></div><code>${escapeHtml(node.public_key)}</code></div>` : ""}
     ${nodeActionButtons(node, { close: true })}
   `;
@@ -2215,6 +2212,16 @@ function nodeScoreSummary(node) {
   `;
 }
 
+function nodeHistory(node) {
+  if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
+  return `
+    <div class="node-history" data-node-key="${escapeHtml(node.public_key.toUpperCase())}">
+      <div class="node-history-head"><span>${t("node.historyTitle")}</span><small>${t("node.historyLoading")}</small></div>
+      <div class="node-history-chart"></div>
+    </div>
+  `;
+}
+
 function compactNodePopupContent(node, active) {
   return `
     <header>
@@ -2228,6 +2235,7 @@ function compactNodePopupContent(node, active) {
     ${nodeComments(node)}
     ${nodeLastRoute(node)}
     ${nodeNeighbors(node)}
+    ${IS_BETA ? nodeHistory(node) : ""}
     ${nodeActionButtons(node)}
     <div class="node-compact-actions">
       <button class="node-detail-open" type="button">${t("nodeDetail.open")}</button>
@@ -2289,7 +2297,8 @@ function renderNodeDetail(node, active, initialTab = "overview") {
   move(".node-analytics", "network", true);
   move(".node-last-route", "overview", true);
   move(".node-neighbors", "overview", true);
-  move(".node-history", "network", true);
+  if (IS_BETA) move(".node-history", "overview", true);
+  else move(".node-history", "network", true);
   move(".node-public-key", "network", true);
   move(".node-popup-actions", "overview", true);
   shell.querySelector(".node-popup-close")?.remove();
