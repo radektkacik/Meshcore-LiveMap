@@ -377,6 +377,7 @@
 | 2026-11-03 10:50 | `20261103T105034Z.tar.gz` | `20261103-1050-3f07ee6` | Prod: skóre a historie užitečnosti dole v základní kartě i Přehledu, historie už není v Síti | `src/main.js` |
 | 2026-11-04 11:26 | `20261104T112630Z.tar.gz` (stage APP_DIR) | `20261104-1126-d21941c` | Beta experiment: Provoz a Síťové hodnocení (užitečnost, pokrytí, podíl provozu, bridge, kritičnost) v základní kartě a Přehledu v pořadí před záložkami | `src/main.js` |
 | 2026-11-04 11:28 | `20261104T112839Z.tar.gz` (stage APP_DIR) | `20261104-1128-4dadef6` | Beta: odstraněna duplicitní řádka Užitečnost ze Síťového hodnocení, zůstává souhrn Skóre | `src/main.js` |
+| 2026-11-04 11:36 | `20261104T113643Z.tar.gz` (stage APP_DIR) | `20261104-1136-47e1b59` | Beta: souhrn Skóre přesunut nahoru mezi Provoz a Síťové hodnocení, bez duplicity | `src/main.js` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
