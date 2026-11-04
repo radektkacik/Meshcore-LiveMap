@@ -153,7 +153,12 @@ const INITIAL_PACKET_HASH = /^[0-9a-f]{4,64}$/i.test(INITIAL_PARAMS.get("packet"
 const INITIAL_ZOOM = Number(INITIAL_PARAMS.get("z"));
 
 const THEME_KEY = "meshcoreTheme";
+const FONT_SIZE_KEY = "meshcoreFontSize";
+const FONT_SIZE_VALUES = ["small", "normal", "large"];
+const storedFontSize = localStorage.getItem(FONT_SIZE_KEY);
+const initialFontSize = IS_BETA && FONT_SIZE_VALUES.includes(storedFontSize) ? storedFontSize : "normal";
 document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
+document.documentElement.dataset.fontSize = initialFontSize;
 
 const elements = {
   activityNew: document.querySelector("#activity-new"),
@@ -376,6 +381,9 @@ const elements = {
   statsVisits: document.querySelector("#stats-visits"),
   statsWindow: document.querySelector("#stats-window"),
   themeToggle: document.querySelector("#theme-toggle"),
+  fontSizeBlock: document.querySelector("#font-size-block"),
+  fontSizeLabel: document.querySelector("#font-size-label"),
+  fontSizeSelect: document.querySelector("#font-size-select"),
   viewerCount: document.querySelector("#viewer-count"),
   windowButtons: [...document.querySelectorAll("#window-buttons button")],
 };
@@ -413,6 +421,21 @@ langButton.addEventListener("click", () => {
   location.replace(url);
 });
 elements.themeToggle.after(langButton);
+if (elements.fontSizeBlock) elements.fontSizeBlock.hidden = !IS_BETA;
+if (elements.fontSizeLabel) elements.fontSizeLabel.textContent = t("fontSize.label");
+if (elements.fontSizeSelect) {
+  elements.fontSizeSelect.value = initialFontSize;
+  for (const option of elements.fontSizeSelect.options) {
+    option.textContent = t(`fontSize.${option.value}`);
+  }
+  elements.fontSizeSelect.addEventListener("change", () => {
+    const next = FONT_SIZE_VALUES.includes(elements.fontSizeSelect.value)
+      ? elements.fontSizeSelect.value
+      : "normal";
+    document.documentElement.dataset.fontSize = next;
+    localStorage.setItem(FONT_SIZE_KEY, next);
+  });
+}
 elements.animationToggle.checked = localStorage.getItem("meshcoreAnimateRoutes") !== "false";
 
 function initialRouteRetentionMs() {
