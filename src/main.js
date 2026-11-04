@@ -1647,14 +1647,6 @@ function setupNodePopup(popup, node) {
     }
   });
 
-  const healthBadge = root.querySelector(".node-health-badge");
-  healthBadge?.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (scrollNodeHealthHistory(root)) return;
-    openNodeDetail(node);
-    setTimeout(() => scrollNodeHealthHistory(elements.nodeDetailPage), 80);
-  });
   for (const button of root.querySelectorAll(".node-health-windows button")) {
     button.addEventListener("click", (event) => {
       event.preventDefault();
@@ -2229,7 +2221,7 @@ function nodeHealthBadge(node) {
     statusText,
     temperatureText ? `${t("node.temperature")}: ${temperatureText}` : null,
   ].filter(Boolean).join(" · ");
-  return `<button type="button" class="node-health-badge ${status}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
+  return `<button type="button" class="node-health-badge ${status}" data-health-node-key="${escapeHtml(node.public_key.toUpperCase())}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
     ${battery == null ? "" : batteryStatusIcon(status)}
     ${voltageText ? `<span class="node-health-voltage">${escapeHtml(voltageText)}</span>` : ""}
     ${temperatureText ? `${THERMOMETER_ICON}<span class="node-health-temperature">${escapeHtml(temperatureText)}</span>` : ""}
@@ -7243,6 +7235,20 @@ document.addEventListener("click", (event) => {
     nodeSearch.setAttribute("aria-expanded", "false");
   }
 });
+
+document.addEventListener("click", (event) => {
+  const badge = event.target instanceof Element ? event.target.closest(".node-health-badge") : null;
+  if (!badge) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const detailPage = badge.closest(".node-detail-page");
+  if (detailPage?.open && scrollNodeHealthHistory(detailPage)) return;
+  const key = String(badge.dataset.healthNodeKey || "").toUpperCase();
+  const node = key ? state.nodeByKey.get(key) : null;
+  if (!node) return;
+  openNodeDetail(node);
+  setTimeout(() => scrollNodeHealthHistory(elements.nodeDetailPage), 80);
+}, true);
 
 document.addEventListener("click", (event) => {
   const target = event.target instanceof Element ? event.target.closest(".node-neighbors-map") : null;
