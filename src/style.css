@@ -1157,3 +1157,75 @@ html[data-theme="dark"] .map-status { background: rgba(18, 24, 30, 0.92); }
 html[data-theme="dark"] .los-recompute { color: #8ec5f0; background: rgba(40, 127, 201, 0.14); border-color: rgba(40, 127, 201, 0.4); }
 
 .perf-overlay { position: fixed; right: 8px; bottom: 8px; z-index: 3000; padding: 6px 9px; border: 1px solid rgba(120, 255, 190, 0.25); border-radius: 8px; background: rgba(12, 18, 16, 0.88); color: #b9ffd9; font: 11px/1.5 "DM Mono", monospace; white-space: pre; pointer-events: none; }
+
+/* Beta readability pass: slightly larger and darker UI text */
+:root { --muted: #4f6458; }
+html:not([data-theme="dark"]) { color: #111f18; }
+html[data-theme="dark"] { --muted: #95a8a0; }
+.hud-title small { font-size: 13px; }
+.status-line { font-size: 13px; }
+.metrics span { font-size: 10px; }
+.metrics strong { font-size: 13px; }
+.node-search input { font-size: 15px; }
+.search-results strong { font-size: 14px; }
+.search-results small { font-size: 12px; }
+.map-actions > button { font-size: 13px; }
+.filter-block .filter-title,
+.filter-chips label,
+.filter-chips button { font-size: 12px; }
+.legend span,
+.source-note { font-size: 12px; }
+.viewer-line { font-size: 13px; }
+.activity-panel header span { font-size: 14px; }
+.activity-panel header small { font-size: 12px; }
+.route-feed b, .route-feed time, .route-feed small { font-size: 12px; }
+.route-feed p { font-size: 13px; }
+.stats-controls label { font-size: 12px; }
+.stats-controls select { font-size: 13px; }
+.stats-counts button { font-size: 12px; }
+.stats-list .stats-name { font-size: 13px; }
+.stats-value { font-size: 13px; }
+.node-popup-card, .node-detail-shell { color: #111f18; }
+.node-popup-card h3 { font-size: 18px; }
+.node-popup-card header small, .node-public-key span { font-size: 12px; }
+.node-popup-details h4, .node-health-history-head h4 { font-size: 12px; }
+.node-popup-card dt, .node-detail-shell dt,
+.node-popup-card dd, .node-detail-shell dd { font-size: 13px; }
+.node-popup-card dt, .node-detail-shell dt { color: #4f6458; }
+.node-popup-card dd, .node-detail-shell dd { color: #111f18; }
+.node-health-badge { font-size: 13px; }
+.node-health-series-head span { color: #2f4438; font-size: 12px; }
+.node-health-series-head small { font-size: 10px; }
+.node-history-head span { font-size: 11px; }
+.node-history-head small { font-size: 10px; }
+.node-last-route > span, .node-neighbors > span { font-size: 12px; }
+.node-last-route strong { font-size: 13px; }
+.node-last-route time, .node-last-route small { font-size: 12px; }
+.node-last-route p { font-size: 13px; }
+.node-route-path li { font-size: 12px; }
+.node-route-show { font-size: 13px; }
+.node-neighbor { font-size: 13px; }
+.node-neighbor small, .node-neighbors > small { font-size: 12px; }
+.node-key-copy, .node-public-key code { font-size: 12px; }
+.node-qr-toggle { font-size: 13px; }
+.node-tooltip, .route-tooltip { font-size: 13px !important; }
+.node-label { font-size: 12px; }
+.map-status { font-size: 13px; }
+.packet-focus-bar, .packet-focus-bar b, .packet-focus-bar code { font-size: 12px; }
+.packet-focus-bar button, .packet-focus-bar .packet-focus-analyzer { font-size: 11px; }
+
+@media (max-width: 700px) {
+  .node-popup-card h3 { font-size: 19px; }
+  .node-popup-card dt, .node-detail-shell dt,
+  .node-popup-card dd, .node-detail-shell dd { font-size: 14px; }
+  .node-popup-details h4, .node-health-history-head h4 { font-size: 12px; }
+  .node-health-badge { font-size: 13px; }
+  .node-health-series-head span { font-size: 13px; }
+  .node-health-series-head small { font-size: 11px; }
+  .node-history-head span { font-size: 12px; }
+  .node-history-head small { font-size: 11px; }
+  .node-last-route > span, .node-neighbors > span { font-size: 12px; }
+  .node-route-path li, .node-neighbor { font-size: 13px; }
+  .node-neighbor small, .node-neighbors > small { font-size: 12px; }
+  .node-label { font-size: 12px; }
+}
