@@ -110,6 +110,7 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       COMMENT_COOLDOWN_MS: "0",
       REPEATER_IMPORT: "1",
       PACKET_DB_PATH: join(directory, "packets.sqlite"),
+      CZ_HEALTH_DB_PATH: join(directory, "cz-health.sqlite"),
       PHOTO_DIR: join(directory, "uploads"),
       PHOTO_AUTO_APPROVE: "0",
       PHOTO_COOLDOWN_MS: "0",

@@ -10,6 +10,8 @@ import { MeshCorePacketDecoder } from "@michaelhart/meshcore-decoder";
 import { decodedPacketHashBytes, decodedPacketPath, TimeBoundRingBuffer } from "./backend-utils.mjs";
 import { createNodeMetricsStore } from "./node-metrics.mjs";
 import { createPacketStore } from "./packet-store.mjs";
+import { decodeCzHealth } from "./cz-health.mjs";
+import { createCzHealthStore } from "./cz-health-store.mjs";
 import { createVisitStatsStore } from "./visit-stats.mjs";
 import { createFeedbackStore } from "./feedback.mjs";
 import { createPhotoStore, detectImage, PhotoError } from "./photos.mjs";
@@ -52,6 +54,10 @@ const packetStore = createPacketStore(packetDbPath, {
   maxRows: Math.max(1, Number(process.env.PACKET_MAX_ROWS || 500_000)),
 });
 const packetCollectionMs = Math.max(30_000, Number(process.env.PACKET_COLLECT_MS || 5 * 60 * 1000));
+const healthDbPath = process.env.CZ_HEALTH_DB_PATH || join(process.cwd(), "data", "cz-health.sqlite");
+const healthStore = createCzHealthStore(healthDbPath, {
+  retentionMs: Math.max(1, Number(process.env.CZ_HEALTH_RETENTION_MS || 90 * 24 * 60 * 60 * 1000)),
+});
 const visitsDbPath = process.env.VISITS_DB_PATH || join(process.cwd(), "data", "visits.sqlite");
 const visitStore = createVisitStatsStore(visitsDbPath);
 const feedbackDbPath = process.env.FEEDBACK_DB_PATH || join(process.cwd(), "data", "feedback.sqlite");
@@ -258,7 +264,8 @@ function storeNodesCache(data) {
 
 function buildNodesPayload(data) {
   const payload = { ...data };
-  payload.nodes = metricsStore.decorateNodes(Array.isArray(payload.nodes) ? payload.nodes : []);
+  const nodes = metricsStore.decorateNodes(Array.isArray(payload.nodes) ? payload.nodes : []);
+  payload.nodes = healthStore.decorateNodes(nodes);
   payload.scoreHistory = { collectionMinutes: 15, historyDays: 30, windowDays: 7 };
   return payload;
 }
@@ -489,6 +496,18 @@ function parseMqttPacket(topic, message) {
     rssi: Number(source.RSSI),
     snr: Number(source.SNR),
   };
+}
+
+function ingestCzHealth(rawHex, observedAt, packetHash = null) {
+  if (!rawHex) return null;
+  const health = decodeCzHealth(rawHex, Number(observedAt) || Date.now());
+  if (!health) return null;
+  try {
+    healthStore.record(health, { packetHash, rawHex });
+  } catch (error) {
+    console.error(`CzHealth store failed: ${error.message}`);
+  }
+  return health;
 }
 
 const feedbackRate = new Map();
@@ -1434,6 +1453,7 @@ if (mqttEnabled) {
       if (packet?.hash) {
         lastMqttPacketAt = Date.now();
         recentPackets.add(packet);
+        ingestCzHealth(packet.raw_hex, lastMqttPacketAt, packet.hash);
         const stored = toStoreRow(packet, lastMqttPacketAt);
         if (stored) packetStore.record([stored]);
         broadcast("packet", packet);
@@ -1558,6 +1578,13 @@ async function collectPackets() {
       Array.isArray(scopedData.packets) ? scopedData.packets : [],
       now,
     );
+    for (const row of rows) {
+      if (Number(row.payload_type) !== 6) continue;
+      const observedAt = Number(row.observed_at)
+        || Date.parse(row.timestamp || row.first_seen || "")
+        || now;
+      ingestCzHealth(row.raw_hex, observedAt, row.hash);
+    }
     const stored = packetStore.record(rows);
     packetStore.prune(now);
     console.log(`Packet routes updated: ${stored} stored, ${packetStore.count()} total`);
@@ -1571,6 +1598,7 @@ async function collectPackets() {
 
 void collectPackets();
 setInterval(collectPackets, packetCollectionMs).unref();
+setInterval(() => healthStore.prune(), 6 * 60 * 60 * 1000).unref();
 
 visitStore.prune();
 setInterval(() => visitStore.prune(), 24 * 60 * 60 * 1000).unref();
@@ -3582,6 +3610,27 @@ async function handleRequest(request, response) {
     const requestedDays = Number(url.searchParams.get("days") || 7);
     const days = Number.isFinite(requestedDays) ? Math.min(30, Math.max(1, requestedDays)) : 7;
     sendJson(response, 200, { key, days, samples: metricsStore.history(key, days) });
+    return;
+  }
+
+  if (url.pathname === "/api/node-health") {
+    if (request.method !== "GET") {
+      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      return;
+    }
+    const key = String(url.searchParams.get("key") || "").toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(key)) {
+      sendJson(response, 400, { error: "Neplatný klíč uzlu." });
+      return;
+    }
+    const requestedDays = Number(url.searchParams.get("days") || 7);
+    const days = Number.isFinite(requestedDays) ? Math.min(90, Math.max(1, requestedDays)) : 7;
+    const data = healthStore.history(key, days);
+    if (!data) {
+      sendJson(response, 400, { error: "Neplatný klíč uzlu." });
+      return;
+    }
+    sendJson(response, 200, { key, ...data });
     return;
   }
 

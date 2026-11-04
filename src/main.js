@@ -2158,10 +2158,23 @@ function nodePopupContent(node, active) {
 
 function nodeTrafficDetails(node) {
   const rankNodes = [...state.nodeByKey.values()];
+  const health = node.health && typeof node.health === "object" ? node.health : null;
+  const battery = health?.batteryMv ?? node.battery_mv;
+  const temperature = health?.temperatureC ?? node.temperature_c;
+  const batteryStatus = health?.batteryStatus && ["ok", "warn", "critical", "stale"].includes(health.batteryStatus)
+    ? t(`node.healthBattery.${health.batteryStatus}`)
+    : null;
+  const tempSource = health?.temperatureSource && ["mcu", "sensor"].includes(health.temperatureSource)
+    ? t(`node.tempSource.${health.temperatureSource}`)
+    : null;
   return renderNodeDetails(t("node.trafficDetails"), [
     [t("node.advertPackets"), countWithRank(node.advert_count, rankNodes, node, "advert_count"), t("node.advertHelp")],
-    [t("node.battery"), node.battery_mv == null ? null : `${node.battery_mv} mV`],
-    [t("node.temperature"), node.temperature_c == null ? null : `${node.temperature_c} °C`],
+    [t("node.battery"), battery == null ? null : `${formatNumber(battery)} mV${batteryStatus ? ` · ${batteryStatus}` : ""}`],
+    [t("node.temperature"), temperature == null ? null : `${formatDecimal(temperature, 1)} °C${tempSource ? ` · ${tempSource}` : ""}`],
+    [t("node.current"), health?.currentMa != null && Number.isFinite(Number(health.currentMa)) ? `${formatNumber(health.currentMa)} mA` : null],
+    [t("node.charging"), health ? (health.charging ? t("common.yes") : t("common.no")) : null],
+    [t("node.externalPower"), health ? (health.externalPower ? t("common.yes") : t("common.no")) : null],
+    [t("node.healthObserved"), health?.observedAt ? formatNodeDate(health.observedAt) : null],
   ], "", "node-traffic-details");
 }
 
