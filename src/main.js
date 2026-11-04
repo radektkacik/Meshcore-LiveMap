@@ -1647,7 +1647,15 @@ function setupNodePopup(popup, node) {
     }
   });
 
+  for (const button of root.querySelectorAll(".node-health-windows button")) {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      void loadNodeHealthHistory(root, node, Number(button.dataset.healthDays) || 1);
+    });
+  }
   void loadNodeHistory(root, node);
+  void loadNodeHealthHistory(root, node);
   void loadNodePhotos(root, node);
   void loadNodeAnalytics(root, node);
 }
@@ -2146,6 +2154,7 @@ function nodePopupContent(node, active) {
     ${nodeComments(node, true)}
     ${basicDetails}
     ${nodeTrafficDetails(node)}
+    ${nodeHealthHistory(node)}
     ${nodeNetworkDetails(node)}
     ${nodeAnalytics(node)}
     ${nodeLastRoute(node)}
@@ -2268,6 +2277,31 @@ function nodeHistory(node) {
   `;
 }
 
+function nodeHealthHistory(node) {
+  if (!IS_BETA || !node.health || !/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
+  return `
+    <section class="node-health-history" data-node-key="${escapeHtml(node.public_key.toUpperCase())}">
+      <div class="node-health-history-head">
+        <h4>${t("node.healthHistoryTitle")}</h4>
+        <div class="node-health-windows" role="group" aria-label="${t("node.healthHistoryTitle")}">
+          <button type="button" data-health-days="1" class="active">${t("node.healthHistory24h")}</button>
+          <button type="button" data-health-days="7">${t("node.healthHistory7d")}</button>
+          <button type="button" data-health-days="30">${t("node.healthHistory30d")}</button>
+        </div>
+      </div>
+      <div class="node-health-series node-health-series-battery" data-health-metric="battery">
+        <div class="node-health-series-head"><span>${t("node.battery")}</span><small>${t("node.healthHistoryLoading")}</small></div>
+        <div class="node-health-chart node-health-chart-battery"></div>
+      </div>
+      <div class="node-health-series node-health-series-temperature" data-health-metric="temperature">
+        <div class="node-health-series-head"><span>${t("node.temperature")}</span><small>${t("node.healthHistoryLoading")}</small></div>
+        <div class="node-health-chart node-health-chart-temperature"></div>
+      </div>
+      <p class="node-health-history-empty" hidden></p>
+    </section>
+  `;
+}
+
 function compactNodePopupContent(node, active) {
   return `
     <header>
@@ -2344,6 +2378,7 @@ function renderNodeDetail(node, active, initialTab = "overview") {
   move(".node-comments", "comments");
   move(".node-basic-details", "overview");
   move(".node-traffic-details", "overview", true);
+  move(".node-health-history", "overview", true);
   move(".node-network-details", "overview", true);
   move(".node-analytics", "network", true);
   move(".node-last-route", "overview", true);
@@ -2498,6 +2533,152 @@ async function loadNodeHistory(root, node) {
     if (chart) chart.textContent = t("node.historyUnavailable");
     const summary = root.querySelector(".node-history-head small");
     if (summary) summary.textContent = "";
+  }
+}
+
+function splitHealthSegments(points, gapMs) {
+  const segments = [];
+  let current = [];
+  for (const point of points) {
+    if (current.length && point.time - current.at(-1).time > gapMs) {
+      segments.push(current);
+      current = [];
+    }
+    current.push(point);
+  }
+  if (current.length) segments.push(current);
+  return segments;
+}
+
+function healthValueText(metric, value) {
+  return metric === "battery"
+    ? `${formatDecimal(value / 1000, 2)} V`
+    : `${formatDecimal(value, 1)} °C`;
+}
+
+function renderNodeHealthSeries(container, rawPoints, metric) {
+  if (!container) return;
+  const chart = container.querySelector(".node-health-chart");
+  const summary = container.querySelector(".node-health-series-head small");
+  if (!chart) return;
+  const points = (rawPoints || [])
+    .map((sample) => ({ time: Date.parse(sample.at), value: Number(sample.value) }))
+    .filter((point) => Number.isFinite(point.time) && Number.isFinite(point.value))
+    .sort((a, b) => a.time - b.time);
+  if (points.length < 2) {
+    chart.textContent = t("node.healthHistoryEmpty");
+    if (summary) summary.textContent = "";
+    return;
+  }
+  const width = 300;
+  const height = 58;
+  const pad = 5;
+  const firstTime = points[0].time;
+  const lastTime = points.at(-1).time;
+  const timeSpan = Math.max(1, lastTime - firstTime);
+  const values = points.map((point) => point.value);
+  const valueMin = Math.min(...values);
+  const valueMax = Math.max(...values);
+  const valuePadding = metric === "battery" ? 100 : 1;
+  const yMin = valueMin - valuePadding;
+  const yMax = valueMax + valuePadding;
+  const valueSpan = Math.max(1, yMax - yMin);
+  const x = (time) => pad + (width - 2 * pad) * ((time - firstTime) / timeSpan);
+  const y = (value) => height - pad - (height - 2 * pad) * ((value - yMin) / valueSpan);
+  const segments = splitHealthSegments(points, metric === "battery" ? 2 * 60 * 60 * 1000 : 6 * 60 * 60 * 1000);
+  const shapes = segments.map((segment) => {
+    if (segment.length === 1) {
+      return `<circle cx="${x(segment[0].time).toFixed(1)}" cy="${y(segment[0].value).toFixed(1)}" r="2.5" class="node-health-dot"></circle>`;
+    }
+    const line = segment.map((point) => `${x(point.time).toFixed(1)},${y(point.value).toFixed(1)}`).join(" ");
+    const first = segment[0];
+    const last = segment.at(-1);
+    return `<polygon points="${x(first.time).toFixed(1)},${height - pad} ${line} ${x(last.time).toFixed(1)},${height - pad}" class="node-health-area"></polygon><polyline points="${line}" class="node-health-line"></polyline>`;
+  }).join("");
+  chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(t("node.healthHistoryTitle"))}">
+    ${shapes}
+    <circle cx="${x(lastTime).toFixed(1)}" cy="${y(points.at(-1).value).toFixed(1)}" r="3" class="node-health-dot"></circle>
+  </svg>`;
+  const cursor = document.createElement("div");
+  cursor.className = "node-health-cursor";
+  cursor.hidden = true;
+  const tip = document.createElement("div");
+  tip.className = "node-health-tip";
+  tip.hidden = true;
+  chart.append(cursor, tip);
+  const showPoint = (clientX) => {
+    const rect = chart.getBoundingClientRect();
+    if (!rect.width) return;
+    const chartX = Math.max(pad, Math.min(width - pad, ((clientX - rect.left) / rect.width) * width));
+    let nearest = points[0];
+    let best = Infinity;
+    for (const point of points) {
+      const distance = Math.abs(x(point.time) - chartX);
+      if (distance < best) {
+        best = distance;
+        nearest = point;
+      }
+    }
+    const left = (x(nearest.time) / width) * rect.width;
+    cursor.style.left = `${(x(nearest.time) / width) * 100}%`;
+    cursor.hidden = false;
+    tip.textContent = `${formatDateTimeShort(nearest.time)} · ${healthValueText(metric, nearest.value)}`;
+    tip.style.left = `${Math.max(58, Math.min(rect.width - 58, left))}px`;
+    tip.hidden = false;
+  };
+  chart.onpointermove = (event) => showPoint(event.clientX);
+  chart.onpointerdown = (event) => showPoint(event.clientX);
+  chart.onpointerleave = () => {
+    cursor.hidden = true;
+    tip.hidden = true;
+  };
+  if (summary) {
+    summary.textContent = t("node.healthHistoryRange", {
+      min: healthValueText(metric, valueMin),
+      max: healthValueText(metric, valueMax),
+      count: points.length,
+    });
+  }
+}
+
+function renderNodeHealthHistory(root, data) {
+  const section = root.querySelector(".node-health-history");
+  if (!section) return;
+  const samples = data?.samples || {};
+  renderNodeHealthSeries(
+    section.querySelector('[data-health-metric="battery"]'),
+    samples.battery || [],
+    "battery",
+  );
+  renderNodeHealthSeries(
+    section.querySelector('[data-health-metric="temperature"]'),
+    samples.temperature || [],
+    "temperature",
+  );
+}
+
+async function loadNodeHealthHistory(root, node, days = 1) {
+  const section = root.querySelector(".node-health-history");
+  if (!section || !IS_BETA) return;
+  const key = String(node.public_key || "").toUpperCase();
+  if (!key) return;
+  for (const button of section.querySelectorAll("[data-health-days]")) {
+    button.classList.toggle("active", Number(button.dataset.healthDays) === days);
+  }
+  try {
+    const data = await getJson(`/api/node-health?key=${encodeURIComponent(key)}&days=${days}`);
+    if (!root.isConnected) return;
+    const empty = section.querySelector(".node-health-history-empty");
+    if (empty) empty.hidden = true;
+    renderNodeHealthHistory(section, data);
+  } catch (error) {
+    console.error("Historii zdraví nodu se nepodařilo načíst", error);
+    if (!root.isConnected) return;
+    const empty = section.querySelector(".node-health-history-empty");
+    if (empty) {
+      empty.hidden = false;
+      empty.textContent = t("node.healthHistoryUnavailable");
+    }
   }
 }
 

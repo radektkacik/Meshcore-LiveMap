@@ -354,6 +354,35 @@ html[data-theme="dark"] .node-history-line { stroke: #5fd0a5; }
 html[data-theme="dark"] .node-history-dot { fill: #5fd0a5; stroke: #161d24; }
 html[data-theme="dark"] .node-history-cursor { background: rgba(230, 236, 239, 0.3); }
 html[data-theme="dark"] .node-history-tip { color: #17271f; background: #e6ecef; }
+html[data-theme="dark"] .node-health-history { background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .node-health-series-head span { color: #d7e2dc; }
+html[data-theme="dark"] .node-health-series-head small { color: #8fa0a8; }
+html[data-theme="dark"] .node-health-windows button { color: #b9c9d2; background: #1b232b; border-color: #2f3d46; }
+html[data-theme="dark"] .node-health-windows button.active { color: #fff; background: var(--green); border-color: var(--green); }
+html[data-theme="dark"] .node-health-chart-battery { --health-color: #5fd0a5; --health-fill: rgba(95, 208, 165, 0.14); }
+html[data-theme="dark"] .node-health-chart-temperature { --health-color: #f0a044; --health-fill: rgba(240, 160, 68, 0.14); }
+html[data-theme="dark"] .node-health-cursor { background: rgba(230, 236, 239, 0.3); }
+html[data-theme="dark"] .node-health-tip { color: #17271f; background: #e6ecef; }
+.node-health-history { padding: 8px 15px 10px; border-bottom: 1px solid var(--line); background: #f8faf7; }
+.node-health-history-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
+.node-health-history-head h4 { margin: 0; color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+.node-health-windows { display: flex; gap: 3px; }
+.node-health-windows button { padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; color: #49665b; background: #fff; font: 9px "DM Mono", monospace; cursor: pointer; }
+.node-health-windows button.active { color: #fff; border-color: var(--green); background: var(--green); }
+.node-health-series { margin-top: 7px; }
+.node-health-series-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.node-health-series-head span { color: #3f584e; font: 500 11px "DM Mono", monospace; }
+.node-health-series-head small { color: #667b70; font: 9px "DM Mono", monospace; text-align: right; }
+.node-health-chart { position: relative; height: 58px; margin-top: 3px; color: var(--muted); font-size: 10px; cursor: crosshair; }
+.node-health-chart svg { display: block; width: 100%; height: 58px; overflow: visible; }
+.node-health-area { fill: var(--health-fill); }
+.node-health-line { fill: none; stroke: var(--health-color); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.node-health-dot { fill: var(--health-color); stroke: #fff; stroke-width: 1.5; }
+.node-health-chart-battery { --health-color: #078e62; --health-fill: rgba(7, 142, 98, 0.13); }
+.node-health-chart-temperature { --health-color: #d87412; --health-fill: rgba(216, 116, 18, 0.13); }
+.node-health-cursor { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(23, 39, 31, 0.35); pointer-events: none; }
+.node-health-tip { position: absolute; top: 1px; z-index: 2; padding: 2px 5px; border-radius: 4px; color: #fff; background: #17271f; font: 9px "DM Mono", monospace; white-space: nowrap; pointer-events: none; transform: translateX(-50%); }
+.node-health-history-empty { margin: 8px 0 0; color: var(--muted); font-size: 10px; }
 .node-popup-details { padding: 8px 15px 5px; border-bottom: 1px solid var(--line); }
 .node-popup-details-title { position: relative; min-height: 18px; }
 .node-popup-details h4 { margin: 0 0 3px; color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: 0.09em; text-transform: uppercase; }
