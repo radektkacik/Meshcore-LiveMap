@@ -2283,11 +2283,9 @@ function scrollNodeHealthHistory(root) {
   const shell = section.closest(".node-detail-shell");
   const overviewTab = shell?.querySelector('[data-node-detail-tab="overview"]');
   if (overviewTab && !overviewTab.classList.contains("active")) overviewTab.click();
-  requestAnimationFrame(() => {
-    section.scrollIntoView({ behavior: "smooth", block: "center" });
-    section.classList.add("node-health-history-highlight");
-    setTimeout(() => section.classList.remove("node-health-history-highlight"), 1_200);
-  });
+  section.scrollIntoView({ behavior: "smooth", block: "center" });
+  section.classList.add("node-health-history-highlight");
+  setTimeout(() => section.classList.remove("node-health-history-highlight"), 1_200);
   return true;
 }
 
