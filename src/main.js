@@ -2356,7 +2356,6 @@ function compactNodePopupContent(node, active) {
       </div>
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
-    ${nodeCompactPublicKey(node)}
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
     ${nodeTrafficDetails(node)}
@@ -2366,6 +2365,7 @@ function compactNodePopupContent(node, active) {
     ${nodeLastRoute(node)}
     ${nodeNeighbors(node)}
     ${nodeHistory(node)}
+    ${nodeCompactPublicKey(node)}
     ${nodeActionButtons(node)}
     <div class="node-compact-actions">
       <button class="node-detail-open" type="button">${t("nodeDetail.open")}</button>
@@ -2419,7 +2419,6 @@ function renderNodeDetail(node, active, initialTab = "overview") {
     for (const element of source) panels.get(panelName)?.appendChild(element);
   };
   move(".node-overview", "overview");
-  move(".node-public-key", "overview", true);
   move(".node-user-info", "overview");
   move(".node-photos", "photos");
   move(".node-comments", "comments");
@@ -2431,6 +2430,7 @@ function renderNodeDetail(node, active, initialTab = "overview") {
   move(".node-last-route", "overview", true);
   move(".node-neighbors", "overview", true);
   move(".node-history", "overview", true);
+  move(".node-public-key", "overview", true);
   move(".node-popup-actions", "overview", true);
   shell.querySelector(".node-popup-close")?.remove();
   const selectTab = (tab) => {
