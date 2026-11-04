@@ -327,7 +327,9 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-popup-card header > span.inactive { background: #899990; }
 .node-header-main { flex: 1 1 auto; min-width: 0; }
 .node-header-main .node-health-badge { margin-top: 7px; }
-.node-health-badge { display: inline-flex; align-items: center; gap: 4px; color: #3f584e; font: 500 12px "DM Mono", monospace; line-height: 18px; white-space: nowrap; }
+.node-health-badge { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; border-radius: 4px; color: #3f584e; background: transparent; font: 500 12px "DM Mono", monospace; line-height: 18px; text-align: left; white-space: nowrap; cursor: pointer; appearance: none; }
+.node-health-badge:hover { opacity: 0.78; }
+.node-health-badge:focus-visible { outline: 2px solid rgba(7, 142, 98, 0.45); outline-offset: 2px; }
 .node-health-battery { flex: 0 0 auto; width: 18px; height: 18px; color: #899990; }
 .node-health-thermometer { flex: 0 0 auto; width: 15px; height: 15px; color: #667b70; }
 .node-health-badge.ok .node-health-battery { color: #1f9d63; }
@@ -364,6 +366,7 @@ html[data-theme="dark"] .node-health-chart-temperature { --health-color: #f0a044
 html[data-theme="dark"] .node-health-cursor { background: rgba(230, 236, 239, 0.3); }
 html[data-theme="dark"] .node-health-tip { color: #17271f; background: #e6ecef; }
 .node-health-history { padding: 8px 15px 10px; border-bottom: 1px solid var(--line); background: #f8faf7; }
+.node-health-history-highlight { box-shadow: inset 0 0 0 2px rgba(7, 142, 98, 0.42); }
 .node-health-history-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
 .node-health-history-head h4 { margin: 0; color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
 .node-health-windows { display: flex; gap: 3px; }

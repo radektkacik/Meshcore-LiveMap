@@ -1647,6 +1647,14 @@ function setupNodePopup(popup, node) {
     }
   });
 
+  const healthBadge = root.querySelector(".node-health-badge");
+  healthBadge?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (scrollNodeHealthHistory(root)) return;
+    openNodeDetail(node);
+    setTimeout(() => scrollNodeHealthHistory(elements.nodeDetailPage), 80);
+  });
   for (const button of root.querySelectorAll(".node-health-windows button")) {
     button.addEventListener("click", (event) => {
       event.preventDefault();
@@ -2221,11 +2229,11 @@ function nodeHealthBadge(node) {
     statusText,
     temperatureText ? `${t("node.temperature")}: ${temperatureText}` : null,
   ].filter(Boolean).join(" · ");
-  return `<div class="node-health-badge ${status}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
+  return `<button type="button" class="node-health-badge ${status}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
     ${battery == null ? "" : batteryStatusIcon(status)}
     ${voltageText ? `<span class="node-health-voltage">${escapeHtml(voltageText)}</span>` : ""}
     ${temperatureText ? `${THERMOMETER_ICON}<span class="node-health-temperature">${escapeHtml(temperatureText)}</span>` : ""}
-  </div>`;
+  </button>`;
 }
 
 function nodeNetworkDetails(node) {
@@ -2275,6 +2283,20 @@ function nodeHistory(node) {
       <div class="node-history-chart"></div>
     </div>
   `;
+}
+
+function scrollNodeHealthHistory(root) {
+  const section = root?.querySelector(".node-health-history");
+  if (!section) return false;
+  const shell = section.closest(".node-detail-shell");
+  const overviewTab = shell?.querySelector('[data-node-detail-tab="overview"]');
+  if (overviewTab && !overviewTab.classList.contains("active")) overviewTab.click();
+  requestAnimationFrame(() => {
+    section.scrollIntoView({ behavior: "smooth", block: "center" });
+    section.classList.add("node-health-history-highlight");
+    setTimeout(() => section.classList.remove("node-health-history-highlight"), 1_200);
+  });
+  return true;
 }
 
 function nodeHealthHistory(node) {
