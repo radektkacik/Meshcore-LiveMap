@@ -380,6 +380,8 @@
 | 2026-11-04 11:36 | `20261104T113643Z.tar.gz` (stage APP_DIR) | `20261104-1136-47e1b59` | Beta: souhrn Skóre přesunut nahoru mezi Provoz a Síťové hodnocení, bez duplicity | `src/main.js` |
 | 2026-11-04 11:39 | `20261104T113909Z.tar.gz` (stage APP_DIR) | `20261104-1139-e772c57` | Beta: Skóre má stejný vzhled jako řádky síťového hodnocení, bez zeleného podkladu | `src/main.js`, `src/style.css` |
 | 2026-11-04 11:45 | `20261104T114521Z.tar.gz` (stage APP_DIR) | `20261104-1145-d996b48` | Beta: Užitečnost je řádek přímo v Síťovém hodnocení, samostatný souhrn Skóre a veřejný klíč z karty zmizely | `src/main.js`, `src/style.css` |
+| 2026-11-04 11:56 | `20261104T115640Z.tar.gz` (stage APP_DIR) | `20261104-1156-3313fdf` | Beta: stejné pořadí ukazatelů bez beta omezení | `src/main.js`, `src/style.css` |
+| 2026-11-04 11:57 | `20261104T115715Z.tar.gz` | `20261104-1157-3313fdf` | Prod: Provoz a Síťové hodnocení v kartě i Přehledu, Užitečnost jako řádek hodnocení, bez samostatného Skóre a klíče | `src/main.js`, `src/style.css` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
