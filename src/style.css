@@ -299,6 +299,14 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-rank-line { color: #667b70 !important; font-weight: 500 !important; }
 .node-key-summary { margin-left: auto; }
 .node-key-summary code { color: #49665b; font: 9px "DM Mono", monospace; }
+.node-score-summary-flat { display: flex; flex-direction: column; align-items: stretch; gap: 0; padding: 8px 15px 5px; background: transparent; }
+.node-score-summary-flat > span { width: 100%; }
+.node-score-summary-flat .node-score-line { align-items: baseline; justify-content: flex-start; gap: 4px 10px; padding: 5px 0; border-bottom: 1px solid rgba(30, 65, 49, 0.08); }
+.node-score-summary-flat .node-score-line small { margin-right: auto; font: 11px Manrope, sans-serif; letter-spacing: 0; text-transform: none; }
+.node-score-summary-flat .node-score-line b { font-size: 11px; font-weight: 500; }
+.node-score-summary-flat .node-rank-line { color: #667b70 !important; font-size: 10px !important; }
+.node-score-summary-flat .node-key-summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-left: 0; padding-top: 5px; }
+.node-score-summary-flat .node-key-summary code { font-size: 10px; }
 .node-photos-count, .node-comments-count { min-width: 14px; padding: 1px 4px; border-radius: 999px; color: #087a57; background: #d9efe4; font: 700 9px/1.3 "DM Mono", monospace; text-align: center; }
 .node-key-summary .node-key-copy { padding: 2px 5px; font-size: 8px; }
 .node-compact-info-text { margin: 0; color: #3f584e; font-size: 12px; line-height: 1.45; }
@@ -895,6 +903,8 @@ html[data-theme="dark"] .node-user-info-edit { color: #5fd0a5; background: rgba(
 html[data-theme="dark"] .node-user-info-text { color: #e6ecef; }
 html[data-theme="dark"] .node-overview span { background: rgba(7, 142, 98, 0.06); }
 html[data-theme="dark"] .node-score-summary { background: rgba(7, 142, 98, 0.07); }
+html[data-theme="dark"] .node-score-summary-flat { background: transparent; }
+html[data-theme="dark"] .node-score-summary-flat .node-score-line { border-color: rgba(255, 255, 255, 0.08); }
 html[data-theme="dark"] .node-score-summary b { color: #e6ecef; }
 html[data-theme="dark"] .node-photos-count, html[data-theme="dark"] .node-comments-count { color: #9ee7c8; background: rgba(7, 142, 98, 0.28); }
 html[data-theme="dark"] .node-key-summary code { color: #b9c9d2; }

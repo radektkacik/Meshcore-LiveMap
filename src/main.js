@@ -2212,7 +2212,7 @@ function nodeScoreSummary(node) {
   const scoreText = score == null ? "—" : `${usefulnessGrade(score)} · ${formatScore(score)}`;
   const rankText = rank ? `#${formatNumber(rank.rank)} / ${formatNumber(rank.total)}` : "—";
   return `
-    <div class="node-score-summary">
+    <div class="node-score-summary${IS_BETA ? " node-score-summary-flat" : ""}">
       <span class="node-score-line"><small>${t("node.score")}</small> <b>${escapeHtml(scoreText)}</b> <b class="node-rank-line" title="${t("node.rank")}">${escapeHtml(rankText)}</b></span>
       <span class="node-key-summary"><code title="${escapeHtml(node.public_key)}">${t("node.publicKey")}: ${escapeHtml(node.public_key.slice(0, 10))}…${escapeHtml(node.public_key.slice(-6))}</code><button class="node-key-copy" type="button">${t("common.copy")}</button></span>
     </div>
