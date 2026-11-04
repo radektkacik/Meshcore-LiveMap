@@ -382,6 +382,7 @@
 | 2026-11-04 11:45 | `20261104T114521Z.tar.gz` (stage APP_DIR) | `20261104-1145-d996b48` | Beta: Užitečnost je řádek přímo v Síťovém hodnocení, samostatný souhrn Skóre a veřejný klíč z karty zmizely | `src/main.js`, `src/style.css` |
 | 2026-11-04 11:56 | `20261104T115640Z.tar.gz` (stage APP_DIR) | `20261104-1156-3313fdf` | Beta: stejné pořadí ukazatelů bez beta omezení | `src/main.js`, `src/style.css` |
 | 2026-11-04 11:57 | `20261104T115715Z.tar.gz` | `20261104-1157-3313fdf` | Prod: Provoz a Síťové hodnocení v kartě i Přehledu, Užitečnost jako řádek hodnocení, bez samostatného Skóre a klíče | `src/main.js`, `src/style.css` |
+| 2026-11-04 19:59 | `20261104T195953Z.tar.gz` (stage APP_DIR) | `20261104-1959-a462175` | Beta: CzHealth – dekódování MQTT/Analyzer health paketů, SQLite historie 90 dní, baterie/teplota/proud/nabíjení/externí napájení a stáří healthu v Provozu; `/api/node-health` | `cz-health.mjs`, `cz-health-store.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `test/*`, `deploy/*`, `.env.example` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
