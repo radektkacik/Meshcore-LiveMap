@@ -3,6 +3,26 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-04 — CzHealth: baterie, teplota a historie
+- Prostředí: produkce i beta
+- Build: 20261104-2157-f6d9eb8
+- Mapa dekóduje vlastní CzHealth pakety z MQTT i z uložené historie tras.
+- U repeatérů se zobrazuje napětí baterie, teplota, proud, nabíjení a externí napájení.
+- Health data se doplňují i zpětně z již uložených paketů; historie se drží 90 dní.
+- V detailu nodu je graf baterie a teploty pro 24 h, 7 dní a 30 dní.
+- Stav baterie je vidět v hlavičce nodu, v tooltipu při najetí a v sekci Provoz.
+- Přibyl endpoint `/api/node-health`; `/api/nodes` obsahuje poslední health stav.
+
+## 2026-11-04 — Přehlednější karta nodu a čitelnější UI
+- Prostředí: produkce i beta
+- Build: 20261104-2157-f6d9eb8
+- Skóre a užitečnost jsou sjednocené v Síťovém hodnocení, historie je níže v Přehledu.
+- Veřejný klíč s kopírováním je přímo na hlavní obrazovce nodu.
+- Nody bez souřadnic jdou najít v hledání a otevřít v detailu jako „bez polohy“.
+- Písmo v kartách, popupech a dialozích je větší a kontrastnější.
+- Uživatel si může zvolit velikost písma: Menší / Normální / Větší; volba se ukládá v prohlížeči.
+- Health údaje se zobrazují také v minimalistickém tooltipu repeateru.
+
 ## 2026-11-01 — Přehlednější popup nodu na produkci
 - Prostředí: produkce i beta
 - Build: 20261101-0848-beadd9a
