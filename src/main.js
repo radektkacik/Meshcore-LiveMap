@@ -2176,6 +2176,21 @@ function nodeTrafficDetails(node) {
   ], "", "node-traffic-details");
 }
 
+// Battery icons: Tabler Icons (MIT), battery-vertical-1/2/4/off.
+const BATTERY_VERTICAL_BODY = "M7 18v-11a2 2 0 0 1 2 -2h.5a.5 .5 0 0 0 .5 -.5a.5 .5 0 0 1 .5 -.5h3a.5 .5 0 0 1 .5 .5a.5 .5 0 0 0 .5 .5h.5a2 2 0 0 1 2 2v11a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2";
+const BATTERY_VERTICAL_BARS = ["M10 17h4", "M10 14h4", "M10 11h4", "M10 8h4"];
+const BATTERY_VERTICAL_OFF = '<path d="M3 3l18 18" /><path d="M17 13v-6a2 2 0 0 0 -2 -2h-.5a.5 .5 0 0 1 -.5 -.5a.5 .5 0 0 0 -.5 -.5h-3a.5 .5 0 0 0 -.5 .5a.5 .5 0 0 1 -.5 .5h-.5m-2 2v11a2 2 0 0 0 2 2h6a2 2 0 0 0 2 -2v-1" />';
+
+function batteryStatusIcon(status) {
+  const paths = status === "stale" || status === "unknown"
+    ? BATTERY_VERTICAL_OFF
+    : `<path d="${BATTERY_VERTICAL_BODY}" />${BATTERY_VERTICAL_BARS
+      .slice(0, status === "ok" ? 4 : status === "warn" ? 2 : 1)
+      .map((path) => `<path d="${path}" />`)
+      .join("")}`;
+  return `<svg class="node-health-battery" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+}
+
 function nodeHealthBadge(node) {
   const health = node.health && typeof node.health === "object" ? node.health : null;
   const battery = health?.batteryMv != null && Number.isFinite(Number(health.batteryMv))
@@ -2199,7 +2214,7 @@ function nodeHealthBadge(node) {
     temperature == null ? null : `${t("node.temperature")}: ${formatDecimal(temperature, 1)} °C`,
   ].filter(Boolean).join(" · ");
   return `<div class="node-health-badge ${status}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
-    <span class="node-health-battery" aria-hidden="true"></span>
+    ${batteryStatusIcon(status)}
     <span>${escapeHtml(parts.join(" · "))}</span>
   </div>`;
 }
