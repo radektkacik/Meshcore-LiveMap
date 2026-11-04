@@ -510,6 +510,19 @@ function ingestCzHealth(rawHex, observedAt, packetHash = null) {
   return health;
 }
 
+function backfillCzHealth() {
+  const rows = packetStore.queryPayloadType(6, 20_000);
+  const seen = new Set();
+  let decoded = 0;
+  for (const row of rows) {
+    if (!row.raw_hex || seen.has(row.raw_hex)) continue;
+    seen.add(row.raw_hex);
+    const observedAt = Number(row.observed_at) || Date.now();
+    if (ingestCzHealth(row.raw_hex, observedAt, row.hash)) decoded += 1;
+  }
+  console.log(`CzHealth backfill: ${decoded} unique packets`);
+}
+
 const feedbackRate = new Map();
 const feedbackRateLimit = Math.max(1, Number(process.env.FEEDBACK_RATE_LIMIT || 15));
 const feedbackDailyLimit = Math.max(10, Number(process.env.FEEDBACK_DAILY_LIMIT || 300));
@@ -1596,6 +1609,7 @@ async function collectPackets() {
   }
 }
 
+backfillCzHealth();
 void collectPackets();
 setInterval(collectPackets, packetCollectionMs).unref();
 setInterval(() => healthStore.prune(), 6 * 60 * 60 * 1000).unref();

@@ -89,6 +89,13 @@ export function createPacketStore(dbPath, {
     WHERE hash = ?
     ORDER BY observed_at DESC
   `);
+  const selectPayloadType = db.prepare(`
+    SELECT hash, observer_id, observed_at, payload_type, raw_hex
+    FROM packet_routes
+    WHERE payload_type = ?
+    ORDER BY observed_at ASC
+    LIMIT ?
+  `);
   const selectRelay = db.prepare(`
     SELECT observed_at, path_json, scope_name
     FROM packet_routes
@@ -142,6 +149,10 @@ export function createPacketStore(dbPath, {
       ...row,
       resolved_path: safeArray(row.resolved_path),
     })),
+    queryPayloadType: (payloadType, limit = 20_000) => selectPayloadType.all(
+      Math.floor(Number(payloadType) || 0),
+      Math.max(1, Math.min(100_000, Math.floor(Number(limit) || 20_000))),
+    ),
     queryHash: (hash) => selectHash.all(String(hash || "").toLowerCase()).map((row) => ({
       ...row,
       resolved_path: safeArray(row.resolved_path),
