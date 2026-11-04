@@ -327,8 +327,9 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-popup-card header > span.inactive { background: #899990; }
 .node-header-main { flex: 1 1 auto; min-width: 0; }
 .node-header-main .node-health-badge { margin-top: 7px; }
-.node-health-badge { display: inline-flex; align-items: center; gap: 5px; color: #3f584e; font: 500 12px "DM Mono", monospace; white-space: nowrap; }
+.node-health-badge { display: inline-flex; align-items: center; gap: 4px; color: #3f584e; font: 500 12px "DM Mono", monospace; line-height: 18px; white-space: nowrap; }
 .node-health-battery { flex: 0 0 auto; width: 18px; height: 18px; color: #899990; }
+.node-health-thermometer { flex: 0 0 auto; width: 15px; height: 15px; color: #667b70; }
 .node-health-badge.ok .node-health-battery { color: #1f9d63; }
 .node-health-badge.warn .node-health-battery { color: #d18a1f; }
 .node-health-badge.critical .node-health-battery { color: #c63e32; }

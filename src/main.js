@@ -2176,10 +2176,11 @@ function nodeTrafficDetails(node) {
   ], "", "node-traffic-details");
 }
 
-// Battery icons: Tabler Icons (MIT), battery-vertical-1/2/4/off.
+// Icons: Tabler Icons (MIT), battery-vertical-1/2/4/off + temperature.
 const BATTERY_VERTICAL_BODY = "M7 18v-11a2 2 0 0 1 2 -2h.5a.5 .5 0 0 0 .5 -.5a.5 .5 0 0 1 .5 -.5h3a.5 .5 0 0 1 .5 .5a.5 .5 0 0 0 .5 .5h.5a2 2 0 0 1 2 2v11a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2";
 const BATTERY_VERTICAL_BARS = ["M10 17h4", "M10 14h4", "M10 11h4", "M10 8h4"];
 const BATTERY_VERTICAL_OFF = '<path d="M3 3l18 18" /><path d="M17 13v-6a2 2 0 0 0 -2 -2h-.5a.5 .5 0 0 1 -.5 -.5a.5 .5 0 0 0 -.5 -.5h-3a.5 .5 0 0 0 -.5 .5a.5 .5 0 0 1 -.5 .5h-.5m-2 2v11a2 2 0 0 0 2 2h6a2 2 0 0 0 2 -2v-1" />';
+const THERMOMETER_ICON = '<svg class="node-health-thermometer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13.5a4 4 0 1 0 4 0v-8.5a2 2 0 0 0 -4 0v8.5" /><path d="M10 9l4 0" /></svg>';
 
 function batteryStatusIcon(status) {
   const paths = status === "stale" || status === "unknown"
@@ -2204,18 +2205,17 @@ function nodeHealthBadge(node) {
     ? health.batteryStatus
     : "unknown";
   const statusText = status !== "unknown" ? t(`node.healthBattery.${status}`) : null;
-  const parts = [
-    battery == null ? null : `${formatDecimal(battery / 1000, 2)} V`,
-    temperature == null ? null : `${formatDecimal(temperature, 1)} °C`,
-  ].filter(Boolean);
+  const voltageText = battery == null ? null : `${formatDecimal(battery / 1000, 2)} V`;
+  const temperatureText = temperature == null ? null : `${formatDecimal(temperature, 1)} °C`;
   const title = [
-    battery == null ? null : `${t("node.battery")}: ${formatDecimal(battery / 1000, 2)} V`,
+    voltageText ? `${t("node.battery")}: ${voltageText}` : null,
     statusText,
-    temperature == null ? null : `${t("node.temperature")}: ${formatDecimal(temperature, 1)} °C`,
+    temperatureText ? `${t("node.temperature")}: ${temperatureText}` : null,
   ].filter(Boolean).join(" · ");
   return `<div class="node-health-badge ${status}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
-    ${batteryStatusIcon(status)}
-    <span>${escapeHtml(parts.join(" · "))}</span>
+    ${battery == null ? "" : batteryStatusIcon(status)}
+    ${voltageText ? `<span class="node-health-voltage">${escapeHtml(voltageText)}</span>` : ""}
+    ${temperatureText ? `${THERMOMETER_ICON}<span class="node-health-temperature">${escapeHtml(temperatureText)}</span>` : ""}
   </div>`;
 }
 
