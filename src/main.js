@@ -2141,7 +2141,6 @@ function nodePopupContent(node, active) {
       <div><small>${escapeHtml(roleLabel(node.role))}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
-    ${nodeScoreSummary(node)}
     ${nodePhotos(node)}
     ${nodeUserInfo(node)}
     ${nodeComments(node, true)}
@@ -2205,20 +2204,6 @@ function nodeNetworkDetails(node) {
   ], scoreHelp, "node-network-details");
 }
 
-function nodeScoreSummary(node) {
-  if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
-  const score = nodeMetric(node, "usefulness_score");
-  const rank = rankNodeMetric([...state.nodeByKey.values()], node, "usefulness_score");
-  const scoreText = score == null ? "—" : `${usefulnessGrade(score)} · ${formatScore(score)}`;
-  const rankText = rank ? `#${formatNumber(rank.rank)} / ${formatNumber(rank.total)}` : "—";
-  return `
-    <div class="node-score-summary">
-      <span class="node-score-line"><small>${t("node.score")}</small> <b>${escapeHtml(scoreText)}</b> <b class="node-rank-line" title="${t("node.rank")}">${escapeHtml(rankText)}</b></span>
-      <span class="node-key-summary"><code title="${escapeHtml(node.public_key)}">${t("node.publicKey")}: ${escapeHtml(node.public_key.slice(0, 10))}…${escapeHtml(node.public_key.slice(-6))}</code><button class="node-key-copy" type="button">${t("common.copy")}</button></span>
-    </div>
-  `;
-}
-
 function nodeHistory(node) {
   if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
   return `
@@ -2237,13 +2222,13 @@ function compactNodePopupContent(node, active) {
     </header>
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
-    ${IS_BETA ? `${nodeTrafficDetails(node)}${nodeNetworkDetails(node)}` : ""}
+    ${nodeTrafficDetails(node)}
+    ${nodeNetworkDetails(node)}
     ${nodeUserInfo(node)}
     ${nodeComments(node)}
     ${nodeLastRoute(node)}
     ${nodeNeighbors(node)}
     ${nodeHistory(node)}
-    ${IS_BETA ? "" : nodeScoreSummary(node)}
     ${nodeActionButtons(node)}
     <div class="node-compact-actions">
       <button class="node-detail-open" type="button">${t("nodeDetail.open")}</button>
@@ -2300,21 +2285,12 @@ function renderNodeDetail(node, active, initialTab = "overview") {
   move(".node-photos", "photos");
   move(".node-comments", "comments");
   move(".node-basic-details", "overview");
-  if (IS_BETA) {
-    move(".node-traffic-details", "overview", true);
-    move(".node-network-details", "overview", true);
-  } else {
-    move(".node-popup-details:not(.node-basic-details)", "network", true);
-  }
+  move(".node-traffic-details", "overview", true);
+  move(".node-network-details", "overview", true);
   move(".node-analytics", "network", true);
   move(".node-last-route", "overview", true);
   move(".node-neighbors", "overview", true);
-  if (IS_BETA) {
-    move(".node-history", "overview", true);
-  } else {
-    move(".node-history", "network", true);
-    move(".node-score-summary", "overview", true);
-  }
+  move(".node-history", "overview", true);
   move(".node-public-key", "network", true);
   move(".node-popup-actions", "overview", true);
   shell.querySelector(".node-popup-close")?.remove();
