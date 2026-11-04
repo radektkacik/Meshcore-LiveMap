@@ -399,6 +399,7 @@
 | 2026-11-04 21:13 | `20261104T211300Z.tar.gz` | `20261104-2113-bdd27b5` | Prod: CzHealth telemetrie, health badge, grafy baterie/teploty, public key na hlavní obrazovce, hledání nodů bez polohy, větší a tmavší písmo | `cz-health.mjs`, `cz-health-store.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, `src/style.css`, `deploy/*` |
 | 2026-11-04 21:18 | `20261104T211845Z.tar.gz` (stage APP_DIR) | `20261104-2118-d70d51f` | Beta: backfill CzHealth z uložených paketů při startu, 10 nodů s health daty | `server.mjs`, `packet-store.mjs` |
 | 2026-11-04 21:20 | `20261104T212026Z.tar.gz` | `20261104-2120-d70d51f` | Prod: stejný backfill; doplněna health data i pro Develop_77EC a další nody | `server.mjs`, `packet-store.mjs` |
+| 2026-11-04 21:26 | `20261104T212628Z.tar.gz` (stage APP_DIR) | `20261104-2126-feace9a` | Beta: uživatelská velikost písma Menší / Normální / Větší, uložená v prohlížeči | `index.html`, `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
