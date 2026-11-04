@@ -2237,13 +2237,13 @@ function compactNodePopupContent(node, active) {
     </header>
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
-    ${IS_BETA ? `${nodeTrafficDetails(node)}${nodeNetworkDetails(node)}` : ""}
+    ${IS_BETA ? `${nodeTrafficDetails(node)}${nodeScoreSummary(node)}${nodeNetworkDetails(node)}` : ""}
     ${nodeUserInfo(node)}
     ${nodeComments(node)}
     ${nodeLastRoute(node)}
     ${nodeNeighbors(node)}
     ${nodeHistory(node)}
-    ${nodeScoreSummary(node)}
+    ${IS_BETA ? "" : nodeScoreSummary(node)}
     ${nodeActionButtons(node)}
     <div class="node-compact-actions">
       <button class="node-detail-open" type="button">${t("nodeDetail.open")}</button>
@@ -2300,13 +2300,22 @@ function renderNodeDetail(node, active, initialTab = "overview") {
   move(".node-photos", "photos");
   move(".node-comments", "comments");
   move(".node-basic-details", "overview");
-  if (IS_BETA) move(".node-popup-details:not(.node-basic-details)", "overview", true);
-  else move(".node-popup-details:not(.node-basic-details)", "network", true);
+  if (IS_BETA) {
+    move(".node-traffic-details", "overview", true);
+    move(".node-score-summary", "overview", true);
+    move(".node-network-details", "overview", true);
+  } else {
+    move(".node-popup-details:not(.node-basic-details)", "network", true);
+  }
   move(".node-analytics", "network", true);
   move(".node-last-route", "overview", true);
   move(".node-neighbors", "overview", true);
-  move(".node-history", "overview", true);
-  move(".node-score-summary", "overview", true);
+  if (IS_BETA) {
+    move(".node-history", "overview", true);
+  } else {
+    move(".node-history", "network", true);
+    move(".node-score-summary", "overview", true);
+  }
   move(".node-public-key", "network", true);
   move(".node-popup-actions", "overview", true);
   shell.querySelector(".node-popup-close")?.remove();
