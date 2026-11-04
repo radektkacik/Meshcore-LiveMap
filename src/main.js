@@ -2192,7 +2192,7 @@ function nodeNetworkDetails(node) {
     </details>
   `;
   return renderNodeDetails(t("node.networkDetails"), [
-    ...(IS_BETA ? [] : [[t("node.usefulness7d"), usefulness, t("node.usefulnessHelp", { window: scoreWindow })]]),
+    [t("node.usefulness7d"), usefulness, t("node.usefulnessHelp", { window: scoreWindow })],
     [t("node.coverage7d"), scoredWithRank(nodeMetric(node, "coverage_score"), rankNodes, node, "coverage_score"), t("node.coverageHelp")],
     [t("node.trafficShare7d"), scoredWithRank(nodeMetric(node, "traffic_share_score"), rankNodes, node, "traffic_share_score"), t("node.trafficShareHelp")],
     [t("node.bridge7d"), scoredWithRank(nodeMetric(node, "bridge_score"), rankNodes, node, "bridge_score"), t("node.bridgeHelp")],
@@ -2212,7 +2212,7 @@ function nodeScoreSummary(node) {
   const scoreText = score == null ? "—" : `${usefulnessGrade(score)} · ${formatScore(score)}`;
   const rankText = rank ? `#${formatNumber(rank.rank)} / ${formatNumber(rank.total)}` : "—";
   return `
-    <div class="node-score-summary${IS_BETA ? " node-score-summary-flat" : ""}">
+    <div class="node-score-summary">
       <span class="node-score-line"><small>${t("node.score")}</small> <b>${escapeHtml(scoreText)}</b> <b class="node-rank-line" title="${t("node.rank")}">${escapeHtml(rankText)}</b></span>
       <span class="node-key-summary"><code title="${escapeHtml(node.public_key)}">${t("node.publicKey")}: ${escapeHtml(node.public_key.slice(0, 10))}…${escapeHtml(node.public_key.slice(-6))}</code><button class="node-key-copy" type="button">${t("common.copy")}</button></span>
     </div>
@@ -2237,7 +2237,7 @@ function compactNodePopupContent(node, active) {
     </header>
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
-    ${IS_BETA ? `${nodeTrafficDetails(node)}${nodeScoreSummary(node)}${nodeNetworkDetails(node)}` : ""}
+    ${IS_BETA ? `${nodeTrafficDetails(node)}${nodeNetworkDetails(node)}` : ""}
     ${nodeUserInfo(node)}
     ${nodeComments(node)}
     ${nodeLastRoute(node)}
@@ -2302,7 +2302,6 @@ function renderNodeDetail(node, active, initialTab = "overview") {
   move(".node-basic-details", "overview");
   if (IS_BETA) {
     move(".node-traffic-details", "overview", true);
-    move(".node-score-summary", "overview", true);
     move(".node-network-details", "overview", true);
   } else {
     move(".node-popup-details:not(.node-basic-details)", "network", true);
