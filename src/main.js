@@ -2192,7 +2192,7 @@ function nodeNetworkDetails(node) {
     </details>
   `;
   return renderNodeDetails(t("node.networkDetails"), [
-    [t("node.usefulness7d"), usefulness, t("node.usefulnessHelp", { window: scoreWindow })],
+    ...(IS_BETA ? [] : [[t("node.usefulness7d"), usefulness, t("node.usefulnessHelp", { window: scoreWindow })]]),
     [t("node.coverage7d"), scoredWithRank(nodeMetric(node, "coverage_score"), rankNodes, node, "coverage_score"), t("node.coverageHelp")],
     [t("node.trafficShare7d"), scoredWithRank(nodeMetric(node, "traffic_share_score"), rankNodes, node, "traffic_share_score"), t("node.trafficShareHelp")],
     [t("node.bridge7d"), scoredWithRank(nodeMetric(node, "bridge_score"), rankNodes, node, "bridge_score"), t("node.bridgeHelp")],
