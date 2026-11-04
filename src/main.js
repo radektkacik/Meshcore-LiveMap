@@ -156,7 +156,7 @@ const THEME_KEY = "meshcoreTheme";
 const FONT_SIZE_KEY = "meshcoreFontSize";
 const FONT_SIZE_VALUES = ["small", "normal", "large"];
 const storedFontSize = localStorage.getItem(FONT_SIZE_KEY);
-const initialFontSize = IS_BETA && FONT_SIZE_VALUES.includes(storedFontSize) ? storedFontSize : "normal";
+const initialFontSize = FONT_SIZE_VALUES.includes(storedFontSize) ? storedFontSize : "normal";
 document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
 document.documentElement.dataset.fontSize = initialFontSize;
 
@@ -421,7 +421,6 @@ langButton.addEventListener("click", () => {
   location.replace(url);
 });
 elements.themeToggle.after(langButton);
-if (elements.fontSizeBlock) elements.fontSizeBlock.hidden = !IS_BETA;
 if (elements.fontSizeLabel) elements.fontSizeLabel.textContent = t("fontSize.label");
 if (elements.fontSizeSelect) {
   elements.fontSizeSelect.value = initialFontSize;
