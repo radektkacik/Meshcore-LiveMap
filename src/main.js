@@ -3532,6 +3532,25 @@ async function checkServerBuild() {
   }
 }
 
+function nodeHealthTooltip(node) {
+  const health = node.health && typeof node.health === "object" ? node.health : null;
+  const battery = health?.batteryMv != null && Number.isFinite(Number(health.batteryMv))
+    ? Number(health.batteryMv)
+    : null;
+  const temperature = health?.temperatureC != null && Number.isFinite(Number(health.temperatureC))
+    ? Number(health.temperatureC)
+    : null;
+  if (battery == null && temperature == null) return "";
+  const status = health?.batteryStatus && ["ok", "warn", "critical", "stale"].includes(health.batteryStatus)
+    ? health.batteryStatus
+    : "unknown";
+  return `<span class="node-tooltip-health ${status}">
+    ${battery == null ? "" : batteryStatusIcon(status)}
+    ${battery == null ? "" : `<span>${escapeHtml(formatDecimal(battery / 1000, 2))} V</span>`}
+    ${temperature == null ? "" : `${THERMOMETER_ICON}<span>${escapeHtml(formatDecimal(temperature, 1))} °C</span>`}
+  </span>`;
+}
+
 function nodeTooltip(node) {
   const key = String(node.public_key || "").toUpperCase();
   const coverId = state.photoCoverCache.get(key);
@@ -3541,7 +3560,7 @@ function nodeTooltip(node) {
   const archiveHint = state.routeWindowMs
     ? `<small class="node-tooltip-hint">${escapeHtml(t("archive.nodeHint"))}</small>`
     : "";
-  return `<span class="node-tooltip-body">${photo}<span><strong>${escapeHtml(node.name || t("common.unknownNode"))}</strong><br>${escapeHtml(roleLabel(node.role))}${archiveHint}</span></span>`;
+  return `<span class="node-tooltip-body">${photo}<span><strong>${escapeHtml(node.name || t("common.unknownNode"))}</strong><br>${escapeHtml(roleLabel(node.role))}${nodeHealthTooltip(node)}${archiveHint}</span></span>`;
 }
 
 function refreshOpenNodePopup(entry) {

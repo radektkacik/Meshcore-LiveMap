@@ -1545,3 +1545,12 @@ html[data-font-size="large"] .photo-lightbox-zoom button { font-size: 13px; }
 html[data-font-size="large"] .photo-lightbox p { font-size: 13px; }
 html[data-font-size="large"] #photo-lightbox-author { font-size: 12px; }
 html[data-font-size="large"] .leaflet-control-attribution { font-size: 12px !important; }
+
+.node-tooltip-health { display: flex; align-items: center; gap: 4px; margin-top: 3px; color: #3f584e; font: 500 10px/14px "DM Mono", monospace; white-space: nowrap; }
+.node-tooltip-health .node-health-battery { width: 14px; height: 14px; color: #899990; }
+.node-tooltip-health .node-health-thermometer { width: 12px; height: 12px; color: #667b70; }
+.node-tooltip-health.ok .node-health-battery { color: #1f9d63; }
+.node-tooltip-health.warn .node-health-battery { color: #d18a1f; }
+.node-tooltip-health.critical .node-health-battery { color: #c63e32; }
+.node-tooltip-health.stale .node-health-battery,
+.node-tooltip-health.unknown .node-health-battery { color: #899990; opacity: 0.75; }
