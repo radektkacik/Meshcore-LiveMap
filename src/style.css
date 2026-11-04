@@ -1158,7 +1158,7 @@ html[data-theme="dark"] .los-recompute { color: #8ec5f0; background: rgba(40, 12
 
 .perf-overlay { position: fixed; right: 8px; bottom: 8px; z-index: 3000; padding: 6px 9px; border: 1px solid rgba(120, 255, 190, 0.25); border-radius: 8px; background: rgba(12, 18, 16, 0.88); color: #b9ffd9; font: 11px/1.5 "DM Mono", monospace; white-space: pre; pointer-events: none; }
 
-/* Beta readability pass: slightly larger and darker UI text */
+/* Readability pass: slightly larger and darker UI text */
 :root { --muted: #4f6458; }
 html:not([data-theme="dark"]) { color: #111f18; }
 html[data-theme="dark"] { --muted: #95a8a0; }

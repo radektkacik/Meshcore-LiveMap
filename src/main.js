@@ -2301,7 +2301,7 @@ function scrollNodeHealthHistory(root) {
 }
 
 function nodeHealthHistory(node) {
-  if (!IS_BETA || !node.health || !/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
+  if (!node.health || !/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
   return `
     <section class="node-health-history" data-node-key="${escapeHtml(node.public_key.toUpperCase())}">
       <div class="node-health-history-head">
@@ -2682,7 +2682,7 @@ function renderNodeHealthHistory(section, data) {
 
 async function loadNodeHealthHistory(root, node, days = 1) {
   const section = root.querySelector(".node-health-history");
-  if (!section || !IS_BETA) return;
+  if (!section) return;
   const key = String(node.public_key || "").toUpperCase();
   if (!key) return;
   for (const button of section.querySelectorAll("[data-health-days]")) {
