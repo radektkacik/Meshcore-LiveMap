@@ -16,7 +16,7 @@ APP_USER=${APP_USER:-meshcore-map}
 APP_GROUP=${APP_GROUP:-meshcore-map}
 ROLLBACK_SCRIPT=${ROLLBACK_SCRIPT:-/root/rollback-meshcore.sh}
 
-for file in server.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs visit-stats.mjs feedback.mjs photos.mjs node-info.mjs comments.mjs repeater-pages.mjs notify.mjs package.json package-lock.json dist/index.html \
+for file in server.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs cz-health.mjs cz-health-store.mjs visit-stats.mjs feedback.mjs photos.mjs node-info.mjs comments.mjs repeater-pages.mjs notify.mjs package.json package-lock.json dist/index.html \
   rollback-vps.sh \
   "$STORAGE_CONF_NAME" \
   node_modules/@michaelhart/meshcore-decoder/package.json \
@@ -29,6 +29,8 @@ node --check server.mjs
 node --check backend-utils.mjs
 node --check node-metrics.mjs
 node --check packet-store.mjs
+node --check cz-health.mjs
+node --check cz-health-store.mjs
 node --check visit-stats.mjs
 node --check feedback.mjs
 node --check photos.mjs
@@ -67,7 +69,7 @@ rollback() {
   if [[ "$keep_node_modules" != true ]]; then
     rm -rf "$APP_DIR/node_modules"
   fi
-  rm -f "$APP_DIR/backend-utils.mjs" "$APP_DIR/node-metrics.mjs" "$APP_DIR/packet-store.mjs" "$APP_DIR/visit-stats.mjs" "$APP_DIR/feedback.mjs" "$APP_DIR/photos.mjs" "$APP_DIR/node-info.mjs" "$APP_DIR/comments.mjs" "$APP_DIR/repeater-pages.mjs" "$APP_DIR/notify.mjs"
+  rm -f "$APP_DIR/backend-utils.mjs" "$APP_DIR/node-metrics.mjs" "$APP_DIR/packet-store.mjs" "$APP_DIR/cz-health.mjs" "$APP_DIR/cz-health-store.mjs" "$APP_DIR/visit-stats.mjs" "$APP_DIR/feedback.mjs" "$APP_DIR/photos.mjs" "$APP_DIR/node-info.mjs" "$APP_DIR/comments.mjs" "$APP_DIR/repeater-pages.mjs" "$APP_DIR/notify.mjs"
   tar -xzf "$BACKUP_FILE" -C "$APP_DIR"
   if [[ ! -d "$APP_DIR/node_modules" ]]; then
     echo "Závislosti nejsou v záloze ani v aplikaci; instaluji z package-lock.json" >&2
@@ -110,6 +112,12 @@ if [[ -f "$APP_DIR/backend-utils.mjs" ]]; then
 fi
 if [[ -f "$APP_DIR/packet-store.mjs" ]]; then
   backup_paths+=(packet-store.mjs)
+fi
+if [[ -f "$APP_DIR/cz-health.mjs" ]]; then
+  backup_paths+=(cz-health.mjs)
+fi
+if [[ -f "$APP_DIR/cz-health-store.mjs" ]]; then
+  backup_paths+=(cz-health-store.mjs)
 fi
 if [[ -f "$APP_DIR/visit-stats.mjs" ]]; then
   backup_paths+=(visit-stats.mjs)
@@ -155,6 +163,8 @@ install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/server.mjs" "$APP_DIR/serv
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/backend-utils.mjs" "$APP_DIR/backend-utils.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/node-metrics.mjs" "$APP_DIR/node-metrics.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/packet-store.mjs" "$APP_DIR/packet-store.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/cz-health.mjs" "$APP_DIR/cz-health.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/cz-health-store.mjs" "$APP_DIR/cz-health-store.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/visit-stats.mjs" "$APP_DIR/visit-stats.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/feedback.mjs" "$APP_DIR/feedback.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/photos.mjs" "$APP_DIR/photos.mjs"
