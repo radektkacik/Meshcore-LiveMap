@@ -2641,8 +2641,7 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
   }
 }
 
-function renderNodeHealthHistory(root, data) {
-  const section = root.querySelector(".node-health-history");
+function renderNodeHealthHistory(section, data) {
   if (!section) return;
   const samples = data?.samples || {};
   renderNodeHealthSeries(
