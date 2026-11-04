@@ -2271,11 +2271,11 @@ function nodeHistory(node) {
 function compactNodePopupContent(node, active) {
   return `
     <header>
-      <div><small>${escapeHtml(roleLabel(node.role))}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
-      <div class="node-header-side">
-        <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
+      <div class="node-header-main">
+        <small>${escapeHtml(roleLabel(node.role))}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3>
         ${nodeHealthBadge(node)}
       </div>
+      <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
@@ -2310,11 +2310,9 @@ function nodeDetailShell(node, active) {
         <small>${escapeHtml(roleLabel(node.role))}</small>
         <h2 id="node-detail-title">${escapeHtml(node.name || t("common.unknownNode"))}</h2>
         <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
-      </div>
-      <div class="node-detail-header-side">
         ${nodeHealthBadge(node)}
-        <button class="node-detail-close" type="button" aria-label="${t("nodeDetail.close")}">×</button>
       </div>
+      <button class="node-detail-close" type="button" aria-label="${t("nodeDetail.close")}">×</button>
     </header>
     <nav class="node-detail-tabs" aria-label="${t("nodeDetail.tabs")}">
       ${tabs.map(([key, label], index) => `<button type="button" data-node-detail-tab="${key}" class="${index === 0 ? "active" : ""}">${label}</button>`).join("")}

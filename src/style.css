@@ -302,12 +302,12 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-detail-page::backdrop { background: rgba(12, 24, 18, 0.48); backdrop-filter: blur(2px); }
 .node-detail-shell { display: flex; flex-direction: column; max-height: calc(100dvh - 34px); }
 .node-detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 15px 18px 12px; border-bottom: 1px solid var(--line); background: #f3f7f3; }
-.node-detail-header-side { display: flex; flex: 0 0 auto; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
 .node-detail-header small { display: block; color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: 0.09em; text-transform: uppercase; }
 .node-detail-header h2 { margin: 3px 0 0; font-size: 18px; line-height: 1.25; }
 .node-detail-header > div > span { display: inline-block; margin-top: 5px; padding: 2px 6px; border-radius: 5px; color: #fff; font: 500 10px "DM Mono", monospace; text-transform: uppercase; }
 .node-detail-header > div > span.active { background: var(--green); }
 .node-detail-header > div > span.inactive { background: #899990; }
+.node-detail-header .node-health-badge { margin-top: 7px; }
 .node-detail-close { width: 30px; height: 30px; flex: 0 0 auto; padding: 0; border: 0; border-radius: 8px; color: #667b70; background: #e9eee9; font-size: 21px; line-height: 30px; cursor: pointer; }
 .node-detail-close:hover { color: #b03024; background: #f3e9e7; }
 .node-detail-tabs { display: flex; gap: 4px; padding: 8px 12px; overflow-x: auto; border-bottom: 1px solid var(--line); background: #fbfcf8; }
@@ -322,10 +322,11 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-popup-card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 15px 42px 12px 15px; border-bottom: 1px solid var(--line); background: #f3f7f3; }
 .node-popup-card header small, .node-public-key span { display: block; color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: 0.09em; text-transform: uppercase; }
 .node-popup-card h3 { margin: 3px 0 0; font-size: 16px; line-height: 1.25; }
-.node-popup-card header > span, .node-header-side > span { flex: 0 0 auto; margin-top: 2px; padding: 3px 6px; border-radius: 5px; color: #fff; font: 500 10px "DM Mono", monospace; text-transform: uppercase; }
-.node-popup-card header > span.active, .node-header-side > span.active { background: var(--green); }
-.node-popup-card header > span.inactive, .node-header-side > span.inactive { background: #899990; }
-.node-header-side { display: flex; flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 5px; }
+.node-popup-card header > span { flex: 0 0 auto; margin-top: 2px; padding: 3px 6px; border-radius: 5px; color: #fff; font: 500 10px "DM Mono", monospace; text-transform: uppercase; }
+.node-popup-card header > span.active { background: var(--green); }
+.node-popup-card header > span.inactive { background: #899990; }
+.node-header-main { flex: 1 1 auto; min-width: 0; }
+.node-header-main .node-health-badge { margin-top: 7px; }
 .node-health-badge { display: inline-flex; align-items: center; gap: 5px; color: #3f584e; font: 500 12px "DM Mono", monospace; white-space: nowrap; }
 .node-health-battery { flex: 0 0 auto; width: 18px; height: 18px; color: #899990; }
 .node-health-badge.ok .node-health-battery { color: #1f9d63; }
