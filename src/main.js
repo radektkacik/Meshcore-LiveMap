@@ -1789,7 +1789,7 @@ function nodeBasicDetails(node) {
     [t("node.lastActivity"), formatNodeDate(lastActivity), t("node.lastActivityHelp")],
     [t("node.lastAdvert"), formatNodeDate(node.last_seen || node.last_heard)],
     [t("node.firstSeen"), node.first_seen ? formatNodeDate(node.first_seen) : null, t("node.firstSeenHelp")],
-    [t("node.coordinates"), `${Number(node.lat).toFixed(6)}, ${Number(node.lon).toFixed(6)}`],
+    [t("node.coordinates"), validCoords(node.lat, node.lon) ? `${Number(node.lat).toFixed(6)}, ${Number(node.lon).toFixed(6)}` : t("node.noLocation")],
     [t("node.region"), regionText, t("node.regionHelp")],
     [t("node.prefix"), prefix, t("node.prefixHelp")],
     [t("node.hashMode"), hashSize ? (hashSize >= 2 ? "2B+" : "1B") : null, t("node.hashModeHelp")],
@@ -2130,7 +2130,7 @@ function nodePopupContent(node, active) {
     [t("node.lastAdvert"), formatNodeDate(node.last_seen || node.last_heard)],
     [t("node.lastRelay"), formatNodeDate(node.last_relayed)],
     [t("node.firstSeen"), node.first_seen ? formatNodeDate(node.first_seen) : null, t("node.firstSeenHelp")],
-    [t("node.coordinates"), `${Number(node.lat).toFixed(6)}, ${Number(node.lon).toFixed(6)}`],
+    [t("node.coordinates"), validCoords(node.lat, node.lon) ? `${Number(node.lat).toFixed(6)}, ${Number(node.lon).toFixed(6)}` : t("node.noLocation")],
     [t("node.region"), regionText, t("node.regionHelp")],
     [t("node.prefix"), prefix, t("node.prefixHelp")],
     [t("node.hashMode"), hashSize ? (hashSize >= 2 ? "2B+" : "1B") : null, t("node.hashModeHelp")],
@@ -6834,7 +6834,13 @@ function searchResultTitle(kind, item) {
 }
 
 function searchResultMeta(kind, item) {
-  if (kind === "node") return [roleLabel(item.role), shortNodePrefix(item)].filter(Boolean).join(" · ");
+  if (kind === "node") {
+    return [
+      roleLabel(item.role),
+      shortNodePrefix(item),
+      validCoords(item.lat, item.lon) ? null : t("node.noLocation"),
+    ].filter(Boolean).join(" · ");
+  }
   if (kind === "observer") return [item.iata, t(`network.${observerHealth(item)}`)].filter(Boolean).join(" · ");
   if (kind === "packet") return [item.typeLabel, searchFormatTime(item.timestamp)].filter(Boolean).join(" · ");
   return [item.sender, searchFormatTime(item.timestamp)].filter(Boolean).join(" · ");
@@ -6858,7 +6864,10 @@ function highlightSearchResult(index) {
 }
 
 function revealSearchNode(node) {
-  if (!validCoords(node.lat, node.lon)) return;
+  if (!validCoords(node.lat, node.lon)) {
+    openNodeDetail(node);
+    return;
+  }
   const entry = state.nodeMarkerByKey.get(String(node.public_key || "").toUpperCase());
   map.flyTo([node.lat, node.lon], Math.max(map.getZoom(), 11), { duration: 0.7 });
   if (entry) revealNodeMarker(entry);
@@ -6910,7 +6919,7 @@ function renderSearchResults() {
   const result = searchEntities({
     channels: feedState.channelMessages,
     limit: SEARCH_LIMIT_PER_TYPE,
-    nodes: state.nodeMarkers.map(({ node }) => node),
+    nodes: [...state.nodeByKey.values()],
     observers: state.observers,
     packets,
     query: nodeSearch.value,
