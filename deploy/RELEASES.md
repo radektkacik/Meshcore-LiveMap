@@ -389,6 +389,7 @@
 | 2026-11-04 20:24 | `20261104T202404Z.tar.gz` (stage APP_DIR) | `20261104-2024-e1a18bd` | Beta: ikona baterie z Tabler Icons podle stavu, bez rámečku kolem napětí a teploty | `src/main.js`, `src/style.css` |
 | 2026-11-04 20:28 | `20261104T202809Z.tar.gz` (stage APP_DIR) | `20261104-2028-4f99179` | Beta: health badge zarovnaný vlevo pod název nodu, napětí a teplota v jednom řádku | `src/main.js`, `src/style.css` |
 | 2026-11-04 20:29 | `20261104T202944Z.tar.gz` (stage APP_DIR) | `20261104-2029-6ad1996` | Beta: nody bez polohy jdou najít v hledání a otevřít v detailu, souřadnice se zobrazí jako „bez polohy“ | `src/main.js`, `src/i18n.js` |
+| 2026-11-04 20:33 | `20261104T203340Z.tar.gz` (stage APP_DIR) | `20261104-2033-e55b55b` | Beta: teploměr před teplotou v health badge, bez oddělovače před teplotou, zarovnání pod název | `src/main.js`, `src/style.css` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
