@@ -404,6 +404,8 @@
 | 2026-11-04 21:33 | `20261104T213333Z.tar.gz` (stage APP_DIR) | `20261104-2133-b25513c` | Beta: velikost písma se vztahuje i na mapové popupy a dialogy (QR, fotky, komentáře, feedback, export, LOS, pokrytí, historie paketů) | `src/style.css` |
 | 2026-11-04 21:34 | `20261104T213449Z.tar.gz` (stage APP_DIR) | `20261104-2134-f0dba59` | Beta: volba velikosti písma bez beta omezení | `src/main.js`, `index.html` |
 | 2026-11-04 21:35 | `20261104T213549Z.tar.gz` | `20261104-2135-f0dba59` | Prod: uživatelská velikost písma pro celé UI včetně popupů a dialogů | `src/main.js`, `index.html`, `src/style.css` |
+| 2026-11-04 21:56 | `20261104T215652Z.tar.gz` (stage APP_DIR) | `20261104-2156-f6d9eb8` | Beta: minimalistické napětí a teplota v tooltipu při najetí na repeater | `src/main.js`, `src/style.css` |
+| 2026-11-04 21:57 | `20261104T215733Z.tar.gz` | `20261104-2157-f6d9eb8` | Prod: stejné health údaje v tooltipu repeateru | `src/main.js`, `src/style.css` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
