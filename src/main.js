@@ -2167,13 +2167,41 @@ function nodeTrafficDetails(node) {
   const batteryStatus = batteryStatusCode !== "unknown" ? t(`node.healthBattery.${batteryStatusCode}`) : null;
   return renderNodeDetails(t("node.trafficDetails"), [
     [t("node.advertPackets"), countWithRank(node.advert_count, rankNodes, node, "advert_count"), t("node.advertHelp")],
-    [t("node.battery"), battery == null ? null : `${formatDecimal(battery / 1000, 2)} V${batteryStatus ? ` · ${batteryStatus}` : ""}`, t("node.batteryHelp"), `node-battery-row ${batteryStatusCode}`],
+    [t("node.battery"), battery == null ? null : `${formatDecimal(battery / 1000, 2)} V${batteryStatus ? ` · ${batteryStatus}` : ""}`, t("node.batteryHelp")],
     [t("node.temperature"), temperature == null ? null : `${formatDecimal(temperature, 1)} °C`],
     [t("node.current"), health?.currentMa != null && Number.isFinite(Number(health.currentMa)) ? `${formatNumber(health.currentMa)} mA` : null],
     [t("node.charging"), health ? (health.charging ? t("common.yes") : t("common.no")) : null],
     [t("node.externalPower"), health ? (health.externalPower ? t("common.yes") : t("common.no")) : null],
     [t("node.healthObserved"), health?.observedAt ? formatNodeDate(health.observedAt) : null],
   ], "", "node-traffic-details");
+}
+
+function nodeHealthBadge(node) {
+  const health = node.health && typeof node.health === "object" ? node.health : null;
+  const battery = health?.batteryMv != null && Number.isFinite(Number(health.batteryMv))
+    ? Number(health.batteryMv)
+    : null;
+  const temperature = health?.temperatureC != null && Number.isFinite(Number(health.temperatureC))
+    ? Number(health.temperatureC)
+    : null;
+  if (battery == null && temperature == null) return "";
+  const status = health?.batteryStatus && ["ok", "warn", "critical", "stale"].includes(health.batteryStatus)
+    ? health.batteryStatus
+    : "unknown";
+  const statusText = status !== "unknown" ? t(`node.healthBattery.${status}`) : null;
+  const parts = [
+    battery == null ? null : `${formatDecimal(battery / 1000, 2)} V`,
+    temperature == null ? null : `${formatDecimal(temperature, 1)} °C`,
+  ].filter(Boolean);
+  const title = [
+    battery == null ? null : `${t("node.battery")}: ${formatDecimal(battery / 1000, 2)} V`,
+    statusText,
+    temperature == null ? null : `${t("node.temperature")}: ${formatDecimal(temperature, 1)} °C`,
+  ].filter(Boolean).join(" · ");
+  return `<div class="node-health-badge ${status}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
+    <span class="node-health-battery" aria-hidden="true"></span>
+    <span>${escapeHtml(parts.join(" · "))}</span>
+  </div>`;
 }
 
 function nodeNetworkDetails(node) {
@@ -2229,7 +2257,10 @@ function compactNodePopupContent(node, active) {
   return `
     <header>
       <div><small>${escapeHtml(roleLabel(node.role))}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
-      <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
+      <div class="node-header-side">
+        <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
+        ${nodeHealthBadge(node)}
+      </div>
     </header>
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
@@ -2265,7 +2296,10 @@ function nodeDetailShell(node, active) {
         <h2 id="node-detail-title">${escapeHtml(node.name || t("common.unknownNode"))}</h2>
         <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
       </div>
-      <button class="node-detail-close" type="button" aria-label="${t("nodeDetail.close")}">×</button>
+      <div class="node-detail-header-side">
+        ${nodeHealthBadge(node)}
+        <button class="node-detail-close" type="button" aria-label="${t("nodeDetail.close")}">×</button>
+      </div>
     </header>
     <nav class="node-detail-tabs" aria-label="${t("nodeDetail.tabs")}">
       ${tabs.map(([key, label], index) => `<button type="button" data-node-detail-tab="${key}" class="${index === 0 ? "active" : ""}">${label}</button>`).join("")}
