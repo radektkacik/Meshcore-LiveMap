@@ -834,8 +834,8 @@ function countWithRank(value, nodes, node, field) {
 function renderNodeDetails(title, rows, help = "", className = "") {
   const details = rows
     .filter(([, value]) => value != null)
-    .map(([label, value, description]) => `
-      <div>
+    .map(([label, value, description, rowClass]) => `
+      <div${rowClass ? ` class="${escapeHtml(rowClass)}"` : ""}>
         <dt>${escapeHtml(label)}${description ? ` <span class="node-metric-info" title="${escapeHtml(description)}" aria-label="${escapeHtml(description)}">i</span>` : ""}</dt>
         <dd>${escapeHtml(value)}</dd>
       </div>
@@ -2161,12 +2161,13 @@ function nodeTrafficDetails(node) {
   const health = node.health && typeof node.health === "object" ? node.health : null;
   const battery = health?.batteryMv ?? node.battery_mv;
   const temperature = health?.temperatureC ?? node.temperature_c;
-  const batteryStatus = health?.batteryStatus && ["ok", "warn", "critical", "stale"].includes(health.batteryStatus)
-    ? t(`node.healthBattery.${health.batteryStatus}`)
-    : null;
+  const batteryStatusCode = health?.batteryStatus && ["ok", "warn", "critical", "stale"].includes(health.batteryStatus)
+    ? health.batteryStatus
+    : "unknown";
+  const batteryStatus = batteryStatusCode !== "unknown" ? t(`node.healthBattery.${batteryStatusCode}`) : null;
   return renderNodeDetails(t("node.trafficDetails"), [
     [t("node.advertPackets"), countWithRank(node.advert_count, rankNodes, node, "advert_count"), t("node.advertHelp")],
-    [t("node.battery"), battery == null ? null : `${formatDecimal(battery / 1000, 2)} V${batteryStatus ? ` · ${batteryStatus}` : ""}`, t("node.batteryHelp")],
+    [t("node.battery"), battery == null ? null : `${formatDecimal(battery / 1000, 2)} V${batteryStatus ? ` · ${batteryStatus}` : ""}`, t("node.batteryHelp"), `node-battery-row ${batteryStatusCode}`],
     [t("node.temperature"), temperature == null ? null : `${formatDecimal(temperature, 1)} °C`],
     [t("node.current"), health?.currentMa != null && Number.isFinite(Number(health.currentMa)) ? `${formatNumber(health.currentMa)} mA` : null],
     [t("node.charging"), health ? (health.charging ? t("common.yes") : t("common.no")) : null],
