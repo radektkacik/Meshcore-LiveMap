@@ -2164,13 +2164,10 @@ function nodeTrafficDetails(node) {
   const batteryStatus = health?.batteryStatus && ["ok", "warn", "critical", "stale"].includes(health.batteryStatus)
     ? t(`node.healthBattery.${health.batteryStatus}`)
     : null;
-  const tempSource = health?.temperatureSource && ["mcu", "sensor"].includes(health.temperatureSource)
-    ? t(`node.tempSource.${health.temperatureSource}`)
-    : null;
   return renderNodeDetails(t("node.trafficDetails"), [
     [t("node.advertPackets"), countWithRank(node.advert_count, rankNodes, node, "advert_count"), t("node.advertHelp")],
-    [t("node.battery"), battery == null ? null : `${formatNumber(battery)} mV${batteryStatus ? ` · ${batteryStatus}` : ""}`],
-    [t("node.temperature"), temperature == null ? null : `${formatDecimal(temperature, 1)} °C${tempSource ? ` · ${tempSource}` : ""}`],
+    [t("node.battery"), battery == null ? null : `${formatDecimal(battery / 1000, 2)} V${batteryStatus ? ` · ${batteryStatus}` : ""}`, t("node.batteryHelp")],
+    [t("node.temperature"), temperature == null ? null : `${formatDecimal(temperature, 1)} °C`],
     [t("node.current"), health?.currentMa != null && Number.isFinite(Number(health.currentMa)) ? `${formatNumber(health.currentMa)} mA` : null],
     [t("node.charging"), health ? (health.charging ? t("common.yes") : t("common.no")) : null],
     [t("node.externalPower"), health ? (health.externalPower ? t("common.yes") : t("common.no")) : null],
