@@ -2136,11 +2136,38 @@ function nodePopupContent(node, active) {
     [t("node.hashMode"), hashSize ? (hashSize >= 2 ? "2B+" : "1B") : null, t("node.hashModeHelp")],
     [t("node.inconsistentHash"), node.hash_size_inconsistent ? t("common.yes") : null, t("node.inconsistentHashHelp")],
   ], "", "node-basic-details");
-  const trafficDetails = renderNodeDetails(t("node.trafficDetails"), [
+  return `
+    <header>
+      <div><small>${escapeHtml(roleLabel(node.role))}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
+      <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
+    </header>
+    ${nodeScoreSummary(node)}
+    ${nodePhotos(node)}
+    ${nodeUserInfo(node)}
+    ${nodeComments(node, true)}
+    ${basicDetails}
+    ${nodeTrafficDetails(node)}
+    ${nodeNetworkDetails(node)}
+    ${nodeAnalytics(node)}
+    ${nodeLastRoute(node)}
+    ${nodeNeighbors(node)}
+    ${nodeHistory(node)}
+    ${node.public_key ? `<div class="node-public-key"><div><span>${t("node.publicKey")}</span><button class="node-key-copy" type="button">${t("common.copy")}</button></div><code>${escapeHtml(node.public_key)}</code></div>` : ""}
+    ${nodeActionButtons(node, { close: true })}
+  `;
+}
+
+function nodeTrafficDetails(node) {
+  const rankNodes = [...state.nodeByKey.values()];
+  return renderNodeDetails(t("node.trafficDetails"), [
     [t("node.advertPackets"), countWithRank(node.advert_count, rankNodes, node, "advert_count"), t("node.advertHelp")],
     [t("node.battery"), node.battery_mv == null ? null : `${node.battery_mv} mV`],
     [t("node.temperature"), node.temperature_c == null ? null : `${node.temperature_c} °C`],
   ], "", "node-traffic-details");
+}
+
+function nodeNetworkDetails(node) {
+  const rankNodes = [...state.nodeByKey.values()];
   const usefulnessScore = nodeMetric(node, "usefulness_score");
   const usefulness = usefulnessScore == null
     ? null
@@ -2164,7 +2191,7 @@ function nodePopupContent(node, active) {
       </div>
     </details>
   `;
-  const networkDetails = renderNodeDetails(t("node.networkDetails"), [
+  return renderNodeDetails(t("node.networkDetails"), [
     [t("node.usefulness7d"), usefulness, t("node.usefulnessHelp", { window: scoreWindow })],
     [t("node.coverage7d"), scoredWithRank(nodeMetric(node, "coverage_score"), rankNodes, node, "coverage_score"), t("node.coverageHelp")],
     [t("node.trafficShare7d"), scoredWithRank(nodeMetric(node, "traffic_share_score"), rankNodes, node, "traffic_share_score"), t("node.trafficShareHelp")],
@@ -2176,26 +2203,6 @@ function nodePopupContent(node, active) {
       ? node.transported_scopes.join(", ") : null, t("node.transportedScopesHelp")],
     [t("node.foreign"), node.foreign ? t("common.yes") : null, t("node.foreignHelp")],
   ], scoreHelp, "node-network-details");
-
-  return `
-    <header>
-      <div><small>${escapeHtml(roleLabel(node.role))}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
-      <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
-    </header>
-    ${nodeScoreSummary(node)}
-    ${nodePhotos(node)}
-    ${nodeUserInfo(node)}
-    ${nodeComments(node, true)}
-    ${basicDetails}
-    ${trafficDetails}
-    ${networkDetails}
-    ${nodeAnalytics(node)}
-    ${nodeLastRoute(node)}
-    ${nodeNeighbors(node)}
-    ${nodeHistory(node)}
-    ${node.public_key ? `<div class="node-public-key"><div><span>${t("node.publicKey")}</span><button class="node-key-copy" type="button">${t("common.copy")}</button></div><code>${escapeHtml(node.public_key)}</code></div>` : ""}
-    ${nodeActionButtons(node, { close: true })}
-  `;
 }
 
 function nodeScoreSummary(node) {
@@ -2230,6 +2237,7 @@ function compactNodePopupContent(node, active) {
     </header>
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
+    ${IS_BETA ? `${nodeTrafficDetails(node)}${nodeNetworkDetails(node)}` : ""}
     ${nodeUserInfo(node)}
     ${nodeComments(node)}
     ${nodeLastRoute(node)}
@@ -2292,7 +2300,8 @@ function renderNodeDetail(node, active, initialTab = "overview") {
   move(".node-photos", "photos");
   move(".node-comments", "comments");
   move(".node-basic-details", "overview");
-  move(".node-popup-details:not(.node-basic-details)", "network", true);
+  if (IS_BETA) move(".node-popup-details:not(.node-basic-details)", "overview", true);
+  else move(".node-popup-details:not(.node-basic-details)", "network", true);
   move(".node-analytics", "network", true);
   move(".node-last-route", "overview", true);
   move(".node-neighbors", "overview", true);
