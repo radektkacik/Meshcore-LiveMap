@@ -394,6 +394,7 @@
 | 2026-11-04 20:54 | `20261104T205451Z.tar.gz` (stage APP_DIR) | `20261104-2054-956f4a2` | Beta: oprava vykreslení health grafů po načtení | `src/main.js` |
 | 2026-11-04 21:04 | `20261104T210444Z.tar.gz` (stage APP_DIR) | `20261104-2104-fb08897` | Beta: klik na health badge otevře detail a odscrolluje na graf historie baterie/teploty | `src/main.js`, `src/style.css` |
 | 2026-11-04 21:07 | `20261104T210751Z.tar.gz` (stage APP_DIR) | `20261104-2107-39ebf1a` | Beta: větší a tmavší písmo v kartě nodu, detailu, HUD a na menších displejích | `src/style.css` |
+| 2026-11-04 21:10 | `20261104T211012Z.tar.gz` (stage APP_DIR) | `20261104-2110-6eafc80` | Beta: veřejný klíč s kopírováním v kompaktní kartě a na začátku Přehledu detailu | `src/main.js`, `src/style.css` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
