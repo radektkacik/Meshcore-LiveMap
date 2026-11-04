@@ -1229,3 +1229,10 @@ html[data-theme="dark"] { --muted: #95a8a0; }
   .node-neighbor small, .node-neighbors > small { font-size: 12px; }
   .node-label { font-size: 12px; }
 }
+
+.node-compact-key { display: flex; align-items: center; gap: 8px; padding: 7px 15px; border-bottom: 1px solid var(--line); background: #fbfcf8; }
+.node-compact-key > span { flex: 0 0 auto; color: var(--muted); font: 9px "DM Mono", monospace; letter-spacing: 0.07em; text-transform: uppercase; }
+.node-compact-key code { flex: 1 1 auto; min-width: 0; overflow: hidden; color: #3f584e; font: 11px "DM Mono", monospace; text-overflow: ellipsis; white-space: nowrap; }
+.node-compact-key .node-key-copy { flex: 0 0 auto; }
+html[data-theme="dark"] .node-compact-key { background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .node-compact-key code { color: #c3d0d6; }

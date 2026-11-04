@@ -2201,6 +2201,17 @@ function batteryStatusIcon(status) {
   return `<svg class="node-health-battery" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 }
 
+function nodeCompactPublicKey(node) {
+  if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
+  return `
+    <div class="node-compact-key">
+      <span>${t("node.publicKey")}</span>
+      <code title="${escapeHtml(node.public_key)}">${escapeHtml(node.public_key.slice(0, 10))}…${escapeHtml(node.public_key.slice(-6))}</code>
+      <button class="node-key-copy" type="button">${t("common.copy")}</button>
+    </div>
+  `;
+}
+
 function nodeHealthBadge(node) {
   const health = node.health && typeof node.health === "object" ? node.health : null;
   const battery = health?.batteryMv != null && Number.isFinite(Number(health.batteryMv))
@@ -2323,6 +2334,7 @@ function compactNodePopupContent(node, active) {
       </div>
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
+    ${nodeCompactPublicKey(node)}
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
     ${nodeTrafficDetails(node)}
@@ -2385,6 +2397,7 @@ function renderNodeDetail(node, active, initialTab = "overview") {
     for (const element of source) panels.get(panelName)?.appendChild(element);
   };
   move(".node-overview", "overview");
+  move(".node-public-key", "overview", true);
   move(".node-user-info", "overview");
   move(".node-photos", "photos");
   move(".node-comments", "comments");
@@ -2396,7 +2409,6 @@ function renderNodeDetail(node, active, initialTab = "overview") {
   move(".node-last-route", "overview", true);
   move(".node-neighbors", "overview", true);
   move(".node-history", "overview", true);
-  move(".node-public-key", "network", true);
   move(".node-popup-actions", "overview", true);
   shell.querySelector(".node-popup-close")?.remove();
   const selectTab = (tab) => {
