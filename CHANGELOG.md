@@ -5,9 +5,10 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-05 — Mobil: žádné zvětšování celé stránky
 - Prostředí: produkce i beta
-- Build: 20261105-0857-c2e5b2d
+- Build: 20261105-0905-d1c17a8
 - Pinch na levém panelu, dialogu nebo jiném UI už nemění zoom celé stránky.
-- Pinch na mapě dál plynule zoomuje mapu a pinch ve fotogalerii zoomuje fotografii.
+- Pinch na mapě dál plynule zoomuje mapu.
+- Fotogalerie má vlastní dvouprstý pinch zoom, takže zvětšování fotky funguje i bez zoomu celé stránky.
 - Upravený viewport a `touch-action`; na iOS navíc blokované systémové gesto stránky.
 - Po nasazení je potřeba stránku jednou obnovit, aby se zrušil případný starý zoom.
 
