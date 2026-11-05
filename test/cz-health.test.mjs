@@ -87,3 +87,35 @@ test("CzHealth store marks old latest values as stale", () => {
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("CzHealth store accepts SUMMARY packets without sample arrays", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-health-"));
+  const store = createCzHealthStore(join(directory, "health.sqlite"));
+  try {
+    const observedAt = OBSERVED_AT + 60_000;
+    const health = {
+      baseAt: observedAt,
+      battery: { avg: 4000, last: 4020, max: 4050, min: 3950 },
+      flags: {},
+      kind: "summary",
+      latestBatteryMv: 4020,
+      latestTemperatureC: 23.5,
+      messageKey: "summary-packet-1",
+      observedAt,
+      prefix: "0123456789abcdef",
+      temperature: { last: 23.5, max: 25, min: 22 },
+      temperatureSource: "mcu",
+    };
+    assert.ok(store.record(health));
+    const publicKey = `${health.prefix}${"0".repeat(48)}`;
+    const history = store.history(publicKey, 1, observedAt);
+    assert.equal(history.samples.battery.length, 1);
+    assert.equal(history.samples.battery[0].value, 4020);
+    assert.equal(history.samples.temperature.length, 1);
+    assert.equal(history.samples.temperature[0].value, 23.5);
+    assert.equal(history.latest.batteryMv, 4020);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

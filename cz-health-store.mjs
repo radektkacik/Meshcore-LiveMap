@@ -199,10 +199,25 @@ export function createCzHealthStore(dbPath, {
     insertMessage.run(row);
     const messageId = selectMessage.get(health.messageKey)?.id || null;
     const samples = [
-      ...(health.battery || []).map((sample) => ({ metric: "battery", sampled_at: sample.t, value: sample.mv, source: null })),
-      ...(health.temperature || []).map((sample) => ({ metric: "temperature", sampled_at: sample.t, value: sample.c, source: health.temperatureSource || null })),
-      ...(health.current || []).map((sample) => ({ metric: "current", sampled_at: sample.t, value: sample.ma, source: null })),
+      ...(Array.isArray(health.battery) ? health.battery : [])
+        .map((sample) => ({ metric: "battery", sampled_at: sample.t, value: sample.mv, source: null })),
+      ...(Array.isArray(health.temperature) ? health.temperature : [])
+        .map((sample) => ({ metric: "temperature", sampled_at: sample.t, value: sample.c, source: health.temperatureSource || null })),
+      ...(Array.isArray(health.current) ? health.current : [])
+        .map((sample) => ({ metric: "current", sampled_at: sample.t, value: sample.ma, source: null })),
     ];
+    // SUMMARY packets carry only the latest values, not the sample arrays.
+    if (!samples.length) {
+      if (Number.isFinite(health.latestBatteryMv)) {
+        samples.push({ metric: "battery", sampled_at: observedAt, value: health.latestBatteryMv, source: null });
+      }
+      if (Number.isFinite(health.latestTemperatureC)) {
+        samples.push({ metric: "temperature", sampled_at: observedAt, value: health.latestTemperatureC, source: health.temperatureSource || null });
+      }
+      if (Number.isFinite(health.latestCurrentMa)) {
+        samples.push({ metric: "current", sampled_at: observedAt, value: health.latestCurrentMa, source: null });
+      }
+    }
     for (const sample of samples) {
       if (!Number.isFinite(sample.sampled_at) || !Number.isFinite(sample.value)) continue;
       upsertSample.run({
