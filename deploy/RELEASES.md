@@ -433,6 +433,8 @@
 | 2026-11-05 11:02 | `20261105T110240Z.tar.gz` | `20261105-1102-9485e81` | Prod: stejný filtr telemetrie, stavový filtr a bateriové štítky; ověřeno na produkci | `index.html`, `src/main.js`, `src/style.css` |
 | 2026-11-05 11:03 | `20261105T110334Z.tar.gz` (stage APP_DIR) | `20261105-1103-69a1465` | Beta: changelog doplněn o filtr telemetrie | `CHANGELOG.md` |
 | 2026-11-05 11:04 | `20261105T110410Z.tar.gz` | `20261105-1104-69a1465` | Prod: stejný changelog | `CHANGELOG.md` |
+| 2026-11-05 11:06 | `20261105T110611Z.tar.gz` (stage APP_DIR) | `20261105-1106-e492fb4` | Beta: při filtru nody s fotkou/telemetrií se skryjí trasy, SNR popisky a animace | `src/main.js` |
+| 2026-11-05 11:07 | `20261105T110746Z.tar.gz` | `20261105-1107-e492fb4` | Prod: stejné skrývání tras při filtru | `src/main.js` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 

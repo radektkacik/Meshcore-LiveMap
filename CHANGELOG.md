@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-05 — Trasy skryté při filtru nodů
+- Prostředí: produkce i beta
+- Build: 20261105-1107-e492fb4
+- Při zapnutém filtru **Jen nody s fotkou** nebo **Jen nody s telemetrií** se automaticky skryjí trasy.
+- Spolu s trasami se skryjí i SNR popisky a animace tras.
+- Po vypnutí filtru se trasy vrátí podle původního nastavení „Skrýt trasy“.
+
 ## 2026-11-05 — Filtr telemetrie a stav baterie
 - Prostředí: produkce i beta
 - Build: 20261105-1102-9485e81
