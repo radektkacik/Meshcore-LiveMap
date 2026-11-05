@@ -454,6 +454,8 @@
 | 2026-11-05 13:02 | `20261105T130236Z.tar.gz` | `20261105-1302-87df8d3` | Prod: stejné odstranění náhledů fotek | `server.mjs`, `src/main.js`, `src/style.css`, `index.html` |
 | 2026-11-05 13:08 | `20261105T130834Z.tar.gz` (stage APP_DIR) | `20261105-1308-2a87039` | Beta: formulářová pole mají jemné zelené podbarvení (i tmavý režim) | `src/style.css` |
 | 2026-11-05 13:10 | `20261105T131056Z.tar.gz` | `20261105-1310-2a87039` | Prod: stejné podbarvení zadávacích polí | `src/style.css` |
+| 2026-11-05 16:32 | `20261105T163201Z.tar.gz` (stage APP_DIR) | `20261105-1632-8d8fcce` | Beta: v Provozu místo celkového počtu advertů počet za 24 h; server počítá distinct adverty z packet store | `packet-store.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, testy |
+| 2026-11-05 16:35 | `20261105T163546Z.tar.gz` | `20261105-1635-8d8fcce` | Prod: stejný 24h počet advertů | `packet-store.mjs`, `server.mjs`, `src/main.js`, `src/i18n.js`, testy |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
