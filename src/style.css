@@ -1586,3 +1586,29 @@ html[data-font-size="large"] .leaflet-control-attribution { font-size: 12px !imp
 .node-tooltip-health.critical .node-health-battery { color: #c63e32; }
 .node-tooltip-health.stale .node-health-battery,
 .node-tooltip-health.unknown .node-health-battery { color: #899990; opacity: 0.75; }
+
+/* Editable fields: subtle tint so they stand out from surrounding panels */
+input[type="text"],
+input[type="search"],
+input[type="password"],
+input[type="number"],
+input[type="email"],
+input[type="url"],
+input[type="tel"],
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+select,
+textarea { background-color: #f1f7f2 !important; }
+html[data-theme="dark"] input[type="text"],
+html[data-theme="dark"] input[type="search"],
+html[data-theme="dark"] input[type="password"],
+html[data-theme="dark"] input[type="number"],
+html[data-theme="dark"] input[type="email"],
+html[data-theme="dark"] input[type="url"],
+html[data-theme="dark"] input[type="tel"],
+html[data-theme="dark"] input[type="date"],
+html[data-theme="dark"] input[type="datetime-local"],
+html[data-theme="dark"] input[type="time"],
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea { background-color: #1b2822 !important; }
