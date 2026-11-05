@@ -916,9 +916,9 @@ function countWithRank(value, nodes, node, field) {
 function renderNodeDetails(title, rows, help = "", className = "") {
   const details = rows
     .filter(([, value]) => value != null)
-    .map(([label, value, description, rowClass]) => `
+    .map(([label, value, description, rowClass, extraHtml]) => `
       <div${rowClass ? ` class="${escapeHtml(rowClass)}"` : ""}>
-        <dt>${escapeHtml(label)}${description ? ` <span class="node-metric-info" title="${escapeHtml(description)}" aria-label="${escapeHtml(description)}">i</span>` : ""}</dt>
+        <dt>${escapeHtml(label)}${description ? ` <span class="node-metric-info" title="${escapeHtml(description)}" aria-label="${escapeHtml(description)}">i</span>` : ""}${extraHtml || ""}</dt>
         <dd>${escapeHtml(value)}</dd>
       </div>
     `)
@@ -2247,6 +2247,13 @@ function nodePopupContent(node, active) {
   `;
 }
 
+function nodeTrendButton(node) {
+  if (!node.health) return "";
+  const key = String(node.public_key || "").toUpperCase();
+  if (!/^[0-9a-f]{64}$/.test(key)) return "";
+  return `<button type="button" class="node-trend-button" data-health-node-key="${escapeHtml(key)}" title="${t("node.showTrend")}" aria-label="${t("node.showTrend")}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8" /><path d="M14 7h7v7" /></svg><span>${t("node.trend")}</span></button>`;
+}
+
 function nodeTrafficDetails(node) {
   const rankNodes = [...state.nodeByKey.values()];
   const health = node.health && typeof node.health === "object" ? node.health : null;
@@ -2256,10 +2263,11 @@ function nodeTrafficDetails(node) {
     ? health.batteryStatus
     : "unknown";
   const batteryStatus = batteryStatusCode !== "unknown" ? t(`node.healthBattery.${batteryStatusCode}`) : null;
+  const trend = nodeTrendButton(node);
   return renderNodeDetails(t("node.trafficDetails"), [
     [t("node.advertPackets"), countWithRank(node.advert_count, rankNodes, node, "advert_count"), t("node.advertHelp")],
-    [t("node.battery"), battery == null ? null : `${formatDecimal(battery / 1000, 2)} V${batteryStatus ? ` · ${batteryStatus}` : ""}`, t("node.batteryHelp")],
-    [t("node.temperature"), temperature == null ? null : `${formatDecimal(temperature, 1)} °C`],
+    [t("node.battery"), battery == null ? null : `${formatDecimal(battery / 1000, 2)} V${batteryStatus ? ` · ${batteryStatus}` : ""}`, t("node.batteryHelp"), "", trend],
+    [t("node.temperature"), temperature == null ? null : `${formatDecimal(temperature, 1)} °C`, null, "", trend],
     [t("node.current"), health?.currentMa != null && Number.isFinite(Number(health.currentMa)) ? `${formatNumber(health.currentMa)} mA` : null],
     [t("node.charging"), health ? (health.charging ? t("common.yes") : t("common.no")) : null],
     [t("node.externalPower"), health ? (health.externalPower ? t("common.yes") : t("common.no")) : null],
@@ -2379,6 +2387,17 @@ function scrollNodeHealthHistory(root) {
   section.scrollIntoView({ behavior: "smooth", block: "center" });
   section.classList.add("node-health-history-highlight");
   setTimeout(() => section.classList.remove("node-health-history-highlight"), 1_200);
+  return true;
+}
+
+function revealNodeHealthTrend(root, keyValue) {
+  const detailPage = root?.closest?.(".node-detail-page");
+  if (detailPage?.open && scrollNodeHealthHistory(detailPage)) return true;
+  const key = String(keyValue || "").toUpperCase();
+  const node = key ? state.nodeByKey.get(key) : null;
+  if (!node) return false;
+  openNodeDetail(node);
+  setTimeout(() => scrollNodeHealthHistory(elements.nodeDetailPage), 80);
   return true;
 }
 
@@ -7461,16 +7480,17 @@ document.addEventListener("click", (event) => {
 
 document.addEventListener("click", (event) => {
   const badge = event.target instanceof Element ? event.target.closest(".node-health-badge") : null;
-  if (!badge) return;
+  if (badge) {
+    event.preventDefault();
+    event.stopPropagation();
+    revealNodeHealthTrend(badge, badge.dataset.healthNodeKey);
+    return;
+  }
+  const trend = event.target instanceof Element ? event.target.closest(".node-trend-button") : null;
+  if (!trend) return;
   event.preventDefault();
   event.stopPropagation();
-  const detailPage = badge.closest(".node-detail-page");
-  if (detailPage?.open && scrollNodeHealthHistory(detailPage)) return;
-  const key = String(badge.dataset.healthNodeKey || "").toUpperCase();
-  const node = key ? state.nodeByKey.get(key) : null;
-  if (!node) return;
-  openNodeDetail(node);
-  setTimeout(() => scrollNodeHealthHistory(elements.nodeDetailPage), 80);
+  revealNodeHealthTrend(trend, trend.dataset.healthNodeKey);
 }, true);
 
 document.addEventListener("click", (event) => {
