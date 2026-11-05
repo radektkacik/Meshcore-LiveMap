@@ -144,6 +144,7 @@ function appPath(path) {
 const INITIAL_PARAMS = new URLSearchParams(location.search);
 const ALL_NODE_ROLES = ["repeater", "companion", "room", "sensor", "unknown"];
 const ALL_HASH_SIZES = [1, 2, 3];
+const ALL_HEALTH_STATUSES = ["ok", "warn", "critical", "stale"];
 const mobileSheetQuery = window.matchMedia("(max-width: 700px)");
 const FORCE_MOBILE_SHEET = INITIAL_PARAMS.get("sheet") === "1";
 const INITIAL_NODE_KEY = INITIAL_PARAMS.get("node")?.trim().toUpperCase() || null;
@@ -356,6 +357,9 @@ const elements = {
   commentsText: document.querySelector("#comments-text"),
   commentsTextLabel: document.querySelector("#comments-text-label"),
   commentsTitle: document.querySelector("#comments-title"),
+  healthOnlyToggle: document.querySelector("#health-only-toggle"),
+  healthStatusBlock: document.querySelector("#health-status-block"),
+  healthStatusSelect: document.querySelector("#health-status-select"),
   inactiveOnlyToggle: document.querySelector("#inactive-only-toggle"),
   nodeLabelsToggle: document.querySelector("#node-labels-toggle"),
   photosOnlyToggle: document.querySelector("#photos-only-toggle"),
@@ -515,6 +519,8 @@ const state = {
   observers: [],
   observersLoadedAt: 0,
   observersLoading: false,
+  healthOnly: false,
+  healthStatus: "all",
   hideRoutes: localStorage.getItem("meshcoreHideRoutes") === "true",
   inactiveOnly: false,
   photoCache: new Map(),
@@ -626,6 +632,18 @@ function applyInitialFilters() {
     state.photosOnly = photos;
     elements.photosOnlyToggle.checked = photos;
   }
+  const health = readFlag("health");
+  if (health !== null) {
+    state.healthOnly = health;
+    elements.healthOnlyToggle.checked = health;
+  }
+  const healthStatus = INITIAL_PARAMS.get("healthStatus");
+  if (ALL_HEALTH_STATUSES.includes(healthStatus)) {
+    state.healthStatus = healthStatus;
+    elements.healthStatusSelect.value = healthStatus;
+  }
+  elements.healthStatusBlock.hidden = !state.healthOnly;
+  updateHealthLegend();
   const inactive = readFlag("inactive");
   if (inactive !== null) {
     state.inactiveOnly = inactive;
@@ -746,6 +764,7 @@ elements.hideRoutesToggle.checked = state.hideRoutes;
 const losLayer = L.layerGroup().addTo(map);
 const losMarkerLayer = L.layerGroup().addTo(map);
 const nodeLabelLayer = L.layerGroup().addTo(map);
+const healthLayer = L.layerGroup().addTo(map);
 const routeRenderer = L.canvas({ padding: 0.3, tolerance: 8 });
 const routeSvgRenderer = L.svg({ padding: 0.3 });
 routeRenderer._dashOffset = 0;
@@ -764,6 +783,28 @@ function roleColor(role) {
 
 const TOP_TIER_COLOR = "#df5064";
 const SECOND_TIER_COLOR = "#efa438";
+
+function nodeHealthStatusCode(node) {
+  const status = String(node?.health?.batteryStatus || "").toLowerCase();
+  return ALL_HEALTH_STATUSES.includes(status) ? status : (node?.health ? "unknown" : "none");
+}
+
+function nodeHealthMapTitle(node) {
+  const health = node?.health && typeof node.health === "object" ? node.health : null;
+  if (!health) return "";
+  const status = nodeHealthStatusCode(node);
+  const battery = health.batteryMv != null && Number.isFinite(Number(health.batteryMv))
+    ? Number(health.batteryMv)
+    : null;
+  const temperature = health.temperatureC != null && Number.isFinite(Number(health.temperatureC))
+    ? Number(health.temperatureC)
+    : null;
+  return [
+    battery == null ? null : `${t("node.battery")}: ${formatDecimal(battery / 1000, 2)} V`,
+    status === "unknown" ? t("common.unknown") : t(`node.healthBattery.${status}`),
+    temperature == null ? null : `${t("node.temperature")}: ${formatDecimal(temperature, 1)} °C`,
+  ].filter(Boolean).join(" · ");
+}
 
 function nodeMarkerStyle(node, tier) {
   const color = roleColor(node.role);
@@ -3637,6 +3678,7 @@ function refreshNodePresentation(entry) {
   if (validCoords(node.lat, node.lon)) marker.setLatLng([node.lat, node.lon]);
   marker.setTooltipContent(() => nodeTooltip(node));
   applyNodeStyle(entry, entry.tier);
+  syncNodeHealthBadge(entry);
   const role = node.role || "unknown";
   if (entry.stackRole !== role) {
     entry.stackRole = role;
@@ -3725,13 +3767,67 @@ function nodePassesFilters(node) {
   const key = String(node.public_key || "").toUpperCase();
   if (!isNodeRoleAllowed(node, state.allowedRoles)) return false;
   if (state.photosOnly && !state.photoNodeKeys.has(key)) return false;
+  if (state.healthOnly) {
+    if (!node.health) return false;
+    if (state.healthStatus !== "all") {
+      const status = nodeHealthStatusCode(node);
+      if (state.healthStatus === "stale") {
+        if (status !== "stale" && status !== "unknown") return false;
+      } else if (status !== state.healthStatus) return false;
+    }
+  }
   if (state.inactiveOnly && nodeIsActive(node)) return false;
   return true;
 }
 
+function syncNodeHealthBadge(entry) {
+  const node = entry?.node;
+  const shouldShow = Boolean(state.healthOnly
+    && node
+    && node.health
+    && validCoords(node.lat, node.lon)
+    && nodePassesFilters(node));
+  if (!shouldShow) {
+    if (entry?.healthMarker) {
+      healthLayer.removeLayer(entry.healthMarker);
+      entry.healthMarker = null;
+    }
+    return;
+  }
+  const status = nodeHealthStatusCode(node);
+  const title = nodeHealthMapTitle(node);
+  const icon = L.divIcon({
+    className: "node-health-map-icon",
+    html: `<span class="node-health-map-badge ${status}" title="${escapeHtml(title)}">${batteryStatusIcon(status)}</span>`,
+    iconAnchor: [-4, 4],
+    iconSize: [20, 20],
+  });
+  const latlng = [node.lat, node.lon];
+  if (entry.healthMarker) {
+    entry.healthMarker.setLatLng(latlng);
+    entry.healthMarker.setIcon(icon);
+    return;
+  }
+  entry.healthMarker = L.marker(latlng, {
+    icon,
+    interactive: false,
+    keyboard: false,
+    zIndexOffset: 1000,
+  }).addTo(healthLayer);
+}
+
+function syncHealthBadges() {
+  if (!state.healthOnly) {
+    healthLayer.clearLayers();
+    for (const entry of state.nodeMarkers) entry.healthMarker = null;
+    return;
+  }
+  for (const entry of state.nodeMarkers) syncNodeHealthBadge(entry);
+}
+
 function addNodeMarker(node) {
   const active = nodeIsActive(node, nowMs(), NODE_ACTIVE_MS);
-  const entry = { active, marker: null, node, shown: false, stackRole: node.role || "unknown", styleKey: nodeStyleKey(node, null), tier: null };
+  const entry = { active, healthMarker: null, marker: null, node, shown: false, stackRole: node.role || "unknown", styleKey: nodeStyleKey(node, null), tier: null };
   const marker = L.circleMarker([node.lat, node.lon], {
     ...nodeMarkerStyle(node, null),
     pane: "markerPane",
@@ -3786,6 +3882,7 @@ function addNodeMarker(node) {
   entry.shown = allowed;
   state.nodeMarkers.push(entry);
   if (key) state.nodeMarkerByKey.set(key, entry);
+  syncNodeHealthBadge(entry);
   return entry;
 }
 
@@ -3857,6 +3954,8 @@ function buildShareUrl(node = null) {
   url.searchParams.set("hide", state.hideRoutes ? "1" : "0");
   url.searchParams.set("animate", state.animationEnabled ? "1" : "0");
   url.searchParams.set("photos", state.photosOnly ? "1" : "0");
+  url.searchParams.set("health", state.healthOnly ? "1" : "0");
+  if (state.healthOnly && state.healthStatus !== "all") url.searchParams.set("healthStatus", state.healthStatus);
   url.searchParams.set("inactive", state.inactiveOnly ? "1" : "0");
   url.searchParams.set("observers", state.showObservers ? "1" : "0");
   if (state.animationMode === "svg") url.searchParams.set("anim", "svg");
@@ -3900,6 +3999,12 @@ function applyNodeMembership() {
   }
 }
 
+function updateHealthLegend() {
+  for (const element of document.querySelectorAll(".legend-health")) {
+    element.hidden = !state.healthOnly;
+  }
+}
+
 function applyNodeTiers() {
   const tiers = rankNodeTiers(state.nodeMarkers.map(({ node }) => node), nowMs(), NODE_RANKING_ACTIVE_MS);
   let top = 0;
@@ -3923,8 +4028,10 @@ function refreshNodeState() {
     }
   }
   applyNodeTiers();
+  updateHealthLegend();
   refreshOpenNodeDetailStatus();
   applyNodeMembership();
+  syncHealthBadges();
   if (!elements.statsPanel.hidden) renderStats();
   scheduleNodeLabels();
 }
@@ -3986,6 +4093,7 @@ function syncNodes(nodes) {
       else addNodeMarker(node);
     } else if (entry) {
       nodeLayer.removeLayer(entry.marker);
+      if (entry.healthMarker) healthLayer.removeLayer(entry.healthMarker);
       state.nodeMarkerByKey.delete(key);
       state.nodeMarkers = state.nodeMarkers.filter((candidate) => candidate !== entry);
     }
@@ -6726,6 +6834,16 @@ elements.nodeLabelsToggle.addEventListener("change", () => {
 });
 elements.photosOnlyToggle.addEventListener("change", () => {
   void setPhotosOnly(elements.photosOnlyToggle.checked);
+});
+elements.healthOnlyToggle.addEventListener("change", () => {
+  state.healthOnly = elements.healthOnlyToggle.checked;
+  elements.healthStatusBlock.hidden = !state.healthOnly;
+  refreshNodeState();
+});
+elements.healthStatusSelect.addEventListener("change", () => {
+  const next = elements.healthStatusSelect.value;
+  state.healthStatus = ALL_HEALTH_STATUSES.includes(next) ? next : "all";
+  refreshNodeState();
 });
 elements.inactiveOnlyToggle.addEventListener("change", () => {
   state.inactiveOnly = elements.inactiveOnlyToggle.checked;

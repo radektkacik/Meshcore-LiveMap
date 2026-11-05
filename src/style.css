@@ -155,6 +155,10 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .legend i.other { background: #9547b7; }
 .legend i.path { background: #d87412; }
 .legend i.trace { background: linear-gradient(90deg, #d1374d, #e3911c, #2bbf88); }
+.legend i.health-ok { background: #1f9d63; }
+.legend i.health-warn { background: #d18a1f; }
+.legend i.health-critical { background: #c63e32; }
+.legend i.health-stale { background: #899990; }
 .source-note { margin: 10px 0 0; color: #7a8c83; font-size: 10px; line-height: 1.45; }
 .license-note { margin-top: 4px; }
 .license-note a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
@@ -337,6 +341,17 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-health-badge.warn .node-health-battery { color: #d18a1f; }
 .node-health-badge.critical .node-health-battery { color: #c63e32; }
 .node-health-badge.stale .node-health-battery, .node-health-badge.unknown .node-health-battery { color: #899990; opacity: 0.75; }
+.node-health-map-icon { background: transparent; border: 0; pointer-events: none; }
+.node-health-map-badge { display: grid; place-items: center; width: 20px; height: 20px; border: 2px solid currentColor; border-radius: 50%; color: #899990; background: #fffef9; box-shadow: 0 1px 5px rgba(20, 42, 32, 0.34); }
+.node-health-map-badge .node-health-battery { width: 14px; height: 14px; }
+.node-health-map-badge.ok { color: #1f9d63; }
+.node-health-map-badge.warn { color: #d18a1f; }
+.node-health-map-badge.critical { color: #c63e32; }
+.node-health-map-badge.stale, .node-health-map-badge.unknown { color: #899990; border-style: dashed; }
+.node-health-map-badge.ok .node-health-battery { color: #1f9d63; }
+.node-health-map-badge.warn .node-health-battery { color: #d18a1f; }
+.node-health-map-badge.critical .node-health-battery { color: #c63e32; }
+.node-health-map-badge.stale .node-health-battery, .node-health-map-badge.unknown .node-health-battery { color: #899990; }
 .node-history { padding: 8px 15px; border-bottom: 1px solid var(--line); background: #f8faf7; }
 .node-history-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .node-history-head span { color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: 0.07em; text-transform: uppercase; }

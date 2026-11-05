@@ -168,6 +168,22 @@
             </label>
 
             <label class="packet-filter">
+              <input id="health-only-toggle" type="checkbox" />
+              <span><strong>Jen nody s telemetrií</strong><small>CzHealth · baterie a teplota</small></span>
+            </label>
+
+            <div class="filter-block health-status-block" id="health-status-block" hidden>
+              <label class="filter-title" for="health-status-select">Stav telemetrie</label>
+              <select id="health-status-select" class="route-retention-select">
+                <option value="all">Všechny stavy</option>
+                <option value="ok">Baterie OK</option>
+                <option value="warn">Nízká</option>
+                <option value="critical">Kritická</option>
+                <option value="stale">Stará data</option>
+              </select>
+            </div>
+
+            <label class="packet-filter">
               <input id="inactive-only-toggle" type="checkbox" />
               <span><strong>Jen neaktivní nody (1 h)</strong></span>
             </label>
@@ -177,6 +193,10 @@
               <span><i class="node second"></i> <span id="legend-second">Top 5–15 % Užitečnost</span></span>
               <span><i class="node repeater"></i> Repeater</span>
               <span><i class="node companion"></i> Companion</span>
+              <span class="legend-health" hidden><i class="node health-ok"></i> Baterie OK</span>
+              <span class="legend-health" hidden><i class="node health-warn"></i> Nízká</span>
+              <span class="legend-health" hidden><i class="node health-critical"></i> Kritická</span>
+              <span class="legend-health" hidden><i class="node health-stale"></i> Stará data</span>
               <span><i class="line advert"></i> Advert</span>
               <span class="beta-legend" hidden><i class="line direct"></i> Direct / zpráva</span>
               <span class="beta-legend" hidden><i class="line other"></i> Ostatní typy</span>
