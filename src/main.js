@@ -2251,7 +2251,7 @@ function nodeTrendButton(node) {
   if (!node.health) return "";
   const key = String(node.public_key || "").toUpperCase();
   if (!/^[0-9a-f]{64}$/i.test(key)) return "";
-  return `<button type="button" class="node-trend-button" data-health-node-key="${escapeHtml(key)}" title="${t("node.showTrend")}" aria-label="${t("node.showTrend")}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8" /><path d="M14 7h7v7" /></svg><span>${t("node.trend")}</span></button>`;
+  return `<button type="button" class="node-trend-button" data-health-node-key="${escapeHtml(key)}" title="${t("node.showTrend")}" aria-label="${t("node.showTrend")}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8" /><path d="M14 7h7v7" /></svg></button>`;
 }
 
 function nodeTrafficDetails(node) {

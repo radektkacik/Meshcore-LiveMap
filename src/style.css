@@ -420,11 +420,12 @@ html[data-theme="dark"] .node-health-xaxis { color: #7f9188; }
 .node-popup-card dt, .node-detail-shell dt { color: var(--muted); font-size: 11px; }
 .node-popup-card dd, .node-detail-shell dd { margin: 0; font: 500 11px "DM Mono", monospace; text-align: right; }
 .node-metric-info { display: inline-block; width: 15px; height: 15px; margin-left: 2px; border: 1px solid rgba(7, 142, 98, 0.3); border-radius: 50%; color: var(--green); font: 600 9px/14px "DM Mono", monospace; text-align: center; vertical-align: 1px; cursor: help; }
-.node-trend-button { display: inline-flex; align-items: center; gap: 3px; margin-left: 5px; padding: 1px 5px 1px 4px; border: 1px solid rgba(7, 142, 98, 0.28); border-radius: 999px; color: var(--green); background: rgba(7, 142, 98, 0.06); font: 600 9px/14px "DM Mono", monospace; vertical-align: 1px; cursor: pointer; }
-.node-trend-button svg { width: 11px; height: 11px; }
-.node-trend-button:hover { border-color: rgba(7, 142, 98, 0.55); background: rgba(7, 142, 98, 0.13); }
+.node-trend-button { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-left: 3px; padding: 0; border: 0; border-radius: 4px; color: #899990; background: transparent; vertical-align: 1px; cursor: pointer; opacity: 0.9; }
+.node-trend-button svg { width: 13px; height: 13px; }
+.node-trend-button:hover { color: #4f6458; background: rgba(79, 100, 88, 0.08); opacity: 1; }
 .node-trend-button:focus-visible { outline: 2px solid rgba(7, 142, 98, 0.42); outline-offset: 1px; }
-html[data-theme="dark"] .node-trend-button { color: #5fd0a5; background: rgba(95, 208, 165, 0.08); border-color: rgba(95, 208, 165, 0.35); }
+html[data-theme="dark"] .node-trend-button { color: #8fa0a8; }
+html[data-theme="dark"] .node-trend-button:hover { color: #d7e2dc; background: rgba(215, 226, 220, 0.08); }
 .node-score-help { position: absolute; top: 0; right: 0; }
 .node-score-help summary { width: 17px; height: 17px; border: 1px solid rgba(7, 142, 98, 0.35); border-radius: 50%; color: var(--green); background: #edf7f1; font: 600 11px/16px "DM Mono", monospace; text-align: center; cursor: pointer; list-style: none; }
 .node-score-help summary::-webkit-details-marker { display: none; }
