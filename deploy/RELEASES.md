@@ -415,6 +415,10 @@
 | 2026-11-05 08:15 | `20261105T081500Z.tar.gz` (stage APP_DIR) | – | Beta: první pokus o nasazení changelogu selhal na health checku, automaticky obnoven předchozí build | `CHANGELOG.md` |
 | 2026-11-05 08:19 | `20261105T081944Z.tar.gz` | `20261105-0819-1100ed5` | Prod: changelog doplněn o Telegram schvalování | `CHANGELOG.md` |
 | 2026-11-05 08:22 | `20261105T082240Z.tar.gz` (stage APP_DIR) | `20261105-0822-1100ed5` | Beta: changelog po úspěšném opakovaném nasazení | `CHANGELOG.md` |
+| 2026-11-05 08:55 | `20261105T085521Z.tar.gz` (stage APP_DIR) | `20261105-0855-c7d38a6` | Beta: první část opravy mobilního pinch zoomu (viewport, touch-action, iOS gesta) | `index.html`, `src/style.css`, `src/main.js` |
+| 2026-11-05 08:56 | `20261105T085603Z.tar.gz` | `20261105-0856-c7d38a6` | Prod: stejná oprava mobilního pinch zoomu | `index.html`, `src/style.css`, `src/main.js` |
+| 2026-11-05 08:56 | `20261105T085659Z.tar.gz` (stage APP_DIR) | `20261105-0857-c2e5b2d` | Beta: doplněno `touch-action` na všechny UI plochy a dialogy | `src/style.css` |
+| 2026-11-05 08:57 | `20261105T085730Z.tar.gz` | `20261105-0857-c2e5b2d` | Prod: finální oprava pinch zoomu | `src/style.css` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 

@@ -3,6 +3,14 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-05 — Mobil: žádné zvětšování celé stránky
+- Prostředí: produkce i beta
+- Build: 20261105-0857-c2e5b2d
+- Pinch na levém panelu, dialogu nebo jiném UI už nemění zoom celé stránky.
+- Pinch na mapě dál plynule zoomuje mapu a pinch ve fotogalerii zoomuje fotografii.
+- Upravený viewport a `touch-action`; na iOS navíc blokované systémové gesto stránky.
+- Po nasazení je potřeba stránku jednou obnovit, aby se zrušil případný starý zoom.
+
 ## 2026-11-05 — Schvalování přímo z Telegramu
 - Prostředí: produkce
 - Build: 20261105-0812-f980e4d
