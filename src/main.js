@@ -166,7 +166,8 @@ function isPinchOwnedTarget(target) {
   return target instanceof Element && Boolean(target.closest(pinchOwnedSelector));
 }
 function preventPagePinch(event) {
-  if (!isPinchOwnedTarget(event.target)) event.preventDefault();
+  // The map handles its own pinch; the photo lightbox has a custom two-finger zoom.
+  if (!(event.target instanceof Element && event.target.closest("#map"))) event.preventDefault();
 }
 document.addEventListener("gesturestart", preventPagePinch, { passive: false });
 document.addEventListener("gesturechange", preventPagePinch, { passive: false });
@@ -528,6 +529,8 @@ const state = {
   photoPanX: 0,
   photoPanY: 0,
   photoDrag: null,
+  photoPointers: new Map(),
+  photoPinch: null,
   photoPreviewUrls: [],
   photoAutoApprove: null,
   photoTarget: null,
@@ -7861,8 +7864,66 @@ elements.photoLightboxStage.addEventListener("wheel", (event) => {
   event.preventDefault();
   zoomPhotoBy(Math.exp(-event.deltaY * 0.0015), event.clientX, event.clientY);
 }, { passive: false });
+function photoPinchPoints() {
+  return [...state.photoPointers.values()].slice(0, 2);
+}
+
+function beginPhotoPinch() {
+  const points = photoPinchPoints();
+  const bounds = photoZoomBounds();
+  if (points.length < 2 || !bounds) return;
+  const rect = bounds.stage;
+  const centerX = (points[0].x + points[1].x) / 2 - rect.left;
+  const centerY = (points[0].y + points[1].y) / 2 - rect.top;
+  state.photoPinch = {
+    max: bounds.max,
+    min: bounds.fit,
+    startCenterX: centerX,
+    startCenterY: centerY,
+    startDistance: Math.max(1, Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y)),
+    startPanX: state.photoPanX,
+    startPanY: state.photoPanY,
+    startZoom: state.photoZoom || bounds.fit,
+  };
+  state.photoDrag = null;
+  elements.photoLightboxStage.classList.remove("dragging");
+  elements.photoLightboxStage.classList.add("pinching");
+}
+
+function updatePhotoPinch() {
+  const pinch = state.photoPinch;
+  const points = photoPinchPoints();
+  const bounds = photoZoomBounds();
+  if (!pinch || points.length < 2 || !bounds) return;
+  const rect = bounds.stage;
+  const distance = Math.max(1, Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y));
+  const centerX = (points[0].x + points[1].x) / 2 - rect.left;
+  const centerY = (points[0].y + points[1].y) / 2 - rect.top;
+  const nextZoom = Math.max(pinch.min, Math.min(pinch.max, pinch.startZoom * (distance / pinch.startDistance)));
+  const ratio = nextZoom / pinch.startZoom;
+  state.photoZoom = nextZoom;
+  state.photoPanX = centerX - (pinch.startCenterX - pinch.startPanX) * ratio;
+  state.photoPanY = centerY - (pinch.startCenterY - pinch.startPanY) * ratio;
+  applyPhotoZoom();
+}
+
 elements.photoLightboxStage.addEventListener("pointerdown", (event) => {
-  if (event.button !== 0 || state.photoZoom <= state.photoZoomFit + 0.001) return;
+  if (!elements.photoLightbox.open) return;
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+  state.photoPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  if (state.photoPointers.size >= 2) {
+    event.preventDefault();
+    if (!state.photoPinch) beginPhotoPinch();
+    for (const pointerId of state.photoPointers.keys()) {
+      try {
+        elements.photoLightboxStage.setPointerCapture(pointerId);
+      } catch {
+        // The pointer may already be gone.
+      }
+    }
+    return;
+  }
+  if (state.photoZoom <= state.photoZoomFit + 0.001) return;
   event.preventDefault();
   state.photoDrag = {
     id: event.pointerId,
@@ -7875,22 +7936,55 @@ elements.photoLightboxStage.addEventListener("pointerdown", (event) => {
   elements.photoLightboxStage.setPointerCapture(event.pointerId);
 });
 elements.photoLightboxStage.addEventListener("pointermove", (event) => {
+  if (!state.photoPointers.has(event.pointerId)) return;
+  state.photoPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  if (state.photoPinch) {
+    event.preventDefault();
+    updatePhotoPinch();
+    return;
+  }
   const drag = state.photoDrag;
   if (!drag || drag.id !== event.pointerId) return;
   state.photoPanX = drag.panX + (event.clientX - drag.x);
   state.photoPanY = drag.panY + (event.clientY - drag.y);
   applyPhotoZoom();
 });
-const endPhotoDrag = (event) => {
-  if (!state.photoDrag || state.photoDrag.id !== event.pointerId) return;
-  state.photoDrag = null;
-  elements.photoLightboxStage.classList.remove("dragging");
+const endPhotoPointer = (event) => {
+  state.photoPointers.delete(event.pointerId);
+  if (state.photoPinch && state.photoPointers.size < 2) {
+    state.photoPinch = null;
+    elements.photoLightboxStage.classList.remove("pinching");
+    const remaining = [...state.photoPointers.entries()][0];
+    if (remaining && state.photoZoom > state.photoZoomFit + 0.001) {
+      const [id, point] = remaining;
+      state.photoDrag = {
+        id,
+        panX: state.photoPanX,
+        panY: state.photoPanY,
+        x: point.x,
+        y: point.y,
+      };
+      elements.photoLightboxStage.classList.add("dragging");
+      try {
+        elements.photoLightboxStage.setPointerCapture(id);
+      } catch {
+        // The remaining pointer may already be gone.
+      }
+    }
+  }
+  if (state.photoDrag?.id === event.pointerId) {
+    state.photoDrag = null;
+    elements.photoLightboxStage.classList.remove("dragging");
+  }
   if (elements.photoLightboxStage.hasPointerCapture(event.pointerId)) {
     elements.photoLightboxStage.releasePointerCapture(event.pointerId);
   }
 };
-elements.photoLightboxStage.addEventListener("pointerup", endPhotoDrag);
-elements.photoLightboxStage.addEventListener("pointercancel", endPhotoDrag);
+elements.photoLightboxStage.addEventListener("pointerup", endPhotoPointer);
+elements.photoLightboxStage.addEventListener("pointercancel", endPhotoPointer);
+elements.photoLightboxStage.addEventListener("lostpointercapture", (event) => {
+  if (state.photoPointers.has(event.pointerId)) endPhotoPointer(event);
+});
 elements.photoLightboxStage.addEventListener("dblclick", (event) => {
   if (state.photoZoom > state.photoZoomFit * 1.1) resetPhotoZoom();
   else zoomPhotoAt(1, event.clientX, event.clientY);
@@ -7916,6 +8010,9 @@ elements.photoLightbox.addEventListener("close", () => {
   elements.photoLightboxCaption.textContent = "";
   elements.photoLightboxAuthor.textContent = "";
   state.photoDrag = null;
+  state.photoPointers.clear();
+  state.photoPinch = null;
+  elements.photoLightboxStage.classList.remove("dragging", "pinching");
   state.photoZoom = 1;
   state.photoZoomFit = 1;
   state.photoPanX = 0;
