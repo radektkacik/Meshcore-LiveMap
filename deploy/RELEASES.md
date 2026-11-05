@@ -443,6 +443,8 @@
 | 2026-11-05 11:35 | `20261105T113511Z.tar.gz` | `20261105-1135-2fb43b0` | Prod: stejné popisky os zdravotních grafů | `src/main.js`, `src/style.css` |
 | 2026-11-05 11:43 | `20261105T114300Z.tar.gz` (stage APP_DIR) | `20261105-1143-64a8d41` | Beta: u Baterie a Teploty odkaz „trend“ pro skok na historii | `src/main.js`, `src/style.css`, `src/i18n.js` |
 | 2026-11-05 11:45 | `20261105T114527Z.tar.gz` | `20261105-1145-64a8d41` | Prod: stejný odkaz na trend | `src/main.js`, `src/style.css`, `src/i18n.js` |
+| 2026-11-05 11:59 | `20261105T115926Z.tar.gz` (stage APP_DIR) | `20261105-1159-da12cc0` | Beta: trend hint zmenšen na nenápadnou šedou ikonu | `src/main.js`, `src/style.css`, `src/i18n.js` |
+| 2026-11-05 12:02 | `20261105T120220Z.tar.gz` | `20261105-1202-da12cc0` | Prod: stejná drobná šedá ikona trendu | `src/main.js`, `src/style.css`, `src/i18n.js` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
