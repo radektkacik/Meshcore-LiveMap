@@ -412,6 +412,9 @@
 | 2026-11-04 22:04 | `20261104T220450Z.tar.gz` | `20261104-2204-bad9520` | Prod: stejné přesunutí veřejného klíče dolů | `src/main.js` |
 | 2026-11-05 08:10 | `20261105T081002Z.tar.gz` (stage APP_DIR) | `20261105-0810-f980e4d` | Beta: příprava Telegram callbacků; interaktivní tlačítka záměrně vypnutá kvůli sdílenému botovi | `server.mjs`, `notify.mjs`, `.env.example`, `README.md`, testy |
 | 2026-11-05 08:12 | `20261105T081214Z.tar.gz` | `20261105-0812-f980e4d` | Prod: interaktivní schvalování fotkou/žádostí/info nodu tlačítky v Telegramu; webhook registrovaný a ověřený, `TELEGRAM_INTERACTIVE=1` | `server.mjs`, `notify.mjs`, `.env.example`, `README.md`, testy |
+| 2026-11-05 08:15 | `20261105T081500Z.tar.gz` (stage APP_DIR) | – | Beta: první pokus o nasazení changelogu selhal na health checku, automaticky obnoven předchozí build | `CHANGELOG.md` |
+| 2026-11-05 08:19 | `20261105T081944Z.tar.gz` | `20261105-0819-1100ed5` | Prod: changelog doplněn o Telegram schvalování | `CHANGELOG.md` |
+| 2026-11-05 08:22 | `20261105T082240Z.tar.gz` (stage APP_DIR) | `20261105-0822-1100ed5` | Beta: changelog po úspěšném opakovaném nasazení | `CHANGELOG.md` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
