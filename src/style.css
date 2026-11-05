@@ -352,9 +352,6 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-health-map-badge.warn .node-health-battery { color: #d18a1f; }
 .node-health-map-badge.critical .node-health-battery { color: #c63e32; }
 .node-health-map-badge.stale .node-health-battery, .node-health-map-badge.unknown .node-health-battery { color: #899990; }
-.node-photo-thumb-icon { background: transparent; border: 0; cursor: pointer; }
-#map .node-photo-thumb { display: block; width: 30px; height: 30px; max-width: none; max-height: none; border: 2px solid rgba(255, 254, 249, 0.96); border-radius: 50%; object-fit: cover; background: #e9e8e1; box-shadow: 0 2px 6px rgba(20, 42, 32, 0.34); user-select: none; -webkit-user-drag: none; }
-html[data-theme="dark"] .node-photo-thumb { border-color: rgba(22, 29, 36, 0.96); }
 .node-history { padding: 8px 15px; border-bottom: 1px solid var(--line); background: #f8faf7; }
 .node-history-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .node-history-head span { color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: 0.07em; text-transform: uppercase; }

@@ -3458,10 +3458,7 @@ async function handleRequest(request, response) {
   }
 
   if (url.pathname.startsWith("/api/photos/")) {
-    const thumbMatch = url.pathname.match(/^\/api\/photos\/([0-9a-f-]{36})\/thumb$/i);
-    const id = thumbMatch
-      ? thumbMatch[1].toLowerCase()
-      : decodeURIComponent(url.pathname.slice("/api/photos/".length)).toLowerCase();
+    const id = decodeURIComponent(url.pathname.slice("/api/photos/".length)).toLowerCase();
     if (!/^[0-9a-f-]{36}$/.test(id)) {
       response.writeHead(404).end("Not Found");
       return;
@@ -3478,49 +3475,16 @@ async function handleRequest(request, response) {
       response.writeHead(404).end("Not Found");
       return;
     }
-    let servedPath = filePath;
-    let servedType = photo.mime;
-    let servedBytes = photo.bytes;
-    if (thumbMatch) {
-      const thumbDir = join(photoDir, "thumbs");
-      const thumbPath = join(thumbDir, `${id}.webp`);
-      if (!existsSync(thumbPath)) {
-        try {
-          mkdirSync(thumbDir, { recursive: true });
-          execFileSync("convert", [
-            filePath,
-            "-auto-orient",
-            "-thumbnail", "64x64^",
-            "-gravity", "center",
-            "-extent", "64x64",
-            "-strip",
-            "-quality", "78",
-            thumbPath,
-          ], { stdio: "ignore", timeout: 10_000 });
-        } catch (error) {
-          console.error(`Photo thumbnail failed for ${id}: ${error.message}`);
-          response.writeHead(404).end("Not Found");
-          return;
-        }
-      }
-      if (!existsSync(thumbPath)) {
-        response.writeHead(404).end("Not Found");
-        return;
-      }
-      servedPath = thumbPath;
-      servedType = "image/webp";
-      servedBytes = statSync(thumbPath).size;
-    }
     response.writeHead(200, {
       "Cache-Control": photo.status === "approved" ? "public, max-age=31536000, immutable" : "no-store",
-      "Content-Length": servedBytes,
-      "Content-Type": servedType,
+      "Content-Length": photo.bytes,
+      "Content-Type": photo.mime,
     });
     if (request.method === "HEAD") {
       response.end();
       return;
     }
-    createReadStream(servedPath).on("error", () => {
+    createReadStream(filePath).on("error", () => {
       if (!response.writableEnded) response.destroy();
     }).pipe(response);
     return;

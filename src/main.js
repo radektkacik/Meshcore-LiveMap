@@ -765,8 +765,6 @@ const losLayer = L.layerGroup().addTo(map);
 const losMarkerLayer = L.layerGroup().addTo(map);
 const nodeLabelLayer = L.layerGroup().addTo(map);
 const healthLayer = L.layerGroup().addTo(map);
-const photoLayer = L.layerGroup().addTo(map);
-const PHOTO_THUMB_MIN_ZOOM = 8;
 const routeRenderer = L.canvas({ padding: 0.3, tolerance: 8 });
 const routeSvgRenderer = L.svg({ padding: 0.3 });
 routeRenderer._dashOffset = 0;
@@ -2847,7 +2845,6 @@ async function loadPhotoNodes(force = false) {
     for (const overview of document.querySelectorAll(".node-overview[data-node-key]")) {
       updateNodeOverview(overview.dataset.nodeKey);
     }
-    schedulePhotoThumbnails(80);
   } catch (error) {
     console.error("Nody s fotkami se nepodařilo načíst", error);
     state.photosOnly = false;
@@ -3881,75 +3878,9 @@ function syncHealthBadges() {
   for (const entry of state.nodeMarkers) syncNodeHealthBadge(entry);
 }
 
-function syncNodePhotoThumbnail(entry) {
-  const node = entry?.node;
-  const key = String(node?.public_key || "").toUpperCase();
-  const coverId = key ? state.photoCoverCache.get(key) : "";
-  const shouldShow = Boolean(state.photosOnly
-    && map.getZoom() >= PHOTO_THUMB_MIN_ZOOM
-    && coverId
-    && node
-    && validCoords(node.lat, node.lon)
-    && nodePassesFilters(node)
-    && map.getBounds().pad(0.08).contains([node.lat, node.lon]));
-  if (!shouldShow) {
-    if (entry?.photoMarker) {
-      photoLayer.removeLayer(entry.photoMarker);
-      entry.photoMarker = null;
-    }
-    if (entry) entry.photoCoverId = null;
-    return;
-  }
-  const icon = L.divIcon({
-    className: "node-photo-thumb-icon",
-    html: `<img class="node-photo-thumb" src="${escapeHtml(appPath(`/api/photos/${encodeURIComponent(coverId)}/thumb`))}" alt="" loading="eager" decoding="async">`,
-    iconAnchor: [33, 33],
-    iconSize: [30, 30],
-  });
-  const latlng = [node.lat, node.lon];
-  if (entry.photoMarker) {
-    entry.photoMarker.setLatLng(latlng);
-    if (entry.photoCoverId !== coverId) entry.photoMarker.setIcon(icon);
-  } else {
-    const marker = L.marker(latlng, {
-      icon,
-      interactive: true,
-      keyboard: false,
-      zIndexOffset: 900,
-    }).addTo(photoLayer);
-    marker.on("click", (event) => {
-      L.DomEvent.stopPropagation(event);
-      openNodeEntry(entry);
-    });
-    entry.photoMarker = marker;
-  }
-  entry.photoCoverId = coverId;
-}
-
-function syncPhotoThumbnails() {
-  if (!state.photosOnly || map.getZoom() < PHOTO_THUMB_MIN_ZOOM) {
-    photoLayer.clearLayers();
-    for (const entry of state.nodeMarkers) {
-      entry.photoMarker = null;
-      entry.photoCoverId = null;
-    }
-    return;
-  }
-  for (const entry of state.nodeMarkers) syncNodePhotoThumbnail(entry);
-}
-
-let photoThumbnailTimer = null;
-function schedulePhotoThumbnails(delay = 100) {
-  clearTimeout(photoThumbnailTimer);
-  photoThumbnailTimer = setTimeout(() => {
-    photoThumbnailTimer = null;
-    syncPhotoThumbnails();
-  }, delay);
-}
-
 function addNodeMarker(node) {
   const active = nodeIsActive(node, nowMs(), NODE_ACTIVE_MS);
-  const entry = { active, healthMarker: null, marker: null, node, photoCoverId: null, photoMarker: null, shown: false, stackRole: node.role || "unknown", styleKey: nodeStyleKey(node, null), tier: null };
+  const entry = { active, healthMarker: null, marker: null, node, shown: false, stackRole: node.role || "unknown", styleKey: nodeStyleKey(node, null), tier: null };
   const marker = L.circleMarker([node.lat, node.lon], {
     ...nodeMarkerStyle(node, null),
     pane: "markerPane",
@@ -4154,7 +4085,6 @@ function refreshNodeState() {
   refreshOpenNodeDetailStatus();
   applyNodeMembership();
   syncHealthBadges();
-  schedulePhotoThumbnails(80);
   if (!elements.statsPanel.hidden) renderStats();
   scheduleNodeLabels();
 }
@@ -4217,13 +4147,11 @@ function syncNodes(nodes) {
     } else if (entry) {
       nodeLayer.removeLayer(entry.marker);
       if (entry.healthMarker) healthLayer.removeLayer(entry.healthMarker);
-      if (entry.photoMarker) photoLayer.removeLayer(entry.photoMarker);
       state.nodeMarkerByKey.delete(key);
       state.nodeMarkers = state.nodeMarkers.filter((candidate) => candidate !== entry);
     }
   }
   scheduleNodeRefresh();
-  schedulePhotoThumbnails(100);
 }
 
 let nodeRefreshPromise = null;
@@ -6979,7 +6907,6 @@ elements.hideRoutesToggle.addEventListener("change", () => {
   setRoutesHidden(elements.hideRoutesToggle.checked);
 });
 map.on("moveend zoomend", scheduleNodeLabels);
-map.on("moveend zoomend", () => schedulePhotoThumbnails(120));
 map.on("moveend zoomend resize", scheduleViewportRender);
 map.on("moveend zoomend", () => scheduleSnrLabels(150));
 
