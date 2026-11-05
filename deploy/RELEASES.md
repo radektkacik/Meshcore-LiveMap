@@ -410,6 +410,8 @@
 | 2026-11-04 22:01 | `20261104T220156Z.tar.gz` | `20261104-2201-d0e86cb` | Prod: stejný changelog | `CHANGELOG.md` |
 | 2026-11-04 22:03 | `20261104T220350Z.tar.gz` (stage APP_DIR) | `20261104-2203-bad9520` | Beta: veřejný klíč přesunut dolů v kompaktní kartě i Přehledu | `src/main.js` |
 | 2026-11-04 22:04 | `20261104T220450Z.tar.gz` | `20261104-2204-bad9520` | Prod: stejné přesunutí veřejného klíče dolů | `src/main.js` |
+| 2026-11-05 08:10 | `20261105T081002Z.tar.gz` (stage APP_DIR) | `20261105-0810-f980e4d` | Beta: příprava Telegram callbacků; interaktivní tlačítka záměrně vypnutá kvůli sdílenému botovi | `server.mjs`, `notify.mjs`, `.env.example`, `README.md`, testy |
+| 2026-11-05 08:12 | `20261105T081214Z.tar.gz` | `20261105-0812-f980e4d` | Prod: interaktivní schvalování fotkou/žádostí/info nodu tlačítky v Telegramu; webhook registrovaný a ověřený, `TELEGRAM_INTERACTIVE=1` | `server.mjs`, `notify.mjs`, `.env.example`, `README.md`, testy |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 

@@ -3,6 +3,15 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-05 — Schvalování přímo z Telegramu
+- Prostředí: produkce
+- Build: 20261105-0812-f980e4d
+- Nové fotky, žádosti o smazání/nahlášení fotky a čekající změny info nodu lze potvrdit tlačítky v Telegramu.
+- Tlačítka **Schválit**, **Smazat fotku**, **Zamítnout žádost**, **Schválit změnu** a **Zamítnout** provádějí stejnou akci jako administrace.
+- Webhook se sám registruje při startu a je chráněný tajným tokenem; tlačítka mají podepsaná data.
+- Akce je povolená jen pro nakonfigurovaný chat, případně pro seznam `TELEGRAM_ADMIN_USER_IDS`.
+- Beta zůstává bez interaktivních tlačítek, protože s produkcí sdílí stejného bota a webhook může být jen jeden.
+
 ## 2026-11-04 — CzHealth: baterie, teplota a historie
 - Prostředí: produkce i beta
 - Build: 20261104-2157-f6d9eb8
