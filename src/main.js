@@ -157,7 +157,7 @@ const THEME_KEY = "meshcoreTheme";
 const FONT_SIZE_KEY = "meshcoreFontSize";
 const FONT_SIZE_VALUES = ["small", "normal", "large"];
 const storedFontSize = localStorage.getItem(FONT_SIZE_KEY);
-const initialFontSize = FONT_SIZE_VALUES.includes(storedFontSize) ? storedFontSize : "normal";
+const initialFontSize = FONT_SIZE_VALUES.includes(storedFontSize) ? storedFontSize : "small";
 document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
 document.documentElement.dataset.fontSize = initialFontSize;
 
@@ -449,7 +449,7 @@ if (elements.fontSizeSelect) {
   elements.fontSizeSelect.addEventListener("change", () => {
     const next = FONT_SIZE_VALUES.includes(elements.fontSizeSelect.value)
       ? elements.fontSizeSelect.value
-      : "normal";
+      : "small";
     document.documentElement.dataset.fontSize = next;
     localStorage.setItem(FONT_SIZE_KEY, next);
   });
