@@ -2711,7 +2711,7 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
     const last = segment.at(-1);
     return `<polygon points="${x(first.time).toFixed(1)},${height - pad} ${line} ${x(last.time).toFixed(1)},${height - pad}" class="node-health-area"></polygon><polyline points="${line}" class="node-health-line"></polyline>`;
   }).join("");
-  const yTicks = [valueMax, (valueMax + valueMin) / 2, valueMin];
+  const yTicks = [yMax, (yMax + yMin) / 2, yMin];
   const yAxis = `<div class="node-health-yaxis" aria-hidden="true">${yTicks
     .map((value) => `<span style="top:${y(value).toFixed(1)}px">${escapeHtml(healthValueText(metric, value))}</span>`)
     .join("")}</div>`;
