@@ -3,6 +3,15 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-05 — Filtr telemetrie a stav baterie
+- Prostředí: produkce i beta
+- Build: 20261105-1102-9485e81
+- Filtr **Jen nody s telemetrií** zobrazí pouze nody s CzHealth daty.
+- Volba stavu umožňuje zobrazit všechny, nebo jen baterie OK / nízká / kritická / stará data.
+- U health nodů je na mapě malý štítek s baterkou; počet čárek a barva určují stav.
+- Barvy samotných nodů zůstávají podle užitečnosti, takže se zdraví baterie neplete s Top 5 % a Top 5–15 %.
+- Legenda se při zapnutém filtru rozšíří o stavy baterie.
+
 ## 2026-11-05 — Mobil: žádné zvětšování celé stránky
 - Prostředí: produkce i beta
 - Build: 20261105-0914-38af917
