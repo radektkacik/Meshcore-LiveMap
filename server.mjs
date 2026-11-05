@@ -106,12 +106,18 @@ function adminPath(path = "") {
   return `${adminBasePath}${path}`;
 }
 
+const telegramChatId = process.env.TELEGRAM_CHAT_ID || "";
 const telegramNotifier = createTelegramNotifier({
   apiBase: process.env.TELEGRAM_API_BASE || "https://api.telegram.org",
-  chatId: process.env.TELEGRAM_CHAT_ID || "",
+  chatId: telegramChatId,
   timeoutMs: Math.max(1000, Number(process.env.TELEGRAM_TIMEOUT_MS || 5000)),
   token: process.env.TELEGRAM_BOT_TOKEN || "",
 });
+const telegramInteractive = process.env.TELEGRAM_INTERACTIVE === "1";
+const telegramWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET || "";
+const telegramInteractiveEnabled = telegramInteractive && Boolean(telegramWebhookSecret) && telegramNotifier.enabled;
+const telegramAllowedUserIds = new Set(String(process.env.TELEGRAM_ADMIN_USER_IDS || "")
+  .split(",").map((value) => value.trim()).filter(Boolean));
 const telegramNotifyPhotos = process.env.TELEGRAM_NOTIFY_PHOTOS !== "0";
 const telegramNotifyReports = process.env.TELEGRAM_NOTIFY_REPORTS !== "0";
 const telegramNotifyFeedback = process.env.TELEGRAM_NOTIFY_FEEDBACK === "1";
@@ -133,6 +139,11 @@ let monitorAlertedAt = 0;
 let monitorFailureStreak = 0;
 if (telegramNotifier.enabled) {
   console.log("Telegram admin notifications enabled");
+}
+if (telegramInteractive && !telegramWebhookSecret) {
+  console.warn("Telegram interactive approvals disabled: set TELEGRAM_WEBHOOK_SECRET");
+} else if (telegramInteractive && !telegramNotifier.enabled) {
+  console.warn("Telegram interactive approvals disabled: bot token or chat id missing");
 }
 const elevationUpstream = process.env.ELEVATION_UPSTREAM || "https://api.open-meteo.com/v1/elevation";
 const elevationFallbackUrl = process.env.ELEVATION_FALLBACK_URL || "https://api.open-elevation.com/api/v1/lookup";
@@ -973,9 +984,76 @@ function photoNodeNames() {
   return result;
 }
 
-function notifyTelegram(text) {
+function telegramCallbackData(action, value) {
+  if (!telegramInteractiveEnabled) return "";
+  const raw = `${action}:${value}`;
+  const signature = createHmac("sha256", telegramWebhookSecret).update(raw).digest("base64url").slice(0, 12);
+  return `${raw}.${signature}`;
+}
+
+function parseTelegramCallbackData(value) {
+  const text = String(value || "");
+  const separator = text.lastIndexOf(".");
+  if (separator <= 0) return null;
+  const raw = text.slice(0, separator);
+  const signature = text.slice(separator + 1);
+  if (signature.length !== 12) return null;
+  const expected = createHmac("sha256", telegramWebhookSecret).update(raw).digest("base64url").slice(0, 12);
+  if (!safeEqualText(signature, expected)) return null;
+  const colon = raw.indexOf(":");
+  if (colon <= 0 || colon === raw.length - 1) return null;
+  return { action: raw.slice(0, colon), value: raw.slice(colon + 1) };
+}
+
+function encodeTelegramNodeKey(value) {
+  const key = String(value || "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(key)) return "";
+  return Buffer.from(key, "hex").toString("base64url");
+}
+
+function decodeTelegramNodeKey(value) {
+  try {
+    const key = Buffer.from(String(value || ""), "base64url").toString("hex").toLowerCase();
+    return /^[0-9a-f]{64}$/.test(key) ? key : "";
+  } catch {
+    return "";
+  }
+}
+
+function telegramInlineKeyboard(rows) {
+  if (!telegramInteractiveEnabled) return null;
+  const keyboard = rows.filter((row) => Array.isArray(row) && row.length);
+  return keyboard.length ? { inline_keyboard: keyboard } : null;
+}
+
+function photoTelegramKeyboard(photo) {
+  if (!photo?.id) return null;
+  return telegramInlineKeyboard([[
+    { callback_data: telegramCallbackData("pa", photo.id), text: "✅ Schválit" },
+    { callback_data: telegramCallbackData("dp", photo.id), text: "🗑 Smazat" },
+  ]]);
+}
+
+function reportTelegramKeyboard(reportId, photoId) {
+  if (!reportId || !photoId) return null;
+  return telegramInlineKeyboard([[
+    { callback_data: telegramCallbackData("dp", photoId), text: "🗑 Smazat fotku" },
+    { callback_data: telegramCallbackData("rr", reportId), text: "✖ Zamítnout žádost" },
+  ]]);
+}
+
+function nodeInfoTelegramKeyboard(nodeKey) {
+  const encoded = encodeTelegramNodeKey(nodeKey);
+  if (!encoded) return null;
+  return telegramInlineKeyboard([[
+    { callback_data: telegramCallbackData("na", encoded), text: "✅ Schválit změnu" },
+    { callback_data: telegramCallbackData("nr", encoded), text: "✖ Zamítnout" },
+  ]]);
+}
+
+function notifyTelegram(text, { replyMarkup = null } = {}) {
   if (!telegramNotifier.enabled) return;
-  void telegramNotifier.send(text, { silent: telegramSilent }).catch((error) => {
+  void telegramNotifier.send(text, { replyMarkup, silent: telegramSilent }).catch((error) => {
     console.error(`Telegram notification failed: ${error.message}`);
   });
 }
@@ -1013,7 +1091,8 @@ function notifyNewPhotos(photos) {
   else lines.push(`Čeká na schválení: ${stats.pending}`);
   const url = telegramAdminUrl(published ? "/api/photos/approved" : "/api/photos/view");
   if (url) lines.push(url);
-  notifyTelegram(lines.join("\n"));
+  const replyMarkup = !published && photosToNotify.length === 1 ? photoTelegramKeyboard(first) : null;
+  notifyTelegram(lines.join("\n"), { replyMarkup });
 }
 
 function notifyNewPhoto(photo) {
@@ -1056,7 +1135,7 @@ const PHOTO_REPORT_REASONS = {
   privacy: "Soukromí",
 };
 
-function notifyNewReport({ contact, message, photo, reason }) {
+function notifyNewReport({ contact, message, photo, reason, reportId }) {
   if (!telegramNotifier.enabled || !telegramNotifyReports || !photo) return;
   const name = photoNodeNames().get(photo.nodeKey) || photo.nodeKey.slice(0, 8);
   const lines = [
@@ -1069,7 +1148,7 @@ function notifyNewReport({ contact, message, photo, reason }) {
   lines.push(`Otevřené žádosti: ${photoStore.openReportCount()}`);
   const url = telegramAdminUrl("/api/photos/reports");
   if (url) lines.push(url);
-  notifyTelegram(lines.join("\n"));
+  notifyTelegram(lines.join("\n"), { replyMarkup: reportTelegramKeyboard(reportId, photo.id) });
 }
 
 function notifyNodeInfo(info, status = "published") {
@@ -1087,7 +1166,8 @@ function notifyNodeInfo(info, status = "published") {
   lines.push(preview);
   const url = telegramAdminUrl("/api/node-info");
   if (url) lines.push(url);
-  notifyTelegram(lines.join("\n"));
+  const replyMarkup = status === "pending" ? nodeInfoTelegramKeyboard(info.nodeKey) : null;
+  notifyTelegram(lines.join("\n"), { replyMarkup });
 }
 
 function notifyNewComment({ author, nodeKey, text }) {
@@ -1117,6 +1197,103 @@ function notifyNewFeedback({ category, isPublic, message, name }) {
   const url = telegramAdminUrl("/api/feedback/view");
   if (url) lines.push(url);
   notifyTelegram(lines.join("\n"));
+}
+
+function telegramCallbackAllowed(callback) {
+  const chatId = String(callback?.message?.chat?.id || "");
+  if (!telegramChatId || !safeEqualText(chatId, telegramChatId)) return false;
+  const fromId = String(callback?.from?.id || "");
+  if (telegramAllowedUserIds.size) return telegramAllowedUserIds.has(fromId);
+  return safeEqualText(fromId, telegramChatId);
+}
+
+async function updateTelegramCallbackMessage(callback, message, ok) {
+  const chatId = callback?.message?.chat?.id;
+  const messageId = callback?.message?.message_id;
+  if (!chatId || !messageId) return;
+  const original = String(callback.message.text || "").trim();
+  const base = original.replace(/\n\n(?:✅|⚠️) [^\n]*$/, "").trimEnd();
+  const result = `${base ? `${base}\n\n` : ""}${ok ? "✅" : "⚠️"} ${message}`;
+  const edited = await telegramNotifier.editMessageText(chatId, messageId, result, {
+    replyMarkup: { inline_keyboard: [] },
+  });
+  if (!edited) await telegramNotifier.send(result);
+}
+
+async function processTelegramCallback(callback) {
+  const callbackId = callback?.id;
+  if (!callbackId) return;
+  if (!telegramCallbackAllowed(callback)) {
+    await telegramNotifier.answerCallbackQuery(callbackId, {
+      showAlert: true,
+      text: "Nemáš oprávnění k této akci.",
+    });
+    return;
+  }
+  const parsed = parseTelegramCallbackData(callback.data);
+  if (!parsed) {
+    await telegramNotifier.answerCallbackQuery(callbackId, {
+      showAlert: true,
+      text: "Neplatná nebo expirovaná akce.",
+    });
+    return;
+  }
+
+  let ok = false;
+  let message = "Akce není dostupná.";
+  if (parsed.action === "pa") {
+    ok = photoStore.setStatus(parsed.value, "approved");
+    message = ok ? "Fotka byla schválena." : "Fotku už nelze schválit.";
+  } else if (parsed.action === "dp") {
+    ok = photoStore.remove(parsed.value);
+    if (ok) photoStore.resolvePhotoReports(parsed.value);
+    message = ok ? "Fotka byla smazána." : "Fotka už není dostupná.";
+  } else if (parsed.action === "rr") {
+    ok = photoStore.resolveReport(parsed.value);
+    message = ok ? "Žádost byla zamítnuta, fotka zůstala." : "Žádost už není otevřená.";
+  } else if (parsed.action === "na" || parsed.action === "nr") {
+    const nodeKey = decodeTelegramNodeKey(parsed.value);
+    if (nodeKey) {
+      if (parsed.action === "na") {
+        ok = Boolean(nodeInfoStore.approve(nodeKey));
+        message = ok ? "Změna uživatelského info byla schválena." : "Změna už není dostupná.";
+      } else {
+        ok = nodeInfoStore.reject(nodeKey);
+        message = ok ? "Změna uživatelského info byla zamítnuta." : "Změna už není dostupná.";
+      }
+    }
+  }
+
+  await telegramNotifier.answerCallbackQuery(callbackId, { text: message });
+  await updateTelegramCallbackMessage(callback, message, ok);
+}
+
+async function handleTelegramWebhook(request, response) {
+  if (!telegramInteractiveEnabled) {
+    response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not Found");
+    return;
+  }
+  if (request.method !== "POST") {
+    response.writeHead(405, { Allow: "POST" }).end("Method Not Allowed");
+    return;
+  }
+  const providedSecret = request.headers["x-telegram-bot-api-secret-token"];
+  if (typeof providedSecret !== "string" || !safeEqualText(providedSecret, telegramWebhookSecret)) {
+    response.writeHead(401, { "Content-Type": "text/plain; charset=utf-8" }).end("Unauthorized");
+    return;
+  }
+  let update;
+  try {
+    update = JSON.parse(await readBody(request, 65_536));
+  } catch {
+    response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Bad Request");
+    return;
+  }
+  sendJson(response, 200, { ok: true });
+  if (!update?.callback_query) return;
+  void processTelegramCallback(update.callback_query).catch((error) => {
+    console.error(`Telegram callback failed: ${error.message}`);
+  });
 }
 
 function clientIp(request) {
@@ -1380,7 +1557,10 @@ function healthPayload() {
       stored: packetStore.count(),
     },
     photos: photoStore.stats(),
-    notifications: { telegram: telegramNotifier.enabled },
+    notifications: {
+      telegram: telegramNotifier.enabled,
+      telegramInteractive: telegramInteractiveEnabled,
+    },
     databases: {
       feedback: { bytes: statBytes(feedbackDbPath) },
       packets: { bytes: statBytes(packetDbPath) },
@@ -2891,6 +3071,11 @@ async function handleRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/telegram/webhook") {
+    await handleTelegramWebhook(request, response);
+    return;
+  }
+
   if (url.pathname === "/events/packets") {
     if (packetStreams.size >= maxPacketStreams) {
       response.writeHead(503, {
@@ -3214,7 +3399,7 @@ async function handleRequest(request, response) {
       reason,
     });
     if (reportId) {
-      notifyNewReport({ contact, message, photo: photoStore.get(photoId), reason });
+      notifyNewReport({ contact, message, photo: photoStore.get(photoId), reason, reportId });
     }
     sendJson(response, 200, { ok: true });
     return;
@@ -3905,6 +4090,15 @@ const server = createServer((request, response) => {
 
 server.listen(port, host, () => {
   console.log(`MeshCore CZ map listening on http://${host}:${port}`);
+  if (telegramInteractiveEnabled) {
+    const webhookUrl = `${publicBaseUrl}/api/telegram/webhook`;
+    void telegramNotifier.setWebhook(webhookUrl, { secretToken: telegramWebhookSecret }).then((ok) => {
+      if (ok) console.log("Telegram interactive approvals enabled");
+      else console.warn(`Telegram webhook registration failed: ${webhookUrl}`);
+    }).catch((error) => {
+      console.error(`Telegram webhook registration failed: ${error.message}`);
+    });
+  }
 });
 
 if (monitorAlertsEnabled) {

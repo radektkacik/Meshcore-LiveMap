@@ -45,6 +45,7 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
   const tinyPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lK3z1wAAAABJRU5ErkJggg==", "base64");
   let nodesFail = false;
   const telegramMessages = [];
+  const telegramCalls = [];
   const upstream = createServer((req, res) => {
     if (req.url?.startsWith("/bot")) {
       let body = "";
@@ -52,6 +53,10 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       req.on("end", () => {
         try {
           const payload = JSON.parse(body);
+          telegramCalls.push({
+            method: req.url.split("?")[0].split("/").pop(),
+            payload,
+          });
           if (payload?.text) telegramMessages.push(payload.text);
         } catch {}
         res.writeHead(200, { "Content-Type": "application/json" }).end('{"ok":true}');
@@ -128,7 +133,10 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       TELEGRAM_API_BASE: `http://127.0.0.1:${upstreamPort}`,
       TELEGRAM_BOT_TOKEN: "test-bot",
       TELEGRAM_CHAT_ID: "123456",
+      TELEGRAM_INTERACTIVE: "1",
       TELEGRAM_NOTIFY_FEEDBACK: "1",
+      TELEGRAM_WEBHOOK_SECRET: "test-webhook-secret",
+      PUBLIC_BASE_URL: "https://mapa.test",
       UPSTREAM_TIMEOUT_MS: "100",
     },
     stdio: ["ignore", "pipe", "pipe"],
@@ -188,6 +196,21 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(uploaded.status, "pending");
     await new Promise((resolve) => setTimeout(resolve, 150));
     assert.ok(telegramMessages.some((text) => text.includes("Nová fotka čeká na schválení")));
+    const photoMessage = telegramCalls.find((call) => call.method === "sendMessage"
+      && call.payload?.text?.includes("Nová fotka čeká na schválení")
+      && call.payload?.reply_markup);
+    assert.ok(photoMessage);
+    assert.ok(photoMessage.payload.reply_markup.inline_keyboard.flat().some((button) => button.text.includes("Schválit")));
+    const webhookUrl = `http://127.0.0.1:${appPort}/api/telegram/webhook`;
+    const badWebhook = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Telegram-Bot-Api-Secret-Token": "wrong",
+      },
+      body: "{}",
+    });
+    assert.equal(badWebhook.status, 401);
 
     const adminLoginPage = await fetch(`http://127.0.0.1:${appPort}/admin`);
     assert.equal(adminLoginPage.status, 200);
@@ -409,6 +432,41 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     const reportsPage = await fetch(`http://127.0.0.1:${appPort}/api/photos/view?token=photo-token&status=reports`);
     assert.equal(reportsPage.status, 200);
     assert.match(await reportsPage.text(), /Chci tuto fotku smazat/);
+    const reportMessage = telegramCalls.find((call) => call.method === "sendMessage"
+      && call.payload?.text?.includes("Žádost o smazání fotky")
+      && call.payload?.reply_markup);
+    assert.ok(reportMessage);
+    const dismissButton = reportMessage.payload.reply_markup.inline_keyboard.flat()
+      .find((button) => button.text.includes("Zamítnout žádost"));
+    assert.ok(dismissButton);
+    const dismissCallback = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Telegram-Bot-Api-Secret-Token": "test-webhook-secret",
+      },
+      body: JSON.stringify({
+        callback_query: {
+          data: dismissButton.callback_data,
+          from: { id: 123456 },
+          id: "callback-dismiss",
+          message: {
+            chat: { id: 123456 },
+            message_id: 77,
+            text: reportMessage.payload.text,
+          },
+        },
+        update_id: 1,
+      }),
+    });
+    assert.equal(dismissCallback.status, 200);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const reportsAfterDismiss = await fetch(`http://127.0.0.1:${appPort}/api/photos/view?token=photo-token&status=reports`);
+    assert.doesNotMatch(await reportsAfterDismiss.text(), /Chci tuto fotku smazat/);
+    assert.ok(telegramCalls.some((call) => call.method === "answerCallbackQuery"
+      && call.payload?.callback_query_id === "callback-dismiss"));
+    assert.ok(telegramCalls.some((call) => call.method === "editMessageText"
+      && call.payload?.message_id === 77));
     const hidden = await fetch(`http://127.0.0.1:${appPort}/api/photos/moderate?token=photo-token&id=${uploaded.id}&action=hide&status=approved`, { redirect: "manual" });
     assert.equal(hidden.status, 303);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos/${uploaded.id}`)).status, 404);

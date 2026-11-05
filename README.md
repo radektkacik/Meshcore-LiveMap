@@ -211,7 +211,8 @@ přihlašovací údaje zůstávají pouze na serveru.
   zprávu v knize návštěv a nový komentář k nodu (`TELEGRAM_NOTIFY_COMMENTS=0`
   notifikace vypne). Zprávy obsahují počty čekajících položek; odkaz
   do administrace lze zapnout přes `TELEGRAM_ADMIN_LINK=1` (odkaz už neobsahuje
-  token, vede na `/admin`). U automaticky zveřejněných fotek notifikace vede
+  token, vede na `/admin`). Volitelně lze fotky, žádosti a změny info nodu
+  schvalovat tlačítky přímo v Telegramu (`TELEGRAM_INTERACTIVE=1`). U automaticky zveřejněných fotek notifikace vede
   na schválené fotky a obsahuje upozornění, že je možné je smazat.
   `PUBLIC_BASE_URL` určuje základ odkazu (u bety `https://mapa.meshcore.cz/beta`).
 - Animace tras je ve výchozím stavu řešená canvas rendererem (jedna kresba,
@@ -344,6 +345,30 @@ TELEGRAM_SILENT=0
 `TELEGRAM_ADMIN_LINK=1` přidá do zprávy odkaz do administrace `/admin`
 (bez tokenu). Po změně `.env` restartujte službu. Stav je vidět v `/api/health`
 v poli `notifications.telegram`.
+
+### Schvalování přímo z Telegramu
+
+Volitelně lze žádosti a čekající změny potvrdit tlačítky přímo v Telegramu:
+
+```bash
+TELEGRAM_INTERACTIVE=1
+TELEGRAM_WEBHOOK_SECRET=vygenerujte-napriklad-openssl-rand-hex-32
+# Volitelné: omezí tlačítka na konkrétní Telegram user ID
+TELEGRAM_ADMIN_USER_IDS=990790915
+```
+
+Po restartu aplikace se webhook sám zaregistruje na
+`PUBLIC_BASE_URL/api/telegram/webhook` a ověří ho tajným tokenem. Tlačítka se
+přidají k:
+
+- nové fotce čekající na schválení: **Schválit** / **Smazat**,
+- žádosti o smazání nebo nahlášení fotky: **Smazat fotku** / **Zamítnout žádost**,
+- čekající změně uživatelského info nodu: **Schválit změnu** / **Zamítnout**.
+
+Webhook může být pro jednoho bota jen jeden. Proto zapínejte
+`TELEGRAM_INTERACTIVE` pouze v produkci; beta a produkce obvykle sdílejí stejný
+bot token. Pokud používáte skupinový chat, nastavte `TELEGRAM_ADMIN_USER_IDS`,
+jinak jsou tlačítka povolena jen pro chat ID z `TELEGRAM_CHAT_ID`.
 
 ## Pokrytí terénu
 
