@@ -531,6 +531,8 @@ const state = {
   photoDrag: null,
   photoPointers: new Map(),
   photoPinch: null,
+  photoSwipe: null,
+  photoSuppressTapUntil: 0,
   photoPreviewUrls: [],
   photoAutoApprove: null,
   photoTarget: null,
@@ -7872,6 +7874,10 @@ function beginPhotoPinch() {
   const points = photoPinchPoints();
   const bounds = photoZoomBounds();
   if (points.length < 2 || !bounds) return;
+  if (state.photoSwipe) {
+    state.photoSwipe = null;
+    applyPhotoZoom();
+  }
   const rect = bounds.stage;
   const centerX = (points[0].x + points[1].x) / 2 - rect.left;
   const centerY = (points[0].y + points[1].y) / 2 - rect.top;
@@ -7907,12 +7913,19 @@ function updatePhotoPinch() {
   applyPhotoZoom();
 }
 
+const PHOTO_SWIPE_MIN_PX = 48;
+const PHOTO_SWIPE_DOMINANCE = 1.25;
+
 elements.photoLightboxStage.addEventListener("pointerdown", (event) => {
   if (!elements.photoLightbox.open) return;
   if (event.pointerType === "mouse" && event.button !== 0) return;
   state.photoPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
   if (state.photoPointers.size >= 2) {
     event.preventDefault();
+    if (state.photoSwipe) {
+      state.photoSwipe = null;
+      applyPhotoZoom();
+    }
     if (!state.photoPinch) beginPhotoPinch();
     for (const pointerId of state.photoPointers.keys()) {
       try {
@@ -7923,16 +7936,28 @@ elements.photoLightboxStage.addEventListener("pointerdown", (event) => {
     }
     return;
   }
-  if (state.photoZoom <= state.photoZoomFit + 0.001) return;
-  event.preventDefault();
-  state.photoDrag = {
+  if (state.photoZoom > state.photoZoomFit + 0.001) {
+    event.preventDefault();
+    state.photoDrag = {
+      id: event.pointerId,
+      panX: state.photoPanX,
+      panY: state.photoPanY,
+      x: event.clientX,
+      y: event.clientY,
+    };
+    elements.photoLightboxStage.classList.add("dragging");
+    elements.photoLightboxStage.setPointerCapture(event.pointerId);
+    return;
+  }
+  if (event.pointerType === "mouse" || state.lightboxPhotos.length < 2) return;
+  state.photoSwipe = {
+    dx: 0,
+    dy: 0,
     id: event.pointerId,
-    panX: state.photoPanX,
-    panY: state.photoPanY,
-    x: event.clientX,
-    y: event.clientY,
+    startX: event.clientX,
+    startY: event.clientY,
   };
-  elements.photoLightboxStage.classList.add("dragging");
+  elements.photoLightboxStage.classList.add("swiping");
   elements.photoLightboxStage.setPointerCapture(event.pointerId);
 });
 elements.photoLightboxStage.addEventListener("pointermove", (event) => {
@@ -7943,6 +7968,16 @@ elements.photoLightboxStage.addEventListener("pointermove", (event) => {
     updatePhotoPinch();
     return;
   }
+  const swipe = state.photoSwipe;
+  if (swipe && swipe.id === event.pointerId) {
+    swipe.dx = event.clientX - swipe.startX;
+    swipe.dy = event.clientY - swipe.startY;
+    if (Math.abs(swipe.dx) > 8 && Math.abs(swipe.dx) > Math.abs(swipe.dy)) {
+      event.preventDefault();
+      elements.photoLightboxImg.style.transform = `translate(${state.photoPanX + swipe.dx * 0.28}px, ${state.photoPanY}px) scale(${state.photoZoom})`;
+    }
+    return;
+  }
   const drag = state.photoDrag;
   if (!drag || drag.id !== event.pointerId) return;
   state.photoPanX = drag.panX + (event.clientX - drag.x);
@@ -7950,6 +7985,8 @@ elements.photoLightboxStage.addEventListener("pointermove", (event) => {
   applyPhotoZoom();
 });
 const endPhotoPointer = (event) => {
+  const swipe = state.photoSwipe;
+  const swipeEnded = swipe?.id === event.pointerId;
   state.photoPointers.delete(event.pointerId);
   if (state.photoPinch && state.photoPointers.size < 2) {
     state.photoPinch = null;
@@ -7972,6 +8009,21 @@ const endPhotoPointer = (event) => {
       }
     }
   }
+  if (swipeEnded) {
+    state.photoSwipe = null;
+    elements.photoLightboxStage.classList.remove("swiping");
+    const absX = Math.abs(swipe.dx);
+    const absY = Math.abs(swipe.dy);
+    const navigate = event.type === "pointerup"
+      && absX >= PHOTO_SWIPE_MIN_PX
+      && absX > absY * PHOTO_SWIPE_DOMINANCE;
+    if (navigate) {
+      state.photoSuppressTapUntil = performance.now() + 450;
+      stepPhotoLightbox(swipe.dx < 0 ? 1 : -1);
+    } else {
+      applyPhotoZoom();
+    }
+  }
   if (state.photoDrag?.id === event.pointerId) {
     state.photoDrag = null;
     elements.photoLightboxStage.classList.remove("dragging");
@@ -7986,6 +8038,10 @@ elements.photoLightboxStage.addEventListener("lostpointercapture", (event) => {
   if (state.photoPointers.has(event.pointerId)) endPhotoPointer(event);
 });
 elements.photoLightboxStage.addEventListener("dblclick", (event) => {
+  if (performance.now() < state.photoSuppressTapUntil) {
+    event.preventDefault();
+    return;
+  }
   if (state.photoZoom > state.photoZoomFit * 1.1) resetPhotoZoom();
   else zoomPhotoAt(1, event.clientX, event.clientY);
 });
@@ -8002,6 +8058,12 @@ elements.photoLightbox.addEventListener("keydown", (event) => {
   }
 });
 elements.photoLightbox.addEventListener("click", (event) => {
+  const suppressed = performance.now() < state.photoSuppressTapUntil
+    && (event.target === elements.photoLightbox || elements.photoLightboxStage.contains(event.target));
+  if (suppressed) {
+    event.preventDefault();
+    return;
+  }
   if (event.target === elements.photoLightbox) elements.photoLightbox.close();
 });
 elements.photoLightbox.addEventListener("close", () => {
@@ -8012,7 +8074,9 @@ elements.photoLightbox.addEventListener("close", () => {
   state.photoDrag = null;
   state.photoPointers.clear();
   state.photoPinch = null;
-  elements.photoLightboxStage.classList.remove("dragging", "pinching");
+  state.photoSwipe = null;
+  state.photoSuppressTapUntil = 0;
+  elements.photoLightboxStage.classList.remove("dragging", "pinching", "swiping");
   state.photoZoom = 1;
   state.photoZoomFit = 1;
   state.photoPanX = 0;
