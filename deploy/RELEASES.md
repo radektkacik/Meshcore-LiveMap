@@ -423,6 +423,8 @@
 | 2026-11-05 08:59 | `20261105T085902Z.tar.gz` | `20261105-0859-d1c46a9` | Prod: stejný changelog | `CHANGELOG.md` |
 | 2026-11-05 09:04 | `20261105T090403Z.tar.gz` (stage APP_DIR) | `20261105-0904-d1c17a8` | Beta: vlastní pinch zoom ve fotogalerii (dva prsty, ohnisko, návazné tažení) | `src/main.js`, `src/style.css` |
 | 2026-11-05 09:05 | `20261105T090504Z.tar.gz` | `20261105-0905-d1c17a8` | Prod: stejný pinch zoom ve fotogalerii | `src/main.js`, `src/style.css` |
+| 2026-11-05 09:06 | `20261105T090618Z.tar.gz` (stage APP_DIR) | `20261105-0906-ede8ade` | Beta: changelog doplněn o pinch zoom fotogalerie | `CHANGELOG.md` |
+| 2026-11-05 09:07 | `20261105T090700Z.tar.gz` | `20261105-0907-ede8ade` | Prod: stejný changelog | `CHANGELOG.md` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
