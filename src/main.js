@@ -3902,7 +3902,7 @@ function syncNodePhotoThumbnail(entry) {
   }
   const icon = L.divIcon({
     className: "node-photo-thumb-icon",
-    html: `<img class="node-photo-thumb" src="${escapeHtml(appPath(`/api/photos/${encodeURIComponent(coverId)}/thumb`))}" alt="" loading="lazy" decoding="async">`,
+    html: `<img class="node-photo-thumb" src="${escapeHtml(appPath(`/api/photos/${encodeURIComponent(coverId)}/thumb`))}" alt="" loading="eager" decoding="async">`,
     iconAnchor: [33, 33],
     iconSize: [30, 30],
   });
