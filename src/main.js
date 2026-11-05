@@ -2264,8 +2264,14 @@ function nodeTrafficDetails(node) {
     : "unknown";
   const batteryStatus = batteryStatusCode !== "unknown" ? t(`node.healthBattery.${batteryStatusCode}`) : null;
   const trend = nodeTrendButton(node);
+  const advert24h = node.advert_count_24h;
+  const advert24hText = advert24h == null
+    ? null
+    : (Number(advert24h) > 0
+      ? countWithRank(advert24h, rankNodes, node, "advert_count_24h")
+      : formatNumber(Number(advert24h) || 0));
   return renderNodeDetails(t("node.trafficDetails"), [
-    [t("node.advertPackets"), countWithRank(node.advert_count, rankNodes, node, "advert_count"), t("node.advertHelp")],
+    [t("node.advertPackets24h"), advert24hText, t("node.advertHelp")],
     [t("node.battery"), battery == null ? null : `${formatDecimal(battery / 1000, 2)} V${batteryStatus ? ` · ${batteryStatus}` : ""}`, t("node.batteryHelp"), "", trend],
     [t("node.temperature"), temperature == null ? null : `${formatDecimal(temperature, 1)} °C`, null, "", trend],
     [t("node.current"), health?.currentMa != null && Number.isFinite(Number(health.currentMa)) ? `${formatNumber(health.currentMa)} mA` : null],
@@ -7508,7 +7514,7 @@ document.addEventListener("click", (event) => {
 const EXPORT_DATASETS = ["nodes", "observers", "routes"];
 const NODE_EXPORT_COLUMNS = [
   "name", "role", "public_key", "prefix", "lat", "lon", "last_seen",
-  "relay_24h", "advert_count", "usefulness_score", "coverage_score",
+  "relay_24h", "advert_count", "advert_count_24h", "usefulness_score", "coverage_score",
   "bridge_score", "redundancy_score", "traffic_share_score",
 ];
 const OBSERVER_EXPORT_COLUMNS = [
@@ -7567,6 +7573,7 @@ function routeLines(route) {
 function nodeExportRow(node) {
   return {
     advert_count: node.advert_count ?? "",
+    advert_count_24h: node.advert_count_24h ?? "",
     bridge_score: node.bridge_score ?? "",
     coverage_score: node.coverage_score ?? "",
     last_seen: node.last_seen || "",

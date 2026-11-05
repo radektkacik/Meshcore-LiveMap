@@ -179,6 +179,7 @@ const nodeDetailTimeoutMs = Math.max(1_000, Number(process.env.NODE_DETAIL_TIMEO
 const nodeDetailCache = new Map();
 let nodesCache = null;
 let nodesCacheWrittenAt = 0;
+let advert24hCache = { at: 0, counts: new Map() };
 let statsCache = null;
 let statsCacheWrittenAt = 0;
 let statsRefreshActive = false;
@@ -273,9 +274,26 @@ function storeNodesCache(data) {
   }
 }
 
+function advertCounts24h(now = Date.now()) {
+  if (now - advert24hCache.at < 60_000) return advert24hCache.counts;
+  let counts = new Map();
+  try {
+    counts = packetStore.advertCountsSince(now - 24 * 60 * 60 * 1000);
+  } catch (error) {
+    console.error(`Advert 24h count failed: ${error.message}`);
+  }
+  advert24hCache = { at: now, counts };
+  return counts;
+}
+
 function buildNodesPayload(data) {
   const payload = { ...data };
-  const nodes = metricsStore.decorateNodes(Array.isArray(payload.nodes) ? payload.nodes : []);
+  const advertCounts = advertCounts24h();
+  const nodes = metricsStore.decorateNodes(Array.isArray(payload.nodes) ? payload.nodes : [])
+    .map((node) => ({
+      ...node,
+      advert_count_24h: advertCounts.get(String(node.public_key || "").toLowerCase()) || 0,
+    }));
   payload.nodes = healthStore.decorateNodes(nodes);
   payload.scoreHistory = { collectionMinutes: 15, historyDays: 30, windowDays: 7 };
   return payload;

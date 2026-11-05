@@ -180,3 +180,26 @@ test("keeps a resolved path when a newer unresolved live row arrives", () => {
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("packet store counts distinct adverts per node in a time window", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-packets-"));
+  const store = createPacketStore(join(directory, "packets.sqlite"), { retentionMs: 2 * 24 * 60 * 60 * 1000 });
+  const keyA = "a".repeat(64);
+  const keyB = "b".repeat(64);
+  try {
+    store.record([
+      row({ hash: "a1", observer_id: "o1", observed_at: 10_000, payload_type: 4, decoded_json: JSON.stringify({ pubKey: keyA }) }),
+      row({ hash: "a1", observer_id: "o2", observed_at: 10_000, payload_type: 4, decoded_json: JSON.stringify({ pubKey: keyA }) }),
+      row({ hash: "a2", observer_id: "o1", observed_at: 20_000, payload_type: 4, decoded_json: JSON.stringify({ publicKey: keyA }) }),
+      row({ hash: "b1", observer_id: "o1", observed_at: 30_000, payload_type: 4, decoded_json: JSON.stringify({ public_key: keyB }) }),
+      row({ hash: "old", observer_id: "o1", observed_at: 1_000, payload_type: 4, decoded_json: JSON.stringify({ pubKey: keyB }) }),
+      row({ hash: "not-advert", observer_id: "o1", observed_at: 30_000, payload_type: 5, decoded_json: JSON.stringify({ pubKey: keyB }) }),
+    ]);
+    const counts = store.advertCountsSince(5_000);
+    assert.equal(counts.get(keyA), 2);
+    assert.equal(counts.get(keyB), 1);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

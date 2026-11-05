@@ -96,6 +96,12 @@ export function createPacketStore(dbPath, {
     ORDER BY observed_at ASC
     LIMIT ?
   `);
+  const selectAdvertsSince = db.prepare(`
+    SELECT hash, MAX(decoded_json) AS decoded_json
+    FROM packet_routes
+    WHERE payload_type = 4 AND observed_at >= ?
+    GROUP BY hash
+  `);
   const selectRelay = db.prepare(`
     SELECT observed_at, path_json, scope_name
     FROM packet_routes
@@ -149,6 +155,24 @@ export function createPacketStore(dbPath, {
       ...row,
       resolved_path: safeArray(row.resolved_path),
     })),
+    advertCountsSince: (sinceMs) => {
+      const counts = new Map();
+      const seen = new Set();
+      for (const row of selectAdvertsSince.all(Math.floor(Number(sinceMs) || 0))) {
+        if (!row.hash || seen.has(row.hash)) continue;
+        let decoded;
+        try {
+          decoded = JSON.parse(row.decoded_json || "{}");
+        } catch {
+          continue;
+        }
+        const key = String(decoded.pubKey || decoded.publicKey || decoded.public_key || "").toLowerCase();
+        if (!/^[0-9a-f]{64}$/.test(key)) continue;
+        seen.add(row.hash);
+        counts.set(key, (counts.get(key) || 0) + 1);
+      }
+      return counts;
+    },
     queryPayloadType: (payloadType, limit = 20_000) => selectPayloadType.all(
       Math.floor(Number(payloadType) || 0),
       Math.max(1, Math.min(100_000, Math.floor(Number(limit) || 20_000))),
