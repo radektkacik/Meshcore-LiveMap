@@ -2662,6 +2662,14 @@ function healthValueText(metric, value) {
     : `${formatDecimal(value, 1)} °C`;
 }
 
+function healthAxisTime(value, spanMs) {
+  const date = new Date(value);
+  if (spanMs <= 36 * 60 * 60 * 1000) {
+    return new Intl.DateTimeFormat(getLocale(), { hour: "2-digit", minute: "2-digit" }).format(date);
+  }
+  return new Intl.DateTimeFormat(getLocale(), { day: "2-digit", month: "2-digit" }).format(date);
+}
+
 function renderNodeHealthSeries(container, rawPoints, metric) {
   if (!container) return;
   const chart = container.querySelector(".node-health-chart");
@@ -2672,10 +2680,12 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
     .filter((point) => Number.isFinite(point.time) && Number.isFinite(point.value))
     .sort((a, b) => a.time - b.time);
   if (points.length < 2) {
+    chart.classList.add("empty");
     chart.textContent = t("node.healthHistoryEmpty");
     if (summary) summary.textContent = "";
     return;
   }
+  chart.classList.remove("empty");
   const width = 300;
   const height = 58;
   const pad = 5;
@@ -2701,19 +2711,28 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
     const last = segment.at(-1);
     return `<polygon points="${x(first.time).toFixed(1)},${height - pad} ${line} ${x(last.time).toFixed(1)},${height - pad}" class="node-health-area"></polygon><polyline points="${line}" class="node-health-line"></polyline>`;
   }).join("");
-  chart.innerHTML = `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(t("node.healthHistoryTitle"))}">
+  const yTicks = [valueMax, (valueMax + valueMin) / 2, valueMin];
+  const yAxis = `<div class="node-health-yaxis" aria-hidden="true">${yTicks
+    .map((value) => `<span style="top:${y(value).toFixed(1)}px">${escapeHtml(healthValueText(metric, value))}</span>`)
+    .join("")}</div>`;
+  const xTicks = [firstTime, firstTime + timeSpan / 2, lastTime];
+  const xAxis = `<div class="node-health-xaxis" aria-hidden="true">${xTicks
+    .map((time) => `<span>${escapeHtml(healthAxisTime(time, timeSpan))}</span>`)
+    .join("")}</div>`;
+  chart.innerHTML = `${yAxis}<div class="node-health-chart-plot"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(t("node.healthHistoryTitle"))}">
     ${shapes}
     <circle cx="${x(lastTime).toFixed(1)}" cy="${y(points.at(-1).value).toFixed(1)}" r="3" class="node-health-dot"></circle>
-  </svg>`;
+  </svg></div>${xAxis}`;
+  const plot = chart.querySelector(".node-health-chart-plot");
   const cursor = document.createElement("div");
   cursor.className = "node-health-cursor";
   cursor.hidden = true;
   const tip = document.createElement("div");
   tip.className = "node-health-tip";
   tip.hidden = true;
-  chart.append(cursor, tip);
+  plot.append(cursor, tip);
   const showPoint = (clientX) => {
-    const rect = chart.getBoundingClientRect();
+    const rect = plot.getBoundingClientRect();
     if (!rect.width) return;
     const chartX = Math.max(pad, Math.min(width - pad, ((clientX - rect.left) / rect.width) * width));
     let nearest = points[0];
