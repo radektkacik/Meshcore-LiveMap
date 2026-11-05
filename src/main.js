@@ -160,6 +160,20 @@ const initialFontSize = FONT_SIZE_VALUES.includes(storedFontSize) ? storedFontSi
 document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
 document.documentElement.dataset.fontSize = initialFontSize;
 
+// Pinch over UI must not zoom the whole page; the map and photo lightbox handle their own gestures.
+const pinchOwnedSelector = "#map, .photo-lightbox-stage";
+function isPinchOwnedTarget(target) {
+  return target instanceof Element && Boolean(target.closest(pinchOwnedSelector));
+}
+function preventPagePinch(event) {
+  if (!isPinchOwnedTarget(event.target)) event.preventDefault();
+}
+document.addEventListener("gesturestart", preventPagePinch, { passive: false });
+document.addEventListener("gesturechange", preventPagePinch, { passive: false });
+document.addEventListener("touchmove", (event) => {
+  if (event.touches.length > 1 && !isPinchOwnedTarget(event.target)) event.preventDefault();
+}, { passive: false });
+
 const elements = {
   activityNew: document.querySelector("#activity-new"),
   activityChannels: document.querySelector("#activity-channels"),

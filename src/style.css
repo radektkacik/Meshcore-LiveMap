@@ -13,13 +13,13 @@
 }
 
 * { box-sizing: border-box; }
-html, body, #app, .map-shell { width: 100%; height: 100%; margin: 0; }
+html, body, #app, .map-shell { width: 100%; height: 100%; margin: 0; touch-action: pan-x pan-y; }
 body { overflow: hidden; }
 button, input, select { font: inherit; }
 button { color: inherit; }
 
 .map-shell { position: relative; overflow: hidden; }
-#map { position: absolute; inset: 0; background: #e9e8e1; }
+#map { position: absolute; inset: 0; background: #e9e8e1; touch-action: none; }
 .map-vignette { position: absolute; inset: 0; z-index: 400; pointer-events: none; box-shadow: inset 0 0 75px rgba(41, 63, 53, 0.1); }
 .viewer-line { display: flex; align-items: center; gap: 6px; margin-top: 8px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 7px; background: rgba(255, 255, 255, 0.72); color: var(--muted); font: 11px "DM Mono", monospace; }
 .viewer-line strong { color: #17271f; font-weight: 500; }
