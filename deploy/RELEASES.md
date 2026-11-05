@@ -439,6 +439,8 @@
 | 2026-11-05 11:09 | `20261105T110918Z.tar.gz` | `20261105-1109-9dad4e3` | Prod: stejný changelog | `CHANGELOG.md` |
 | 2026-11-05 11:27 | `20261105T112704Z.tar.gz` (stage APP_DIR) | `20261105-1127-970e002` | Beta: u filtru telemetrie doplněno krátké info o požadovaném mesh-cz fw | `index.html` |
 | 2026-11-05 11:27 | `20261105T112747Z.tar.gz` | `20261105-1127-970e002` | Prod: stejné info o mesh-cz fw | `index.html` |
+| 2026-11-05 11:32 | `20261105T113204Z.tar.gz` (stage APP_DIR) | `20261105-1132-d186ea3` | Beta: světlé popisky os historie baterie a teploty | `src/main.js`, `src/style.css` |
+| 2026-11-05 11:35 | `20261105T113511Z.tar.gz` | `20261105-1135-2fb43b0` | Prod: stejné popisky os zdravotních grafů | `src/main.js`, `src/style.css` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
