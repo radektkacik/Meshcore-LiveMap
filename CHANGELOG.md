@@ -3,6 +3,17 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-06 — Úrovně baterie podle chemie
+- Prostředí: beta
+- Build: 20261106-1931-5a642bc
+- Status baterie se počítá z napětí na článek podle typu baterie.
+- Li-ion: plná ≥ 4,05 V, ok ≥ 3,60 V, nízká ≥ 3,40 V, kritická < 3,40 V.
+- LiFePO4: plná ≥ 3,35 V, ok ≥ 3,20 V, nízká ≥ 3,00 V, kritická < 3,00 V.
+- LTO: plná ≥ 2,60 V, ok ≥ 2,40 V, nízká ≥ 2,20 V, kritická < 2,20 V.
+- Pb: plná ≥ 2,10 V, ok ≥ 2,05 V, nízká ≥ 1,95 V, kritická < 1,95 V.
+- U 2S/3S se napětí dělí počtem článků; `auto`, Na-ion a neznámé typy zůstávají bez statusu.
+- Přidána úroveň **Plná** do filtru, legendy a ikony baterie.
+
 ## 2026-11-06 — CzHealth v3 a regiony
 - Prostředí: produkce i beta
 - Build: 20261106-1920-e6ee871
