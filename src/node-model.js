@@ -56,7 +56,7 @@ export function resolveStatsField(metric, window) {
     return null;
   }
   if (metric === "unscoped") return window === "24h" ? "unscoped_relay_count_24h" : null;
-  if (metric === "advert") return "advert_count";
+  if (metric === "advert") return window === "24h" ? "advert_count_24h" : null;
   return window === "7d" ? `long_term_${metric}_score` : `${metric}_score`;
 }
 

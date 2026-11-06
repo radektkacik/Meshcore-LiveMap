@@ -67,7 +67,9 @@ test("stats field resolves metric and window independently", () => {
   assert.equal(resolveStatsField("relay", "7d"), null);
   assert.equal(resolveStatsField("usefulness", "7d"), "long_term_usefulness_score");
   assert.equal(resolveStatsField("usefulness", "1h"), "usefulness_score");
-  assert.equal(resolveStatsField("advert", "7d"), "advert_count");
+  assert.equal(resolveStatsField("advert", "24h"), "advert_count_24h");
+  assert.equal(resolveStatsField("advert", "1h"), null);
+  assert.equal(resolveStatsField("advert", "7d"), null);
   assert.equal(resolveStatsField("unscoped", "24h"), "unscoped_relay_count_24h");
   assert.equal(resolveStatsField("unscoped", "1h"), null);
 });
