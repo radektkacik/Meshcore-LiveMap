@@ -162,7 +162,6 @@ const terrainRateLimit = Math.max(1, Number(process.env.TERRAIN_RATE_LIMIT || 60
 const terrainRateWindowMs = Math.max(60_000, Number(process.env.TERRAIN_RATE_WINDOW_MS || 10 * 60 * 1000));
 const terrainCache = new Map();
 const terrainInFlight = new Map();
-const terrainRate = new Map();
 const nodesCachePath = process.env.NODES_CACHE_PATH || join(process.cwd(), "data", "nodes-cache.json");
 const nodesCacheTtlMs = Math.max(60_000, Number(process.env.NODES_CACHE_TTL_MS || 7 * 24 * 60 * 60 * 1000));
 const nodesSoftTtlMs = Math.max(60_000, Number(process.env.NODES_SOFT_TTL_MS || 15 * 60 * 1000));
@@ -552,81 +551,79 @@ function backfillCzHealth() {
   console.log(`CzHealth backfill: ${decoded} unique packets`);
 }
 
-const feedbackRate = new Map();
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function createRateLimiter({ windowMs = HOUR_MS, cooldownMs = 0, limit = 1, dailyLimit = null, messages = {} }) {
+  const map = new Map();
+  function check(ip, now = Date.now(), options = {}) {
+    const windowStart = now - windowMs;
+    const dayStart = now - DAY_MS;
+    const retentionStart = dailyLimit != null ? dayStart : windowStart;
+    const stamps = (map.get(ip) || []).filter((stamp) => stamp > retentionStart);
+    const last = stamps[stamps.length - 1];
+    if (!options.skipCooldown && cooldownMs > 0 && last != null && now - last < cooldownMs) {
+      map.set(ip, stamps);
+      return {
+        ok: false,
+        retryAfter: Math.max(1, Math.ceil((cooldownMs - (now - last)) / 1000)),
+        message: messages.cooldown,
+      };
+    }
+    const windowCount = dailyLimit != null ? stamps.filter((stamp) => stamp > windowStart).length : stamps.length;
+    if (windowCount >= limit) {
+      map.set(ip, stamps);
+      const retryAfter = dailyLimit != null ? 3600 : Math.max(1, Math.ceil((stamps[0] + windowMs - now) / 1000));
+      return { ok: false, retryAfter, message: messages.limit };
+    }
+    if (dailyLimit != null && stamps.length >= dailyLimit) {
+      map.set(ip, stamps);
+      return { ok: false, retryAfter: 3600, message: messages.daily };
+    }
+    stamps.push(now);
+    map.set(ip, stamps);
+    if (map.size > 5000) {
+      for (const [key, value] of map) {
+        if (!value.some((stamp) => stamp > retentionStart)) map.delete(key);
+      }
+    }
+    return { ok: true };
+  }
+  check.reset = (ip) => {
+    map.delete(ip);
+  };
+  return check;
+}
+
 const feedbackRateLimit = Math.max(1, Number(process.env.FEEDBACK_RATE_LIMIT || 15));
 const feedbackDailyLimit = Math.max(10, Number(process.env.FEEDBACK_DAILY_LIMIT || 300));
 const feedbackMaxRows = Math.max(100, Number(process.env.FEEDBACK_MAX_ROWS || 5000));
 const feedbackCooldownMs = Math.max(0, Number(process.env.FEEDBACK_COOLDOWN_MS || 30_000));
-
-function checkFeedback(ip, now = Date.now()) {
-  const windowStart = now - 60 * 60 * 1000;
-  const stamps = (feedbackRate.get(ip) || []).filter((stamp) => stamp > windowStart);
-  const last = stamps[stamps.length - 1];
-  if (last != null && now - last < feedbackCooldownMs) {
-    feedbackRate.set(ip, stamps);
-    return {
-      ok: false,
-      retryAfter: Math.max(1, Math.ceil((feedbackCooldownMs - (now - last)) / 1000)),
-      message: "Mezi zprávami je krátká pauza, zkuste to prosím za chvíli.",
-    };
-  }
-  if (stamps.length >= feedbackRateLimit) {
-    feedbackRate.set(ip, stamps);
-    return {
-      ok: false,
-      retryAfter: Math.max(1, Math.ceil((stamps[0] + 60 * 60 * 1000 - now) / 1000)),
-      message: "Příliš mnoho zpráv za hodinu, zkuste to později.",
-    };
-  }
-  stamps.push(now);
-  feedbackRate.set(ip, stamps);
-  if (feedbackRate.size > 5000) {
-    for (const [key, value] of feedbackRate) {
-      if (!value.some((stamp) => stamp > windowStart)) feedbackRate.delete(key);
-    }
-  }
-  return { ok: true };
-}
+const checkFeedback = createRateLimiter({
+  limit: feedbackRateLimit,
+  cooldownMs: feedbackCooldownMs,
+  messages: {
+    cooldown: "Mezi zprávami je krátká pauza, zkuste to prosím za chvíli.",
+    limit: "Příliš mnoho zpráv za hodinu, zkuste to později.",
+  },
+});
 
 function startOfUtcDay(now) {
   return Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth(), new Date(now).getUTCDate());
 }
 
-const commentRate = new Map();
 const commentRateLimit = Math.max(1, Number(process.env.COMMENT_RATE_LIMIT || 10));
 const commentDailyLimit = Math.max(10, Number(process.env.COMMENT_DAILY_LIMIT || 200));
 const commentMaxRows = Math.max(100, Number(process.env.COMMENT_MAX_ROWS || 5000));
 const commentCooldownMs = Math.max(0, Number(process.env.COMMENT_COOLDOWN_MS || 15_000));
-
-function checkComment(ip, now = Date.now()) {
-  const windowStart = now - 60 * 60 * 1000;
-  const stamps = (commentRate.get(ip) || []).filter((stamp) => stamp > windowStart);
-  const last = stamps[stamps.length - 1];
-  if (last != null && now - last < commentCooldownMs) {
-    commentRate.set(ip, stamps);
-    return {
-      ok: false,
-      retryAfter: Math.max(1, Math.ceil((commentCooldownMs - (now - last)) / 1000)),
-      message: "Mezi komentáři je krátká pauza, zkuste to prosím za chvíli.",
-    };
-  }
-  if (stamps.length >= commentRateLimit) {
-    commentRate.set(ip, stamps);
-    return {
-      ok: false,
-      retryAfter: Math.max(1, Math.ceil((stamps[0] + 60 * 60 * 1000 - now) / 1000)),
-      message: "Příliš mnoho komentářů za hodinu, zkuste to později.",
-    };
-  }
-  stamps.push(now);
-  commentRate.set(ip, stamps);
-  if (commentRate.size > 5000) {
-    for (const [key, value] of commentRate) {
-      if (!value.some((stamp) => stamp > windowStart)) commentRate.delete(key);
-    }
-  }
-  return { ok: true };
-}
+const checkComment = createRateLimiter({
+  limit: commentRateLimit,
+  cooldownMs: commentCooldownMs,
+  messages: {
+    cooldown: "Mezi komentáři je krátká pauza, zkuste to prosím za chvíli.",
+    limit: "Příliš mnoho komentářů za hodinu, zkuste to později.",
+  },
+});
 
 function readBody(request, limit = 16_384) {
   return new Promise((resolve, reject) => {
@@ -691,118 +688,45 @@ function cleanPhotoText(value, limit) {
     .slice(0, limit);
 }
 
-const photoRate = new Map();
 const photoRateLimit = Math.max(1, Number(process.env.PHOTO_RATE_LIMIT || 8));
 const photoDailyLimit = Math.max(1, Number(process.env.PHOTO_DAILY_LIMIT || 30));
 const photoCooldownMs = Math.max(0, Number(process.env.PHOTO_COOLDOWN_MS || 10_000));
-const photoReportRate = new Map();
 const photoReportLimit = Math.max(1, Number(process.env.PHOTO_REPORT_RATE_LIMIT || 5));
 const photoReportCooldownMs = Math.max(0, Number(process.env.PHOTO_REPORT_COOLDOWN_MS || 10_000));
 
-function checkPhotoUpload(ip, now = Date.now(), { skipCooldown = false } = {}) {
-  const hourStart = now - 60 * 60 * 1000;
-  const dayStart = now - 24 * 60 * 60 * 1000;
-  const stamps = (photoRate.get(ip) || []).filter((stamp) => stamp > dayStart);
-  const last = stamps[stamps.length - 1];
-  if (!skipCooldown && last != null && now - last < photoCooldownMs) {
-    photoRate.set(ip, stamps);
-    return {
-      message: "Mezi nahráním fotek je krátká pauza, zkuste to prosím za chvíli.",
-      ok: false,
-      retryAfter: Math.max(1, Math.ceil((photoCooldownMs - (now - last)) / 1000)),
-    };
-  }
-  if (stamps.filter((stamp) => stamp > hourStart).length >= photoRateLimit) {
-    photoRate.set(ip, stamps);
-    return {
-      message: "Příliš mnoho nahraných fotek za hodinu, zkuste to později.",
-      ok: false,
-      retryAfter: 3600,
-    };
-  }
-  if (stamps.length >= photoDailyLimit) {
-    photoRate.set(ip, stamps);
-    return {
-      message: "Denní limit nahrávání fotek byl vyčerpán.",
-      ok: false,
-      retryAfter: 3600,
-    };
-  }
-  stamps.push(now);
-  photoRate.set(ip, stamps);
-  if (photoRate.size > 5000) {
-    for (const [key, value] of photoRate) {
-      if (!value.some((stamp) => stamp > dayStart)) photoRate.delete(key);
-    }
-  }
-  return { ok: true };
-}
+const checkPhotoUpload = createRateLimiter({
+  limit: photoRateLimit,
+  dailyLimit: photoDailyLimit,
+  cooldownMs: photoCooldownMs,
+  messages: {
+    cooldown: "Mezi nahráním fotek je krátká pauza, zkuste to prosím za chvíli.",
+    limit: "Příliš mnoho nahraných fotek za hodinu, zkuste to později.",
+    daily: "Denní limit nahrávání fotek byl vyčerpán.",
+  },
+});
 
-function checkPhotoReport(ip, now = Date.now()) {
-  const hourStart = now - 60 * 60 * 1000;
-  const stamps = (photoReportRate.get(ip) || []).filter((stamp) => stamp > hourStart);
-  const last = stamps[stamps.length - 1];
-  if (last != null && now - last < photoReportCooldownMs) {
-    photoReportRate.set(ip, stamps);
-    return {
-      message: "Mezi žádostmi je krátká pauza, zkuste to prosím za chvíli.",
-      ok: false,
-      retryAfter: Math.max(1, Math.ceil((photoReportCooldownMs - (now - last)) / 1000)),
-    };
-  }
-  if (stamps.length >= photoReportLimit) {
-    photoReportRate.set(ip, stamps);
-    return {
-      message: "Příliš mnoho žádostí za hodinu, zkuste to později.",
-      ok: false,
-      retryAfter: 3600,
-    };
-  }
-  stamps.push(now);
-  photoReportRate.set(ip, stamps);
-  if (photoReportRate.size > 5000) {
-    for (const [key, value] of photoReportRate) {
-      if (!value.some((stamp) => stamp > hourStart)) photoReportRate.delete(key);
-    }
-  }
-  return { ok: true };
-}
+const checkPhotoReport = createRateLimiter({
+  limit: photoReportLimit,
+  cooldownMs: photoReportCooldownMs,
+  messages: {
+    cooldown: "Mezi žádostmi je krátká pauza, zkuste to prosím za chvíli.",
+    limit: "Příliš mnoho žádostí za hodinu, zkuste to později.",
+  },
+});
 
-const nodeInfoRate = new Map();
 const nodeInfoRateLimit = Math.max(1, Number(process.env.NODE_INFO_RATE_LIMIT || 10));
 const nodeInfoDailyLimit = Math.max(1, Number(process.env.NODE_INFO_DAILY_LIMIT || 50));
 const nodeInfoCooldownMs = Math.max(0, Number(process.env.NODE_INFO_COOLDOWN_MS || 5_000));
-
-function checkNodeInfo(ip, now = Date.now()) {
-  const hourStart = now - 60 * 60 * 1000;
-  const dayStart = now - 24 * 60 * 60 * 1000;
-  const stamps = (nodeInfoRate.get(ip) || []).filter((stamp) => stamp > dayStart);
-  const last = stamps[stamps.length - 1];
-  if (last != null && now - last < nodeInfoCooldownMs) {
-    nodeInfoRate.set(ip, stamps);
-    return {
-      message: "Mezi úpravami info je krátká pauza, zkuste to prosím za chvíli.",
-      ok: false,
-      retryAfter: Math.max(1, Math.ceil((nodeInfoCooldownMs - (now - last)) / 1000)),
-    };
-  }
-  if (stamps.filter((stamp) => stamp > hourStart).length >= nodeInfoRateLimit) {
-    nodeInfoRate.set(ip, stamps);
-    return { message: "Příliš mnoho úprav info za hodinu.", ok: false, retryAfter: 3600 };
-  }
-  if (stamps.length >= nodeInfoDailyLimit) {
-    nodeInfoRate.set(ip, stamps);
-    return { message: "Denní limit úprav info byl vyčerpán.", ok: false, retryAfter: 3600 };
-  }
-  stamps.push(now);
-  nodeInfoRate.set(ip, stamps);
-  if (nodeInfoRate.size > 5000) {
-    for (const [key, value] of nodeInfoRate) {
-      if (!value.some((stamp) => stamp > dayStart)) nodeInfoRate.delete(key);
-    }
-  }
-  return { ok: true };
-}
+const checkNodeInfo = createRateLimiter({
+  limit: nodeInfoRateLimit,
+  dailyLimit: nodeInfoDailyLimit,
+  cooldownMs: nodeInfoCooldownMs,
+  messages: {
+    cooldown: "Mezi úpravami info je krátká pauza, zkuste to prosím za chvíli.",
+    limit: "Příliš mnoho úprav info za hodinu.",
+    daily: "Denní limit úprav info byl vyčerpán.",
+  },
+});
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -811,6 +735,18 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function hashIp(ip) {
+  return createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16);
+}
+
+function formatCsDate(value) {
+  return new Date(value).toLocaleString("cs-CZ");
+}
+
+function methodNotAllowed(response, allow, extraHeaders = {}) {
+  response.writeHead(405, { Allow: allow, ...extraHeaders }).end("Method Not Allowed");
 }
 
 function renderFeedbackPage(entries, token) {
@@ -824,7 +760,7 @@ function renderFeedbackPage(entries, token) {
       : "";
     return `
     <li${entry.hidden ? ' class="is-hidden"' : ""}>
-      <div class="meta">#${entry.id} · ${escapeHtml(new Date(entry.created_at).toLocaleString("cs-CZ"))} · ${escapeHtml(entry.category || "other")} · ${escapeHtml(flags)}</div>
+      <div class="meta">#${entry.id} · ${escapeHtml(formatCsDate(entry.created_at))} · ${escapeHtml(entry.category || "other")} · ${escapeHtml(flags)}</div>
       ${entry.name ? `<div class="name">${escapeHtml(entry.name)}</div>` : ""}
       <p>${escapeHtml(entry.message)}</p>
       ${entry.contact ? `<div class="contact">Kontakt: ${escapeHtml(entry.contact)}</div>` : ""}
@@ -890,7 +826,7 @@ function renderPhotoPage(entries, reports, token, status, openReports) {
     <li class="photo ${escapeHtml(photo.status)}">
       <a class="thumb" href="${imageUrl}" target="_blank" rel="noreferrer"><img src="${imageUrl}" alt="" loading="lazy" /></a>
       <div class="body">
-        <div class="meta">${isCover ? '<span class="cover-badge">Náhled</span>' : ""}${escapeHtml(photo.status)} · ${escapeHtml(new Date(photo.createdAt).toLocaleString("cs-CZ"))} · ${escapeHtml(photo.bytes)} B · ${photo.width || "?"}×${photo.height || "?"}</div>
+        <div class="meta">${isCover ? '<span class="cover-badge">Náhled</span>' : ""}${escapeHtml(photo.status)} · ${escapeHtml(formatCsDate(photo.createdAt))} · ${escapeHtml(photo.bytes)} B · ${photo.width || "?"}×${photo.height || "?"}</div>
         <div class="node"><a href="../../?node=${encodeURIComponent(photo.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(nodeLabel)}</a></div>
         ${photo.author ? `<div class="author">${escapeHtml(photo.author)}</div>` : ""}
         ${photo.caption ? `<p>${escapeHtml(photo.caption)}</p>` : ""}
@@ -922,7 +858,7 @@ function renderPhotoPage(entries, reports, token, status, openReports) {
         ? `<a class="thumb" href="${imageUrl}" target="_blank" rel="noreferrer"><img src="${imageUrl}" alt="" loading="lazy" /></a>`
         : '<div class="thumb missing"></div>'}
       <div class="body">
-        <div class="meta">${escapeHtml(reportReasons[report.reason] || report.reason)} · ${escapeHtml(new Date(report.createdAt).toLocaleString("cs-CZ"))}</div>
+        <div class="meta">${escapeHtml(reportReasons[report.reason] || report.reason)} · ${escapeHtml(formatCsDate(report.createdAt))}</div>
         ${report.photo ? `<div class="node"><a href="../../?node=${encodeURIComponent(report.photo.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(nodeLabel)}</a></div>` : ""}
         ${report.photo?.caption ? `<div class="author">${escapeHtml(report.photo.caption)}</div>` : ""}
         ${report.message ? `<p>${escapeHtml(report.message)}</p>` : ""}
@@ -1292,7 +1228,7 @@ async function handleTelegramWebhook(request, response) {
     return;
   }
   if (request.method !== "POST") {
-    response.writeHead(405, { Allow: "POST" }).end("Method Not Allowed");
+    methodNotAllowed(response, "POST");
     return;
   }
   const providedSecret = request.headers["x-telegram-bot-api-secret-token"];
@@ -1925,24 +1861,10 @@ function terrainCacheSet(key, body, contentType) {
   }
 }
 
-function checkTerrainRate(ip) {
-  const now = Date.now();
-  const windowStart = now - terrainRateWindowMs;
-  const stamps = (terrainRate.get(ip) || []).filter((stamp) => stamp > windowStart);
-  if (stamps.length >= terrainRateLimit) {
-    const retryAfter = Math.max(1, Math.ceil((stamps[0] + terrainRateWindowMs - now) / 1000));
-    terrainRate.set(ip, stamps);
-    return { ok: false, retryAfter };
-  }
-  stamps.push(now);
-  terrainRate.set(ip, stamps);
-  if (terrainRate.size > 5000) {
-    for (const [key, value] of terrainRate) {
-      if (!value.some((stamp) => stamp > windowStart)) terrainRate.delete(key);
-    }
-  }
-  return { ok: true, retryAfter: 0 };
-}
+const checkTerrainRate = createRateLimiter({
+  windowMs: terrainRateWindowMs,
+  limit: terrainRateLimit,
+});
 
 async function fetchTerrainTile(zoom, x, y) {
   const key = `${zoom}/${x}/${y}`;
@@ -1984,8 +1906,6 @@ async function fetchTerrainTile(zoom, x, y) {
   }
 }
 
-
-const adminLoginAttempts = new Map();
 
 function parseCookieHeader(header) {
   const cookies = {};
@@ -2031,22 +1951,10 @@ function adminCookie(request, value, maxAge = Math.floor(adminSessionTtlMs / 100
   return `mc_admin=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Strict;${secure ? " Secure;" : ""} Max-Age=${maxAge}`;
 }
 
-function checkAdminLogin(ip, now = Date.now()) {
-  const windowMs = 15 * 60 * 1000;
-  const stamps = (adminLoginAttempts.get(ip) || []).filter((stamp) => stamp > now - windowMs);
-  if (stamps.length >= 10) {
-    adminLoginAttempts.set(ip, stamps);
-    return { ok: false, retryAfter: Math.max(1, Math.ceil((stamps[0] + windowMs - now) / 1000)) };
-  }
-  stamps.push(now);
-  adminLoginAttempts.set(ip, stamps);
-  if (adminLoginAttempts.size > 5000) {
-    for (const [key, value] of adminLoginAttempts) {
-      if (!value.some((stamp) => stamp > now - windowMs)) adminLoginAttempts.delete(key);
-    }
-  }
-  return { ok: true };
-}
+const checkAdminLogin = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+});
 
 function sameOriginRequest(request) {
   const origin = request.headers.origin;
@@ -2326,7 +2234,7 @@ function adminPhotoRows(entries, names, status, covers = new Map()) {
     <li class="photo ${escapeHtml(photo.status)}">
       <a class="thumb" href="${imageUrl}" target="_blank" rel="noreferrer"><img src="${imageUrl}" alt="" loading="lazy" /></a>
       <div class="body">
-        <div class="meta">${isCover ? '<span class="cover-badge">Náhled</span>' : ""}${escapeHtml(photo.status)} · ${escapeHtml(new Date(photo.createdAt).toLocaleString("cs-CZ"))} · ${escapeHtml(photo.bytes)} B · ${photo.width || "?"}×${photo.height || "?"}</div>
+        <div class="meta">${isCover ? '<span class="cover-badge">Náhled</span>' : ""}${escapeHtml(photo.status)} · ${escapeHtml(formatCsDate(photo.createdAt))} · ${escapeHtml(photo.bytes)} B · ${photo.width || "?"}×${photo.height || "?"}</div>
         <div class="node"><a href="${sitePath("/")}?node=${encodeURIComponent(photo.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(nodeLabel)}</a></div>
         ${photo.author ? `<div class="author">${escapeHtml(photo.author)}</div>` : ""}
         ${photo.caption ? `<p>${escapeHtml(photo.caption)}</p>` : ""}
@@ -2387,7 +2295,7 @@ function adminPhotoPage(status) {
         ? `<a class="thumb" href="${imageUrl}" target="_blank" rel="noreferrer"><img src="${imageUrl}" alt="" loading="lazy" /></a>`
         : '<div class="thumb missing"></div>'}
       <div class="body">
-        <div class="meta">${escapeHtml(reportReasons[report.reason] || report.reason)} · ${escapeHtml(new Date(report.createdAt).toLocaleString("cs-CZ"))}</div>
+        <div class="meta">${escapeHtml(reportReasons[report.reason] || report.reason)} · ${escapeHtml(formatCsDate(report.createdAt))}</div>
         ${report.photo ? `<div class="node"><a href="${sitePath("/")}?node=${encodeURIComponent(report.photo.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(nodeLabel)}</a></div>` : ""}
         ${report.message ? `<p>${escapeHtml(report.message)}</p>` : ""}
         ${report.contact ? `<div class="contact">Kontakt: ${escapeHtml(report.contact)}</div>` : ""}
@@ -2415,7 +2323,7 @@ function adminCommentsPage() {
     const name = names.get(comment.nodeKey) || comment.nodeKey.slice(0, 16);
     return `
     <li class="admin-comment">
-      <div class="meta">${escapeHtml(new Date(comment.createdAt).toLocaleString("cs-CZ"))}${comment.author ? ` · ${escapeHtml(comment.author)}` : ""}</div>
+      <div class="meta">${escapeHtml(formatCsDate(comment.createdAt))}${comment.author ? ` · ${escapeHtml(comment.author)}` : ""}</div>
       <div class="node"><a href="${sitePath("/")}?node=${encodeURIComponent(comment.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(name)}</a></div>
       <p>${escapeHtml(comment.text)}</p>
       <form class="actions" method="post" action="${adminPath("/comments/delete")}">
@@ -2440,7 +2348,7 @@ function adminFeedbackPage() {
     const flags = [entry.is_public ? "veřejné" : "soukromé", entry.hidden ? "skryté" : null].filter(Boolean).join(" · ");
     return `
     <li class="${entry.hidden ? "is-hidden" : ""}">
-      <div class="meta">#${entry.id} · ${escapeHtml(new Date(entry.created_at).toLocaleString("cs-CZ"))} · ${escapeHtml(entry.category || "other")} · ${escapeHtml(flags)}</div>
+      <div class="meta">#${entry.id} · ${escapeHtml(formatCsDate(entry.created_at))} · ${escapeHtml(entry.category || "other")} · ${escapeHtml(flags)}</div>
       ${entry.name ? `<div class="node">${escapeHtml(entry.name)}</div>` : ""}
       <p>${escapeHtml(entry.message)}</p>
       ${entry.contact ? `<div class="contact">Kontakt: ${escapeHtml(entry.contact)}</div>` : ""}
@@ -2692,7 +2600,7 @@ function adminNodeInfoPage(imported = false, synced = false) {
     const nodeLabel = node ? `${node} · ${info.nodeKey.slice(0, 8)}` : info.nodeKey.slice(0, 16);
     return `
     <li>
-      <div class="meta">${escapeHtml(new Date(info.createdAt).toLocaleString("cs-CZ"))}${info.author ? ` · ${escapeHtml(info.author)}` : ""}</div>
+      <div class="meta">${escapeHtml(formatCsDate(info.createdAt))}${info.author ? ` · ${escapeHtml(info.author)}` : ""}</div>
       <div class="node"><a href="${sitePath("/")}?node=${encodeURIComponent(info.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(nodeLabel)}</a></div>
       <div class="meta">Aktuální zveřejněný text</div>
       <p>${escapeHtml(info.currentText || "—")}</p>
@@ -2710,7 +2618,7 @@ function adminNodeInfoPage(imported = false, synced = false) {
     const nodeLabel = node ? `${node} · ${info.nodeKey.slice(0, 8)}` : info.nodeKey.slice(0, 16);
     return `
     <li>
-      <div class="meta">${escapeHtml(new Date(info.updatedAt).toLocaleString("cs-CZ"))}${info.author ? ` · ${escapeHtml(info.author)}` : ""}</div>
+      <div class="meta">${escapeHtml(formatCsDate(info.updatedAt))}${info.author ? ` · ${escapeHtml(info.author)}` : ""}</div>
       <div class="node"><a href="${sitePath("/")}?node=${encodeURIComponent(info.nodeKey)}" target="_blank" rel="noreferrer">${escapeHtml(nodeLabel)}</a></div>
       <p>${escapeHtml(info.text)}</p>
       <div class="actions">
@@ -2805,7 +2713,7 @@ async function handleAdminRequest(request, response, url) {
       response.end(renderAdminLogin({ error: "Nesprávné heslo.", next }));
       return;
     }
-    adminLoginAttempts.delete(ip);
+    checkAdminLogin.reset(ip);
     response.writeHead(303, {
       "Cache-Control": "no-store",
       "Location": next,
@@ -3067,7 +2975,7 @@ async function handleAdminRequest(request, response, url) {
     response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not Found");
     return;
   }
-  response.writeHead(405, { "Content-Type": "text/plain; charset=utf-8", Allow: "GET, POST" }).end("Method Not Allowed");
+  methodNotAllowed(response, "GET, POST", { "Content-Type": "text/plain; charset=utf-8" });
 }
 
 async function handleRequest(request, response) {
@@ -3136,7 +3044,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/version") {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET");
       return;
     }
     const body = JSON.stringify({
@@ -3153,7 +3061,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/health") {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET");
       return;
     }
     const body = JSON.stringify(healthPayload());
@@ -3167,7 +3075,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/search") {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET");
       return;
     }
     const prefix = String(url.searchParams.get("hash") || "").trim();
@@ -3188,7 +3096,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/node-relay") {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET, HEAD" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET, HEAD");
       return;
     }
     const key = String(url.searchParams.get("key") || "").trim().toLowerCase();
@@ -3216,7 +3124,7 @@ async function handleRequest(request, response) {
       return;
     }
     if (request.method !== "POST") {
-      response.writeHead(405, { Allow: "GET, HEAD, POST" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET, HEAD, POST");
       return;
     }
     const ip = clientIp(request);
@@ -3250,7 +3158,7 @@ async function handleRequest(request, response) {
     }
     const result = nodeInfoStore.submit({
       author,
-      ipHash: createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16),
+      ipHash: hashIp(ip),
       nodeKey: key,
       password,
       text,
@@ -3274,7 +3182,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/photos/config") {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET, HEAD" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET, HEAD");
       return;
     }
     sendJson(response, 200, { autoApprove: photoAutoApprove });
@@ -3301,7 +3209,7 @@ async function handleRequest(request, response) {
       return;
     }
     if (request.method !== "POST") {
-      response.writeHead(405, { Allow: "GET, HEAD, POST" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET, HEAD, POST");
       return;
     }
     const key = String(request.headers["x-photo-key"] || "").trim().toLowerCase();
@@ -3350,7 +3258,7 @@ async function handleRequest(request, response) {
         author: cleanPhotoText(decodeHeaderValue(request.headers["x-photo-author"]), 60),
         buffer,
         caption: cleanPhotoText(decodeHeaderValue(request.headers["x-photo-caption"]), 240),
-        ipHash: createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16),
+        ipHash: hashIp(ip),
         nodeKey: key,
         status: photoAutoApprove ? "approved" : "pending",
       });
@@ -3377,7 +3285,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/photos/report") {
     if (request.method !== "POST") {
-      response.writeHead(405, { Allow: "POST" }).end("Method Not Allowed");
+      methodNotAllowed(response, "POST");
       return;
     }
     const ip = clientIp(request);
@@ -3411,7 +3319,7 @@ async function handleRequest(request, response) {
     const contact = cleanPhotoText(payload?.contact, 200);
     const reportId = photoStore.createReport({
       contact,
-      ipHash: createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16),
+      ipHash: hashIp(ip),
       message,
       photoId,
       reason,
@@ -3425,7 +3333,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/photos/nodes") {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET");
       return;
     }
     const nodes = photoStore.listApprovedNodeCounts();
@@ -3510,7 +3418,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/node-detail") {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET");
       return;
     }
     const key = String(url.searchParams.get("key") || "").trim().toLowerCase();
@@ -3539,7 +3447,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/comments/count") {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET, HEAD" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET, HEAD");
       return;
     }
     const key = String(url.searchParams.get("key") || "").trim().toLowerCase();
@@ -3553,7 +3461,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/comments") {
     if (request.method !== "GET" && request.method !== "HEAD" && request.method !== "POST") {
-      response.writeHead(405, { Allow: "GET, HEAD, POST" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET, HEAD, POST");
       return;
     }
     if (request.method === "GET" || request.method === "HEAD") {
@@ -3597,7 +3505,7 @@ async function handleRequest(request, response) {
     }
     const comment = commentStore.create({
       author,
-      ipHash: createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16),
+      ipHash: hashIp(ip),
       nodeKey: key,
       text,
     }, now);
@@ -3613,7 +3521,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/feedback/public") {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET");
       return;
     }
     const entries = feedbackStore.listPublic(50);
@@ -3663,7 +3571,7 @@ async function handleRequest(request, response) {
       const name = String(payload?.name || "").trim().slice(0, 60);
       const isPublic = payload?.isPublic === true;
       const userAgent = String(request.headers["user-agent"] || "").slice(0, 300);
-      const ipHash = createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16);
+      const ipHash = hashIp(ip);
       const id = feedbackStore.record({ category, message, contact, name, isPublic, ipHash, userAgent }, now);
       feedbackStore.pruneTo(feedbackMaxRows);
       notifyNewFeedback({ category, isPublic, message, name });
@@ -3696,7 +3604,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/packet-routes") {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET");
       return;
     }
     const hash = String(url.searchParams.get("hash") || "").trim().toLowerCase();
@@ -3715,7 +3623,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/history") {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET");
       return;
     }
     const sinceParam = url.searchParams.has("since") ? Number(url.searchParams.get("since")) : NaN;
@@ -3733,7 +3641,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/packet-history") {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET");
       return;
     }
     const hoursParam = url.searchParams.has("hours") ? Number(url.searchParams.get("hours")) : NaN;
@@ -3796,7 +3704,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/recent") {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET");
       return;
     }
     const secondsParam = url.searchParams.has("seconds") ? Number(url.searchParams.get("seconds")) : NaN;
@@ -3816,7 +3724,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/node-history") {
     if (request.method !== "GET") {
-      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET");
       return;
     }
     const key = String(url.searchParams.get("key") || "").toLowerCase();
@@ -3832,7 +3740,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/node-health") {
     if (request.method !== "GET") {
-      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET");
       return;
     }
     const key = String(url.searchParams.get("key") || "").toLowerCase();
@@ -3854,7 +3762,7 @@ async function handleRequest(request, response) {
   const terrainMatch = /^\/api\/terrain\/(\d{1,2})\/(\d+)\/(\d+)\.png$/.exec(url.pathname);
   if (terrainMatch) {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET");
       return;
     }
     const zoom = Number(terrainMatch[1]);
@@ -3894,7 +3802,7 @@ async function handleRequest(request, response) {
 
   if (url.pathname === "/api/elevation") {
     if (request.method !== "GET" && request.method !== "HEAD") {
-      response.writeHead(405, { Allow: "GET" }).end("Method Not Allowed");
+      methodNotAllowed(response, "GET");
       return;
     }
     const lats = (url.searchParams.get("latitude") || "").split(",").filter((value) => value.trim() !== "");

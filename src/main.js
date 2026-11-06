@@ -11,7 +11,7 @@ import {
   parsePath,
   resolveCandidateChain,
 } from "./route-utils.js";
-import { analyzePath, interpolatePath, nearestOnPath, profilePointAt } from "./los.js";
+import { analyzePath, interpolatePath, nearestOnPath, profilePointAt, haversineKm } from "./los.js";
 import { clampActivitySize } from "./activity-size.js";
 import { CLEAR, PARTIAL } from "./coverage.js";
 import { createElevationService, ElevationError } from "./elevation.js";
@@ -1780,7 +1780,7 @@ function nodeNeighbors(node) {
       const distanceKm = neighborNode
         && validCoords(node.lat, node.lon)
         && validCoords(neighborNode.lat, neighborNode.lon)
-        ? haversineKm(node.lat, node.lon, neighborNode.lat, neighborNode.lon)
+        ? haversineKm(node, neighborNode)
         : null;
       const meta = [
         role ? roleLabel(role) : "",
@@ -4498,15 +4498,6 @@ async function resolvePrefixes(prefixes) {
   await Promise.all(new Set(requests));
 }
 
-function haversineKm(latA, lonA, latB, lonB) {
-  const rad = Math.PI / 180;
-  const dLat = (latB - latA) * rad;
-  const dLon = (lonB - lonA) * rad;
-  const a = Math.sin(dLat / 2) ** 2
-    + Math.cos(latA * rad) * Math.cos(latB * rad) * Math.sin(dLon / 2) ** 2;
-  return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 function packetPoints(packet, path, hashBytes = packetPathHashBytes(packet, path)) {
   const maxHopKm = maxRouteHopKm(hashBytes);
   const decoded = parseDecoded(packet);
@@ -4578,7 +4569,7 @@ function packetPoints(packet, path, hashBytes = packetPathHashBytes(packet, path
   if (!isDirectRoute && observerKey.length >= 4 && observerNode && validCoords(observerNode.lat, observerNode.lon)) {
     const last = points.at(-1);
     const plausibleDistance = !last
-      || haversineKm(last.lat, last.lon, observerNode.lat, observerNode.lon) <= maxHopKm;
+      || haversineKm(last, observerNode) <= maxHopKm;
     const distinct = !last || last.lat !== observerNode.lat || last.lon !== observerNode.lon;
     if (plausibleDistance && distinct) {
       pushPoint(observerNode.lat, observerNode.lon, observerNode.name || packet.observer_name || "Observer", observerNode.public_key);
@@ -4612,7 +4603,7 @@ function routeAnomalies(route) {
     const previous = points[index - 1];
     const point = points[index];
     if (point.breakBefore) continue;
-    longest = Math.max(longest, haversineKm(previous.lat, previous.lon, point.lat, point.lon));
+    longest = Math.max(longest, haversineKm(previous, point));
   }
   if (longest > 140) anomalies.push(t("anomaly.longHop", { distance: formatDecimal(longest, 0) }));
   const seen = new Set();
@@ -4651,7 +4642,7 @@ function historyRoutePoints(packet, hashBytes = packetPathHashBytes(packet)) {
     }
     if (seen.has(key)) continue;
     const previous = points.at(-1);
-    if (previous && haversineKm(previous.lat, previous.lon, node.lat, node.lon) > maxHopKm) {
+    if (previous && haversineKm(previous, node) > maxHopKm) {
       breakNext = true;
       continue;
     }
@@ -7549,7 +7540,7 @@ function routeDistanceKm(route) {
   let previous = null;
   for (const point of route.points || []) {
     if (previous && !point.breakBefore) {
-      total += haversineKm(previous.lat, previous.lon, point.lat, point.lon);
+      total += haversineKm(previous, point);
     }
     previous = point;
   }

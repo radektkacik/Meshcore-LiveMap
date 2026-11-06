@@ -1,3 +1,5 @@
+import { haversineKm } from "./los.js";
+
 export const PRIMARY_PACKET_TYPES = new Set([2, 4, 5, 9]);
 export const DEFAULT_MAX_HOP_KM = 170;
 export const MULTI_BYTE_MAX_HOP_KM = 200;
@@ -62,15 +64,6 @@ export function isRouteVisible(packetType, hashBytes, filters) {
   return true;
 }
 
-function distanceKm(a, b) {
-  const rad = Math.PI / 180;
-  const dLat = (b.lat - a.lat) * rad;
-  const dLon = (b.lon - a.lon) * rad;
-  const h = Math.sin(dLat / 2) ** 2
-    + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLon / 2) ** 2;
-  return 6371 * 2 * Math.asin(Math.min(1, Math.sqrt(h)));
-}
-
 export function resolveCandidateChain(candidateSets, { maxHopKm = 150, start = null, end = null } = {}) {
   const sets = candidateSets.map((list) => (Array.isArray(list) ? list : []).filter((candidate) => (
     candidate && Number.isFinite(Number(candidate.lat)) && Number.isFinite(Number(candidate.lon))
@@ -79,7 +72,7 @@ export function resolveCandidateChain(candidateSets, { maxHopKm = 150, start = n
 
   let costs = sets[0].map((candidate) => {
     if (!start) return 0;
-    const distance = distanceKm(start, candidate);
+    const distance = haversineKm(start, candidate);
     return distance <= maxHopKm ? distance : Infinity;
   });
   const parents = [sets[0].map(() => -1)];
@@ -91,7 +84,7 @@ export function resolveCandidateChain(candidateSets, { maxHopKm = 150, start = n
       const candidate = sets[index][current];
       for (let previous = 0; previous < sets[index - 1].length; previous += 1) {
         if (!Number.isFinite(costs[previous])) continue;
-        const distance = distanceKm(sets[index - 1][previous], candidate);
+        const distance = haversineKm(sets[index - 1][previous], candidate);
         if (distance > maxHopKm) continue;
         const total = costs[previous] + distance;
         if (total < nextCosts[current]) {
@@ -110,7 +103,7 @@ export function resolveCandidateChain(candidateSets, { maxHopKm = 150, start = n
     if (!Number.isFinite(costs[index])) continue;
     let total = costs[index];
     if (end) {
-      const distance = distanceKm(sets.at(-1)[index], end);
+      const distance = haversineKm(sets.at(-1)[index], end);
       if (distance > maxHopKm) continue;
       total += distance;
     }
