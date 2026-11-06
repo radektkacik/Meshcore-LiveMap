@@ -3,6 +3,19 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-06 — CzHealth v3 a regiony
+- Prostředí: beta
+- Build: 20261106-1900-161d178
+- Podpora nového formátu CzHealth v3: DAY, SUMMARY i CONFIG.
+- U nodu se zobrazuje napětí, teplota, případně proud a vlhkost.
+- Zobrazen je typ baterie, počet článků v sérii a zdroj napětí (`ADC`, `INA`, `BMS`).
+- Status baterie se počítá jen pro Li-ion se známým počtem článků; u ostatních typů se zobrazuje pouze měřené napětí.
+- CONFIG zobrazuje domácí, výchozí a flood regiony včetně `*` a upozornění na neúplný seznam.
+- CONFIG sám nevytváří senzorový vzorek ani nemění čas posledního měření.
+- SUMMARY se ukládá jako rozsahy a poslední hodnoty, ne jako smyšlená historie.
+- Staré v1 záznamy se ignorují; telemetrický filtr používá pouze přijatá senzorová data.
+- Beta ověřena na živých v3 repeaterech `Dev_68B76D`, `OVA-Test`, `BraEastYagi` a `nedvezi.meshcore.cz`.
+
 ## 2026-11-05 — Trasy skryté při filtru nodů
 - Prostředí: produkce i beta
 - Build: 20261105-1107-e492fb4
