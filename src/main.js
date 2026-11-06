@@ -1847,6 +1847,7 @@ function nodePopupContent(node, active) {
     ${nodeComments(node, true)}
     ${basicDetails}
     ${nodeTrafficDetails(node)}
+    ${nodeHealthSummary(node)}
     ${nodeHealthConfig(node)}
     ${nodeHealthHistory(node)}
     ${nodeNetworkDetails(node)}
@@ -1930,12 +1931,14 @@ const BATTERY_VERTICAL_OFF = '<path d="M3 3l18 18" /><path d="M17 13v-6a2 2 0 0 
 const THERMOMETER_ICON = '<svg class="node-health-thermometer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13.5a4 4 0 1 0 4 0v-8.5a2 2 0 0 0 -4 0v8.5" /><path d="M10 9l4 0" /></svg>';
 
 function batteryStatusIcon(status) {
-  const paths = status === "stale" || status === "unknown"
+  const paths = status === "stale"
     ? BATTERY_VERTICAL_OFF
-    : `<path d="${BATTERY_VERTICAL_BODY}" />${BATTERY_VERTICAL_BARS
-      .slice(0, status === "ok" ? 4 : status === "warn" ? 2 : 1)
-      .map((path) => `<path d="${path}" />`)
-      .join("")}`;
+    : status === "unknown"
+      ? `<path d="${BATTERY_VERTICAL_BODY}" />`
+      : `<path d="${BATTERY_VERTICAL_BODY}" />${BATTERY_VERTICAL_BARS
+        .slice(0, status === "ok" ? 4 : status === "warn" ? 2 : 1)
+        .map((path) => `<path d="${path}" />`)
+        .join("")}`;
   return `<svg class="node-health-battery" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 }
 
@@ -1971,7 +1974,7 @@ function nodeHealthBadge(node) {
     temperatureText ? `${t("node.temperature")}: ${temperatureText}` : null,
   ].filter(Boolean).join(" · ");
   return `<button type="button" class="node-health-badge ${status}" data-health-node-key="${escapeHtml(node.public_key.toUpperCase())}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
-    ${battery == null || status === "unknown" ? "" : batteryStatusIcon(status)}
+    ${battery == null ? "" : batteryStatusIcon(status)}
     ${voltageText ? `<span class="node-health-voltage">${escapeHtml(voltageText)}</span>` : ""}
     ${temperatureText ? `${THERMOMETER_ICON}<span class="node-health-temperature">${escapeHtml(temperatureText)}</span>` : ""}
   </button>`;
@@ -2173,6 +2176,7 @@ function renderNodeDetail(node, active, initialTab = "overview") {
   move(".node-comments", "comments");
   move(".node-basic-details", "overview");
   move(".node-traffic-details", "overview", true);
+  move(".node-health-summary", "overview", true);
   move(".node-health-config", "overview", true);
   move(".node-health-history", "overview", true);
   move(".node-network-details", "overview", true);
@@ -2347,9 +2351,50 @@ function splitHealthSegments(points, gapMs) {
 }
 
 function healthValueText(metric, value) {
-  return metric === "battery"
-    ? `${formatDecimal(value / 1000, 2)} V`
-    : `${formatDecimal(value, 1)} °C`;
+  if (metric === "battery") return `${formatDecimal(value / 1000, 2)} V`;
+  if (metric === "humidity") return `${formatNumber(value)} %`;
+  if (metric === "current") return `${formatNumber(value)} mA`;
+  return `${formatDecimal(value, 1)} °C`;
+}
+
+function healthSummaryRange(range, metric) {
+  if (!range) return null;
+  const min = range.min == null ? null : healthValueText(metric, range.min);
+  const max = range.max == null ? null : healthValueText(metric, range.max);
+  const avg = range.avg == null ? null : healthValueText(metric, range.avg);
+  const last = range.last == null ? null : healthValueText(metric, range.last);
+  const span = min && max ? `${min} – ${max}` : (last || min || max);
+  return [
+    span,
+    avg ? t("node.healthSummaryAvg", { value: avg }) : null,
+    last ? t("node.healthSummaryLast", { value: last }) : null,
+  ].filter(Boolean).join(" · ") || null;
+}
+
+function nodeHealthSummary(node) {
+  const summary = node.health?.summary;
+  if (!summary) return "";
+  const rows = [
+    [t("node.battery"), healthSummaryRange(summary.battery, "battery")],
+    [t("node.temperature"), healthSummaryRange(summary.temperature, "temperature")],
+    [t("node.humidity"), healthSummaryRange(summary.humidity, "humidity")],
+  ].filter(([, value]) => value);
+  if (!rows.length) return "";
+  const meta = [
+    summary.batteryType ? batteryTypeName(summary.batteryType) : null,
+    summary.batteryCells ? `${summary.batteryCells}S` : null,
+    summary.voltageSource ? voltageSourceName(summary.voltageSource) : null,
+  ].filter(Boolean).join(" · ");
+  return `
+    <section class="node-health-summary" data-node-key="${escapeHtml(String(node.public_key || "").toUpperCase())}">
+      <div class="node-health-summary-head">
+        <h4>${t("node.healthSummaryTitle")}</h4>
+        <small>${t("node.healthSummarySamples", { count: formatNumber(summary.samples) })}</small>
+      </div>
+      <dl>${rows.map(([label, value]) => `<div><dt>${label}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl>
+      ${meta ? `<small class="node-health-summary-meta">${escapeHtml(meta)}</small>` : ""}
+    </section>
+  `;
 }
 
 function healthAxisTime(value, spanMs) {
@@ -2459,6 +2504,19 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
 function renderNodeHealthHistory(section, data) {
   if (!section) return;
   const samples = data?.samples || {};
+  const hasSamples = (samples.battery || []).length || (samples.temperature || []).length;
+  if (!hasSamples && data?.latest?.summary) {
+    for (const metric of ["battery", "temperature"]) {
+      const series = section.querySelector(`[data-health-metric="${metric}"]`);
+      const chart = series?.querySelector(".node-health-chart");
+      const summary = series?.querySelector(".node-health-series-head small");
+      if (!chart) continue;
+      chart.classList.add("empty");
+      chart.textContent = t("node.healthSummaryOnly");
+      if (summary) summary.textContent = "";
+    }
+    return;
+  }
   renderNodeHealthSeries(
     section.querySelector('[data-health-metric="battery"]'),
     samples.battery || [],
@@ -3325,7 +3383,7 @@ function nodeHealthTooltip(node) {
     ? health.batteryStatus
     : "unknown";
   return `<span class="node-tooltip-health ${status}">
-    ${battery == null || status === "unknown" ? "" : batteryStatusIcon(status)}
+    ${battery == null ? "" : batteryStatusIcon(status)}
     ${battery == null ? "" : `<span>${escapeHtml(formatDecimal(battery / 1000, 2))} V</span>`}
     ${temperature == null ? "" : `${THERMOMETER_ICON}<span>${escapeHtml(formatDecimal(temperature, 1))} °C</span>`}
   </span>`;
