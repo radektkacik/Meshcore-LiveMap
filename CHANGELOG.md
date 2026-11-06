@@ -5,9 +5,11 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-06 — CzHealth v3 a regiony
 - Prostředí: beta
-- Build: 20261106-1907-5be8f85
+- Build: 20261106-1918-358012b
 - Podpora nového formátu CzHealth v3: DAY, SUMMARY i CONFIG.
 - Kompaktní faceplate nodu zůstává krátký; regiony, typ baterie a doplňková telemetrie jsou až v detailu nodu.
+- Ikona baterie se zobrazuje i u neznámého stavu (neutrální obrys), takže není zaměnitelná s vypnutou/chybějící baterií.
+- U uzlů, které posílají jen SUMMARY, detail zobrazí rozsahy min/avg/max/last místo prázdného grafu.
 - U nodu se zobrazuje napětí, teplota, případně proud a vlhkost.
 - Zobrazen je typ baterie, počet článků v sérii a zdroj napětí (`ADC`, `INA`, `BMS`).
 - Status baterie se počítá jen pro Li-ion se známým počtem článků; u ostatních typů se zobrazuje pouze měřené napětí.
