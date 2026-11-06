@@ -146,7 +146,7 @@ function appPath(path) {
 const INITIAL_PARAMS = new URLSearchParams(location.search);
 const ALL_NODE_ROLES = ["repeater", "companion", "room", "sensor", "unknown"];
 const ALL_HASH_SIZES = [1, 2, 3];
-const ALL_HEALTH_STATUSES = ["ok", "warn", "critical", "stale"];
+const ALL_HEALTH_STATUSES = ["full", "ok", "warn", "critical", "stale"];
 const mobileSheetQuery = window.matchMedia("(max-width: 700px)");
 const FORCE_MOBILE_SHEET = INITIAL_PARAMS.get("sheet") === "1";
 const INITIAL_NODE_KEY = INITIAL_PARAMS.get("node")?.trim().toUpperCase() || null;
@@ -1872,7 +1872,7 @@ function nodeTrafficDetails(node, { compact = false } = {}) {
   const health = node.health && typeof node.health === "object" ? node.health : null;
   const battery = health?.batteryMv ?? node.battery_mv;
   const temperature = health?.temperatureC ?? node.temperature_c;
-  const batteryStatusCode = health?.batteryStatus && ["ok", "warn", "critical", "stale"].includes(health.batteryStatus)
+  const batteryStatusCode = health?.batteryStatus && ALL_HEALTH_STATUSES.includes(health.batteryStatus)
     ? health.batteryStatus
     : "unknown";
   const batteryStatus = batteryStatusCode !== "unknown" ? t(`node.healthBattery.${batteryStatusCode}`) : null;
@@ -1936,7 +1936,7 @@ function batteryStatusIcon(status) {
     : status === "unknown"
       ? `<path d="${BATTERY_VERTICAL_BODY}" />`
       : `<path d="${BATTERY_VERTICAL_BODY}" />${BATTERY_VERTICAL_BARS
-        .slice(0, status === "ok" ? 4 : status === "warn" ? 2 : 1)
+        .slice(0, status === "full" || status === "ok" ? 4 : status === "warn" ? 2 : 1)
         .map((path) => `<path d="${path}" />`)
         .join("")}`;
   return `<svg class="node-health-battery" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
@@ -1962,7 +1962,7 @@ function nodeHealthBadge(node) {
     ? Number(health.temperatureC)
     : null;
   if (battery == null && temperature == null) return "";
-  const status = health?.batteryStatus && ["ok", "warn", "critical", "stale"].includes(health.batteryStatus)
+  const status = health?.batteryStatus && ALL_HEALTH_STATUSES.includes(health.batteryStatus)
     ? health.batteryStatus
     : "unknown";
   const statusText = status !== "unknown" ? t(`node.healthBattery.${status}`) : null;
@@ -3379,7 +3379,7 @@ function nodeHealthTooltip(node) {
     ? Number(health.temperatureC)
     : null;
   if (battery == null && temperature == null) return "";
-  const status = health?.batteryStatus && ["ok", "warn", "critical", "stale"].includes(health.batteryStatus)
+  const status = health?.batteryStatus && ALL_HEALTH_STATUSES.includes(health.batteryStatus)
     ? health.batteryStatus
     : "unknown";
   return `<span class="node-tooltip-health ${status}">

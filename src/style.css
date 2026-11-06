@@ -155,6 +155,7 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .legend i.other { background: #9547b7; }
 .legend i.path { background: #d87412; }
 .legend i.trace { background: linear-gradient(90deg, #d1374d, #e3911c, #2bbf88); }
+.legend i.health-full { background: #078e62; }
 .legend i.health-ok { background: #1f9d63; }
 .legend i.health-warn { background: #d18a1f; }
 .legend i.health-critical { background: #c63e32; }
@@ -336,6 +337,7 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-health-badge:focus-visible { outline: 2px solid rgba(7, 142, 98, 0.45); outline-offset: 2px; }
 .node-health-battery { flex: 0 0 auto; width: 18px; height: 18px; color: #899990; }
 .node-health-thermometer { flex: 0 0 auto; width: 15px; height: 15px; color: #667b70; }
+.node-health-badge.full .node-health-battery { color: #078e62; }
 .node-health-badge.ok .node-health-battery { color: #1f9d63; }
 .node-health-badge.warn .node-health-battery { color: #d18a1f; }
 .node-health-badge.critical .node-health-battery { color: #c63e32; }

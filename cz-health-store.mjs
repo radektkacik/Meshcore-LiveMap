@@ -13,15 +13,24 @@ function safeJson(value, fallback) {
   }
 }
 
+const BATTERY_LEVELS = {
+  liion: { full: 4050, ok: 3600, warn: 3400 },
+  lifepo4: { full: 3350, ok: 3200, warn: 3000 },
+  lto: { full: 2600, ok: 2400, warn: 2200 },
+  lead: { full: 2100, ok: 2050, warn: 1950 },
+};
+
 function batteryStatus(mv, observedAt, now, { batteryType = null, batteryCells = null, voltageSource = null } = {}) {
   if (!Number.isFinite(mv)) return null;
   if (now - observedAt > STALE_MS) return "stale";
   if (voltageSource === "none") return null;
-  if (batteryType !== "liion") return null;
-  const cells = Number.isFinite(batteryCells) && batteryCells > 0 ? batteryCells : 1;
-  const perCellMv = mv / cells;
-  if (perCellMv >= 3600) return "ok";
-  if (perCellMv >= 3400) return "warn";
+  const levels = BATTERY_LEVELS[batteryType];
+  if (!levels) return null;
+  if (!Number.isFinite(batteryCells) || batteryCells < 1) return null;
+  const perCellMv = mv / batteryCells;
+  if (perCellMv >= levels.full) return "full";
+  if (perCellMv >= levels.ok) return "ok";
+  if (perCellMv >= levels.warn) return "warn";
   return "critical";
 }
 

@@ -177,7 +177,7 @@ test("CzHealth store decorates v3 sensor data and history", () => {
     assert.equal(node.health.batteryType, "lifepo4");
     assert.equal(node.health.batteryCells, 1);
     assert.equal(node.health.voltageSource, "ina");
-    assert.equal(node.health.batteryStatus, null);
+    assert.equal(node.health.batteryStatus, "ok");
     assert.equal(node.health.temperatureC, 21);
     assert.equal(node.health.humidityPct, null);
 
@@ -189,6 +189,53 @@ test("CzHealth store decorates v3 sensor data and history", () => {
     assert.equal(history.samples.humidity.length, 0);
     assert.equal(history.latest.batteryMv, 3312);
     assert.equal(store.count(), 1);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("CzHealth store applies chemistry and series cell thresholds", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-health-"));
+  const store = createCzHealthStore(join(directory, "health.sqlite"));
+  try {
+    const cases = [
+      { batteryType: "liion", batteryCells: 1, mv: 4100, expected: "full" },
+      { batteryType: "liion", batteryCells: 2, mv: 7200, expected: "ok" },
+      { batteryType: "lifepo4", batteryCells: 1, mv: 3312, expected: "ok" },
+      { batteryType: "lifepo4", batteryCells: 2, mv: 5800, expected: "critical" },
+      { batteryType: "lto", batteryCells: 1, mv: 2500, expected: "ok" },
+      { batteryType: "lead", batteryCells: 1, mv: 2000, expected: "warn" },
+      { batteryType: "auto", batteryCells: 1, mv: 4100, expected: null },
+      { batteryType: "liion", batteryCells: null, mv: 4000, expected: null },
+      { batteryType: "liion", batteryCells: 1, mv: 4000, source: "none", expected: null },
+    ];
+    const nodes = cases.map((entry, index) => {
+      const prefix = String(index + 1).padStart(16, "0");
+      store.record({
+        baseAt: OBSERVED_AT,
+        battery: [],
+        batteryCells: entry.batteryCells,
+        batteryType: entry.batteryType,
+        clock: true,
+        current: [],
+        flags: {},
+        humidity: [],
+        kind: "day",
+        latestBatteryMv: entry.mv,
+        latestCurrentMa: null,
+        latestHumidityPct: null,
+        latestTemperatureC: null,
+        latestVoltageSource: entry.source || "adc",
+        messageKey: `status-${index}`,
+        observedAt: OBSERVED_AT,
+        prefix,
+        temperature: [],
+      });
+      return { public_key: `${prefix}${"0".repeat(48)}` };
+    });
+    const decorated = store.decorateNodes(nodes, OBSERVED_AT);
+    assert.deepEqual(decorated.map((node) => node.health.batteryStatus), cases.map((entry) => entry.expected));
   } finally {
     store.close();
     rmSync(directory, { recursive: true, force: true });
