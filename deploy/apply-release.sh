@@ -16,7 +16,7 @@ APP_USER=${APP_USER:-meshcore-map}
 APP_GROUP=${APP_GROUP:-meshcore-map}
 ROLLBACK_SCRIPT=${ROLLBACK_SCRIPT:-/root/rollback-meshcore.sh}
 
-for file in server.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs cz-health.mjs cz-health-store.mjs visit-stats.mjs feedback.mjs photos.mjs node-info.mjs comments.mjs repeater-pages.mjs notify.mjs package.json package-lock.json dist/index.html \
+for file in server.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs cz-health.mjs cz-health-store.mjs visit-stats.mjs feedback.mjs photos.mjs node-info.mjs comments.mjs repeater-pages.mjs notify.mjs html.mjs sqlite-store.mjs admin-pages.mjs legacy-pages.mjs http-utils.mjs package.json package-lock.json dist/index.html \
   rollback-vps.sh \
   "$STORAGE_CONF_NAME" \
   node_modules/@michaelhart/meshcore-decoder/package.json \
@@ -38,6 +38,11 @@ node --check node-info.mjs
 node --check comments.mjs
 node --check repeater-pages.mjs
 node --check notify.mjs
+node --check html.mjs
+node --check sqlite-store.mjs
+node --check admin-pages.mjs
+node --check legacy-pages.mjs
+node --check http-utils.mjs
 node --input-type=module -e 'import("@michaelhart/meshcore-decoder")'
 node --input-type=module -e 'import("better-sqlite3")'
 
@@ -69,7 +74,7 @@ rollback() {
   if [[ "$keep_node_modules" != true ]]; then
     rm -rf "$APP_DIR/node_modules"
   fi
-  rm -f "$APP_DIR/backend-utils.mjs" "$APP_DIR/node-metrics.mjs" "$APP_DIR/packet-store.mjs" "$APP_DIR/cz-health.mjs" "$APP_DIR/cz-health-store.mjs" "$APP_DIR/visit-stats.mjs" "$APP_DIR/feedback.mjs" "$APP_DIR/photos.mjs" "$APP_DIR/node-info.mjs" "$APP_DIR/comments.mjs" "$APP_DIR/repeater-pages.mjs" "$APP_DIR/notify.mjs"
+  rm -f "$APP_DIR/backend-utils.mjs" "$APP_DIR/node-metrics.mjs" "$APP_DIR/packet-store.mjs" "$APP_DIR/cz-health.mjs" "$APP_DIR/cz-health-store.mjs" "$APP_DIR/visit-stats.mjs" "$APP_DIR/feedback.mjs" "$APP_DIR/photos.mjs" "$APP_DIR/node-info.mjs" "$APP_DIR/comments.mjs" "$APP_DIR/repeater-pages.mjs" "$APP_DIR/notify.mjs" "$APP_DIR/html.mjs" "$APP_DIR/sqlite-store.mjs" "$APP_DIR/admin-pages.mjs" "$APP_DIR/legacy-pages.mjs" "$APP_DIR/http-utils.mjs"
   tar -xzf "$BACKUP_FILE" -C "$APP_DIR"
   if [[ ! -d "$APP_DIR/node_modules" ]]; then
     echo "Závislosti nejsou v záloze ani v aplikaci; instaluji z package-lock.json" >&2
@@ -140,6 +145,21 @@ fi
 if [[ -f "$APP_DIR/notify.mjs" ]]; then
   backup_paths+=(notify.mjs)
 fi
+if [[ -f "$APP_DIR/html.mjs" ]]; then
+  backup_paths+=(html.mjs)
+fi
+if [[ -f "$APP_DIR/sqlite-store.mjs" ]]; then
+  backup_paths+=(sqlite-store.mjs)
+fi
+if [[ -f "$APP_DIR/admin-pages.mjs" ]]; then
+  backup_paths+=(admin-pages.mjs)
+fi
+if [[ -f "$APP_DIR/legacy-pages.mjs" ]]; then
+  backup_paths+=(legacy-pages.mjs)
+fi
+if [[ -f "$APP_DIR/http-utils.mjs" ]]; then
+  backup_paths+=(http-utils.mjs)
+fi
 existing_backup_paths=()
 for path in "${backup_paths[@]}"; do
   [[ -e "$APP_DIR/$path" ]] && existing_backup_paths+=("$path")
@@ -172,6 +192,11 @@ install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/node-info.mjs" "$APP_DIR/n
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/comments.mjs" "$APP_DIR/comments.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/repeater-pages.mjs" "$APP_DIR/repeater-pages.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/notify.mjs" "$APP_DIR/notify.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/html.mjs" "$APP_DIR/html.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/sqlite-store.mjs" "$APP_DIR/sqlite-store.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/admin-pages.mjs" "$APP_DIR/admin-pages.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/legacy-pages.mjs" "$APP_DIR/legacy-pages.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/http-utils.mjs" "$APP_DIR/http-utils.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/package.json" "$APP_DIR/package.json"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/package-lock.json" "$APP_DIR/package-lock.json"
 mv "$STAGE/dist" "$APP_DIR/dist"
