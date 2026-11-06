@@ -37,10 +37,7 @@ import {
   validCoords,
 } from "./node-model.js";
 import { buildNeighborIndex, groupTraceObservations, RouteStore, RouteVersionState, routeTimestamp } from "./route-model.js";
-import {
-  countSearchResults,
-  searchEntities,
-} from "./search-model.js";
+import { searchEntities } from "./search-model.js";
 import {
   applyStaticTranslations,
   formatDate,
@@ -483,7 +480,6 @@ const state = {
   lastRouteByNodeKey: new Map(),
   liveRouteCount: 0,
   losAbortController: null,
-  losBusy: false,
   losChartScale: null,
   losComputeId: 0,
   losCursorMarker: null,
@@ -1814,40 +1810,6 @@ function nodeNeighbors(node) {
   `;
 }
 
-function nodeOverview(node) {
-  if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
-  const key = node.public_key.toLowerCase();
-  return `
-    <div class="node-overview" data-node-key="${escapeHtml(key)}">
-      <span><small>${t("node.overviewPhotos")}</small><b data-overview-photos>…</b></span>
-      <span><small>${t("node.overviewComments")}</small><b data-overview-comments>…</b></span>
-      <span><small>${t("node.overviewInfo")}</small><b data-overview-info>…</b></span>
-    </div>
-  `;
-}
-
-function updateNodeOverview(key) {
-  const normalized = String(key || "").toLowerCase();
-  if (!normalized) return;
-  const photoCount = state.photoCountCache.get(normalized);
-  const commentEntry = state.commentCountCache.get(normalized);
-  const infoEntry = state.nodeInfoCache.get(normalized);
-  for (const overview of document.querySelectorAll(".node-overview[data-node-key]")) {
-    if (overview.dataset.nodeKey !== normalized) continue;
-    const photos = overview.querySelector("[data-overview-photos]");
-    const comments = overview.querySelector("[data-overview-comments]");
-    const info = overview.querySelector("[data-overview-info]");
-    if (photos) photos.textContent = photoCount == null ? "…" : String(photoCount);
-    if (comments) comments.textContent = commentEntry ? String(commentEntry.count) : "…";
-    if (info) {
-      const hasInfo = Boolean(infoEntry?.info?.text);
-      info.textContent = infoEntry ? (hasInfo ? "✓" : "—") : "…";
-      info.title = hasInfo ? t("node.overviewInfoYes") : "";
-      info.classList.toggle("positive", hasInfo);
-    }
-  }
-}
-
 function nodePhotos(node) {
   if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
   return `
@@ -1885,17 +1847,6 @@ function nodeBasicDetails(node) {
     [t("node.hashMode"), hashSize ? (hashSize >= 2 ? "2B+" : "1B") : null, t("node.hashModeHelp")],
     [t("node.inconsistentHash"), node.hash_size_inconsistent ? t("common.yes") : null, t("node.inconsistentHashHelp")],
   ]);
-}
-
-function nodeUserInfoCompact(node) {
-  if (!/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
-  return `
-    <details class="node-user-info node-user-info-collapsible" data-node-key="${escapeHtml(node.public_key.toLowerCase())}">
-      <summary><span>${t("nodeInfo.title")}</span><small>${t("nodeInfo.open")}</small></summary>
-      <div class="node-user-info-body"><p class="node-user-info-empty">${t("nodeInfo.loading")}</p></div>
-      <button class="node-user-info-edit" type="button">${t("nodeInfo.edit")}</button>
-    </details>
-  `;
 }
 
 function nodeUserInfo(node) {
@@ -2000,7 +1951,6 @@ async function loadNodeInfo(root, node) {
     const data = await getJson(`/api/node-info?key=${encodeURIComponent(key)}`);
     const info = data.info || null;
     state.nodeInfoCache.set(key, { at: Date.now(), info });
-    updateNodeOverview(key);
     if (!root.isConnected) return;
     render(info);
   } catch (error) {
@@ -2503,7 +2453,6 @@ function renderNodeDetail(node, active, initialTab = "overview") {
     const source = all ? temp.querySelectorAll(selector) : [temp.querySelector(selector)].filter(Boolean);
     for (const element of source) panels.get(panelName)?.appendChild(element);
   };
-  move(".node-overview", "overview");
   move(".node-user-info", "overview");
   move(".node-photos", "photos");
   move(".node-comments", "comments");
@@ -2848,9 +2797,6 @@ async function loadPhotoNodes(force = false) {
       if (item.coverId) state.photoCoverCache.set(key, String(item.coverId));
     }
     state.photoNodesLoadedAt = Date.now();
-    for (const overview of document.querySelectorAll(".node-overview[data-node-key]")) {
-      updateNodeOverview(overview.dataset.nodeKey);
-    }
   } catch (error) {
     console.error("Nody s fotkami se nepodařilo načíst", error);
     state.photosOnly = false;
@@ -3181,7 +3127,6 @@ function updateCommentCount(key, count, { touch = true } = {}) {
     badge.classList.toggle("zero", value === 0);
     badge.title = tCount("comments.count", value);
   }
-  updateNodeOverview(key);
 }
 
 async function loadCommentCount(root, node) {
