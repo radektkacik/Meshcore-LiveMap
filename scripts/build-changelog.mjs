@@ -1,14 +1,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-
-const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&#39;",
-}[character]));
+import { escapeHtml } from "../html.mjs";
 
 function formatText(value) {
   return escapeHtml(value).replace(/`([^`]+)`/g, "<code>$1</code>");

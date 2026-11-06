@@ -1,7 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import Database from "better-sqlite3";
+import { openSqliteStore } from "./sqlite-store.mjs";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -10,10 +8,7 @@ function dayKey(now) {
 }
 
 export function createVisitStatsStore(dbPath, { uniqueRetentionDays = 90 } = {}) {
-  mkdirSync(dirname(dbPath), { recursive: true });
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
-  db.pragma("synchronous = NORMAL");
+  const db = openSqliteStore(dbPath);
   db.exec(`
     CREATE TABLE IF NOT EXISTS visit_daily (
       day TEXT PRIMARY KEY,

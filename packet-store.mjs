@@ -1,6 +1,4 @@
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import Database from "better-sqlite3";
+import { openSqliteStore } from "./sqlite-store.mjs";
 
 const DEFAULT_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_MAX_ROWS = 500_000;
@@ -18,10 +16,7 @@ export function createPacketStore(dbPath, {
   retentionMs = DEFAULT_RETENTION_MS,
   maxRows = DEFAULT_MAX_ROWS,
 } = {}) {
-  mkdirSync(dirname(dbPath), { recursive: true });
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
-  db.pragma("synchronous = NORMAL");
+  const db = openSqliteStore(dbPath);
   db.exec(`
     CREATE TABLE IF NOT EXISTS packet_routes (
       hash TEXT NOT NULL,

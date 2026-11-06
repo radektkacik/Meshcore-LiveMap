@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, normalize, sep } from "node:path";
-import Database from "better-sqlite3";
+import { openSqliteStore } from "./sqlite-store.mjs";
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const MAX_DIMENSION = 8192;
@@ -122,9 +122,7 @@ export function createPhotoStore(rootDir, {
 } = {}) {
   const filesDir = join(rootDir, "files");
   mkdirSync(filesDir, { recursive: true });
-  const db = new Database(join(rootDir, "photos.sqlite"));
-  db.pragma("journal_mode = WAL");
-  db.pragma("synchronous = NORMAL");
+  const db = openSqliteStore(join(rootDir, "photos.sqlite"));
   db.exec(`
     CREATE TABLE IF NOT EXISTS photos (
       id TEXT PRIMARY KEY,

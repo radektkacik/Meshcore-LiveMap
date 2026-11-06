@@ -1,3 +1,5 @@
+import { parseSearchQuery } from "./search-query.js";
+
 export function validCoords(lat, lon) {
   return Number.isFinite(lat) && Number.isFinite(lon) && !(lat === 0 && lon === 0);
 }
@@ -27,12 +29,8 @@ export function activeUsefulnessScore(node, now, activeMs) {
 }
 
 export function parseNodeQuery(raw) {
-  const text = String(raw || "").trim();
-  const token = text.replace(/\s+/g, "");
-  return {
-    query: text.toLocaleLowerCase("cs-CZ"),
-    hexQuery: /^[0-9a-fA-F]{2,}$/.test(token) ? token.toUpperCase() : "",
-  };
+  const { query, hex } = parseSearchQuery(raw);
+  return { query, hexQuery: hex };
 }
 
 export function nodeMatchesQuery(node, query, hexQuery) {

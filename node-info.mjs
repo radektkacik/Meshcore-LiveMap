@@ -1,7 +1,5 @@
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import Database from "better-sqlite3";
+import { openSqliteStore } from "./sqlite-store.mjs";
 
 function hashPassword(password) {
   const salt = randomBytes(16).toString("hex");
@@ -48,10 +46,7 @@ function mapPendingRow(row) {
 }
 
 export function createNodeInfoStore(dbPath) {
-  mkdirSync(dirname(dbPath), { recursive: true });
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
-  db.pragma("synchronous = NORMAL");
+  const db = openSqliteStore(dbPath);
   db.exec(`
     CREATE TABLE IF NOT EXISTS node_info (
       node_key TEXT PRIMARY KEY,

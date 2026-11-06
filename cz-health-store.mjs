@@ -1,6 +1,4 @@
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import Database from "better-sqlite3";
+import { openSqliteStore } from "./sqlite-store.mjs";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STALE_MS = 2 * DAY_MS;
@@ -51,10 +49,7 @@ function latestHealth(row, now = Date.now()) {
 export function createCzHealthStore(dbPath, {
   retentionMs = 90 * DAY_MS,
 } = {}) {
-  mkdirSync(dirname(dbPath), { recursive: true });
-  const db = new Database(dbPath);
-  db.pragma("journal_mode = WAL");
-  db.pragma("synchronous = NORMAL");
+  const db = openSqliteStore(dbPath);
   db.exec(`
     CREATE TABLE IF NOT EXISTS health_messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

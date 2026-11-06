@@ -19,6 +19,7 @@ import { createNodeInfoStore } from "./node-info.mjs";
 import { createCommentStore } from "./comments.mjs";
 import { fetchRepeaterPage, findRepeaterPage, validRepeaterSlug } from "./repeater-pages.mjs";
 import { createTelegramNotifier } from "./notify.mjs";
+import { escapeHtml } from "./html.mjs";
 
 const port = Number(process.env.PORT || 4173);
 const host = process.env.HOST || "0.0.0.0";
@@ -727,15 +728,6 @@ const checkNodeInfo = createRateLimiter({
     daily: "Denní limit úprav info byl vyčerpán.",
   },
 });
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
 
 function hashIp(ip) {
   return createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16);

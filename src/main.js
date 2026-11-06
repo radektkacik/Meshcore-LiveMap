@@ -1,5 +1,6 @@
 import L from "leaflet";
 import QRCode from "qrcode";
+import { escapeHtml } from "../html.mjs";
 import "leaflet/dist/leaflet.css";
 import "./style.css";
 import {
@@ -827,15 +828,6 @@ function formatHops(count) {
 
 function formatObservers(count) {
   return tCount("units.observers", count);
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
 }
 
 async function copyText(text) {
