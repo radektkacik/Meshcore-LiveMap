@@ -4,8 +4,8 @@ Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam 
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-06 — Úrovně baterie podle chemie
-- Prostředí: beta
-- Build: 20261106-1931-5a642bc
+- Prostředí: produkce i beta
+- Build: 20261106-1934-24fc93e
 - Status baterie se počítá z napětí na článek podle typu baterie.
 - Li-ion: plná ≥ 4,05 V, ok ≥ 3,60 V, nízká ≥ 3,40 V, kritická < 3,40 V.
 - LiFePO4: plná ≥ 3,35 V, ok ≥ 3,20 V, nízká ≥ 3,00 V, kritická < 3,00 V.
