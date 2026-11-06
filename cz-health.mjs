@@ -3,6 +3,7 @@ import { createDecipheriv, createHash, createHmac } from "node:crypto";
 export const CZ_HEALTH_SECRET = Buffer.from("26cff13d1579ccf0ccd29a2986c01c93", "hex");
 const CHANNEL_HASH = 0xe0;
 const MESSAGE_TYPE = 0xffc9;
+const MESSAGE_VERSION = 3;
 const RESET_REASONS = [
   "unknown",
   "power_on",
@@ -16,6 +17,19 @@ const RESET_REASONS = [
   "other",
 ];
 const SHUTDOWN_REASONS = [null, "low_voltage", "user", "boot_protect"];
+const BATTERY_TYPES = [
+  "auto",
+  "liion",
+  "lifepo4",
+  "lto",
+  "naion",
+  "lead",
+  "other",
+  "lto-vlastik",
+  "naion-vlastik",
+];
+const VOLTAGE_SOURCES = ["none", "adc", "ina", "bms"];
+const TEMPERATURE_SOURCES = [null, "mcu", "sensor"];
 const FLAG_BITS = {
   clock: 0x01,
   boot: 0x02,
@@ -71,6 +85,10 @@ function temperatureFromCode(code) {
   return code === -128 ? null : 20 + code / 2;
 }
 
+function sourceName(value) {
+  return VOLTAGE_SOURCES[value] ?? null;
+}
+
 function formatFlags(flags) {
   return Object.fromEntries(
     Object.entries(FLAG_BITS).map(([name, bit]) => [name, Boolean(flags & bit)]),
@@ -91,40 +109,48 @@ function baseTime(message, observedAt) {
 }
 
 function parseDay(body, baseAt) {
-  if (body.length < 2) return null;
-  const count = clampCount(body[0], 48);
-  const ageMinutes = body[1];
-  if (count == null || body.length < 5 + count + 1) return null;
-  const base = body.readUInt16LE(2);
-  const step = body[4];
+  let offset = 0;
+  if (body.length < 5) return null;
+
+  const count = clampCount(body[offset], 48);
+  offset += 1;
+  const ageMinutes = body[offset];
+  offset += 1;
+  const baseMv = body.readUInt16LE(offset);
+  offset += 2;
+  const stepMv = body[offset];
+  offset += 1;
+  if (count == null) return null;
+
   const newest = baseAt - ageMinutes * 60_000;
+  if (body.length < offset + count) return null;
   const battery = [];
   for (let index = 0; index < count; index += 1) {
-    const code = body[5 + index];
+    const code = body[offset + index];
     if (code === 0xff) continue;
     battery.push({
       t: newest - (count - 1 - index) * 1_800_000,
-      mv: base + code * step,
+      mv: baseMv + code * stepMv,
+      sourceIndex: index,
     });
   }
+  offset += count;
 
-  let offset = 5 + count;
-  const tempByte = body[offset];
+  if (body.length < offset + 1) return null;
+  const temperatureByte = body[offset];
   offset += 1;
-  const sourceCode = (tempByte >> 6) & 0x03;
-  const slots = clampCount(tempByte & 0x3f, 12);
-  if (slots == null || body.length < offset + slots + 1) return null;
+  const temperatureSource = TEMPERATURE_SOURCES[(temperatureByte >> 6) & 0x03] || null;
+  const temperatureCount = clampCount(temperatureByte & 0x3f, 12);
+  if (temperatureCount == null || body.length < offset + temperatureCount) return null;
   const temperature = [];
-  for (let index = 0; index < slots; index += 1) {
+  for (let index = 0; index < temperatureCount; index += 1) {
     const value = temperatureFromCode(body.readInt8(offset + index));
     if (value == null) continue;
-    temperature.push({
-      t: newest - (slots - 1 - index) * 7_200_000,
-      c: value,
-    });
+    temperature.push({ t: newest - (temperatureCount - 1 - index) * 7_200_000, c: value });
   }
-  offset += slots;
+  offset += temperatureCount;
 
+  if (body.length < offset + 1) return null;
   const currentCount = clampCount(body[offset], 12);
   offset += 1;
   if (currentCount == null) return null;
@@ -137,53 +163,150 @@ function parseDay(body, baseAt) {
     for (let index = 0; index < currentCount; index += 1) {
       const code = body.readInt8(offset + index);
       if (code === -128) continue;
-      current.push({
-        t: newest - (currentCount - 1 - index) * 7_200_000,
-        ma: code * currentStep,
-      });
+      current.push({ t: newest - (currentCount - 1 - index) * 7_200_000, ma: code * currentStep });
     }
+    offset += currentCount;
   }
 
+  if (body.length < offset + 1) return null;
+  const humidityCount = clampCount(body[offset], 12);
+  offset += 1;
+  if (humidityCount == null || body.length < offset + humidityCount) return null;
+  const humidity = [];
+  for (let index = 0; index < humidityCount; index += 1) {
+    const value = body[offset + index];
+    if (value === 0xff) continue;
+    if (value > 100) return null;
+    humidity.push({ t: newest - (humidityCount - 1 - index) * 7_200_000, pct: value });
+  }
+  offset += humidityCount;
+
+  if (body.length < offset + 2) return null;
+  const batteryType = BATTERY_TYPES[body[offset]] ?? null;
+  offset += 1;
+  const batteryCells = body[offset] >= 1 && body[offset] <= 16 ? body[offset] : null;
+  offset += 1;
+
+  const sourceBytes = Math.ceil(count / 4);
+  if (body.length < offset + sourceBytes) return null;
+  const voltageSources = [];
+  for (let index = 0; index < count; index += 1) {
+    const sourceByte = body[offset + Math.floor(index / 4)];
+    voltageSources.push(sourceName((sourceByte >> ((index % 4) * 2)) & 0x03));
+  }
+  offset += sourceBytes;
+  if (offset !== body.length) return null;
+
+  const latestBattery = battery.at(-1) || null;
+  const latestTemperature = temperature.at(-1) || null;
+  const latestCurrent = current.at(-1) || null;
+  const latestHumidity = humidity.at(-1) || null;
   return {
-    battery,
+    battery: battery.map(({ sourceIndex, ...sample }) => ({
+      ...sample,
+      source: voltageSources[sourceIndex] ?? null,
+    })),
+    batteryCells,
+    batteryType,
     current,
     currentStep,
-    latestBatteryMv: battery.at(-1)?.mv ?? null,
-    latestCurrentMa: current.at(-1)?.ma ?? null,
-    latestTemperatureC: temperature.at(-1)?.c ?? null,
+    humidity,
+    latestBatteryMv: latestBattery?.mv ?? null,
+    latestCurrentMa: latestCurrent?.ma ?? null,
+    latestHumidityPct: latestHumidity?.pct ?? null,
+    latestTemperatureC: latestTemperature?.c ?? null,
+    latestVoltageSource: voltageSources[latestBattery?.sourceIndex] ?? null,
+    voltageSource: voltageSources[latestBattery?.sourceIndex] ?? null,
     temperature,
-    temperatureSource: ["mcu", "sensor"][sourceCode - 1] || null,
+    temperatureSource,
+    voltageSources,
   };
 }
 
 function parseSummary(body) {
-  if (body.length < 13) return null;
-  const batteryMin = body.readUInt16LE(1) || null;
-  const batteryAvg = body.readUInt16LE(3) || null;
-  const batteryMax = body.readUInt16LE(5) || null;
-  const batteryLast = body.readUInt16LE(7) || null;
-  const sourceCode = body[9];
-  const temperatureMin = temperatureFromCode(body.readInt8(10));
-  const temperatureMax = temperatureFromCode(body.readInt8(11));
-  const temperatureLast = temperatureFromCode(body.readInt8(12));
-  return {
-    battery: {
-      min: batteryMin,
-      avg: batteryAvg,
-      max: batteryMax,
-      last: batteryLast,
-    },
-    samples: body[0],
-    temperature: {
-      min: temperatureMin,
-      max: temperatureMax,
-      last: temperatureLast,
-    },
-    temperatureSource: ["mcu", "sensor"][sourceCode - 1] || null,
-    latestBatteryMv: batteryLast,
-    latestTemperatureC: temperatureLast,
-    latestCurrentMa: null,
+  if (body.length !== 20) return null;
+  const valueOrNull = (value) => (value === 0 ? null : value);
+  const temperatureValue = (value) => temperatureFromCode(value);
+  const humidityValue = (value) => (value === 0xff ? null : value > 100 ? null : value);
+  const batteryType = BATTERY_TYPES[body[16]] ?? null;
+  const batteryCells = body[17] >= 1 && body[17] <= 16 ? body[17] : null;
+  const voltageSource = sourceName(body[18]);
+  const battery = {
+    min: valueOrNull(body.readUInt16LE(1)),
+    avg: valueOrNull(body.readUInt16LE(3)),
+    max: valueOrNull(body.readUInt16LE(5)),
+    last: valueOrNull(body.readUInt16LE(7)),
   };
+  const temperature = {
+    min: temperatureValue(body.readInt8(10)),
+    max: temperatureValue(body.readInt8(11)),
+    last: temperatureValue(body.readInt8(12)),
+  };
+  const humidity = {
+    min: humidityValue(body[13]),
+    max: humidityValue(body[14]),
+    last: humidityValue(body[15]),
+  };
+  return {
+    battery: [],
+    batteryCells,
+    batteryType,
+    current: [],
+    currentStep: null,
+    humidity: [],
+    latestBatteryMv: battery.last,
+    latestCurrentMa: null,
+    latestHumidityPct: humidity.last,
+    latestTemperatureC: temperature.last,
+    latestVoltageSource: voltageSource,
+    voltageSource,
+    samples: body[0],
+    summary: {
+      battery,
+      batteryCells,
+      batteryType,
+      humidity,
+      samples: body[0],
+      sourceMask: body[19],
+      temperature,
+      temperatureSource: TEMPERATURE_SOURCES[body[9]] || null,
+      voltageSource,
+    },
+    temperature: [],
+    temperatureSource: TEMPERATURE_SOURCES[body[9]] || null,
+    voltageSources: [],
+  };
+}
+
+function parseConfig(body) {
+  if (body.length < 3) return null;
+  const incomplete = Boolean(body[0] & 0x01);
+  const seen = { 1: false, 2: false };
+  const regions = { home: null, default: null, flood: [], incomplete };
+  let offset = 1;
+  while (offset < body.length) {
+    if (offset + 2 > body.length) return null;
+    const tag = body[offset];
+    offset += 1;
+    const length = body[offset];
+    offset += 1;
+    if (offset + length > body.length) return null;
+    const value = body.subarray(offset, offset + length);
+    offset += length;
+
+    if (tag === 1 || tag === 2) {
+      if (seen[tag]) return null;
+      seen[tag] = true;
+      const name = value.toString("utf8");
+      if (tag === 1) regions.home = name || null;
+      else regions.default = name || null;
+    } else if (tag === 3) {
+      const name = value.toString("utf8");
+      if (name) regions.flood.push(name);
+    }
+  }
+  if (!seen[1] || !seen[2]) return null;
+  return { regions };
 }
 
 export function decodeCzHealth(rawHex, observedAt = Date.now()) {
@@ -194,9 +317,9 @@ export function decodeCzHealth(rawHex, observedAt = Date.now()) {
     const packet = readPacketPayload(raw);
     if (!packet) return null;
     const message = decryptChannelPayload(packet.payload);
-    if (!message || message.length < 23) return null;
-    if (message[0] !== 0x43 || message[1] !== 0x48 || message[2] !== 1) return null;
-    const kind = message[3] === 1 ? "day" : message[3] === 2 ? "summary" : null;
+    if (!message || message.length < 40) return null;
+    if (message[0] !== 0x43 || message[1] !== 0x48 || message[2] !== MESSAGE_VERSION) return null;
+    const kind = message[3] === 1 ? "day" : message[3] === 2 ? "summary" : message[3] === 3 ? "config" : null;
     if (!kind) return null;
     const prefix = message.subarray(5, 13).toString("hex");
     if (!/^[0-9a-f]{16}$/.test(prefix)) return null;
@@ -205,7 +328,11 @@ export function decodeCzHealth(rawHex, observedAt = Date.now()) {
     const resetCode = message[21] & 0x0f;
     const shutdownCode = message[21] >> 4;
     const body = message.subarray(23, message.length - 16);
-    const parsed = kind === "day" ? parseDay(body, baseAt) : parseSummary(body);
+    const parsed = kind === "day"
+      ? parseDay(body, baseAt)
+      : kind === "summary"
+        ? parseSummary(body)
+        : parseConfig(body);
     if (!parsed) return null;
     return {
       ...parsed,

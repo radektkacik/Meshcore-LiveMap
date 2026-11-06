@@ -1847,6 +1847,7 @@ function nodePopupContent(node, active) {
     ${nodeComments(node, true)}
     ${basicDetails}
     ${nodeTrafficDetails(node)}
+    ${nodeHealthConfig(node)}
     ${nodeHealthHistory(node)}
     ${nodeNetworkDetails(node)}
     ${nodeAnalytics(node)}
@@ -1881,15 +1882,45 @@ function nodeTrafficDetails(node) {
     : (Number(advert24h) > 0
       ? countWithRank(advert24h, rankNodes, node, "advert_count_24h")
       : formatNumber(Number(advert24h) || 0));
+  const batterySpec = [
+    health?.batteryType ? batteryTypeName(health.batteryType) : null,
+    health?.batteryCells ? `${health.batteryCells}S` : null,
+    health?.voltageSource ? voltageSourceName(health.voltageSource) : null,
+  ].filter(Boolean).join(" · ") || null;
   return renderNodeDetails(t("node.trafficDetails"), [
     [t("node.advertPackets24h"), advert24hText, t("node.advertHelp")],
     [t("node.battery"), battery == null ? null : `${formatDecimal(battery / 1000, 2)} V${batteryStatus ? ` · ${batteryStatus}` : ""}`, t("node.batteryHelp"), "", trend],
+    [t("node.batterySpec"), batterySpec, t("node.batterySpecHelp")],
     [t("node.temperature"), temperature == null ? null : `${formatDecimal(temperature, 1)} °C`, null, "", trend],
     [t("node.current"), health?.currentMa != null && Number.isFinite(Number(health.currentMa)) ? `${formatNumber(health.currentMa)} mA` : null],
+    [t("node.humidity"), health?.humidityPct != null && Number.isFinite(Number(health.humidityPct)) ? `${formatNumber(health.humidityPct)} %` : null],
     [t("node.charging"), health ? (health.charging ? t("common.yes") : t("common.no")) : null],
     [t("node.externalPower"), health ? (health.externalPower ? t("common.yes") : t("common.no")) : null],
     [t("node.healthObserved"), health?.observedAt ? formatNodeDate(health.observedAt) : null],
   ], "", "node-traffic-details");
+}
+
+function batteryTypeName(value) {
+  return {
+    auto: "auto",
+    liion: "Li-ion",
+    lifepo4: "LiFePO4",
+    lto: "LTO",
+    naion: "Na-ion",
+    lead: "Pb",
+    other: "other",
+    "lto-vlastik": "LTO (vlastik)",
+    "naion-vlastik": "Na-ion (vlastik)",
+  }[value] || value;
+}
+
+function voltageSourceName(value) {
+  return {
+    none: "—",
+    adc: "ADC",
+    ina: "INA",
+    bms: "BMS",
+  }[value] || value;
 }
 
 // Icons: Tabler Icons (MIT), battery-vertical-1/2/4/off + temperature.
@@ -1940,7 +1971,7 @@ function nodeHealthBadge(node) {
     temperatureText ? `${t("node.temperature")}: ${temperatureText}` : null,
   ].filter(Boolean).join(" · ");
   return `<button type="button" class="node-health-badge ${status}" data-health-node-key="${escapeHtml(node.public_key.toUpperCase())}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
-    ${battery == null ? "" : batteryStatusIcon(status)}
+    ${battery == null || status === "unknown" ? "" : batteryStatusIcon(status)}
     ${voltageText ? `<span class="node-health-voltage">${escapeHtml(voltageText)}</span>` : ""}
     ${temperatureText ? `${THERMOMETER_ICON}<span class="node-health-temperature">${escapeHtml(temperatureText)}</span>` : ""}
   </button>`;
@@ -2018,6 +2049,29 @@ function revealNodeHealthTrend(root, keyValue) {
   return true;
 }
 
+function nodeHealthConfig(node) {
+  const config = node.healthConfig;
+  if (!config?.regions) return "";
+  const regions = config.regions;
+  const received = config.observedAt
+    ? `<small>${t("node.configReceived", { time: formatNodeDate(config.observedAt) })}</small>`
+    : "";
+  return `
+    <section class="node-health-config" data-node-key="${escapeHtml(String(node.public_key || "").toUpperCase())}">
+      <div class="node-health-config-head">
+        <h4>${t("node.healthConfigTitle")}</h4>
+        ${received}
+      </div>
+      <dl>
+        <div><dt>${t("node.homeRegion")}</dt><dd>${escapeHtml(regions.home || "—")}</dd></div>
+        <div><dt>${t("node.defaultRegion")}</dt><dd>${escapeHtml(regions.default || "—")}</dd></div>
+        <div><dt>${t("node.floodRegions")}</dt><dd>${escapeHtml(regions.flood.length ? regions.flood.join(", ") : "—")}</dd></div>
+      </dl>
+      ${regions.incomplete ? `<p class="node-health-config-warning">${t("node.regionsIncomplete")}</p>` : ""}
+    </section>
+  `;
+}
+
 function nodeHealthHistory(node) {
   if (!node.health || !/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
   return `
@@ -2055,6 +2109,7 @@ function compactNodePopupContent(node, active) {
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
     ${nodeTrafficDetails(node)}
+    ${nodeHealthConfig(node)}
     ${nodeNetworkDetails(node)}
     ${nodeUserInfo(node)}
     ${nodeComments(node)}
@@ -2119,6 +2174,7 @@ function renderNodeDetail(node, active, initialTab = "overview") {
   move(".node-comments", "comments");
   move(".node-basic-details", "overview");
   move(".node-traffic-details", "overview", true);
+  move(".node-health-config", "overview", true);
   move(".node-health-history", "overview", true);
   move(".node-network-details", "overview", true);
   move(".node-analytics", "network", true);
@@ -3270,7 +3326,7 @@ function nodeHealthTooltip(node) {
     ? health.batteryStatus
     : "unknown";
   return `<span class="node-tooltip-health ${status}">
-    ${battery == null ? "" : batteryStatusIcon(status)}
+    ${battery == null || status === "unknown" ? "" : batteryStatusIcon(status)}
     ${battery == null ? "" : `<span>${escapeHtml(formatDecimal(battery / 1000, 2))} V</span>`}
     ${temperature == null ? "" : `${THERMOMETER_ICON}<span>${escapeHtml(formatDecimal(temperature, 1))} °C</span>`}
   </span>`;

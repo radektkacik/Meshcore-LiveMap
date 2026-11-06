@@ -2,6 +2,7 @@ import { openSqliteStore } from "./sqlite-store.mjs";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STALE_MS = 2 * DAY_MS;
+const CONFIG_STALE_MS = 8 * DAY_MS;
 const SAMPLE_BUCKET_MS = 10 * 60 * 1000;
 
 function safeJson(value, fallback) {
@@ -12,12 +13,32 @@ function safeJson(value, fallback) {
   }
 }
 
-function batteryStatus(mv, observedAt, now) {
+function batteryStatus(mv, observedAt, now, { batteryType = null, batteryCells = null, voltageSource = null } = {}) {
   if (!Number.isFinite(mv)) return null;
   if (now - observedAt > STALE_MS) return "stale";
-  if (mv >= 3600) return "ok";
-  if (mv >= 3400) return "warn";
+  if (voltageSource === "none") return null;
+  if (batteryType !== "liion") return null;
+  const cells = Number.isFinite(batteryCells) && batteryCells > 0 ? batteryCells : 1;
+  const perCellMv = mv / cells;
+  if (perCellMv >= 3600) return "ok";
+  if (perCellMv >= 3400) return "warn";
   return "critical";
+}
+
+function latestConfig(row, now = Date.now()) {
+  if (!row) return null;
+  const observedAt = Number(row.observed_at) || 0;
+  return {
+    observedAt: observedAt ? new Date(observedAt).toISOString() : null,
+    ageSec: observedAt ? Math.max(0, Math.floor((now - observedAt) / 1000)) : null,
+    stale: Boolean(observedAt) && now - observedAt > CONFIG_STALE_MS,
+    regions: {
+      home: row.home_region || null,
+      default: row.default_region || null,
+      flood: safeJson(row.flood_regions_json, []),
+      incomplete: Boolean(row.incomplete),
+    },
+  };
 }
 
 function latestHealth(row, now = Date.now()) {
@@ -28,7 +49,15 @@ function latestHealth(row, now = Date.now()) {
     prefix: row.prefix,
     kind: row.kind,
     batteryMv: row.battery_mv == null ? null : Number(row.battery_mv),
-    batteryStatus: batteryStatus(Number(row.battery_mv), observedAt, now),
+    batteryStatus: batteryStatus(Number(row.battery_mv), observedAt, now, {
+      batteryType: row.battery_type,
+      batteryCells: row.battery_cells,
+      voltageSource: row.voltage_source,
+    }),
+    batteryType: row.battery_type || null,
+    batteryCells: row.battery_cells == null ? null : Number(row.battery_cells),
+    voltageSource: row.voltage_source || null,
+    humidityPct: row.humidity_pct == null ? null : Number(row.humidity_pct),
     temperatureC: row.temperature_c == null ? null : Number(row.temperature_c),
     temperatureSource: row.temperature_source || null,
     currentMa: row.current_ma == null ? null : Number(row.current_ma),
@@ -39,11 +68,19 @@ function latestHealth(row, now = Date.now()) {
     bootAt: row.boot_at ? new Date(Number(row.boot_at)).toISOString() : null,
     resetReason: row.reset_reason || null,
     shutdownReason: row.shutdown_reason || null,
+    summary: safeJson(row.summary_json, null),
     observedAt: observedAt ? new Date(observedAt).toISOString() : null,
     deviceTime: row.device_time ? new Date(Number(row.device_time)).toISOString() : null,
     ageSec: observedAt ? Math.max(0, Math.floor((now - observedAt) / 1000)) : null,
     stale: Boolean(observedAt) && now - observedAt > STALE_MS,
   };
+}
+
+function ensureColumn(db, table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!columns.some((entry) => entry.name === column)) {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
 }
 
 export function createCzHealthStore(dbPath, {
@@ -57,6 +94,7 @@ export function createCzHealthStore(dbPath, {
       prefix TEXT NOT NULL,
       node_key TEXT,
       kind TEXT NOT NULL,
+      format_version INTEGER NOT NULL DEFAULT 1,
       observed_at INTEGER NOT NULL,
       base_at INTEGER,
       device_time INTEGER,
@@ -66,9 +104,14 @@ export function createCzHealthStore(dbPath, {
       shutdown_reason TEXT,
       flags_json TEXT,
       battery_mv INTEGER,
+      battery_type TEXT,
+      battery_cells INTEGER,
+      voltage_source TEXT,
+      humidity_pct REAL,
       temperature_c REAL,
       temperature_source TEXT,
       current_ma REAL,
+      summary_json TEXT,
       packet_hash TEXT,
       raw_hex TEXT
     );
@@ -81,6 +124,7 @@ export function createCzHealthStore(dbPath, {
       value REAL NOT NULL,
       source TEXT,
       message_id INTEGER,
+      format_version INTEGER NOT NULL DEFAULT 1,
       PRIMARY KEY (prefix, metric, sampled_at)
     );
     CREATE INDEX IF NOT EXISTS health_samples_prefix_metric_time
@@ -88,6 +132,7 @@ export function createCzHealthStore(dbPath, {
     CREATE TABLE IF NOT EXISTS health_latest (
       prefix TEXT PRIMARY KEY,
       kind TEXT,
+      format_version INTEGER NOT NULL DEFAULT 1,
       observed_at INTEGER,
       base_at INTEGER,
       device_time INTEGER,
@@ -97,49 +142,87 @@ export function createCzHealthStore(dbPath, {
       shutdown_reason TEXT,
       flags_json TEXT,
       battery_mv INTEGER,
+      battery_type TEXT,
+      battery_cells INTEGER,
+      voltage_source TEXT,
+      humidity_pct REAL,
       temperature_c REAL,
       temperature_source TEXT,
       current_ma REAL,
+      summary_json TEXT,
+      message_key TEXT
+    );
+    CREATE TABLE IF NOT EXISTS health_config (
+      prefix TEXT PRIMARY KEY,
+      format_version INTEGER NOT NULL DEFAULT 3,
+      observed_at INTEGER NOT NULL,
+      base_at INTEGER,
+      device_time INTEGER,
+      home_region TEXT,
+      default_region TEXT,
+      flood_regions_json TEXT,
+      incomplete INTEGER NOT NULL DEFAULT 0,
       message_key TEXT
     );
   `);
 
+  ensureColumn(db, "health_messages", "format_version", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn(db, "health_messages", "battery_type", "TEXT");
+  ensureColumn(db, "health_messages", "battery_cells", "INTEGER");
+  ensureColumn(db, "health_messages", "voltage_source", "TEXT");
+  ensureColumn(db, "health_messages", "humidity_pct", "REAL");
+  ensureColumn(db, "health_messages", "summary_json", "TEXT");
+  ensureColumn(db, "health_samples", "format_version", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn(db, "health_latest", "format_version", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn(db, "health_latest", "battery_type", "TEXT");
+  ensureColumn(db, "health_latest", "battery_cells", "INTEGER");
+  ensureColumn(db, "health_latest", "voltage_source", "TEXT");
+  ensureColumn(db, "health_latest", "humidity_pct", "REAL");
+  ensureColumn(db, "health_latest", "summary_json", "TEXT");
+
   const insertMessage = db.prepare(`
     INSERT INTO health_messages (
-      message_key, prefix, node_key, kind, observed_at, base_at, device_time,
-      uptime_s, boot_at, reset_reason, shutdown_reason, flags_json,
-      battery_mv, temperature_c, temperature_source, current_ma, packet_hash, raw_hex
+      message_key, prefix, node_key, kind, format_version, observed_at, base_at, device_time,
+      uptime_s, boot_at, reset_reason, shutdown_reason, flags_json, battery_mv,
+      battery_type, battery_cells, voltage_source, humidity_pct, temperature_c,
+      temperature_source, current_ma, summary_json, packet_hash, raw_hex
     ) VALUES (
-      @message_key, @prefix, @node_key, @kind, @observed_at, @base_at, @device_time,
-      @uptime_s, @boot_at, @reset_reason, @shutdown_reason, @flags_json,
-      @battery_mv, @temperature_c, @temperature_source, @current_ma, @packet_hash, @raw_hex
+      @message_key, @prefix, @node_key, @kind, @format_version, @observed_at, @base_at, @device_time,
+      @uptime_s, @boot_at, @reset_reason, @shutdown_reason, @flags_json, @battery_mv,
+      @battery_type, @battery_cells, @voltage_source, @humidity_pct, @temperature_c,
+      @temperature_source, @current_ma, @summary_json, @packet_hash, @raw_hex
     )
     ON CONFLICT(message_key) DO UPDATE SET
-      observed_at = excluded.observed_at,
+      format_version = excluded.format_version,
+      observed_at = MAX(health_messages.observed_at, excluded.observed_at),
       raw_hex = COALESCE(excluded.raw_hex, health_messages.raw_hex)
   `);
   const selectMessage = db.prepare("SELECT id FROM health_messages WHERE message_key = ?");
   const upsertSample = db.prepare(`
-    INSERT INTO health_samples (prefix, metric, sampled_at, value, source, message_id)
-    VALUES (@prefix, @metric, @sampled_at, @value, @source, @message_id)
+    INSERT INTO health_samples (prefix, metric, sampled_at, value, source, message_id, format_version)
+    VALUES (@prefix, @metric, @sampled_at, @value, @source, @message_id, @format_version)
     ON CONFLICT(prefix, metric, sampled_at) DO UPDATE SET
       value = excluded.value,
       source = excluded.source,
-      message_id = excluded.message_id
+      message_id = excluded.message_id,
+      format_version = excluded.format_version
   `);
   const upsertLatest = db.prepare(`
     INSERT INTO health_latest (
-      prefix, kind, observed_at, base_at, device_time, uptime_s, boot_at,
-      reset_reason, shutdown_reason, flags_json, battery_mv, temperature_c,
-      temperature_source, current_ma, message_key
+      prefix, kind, format_version, observed_at, base_at, device_time, uptime_s, boot_at,
+      reset_reason, shutdown_reason, flags_json, battery_mv, battery_type, battery_cells,
+      voltage_source, humidity_pct, temperature_c, temperature_source, current_ma,
+      summary_json, message_key
     ) VALUES (
-      @prefix, @kind, @observed_at, @base_at, @device_time, @uptime_s, @boot_at,
-      @reset_reason, @shutdown_reason, @flags_json, @battery_mv, @temperature_c,
-      @temperature_source, @current_ma, @message_key
+      @prefix, @kind, @format_version, @observed_at, @base_at, @device_time, @uptime_s, @boot_at,
+      @reset_reason, @shutdown_reason, @flags_json, @battery_mv, @battery_type, @battery_cells,
+      @voltage_source, @humidity_pct, @temperature_c, @temperature_source, @current_ma,
+      @summary_json, @message_key
     )
     ON CONFLICT(prefix) DO UPDATE SET
       kind = excluded.kind,
-      observed_at = excluded.observed_at,
+      format_version = excluded.format_version,
+      observed_at = MAX(COALESCE(health_latest.observed_at, 0), excluded.observed_at),
       base_at = excluded.base_at,
       device_time = excluded.device_time,
       uptime_s = excluded.uptime_s,
@@ -148,24 +231,52 @@ export function createCzHealthStore(dbPath, {
       shutdown_reason = excluded.shutdown_reason,
       flags_json = excluded.flags_json,
       battery_mv = excluded.battery_mv,
+      battery_type = excluded.battery_type,
+      battery_cells = excluded.battery_cells,
+      voltage_source = excluded.voltage_source,
+      humidity_pct = excluded.humidity_pct,
       temperature_c = excluded.temperature_c,
       temperature_source = excluded.temperature_source,
       current_ma = COALESCE(excluded.current_ma, health_latest.current_ma),
+      summary_json = COALESCE(excluded.summary_json, health_latest.summary_json),
       message_key = excluded.message_key
-    WHERE excluded.base_at >= health_latest.base_at
+    WHERE health_latest.format_version <> 3 OR excluded.base_at >= health_latest.base_at
   `);
-  const selectLatest = db.prepare("SELECT * FROM health_latest WHERE prefix = ?");
-  const selectAllLatest = db.prepare("SELECT * FROM health_latest");
+  const upsertConfig = db.prepare(`
+    INSERT INTO health_config (
+      prefix, format_version, observed_at, base_at, device_time,
+      home_region, default_region, flood_regions_json, incomplete, message_key
+    ) VALUES (
+      @prefix, @format_version, @observed_at, @base_at, @device_time,
+      @home_region, @default_region, @flood_regions_json, @incomplete, @message_key
+    )
+    ON CONFLICT(prefix) DO UPDATE SET
+      format_version = excluded.format_version,
+      observed_at = MAX(COALESCE(health_config.observed_at, 0), excluded.observed_at),
+      base_at = excluded.base_at,
+      device_time = excluded.device_time,
+      home_region = excluded.home_region,
+      default_region = excluded.default_region,
+      flood_regions_json = excluded.flood_regions_json,
+      incomplete = excluded.incomplete,
+      message_key = excluded.message_key
+    WHERE health_config.format_version <> 3 OR excluded.base_at >= health_config.base_at
+  `);
+  const selectLatest = db.prepare("SELECT * FROM health_latest WHERE prefix = ? AND format_version = 3");
+  const selectAllLatest = db.prepare("SELECT * FROM health_latest WHERE format_version = 3");
+  const selectConfig = db.prepare("SELECT * FROM health_config WHERE prefix = ? AND format_version = 3");
+  const selectAllConfig = db.prepare("SELECT * FROM health_config WHERE format_version = 3");
   const selectSamples = db.prepare(`
     SELECT metric, sampled_at, value, source
     FROM health_samples
-    WHERE prefix = ? AND sampled_at >= ?
+    WHERE prefix = ? AND sampled_at >= ? AND format_version = 3
     ORDER BY sampled_at ASC
   `);
-  const countRows = db.prepare("SELECT COUNT(*) AS total FROM health_messages");
+  const countRows = db.prepare("SELECT COUNT(*) AS total FROM health_messages WHERE format_version = 3");
   const purgeSamples = db.prepare("DELETE FROM health_samples WHERE sampled_at < ?");
   const purgeMessages = db.prepare("DELETE FROM health_messages WHERE observed_at < ?");
-  const pruneLatest = db.prepare("DELETE FROM health_latest WHERE observed_at < ?");
+  const purgeLatest = db.prepare("DELETE FROM health_latest WHERE observed_at < ?");
+  const purgeConfig = db.prepare("DELETE FROM health_config WHERE observed_at < ?");
 
   const record = db.transaction((health, metadata = {}) => {
     if (!health?.prefix || !health?.messageKey || !health?.kind) return null;
@@ -176,6 +287,7 @@ export function createCzHealthStore(dbPath, {
       prefix: health.prefix,
       node_key: metadata.nodeKey || null,
       kind: health.kind,
+      format_version: 3,
       observed_at: observedAt,
       base_at: baseAt,
       device_time: health.deviceTime || null,
@@ -185,34 +297,72 @@ export function createCzHealthStore(dbPath, {
       shutdown_reason: health.shutdownReason || null,
       flags_json: JSON.stringify(health.flags || {}),
       battery_mv: Number.isFinite(health.latestBatteryMv) ? health.latestBatteryMv : null,
+      battery_type: health.batteryType || null,
+      battery_cells: health.batteryCells ?? null,
+      voltage_source: health.latestVoltageSource || health.voltageSource || null,
+      humidity_pct: Number.isFinite(health.latestHumidityPct) ? health.latestHumidityPct : null,
       temperature_c: Number.isFinite(health.latestTemperatureC) ? health.latestTemperatureC : null,
       temperature_source: health.temperatureSource || null,
       current_ma: Number.isFinite(health.latestCurrentMa) ? health.latestCurrentMa : null,
+      summary_json: health.summary ? JSON.stringify(health.summary) : null,
       packet_hash: metadata.packetHash || null,
       raw_hex: metadata.rawHex || null,
     };
     insertMessage.run(row);
     const messageId = selectMessage.get(health.messageKey)?.id || null;
-    const samples = [
-      ...(Array.isArray(health.battery) ? health.battery : [])
-        .map((sample) => ({ metric: "battery", sampled_at: sample.t, value: sample.mv, source: null })),
-      ...(Array.isArray(health.temperature) ? health.temperature : [])
-        .map((sample) => ({ metric: "temperature", sampled_at: sample.t, value: sample.c, source: health.temperatureSource || null })),
-      ...(Array.isArray(health.current) ? health.current : [])
-        .map((sample) => ({ metric: "current", sampled_at: sample.t, value: sample.ma, source: null })),
-    ];
-    // SUMMARY packets carry only the latest values, not the sample arrays.
-    if (!samples.length) {
-      if (Number.isFinite(health.latestBatteryMv)) {
-        samples.push({ metric: "battery", sampled_at: observedAt, value: health.latestBatteryMv, source: null });
+
+    if (health.kind === "config") {
+      upsertConfig.run({
+        prefix: health.prefix,
+        format_version: 3,
+        observed_at: observedAt,
+        base_at: baseAt,
+        device_time: health.deviceTime || null,
+        home_region: health.regions?.home || null,
+        default_region: health.regions?.default || null,
+        flood_regions_json: JSON.stringify(health.regions?.flood || []),
+        incomplete: health.regions?.incomplete ? 1 : 0,
+        message_key: health.messageKey,
+      });
+      return messageId;
+    }
+
+    const samples = [];
+    if (health.kind === "day") {
+      for (const sample of Array.isArray(health.battery) ? health.battery : []) {
+        samples.push({
+          metric: "battery",
+          sampled_at: sample.t,
+          value: sample.mv,
+          source: sample.source || null,
+        });
       }
-      if (Number.isFinite(health.latestTemperatureC)) {
-        samples.push({ metric: "temperature", sampled_at: observedAt, value: health.latestTemperatureC, source: health.temperatureSource || null });
+      for (const sample of Array.isArray(health.temperature) ? health.temperature : []) {
+        samples.push({
+          metric: "temperature",
+          sampled_at: sample.t,
+          value: sample.c,
+          source: health.temperatureSource || null,
+        });
       }
-      if (Number.isFinite(health.latestCurrentMa)) {
-        samples.push({ metric: "current", sampled_at: observedAt, value: health.latestCurrentMa, source: null });
+      for (const sample of Array.isArray(health.current) ? health.current : []) {
+        samples.push({
+          metric: "current",
+          sampled_at: sample.t,
+          value: sample.ma,
+          source: null,
+        });
+      }
+      for (const sample of Array.isArray(health.humidity) ? health.humidity : []) {
+        samples.push({
+          metric: "humidity",
+          sampled_at: sample.t,
+          value: sample.pct,
+          source: null,
+        });
       }
     }
+
     for (const sample of samples) {
       if (!Number.isFinite(sample.sampled_at) || !Number.isFinite(sample.value)) continue;
       upsertSample.run({
@@ -222,6 +372,7 @@ export function createCzHealthStore(dbPath, {
         value: sample.value,
         source: sample.source,
         message_id: messageId,
+        format_version: 3,
       });
     }
     upsertLatest.run(row);
@@ -232,13 +383,19 @@ export function createCzHealthStore(dbPath, {
     close: () => db.close(),
     count: () => countRows.get().total,
     latest: (prefix) => latestHealth(selectLatest.get(String(prefix || "").toLowerCase())),
+    config: (prefix) => latestConfig(selectConfig.get(String(prefix || "").toLowerCase())),
     decorateNodes: (nodes, now = Date.now()) => {
       const byPrefix = new Map(selectAllLatest.all().map((row) => [row.prefix, row]));
+      const configByPrefix = new Map(selectAllConfig.all().map((row) => [row.prefix, row]));
       return nodes.map((node) => {
-        const key = String(node.public_key || "").toLowerCase();
-        const row = byPrefix.get(key.slice(0, 16));
-        if (!row) return node;
-        return { ...node, health: latestHealth(row, now) };
+        const prefix = String(node.public_key || "").toLowerCase().slice(0, 16);
+        const row = byPrefix.get(prefix);
+        const configRow = configByPrefix.get(prefix);
+        if (!row && !configRow) return node;
+        const decorated = { ...node };
+        if (row) decorated.health = latestHealth(row, now);
+        if (configRow) decorated.healthConfig = latestConfig(configRow, now);
+        return decorated;
       });
     },
     history: (key, days = 7, now = Date.now()) => {
@@ -246,7 +403,7 @@ export function createCzHealthStore(dbPath, {
       if (!/^[0-9a-f]{16}$/.test(prefix)) return null;
       const since = now - Math.max(1, Math.min(90, Number(days) || 7)) * DAY_MS;
       const samples = selectSamples.all(prefix, since);
-      const series = { battery: [], temperature: [], current: [] };
+      const series = { battery: [], temperature: [], current: [], humidity: [] };
       for (const sample of samples) {
         const bucket = series[sample.metric];
         if (!bucket) continue;
@@ -259,6 +416,7 @@ export function createCzHealthStore(dbPath, {
       return {
         days: Math.max(1, Math.min(90, Number(days) || 7)),
         latest: latestHealth(selectLatest.get(prefix), now),
+        config: latestConfig(selectConfig.get(prefix), now),
         prefix,
         samples: series,
       };
@@ -268,7 +426,8 @@ export function createCzHealthStore(dbPath, {
       const cutoff = now - retentionMs;
       purgeSamples.run(cutoff);
       purgeMessages.run(cutoff);
-      pruneLatest.run(cutoff - 365 * DAY_MS);
+      purgeLatest.run(cutoff - 365 * DAY_MS);
+      purgeConfig.run(cutoff - 365 * DAY_MS);
     },
   };
 }
