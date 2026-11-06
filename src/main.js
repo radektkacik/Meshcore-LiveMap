@@ -1866,7 +1866,7 @@ function nodeTrendButton(node) {
   return `<button type="button" class="node-trend-button" data-health-node-key="${escapeHtml(key)}" title="${t("node.showTrend")}" aria-label="${t("node.showTrend")}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8" /><path d="M14 7h7v7" /></svg></button>`;
 }
 
-function nodeTrafficDetails(node) {
+function nodeTrafficDetails(node, { compact = false } = {}) {
   const rankNodes = [...state.nodeByKey.values()];
   const health = node.health && typeof node.health === "object" ? node.health : null;
   const battery = health?.batteryMv ?? node.battery_mv;
@@ -1882,18 +1882,18 @@ function nodeTrafficDetails(node) {
     : (Number(advert24h) > 0
       ? countWithRank(advert24h, rankNodes, node, "advert_count_24h")
       : formatNumber(Number(advert24h) || 0));
-  const batterySpec = [
+  const batterySpec = compact ? null : ([
     health?.batteryType ? batteryTypeName(health.batteryType) : null,
     health?.batteryCells ? `${health.batteryCells}S` : null,
     health?.voltageSource ? voltageSourceName(health.voltageSource) : null,
-  ].filter(Boolean).join(" · ") || null;
+  ].filter(Boolean).join(" · ") || null);
   return renderNodeDetails(t("node.trafficDetails"), [
     [t("node.advertPackets24h"), advert24hText, t("node.advertHelp")],
     [t("node.battery"), battery == null ? null : `${formatDecimal(battery / 1000, 2)} V${batteryStatus ? ` · ${batteryStatus}` : ""}`, t("node.batteryHelp"), "", trend],
     [t("node.batterySpec"), batterySpec, t("node.batterySpecHelp")],
     [t("node.temperature"), temperature == null ? null : `${formatDecimal(temperature, 1)} °C`, null, "", trend],
     [t("node.current"), health?.currentMa != null && Number.isFinite(Number(health.currentMa)) ? `${formatNumber(health.currentMa)} mA` : null],
-    [t("node.humidity"), health?.humidityPct != null && Number.isFinite(Number(health.humidityPct)) ? `${formatNumber(health.humidityPct)} %` : null],
+    [t("node.humidity"), !compact && health?.humidityPct != null && Number.isFinite(Number(health.humidityPct)) ? `${formatNumber(health.humidityPct)} %` : null],
     [t("node.charging"), health ? (health.charging ? t("common.yes") : t("common.no")) : null],
     [t("node.externalPower"), health ? (health.externalPower ? t("common.yes") : t("common.no")) : null],
     [t("node.healthObserved"), health?.observedAt ? formatNodeDate(health.observedAt) : null],
@@ -2108,8 +2108,7 @@ function compactNodePopupContent(node, active) {
     </header>
     ${nodePhotos(node)}
     ${nodeBasicDetails(node)}
-    ${nodeTrafficDetails(node)}
-    ${nodeHealthConfig(node)}
+    ${nodeTrafficDetails(node, { compact: true })}
     ${nodeNetworkDetails(node)}
     ${nodeUserInfo(node)}
     ${nodeComments(node)}
