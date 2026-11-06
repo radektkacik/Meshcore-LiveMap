@@ -4,8 +4,8 @@ Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam 
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-06 — CzHealth v3 a regiony
-- Prostředí: beta
-- Build: 20261106-1918-358012b
+- Prostředí: produkce i beta
+- Build: 20261106-1920-e6ee871
 - Podpora nového formátu CzHealth v3: DAY, SUMMARY i CONFIG.
 - Kompaktní faceplate nodu zůstává krátký; regiony, typ baterie a doplňková telemetrie jsou až v detailu nodu.
 - Ikona baterie se zobrazuje i u neznámého stavu (neutrální obrys), takže není zaměnitelná s vypnutou/chybějící baterií.
