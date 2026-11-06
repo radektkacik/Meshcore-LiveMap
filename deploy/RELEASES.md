@@ -459,6 +459,7 @@
 | 2026-11-06 08:51 | `20261106T085145Z.tar.gz` (stage APP_DIR) | `20261106-0851-919bea1` | Beta: panel Statistiky pro Advertů při období 24 h používá 24h počet, ne celkový `advert_count`; 1h/7d nemají data | `src/node-model.js`, `test/node-model.test.mjs`, `index.html` |
 | 2026-11-06 08:53 | `20261106T085310Z.tar.gz` | `20261106-0853-919bea1` | Prod: stejná oprava Statistiky | `src/node-model.js`, `test/node-model.test.mjs`, `index.html` |
 | 2026-11-06 19:00 | `20261106T190014Z.tar.gz` (stage APP_DIR) | `20261106-1900-161d178` | Beta: CzHealth v3 — DAY/SUMMARY/CONFIG, baterie/teplota/vlhkost, typ baterie a články, zdroje napětí, regiony; migrace health DB a UI | `cz-health.mjs`, `cz-health-store.mjs`, `src/main.js`, `src/style.css`, `src/i18n.js`, `index.html`, `test/cz-health.test.mjs`, `deploy/apply-release.sh` |
+| 2026-11-06 19:07 | `20261106T190714Z.tar.gz` (stage APP_DIR) | `20261106-1907-5be8f85` | Beta: kompaktní faceplate nodu — regiony a rozšířená telemetrie jen v detailu | `src/main.js` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
 
