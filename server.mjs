@@ -798,6 +798,7 @@ ${entries.length ? `<ul>${rows}</ul>` : '<p class="empty">Zatím žádné zpráv
 
 function renderPhotoPage(entries, reports, token, status, openReports) {
   const names = photoNodeNames();
+  const covers = new Map(photoStore.listApprovedNodeCounts(10_000).map((node) => [node.nodeKey, node.coverId]));
   const labels = {
     all: "Vše",
     approved: "Schválené",
@@ -812,6 +813,7 @@ function renderPhotoPage(entries, reports, token, status, openReports) {
   const rows = entries.map((photo) => {
     const imageUrl = `../photos/${encodeURIComponent(photo.id)}?token=${encodeURIComponent(token)}`;
     const node = names.get(photo.nodeKey);
+    const isCover = covers.get(photo.nodeKey) === photo.id;
     const nodeLabel = node ? `${node} · ${photo.nodeKey.slice(0, 8)}` : photo.nodeKey.slice(0, 16);
     const actions = [
       photo.status !== "approved"
@@ -2780,28 +2782,6 @@ async function handleAdminRequest(request, response, url) {
       response.end(adminRepeaterSyncAllPage({ plans }));
       return;
     }
-    if (path === "/admin/repeater-sync-all" && repeaterImportEnabled) {
-      const names = photoNodeNames();
-      let synced = 0;
-      for (const key of form.getAll("key").map(String)) {
-        const info = nodeInfoStore.get(key);
-        if (!info?.sourceUrl) continue;
-        const plan = await repeaterSyncPlan(info, names.get(info.nodeKey) || info.nodeKey.slice(0, 12));
-        if (!plan?.page) continue;
-        if (plan.page.text.trim().length >= 5) {
-          nodeInfoStore.importText(info.nodeKey, {
-            author: "meshcore.cz",
-            sourceTitle: plan.page.title || plan.page.slug,
-            sourceUrl: plan.page.sourceUrl,
-            text: plan.page.text,
-          });
-        }
-        for (const fileName of plan.missing) await importRepeaterPhoto(info.nodeKey, plan.page, fileName);
-        synced += 1;
-      }
-      redirectAdmin(response, `${adminBasePath}/node-info?synced=1`);
-      return;
-    }
     if (path === "/admin/repeater-sync" && repeaterImportEnabled) {
       const keyValue = String(url.searchParams.get("key") || "").trim();
       if (!keyValue) {
@@ -4036,6 +4016,7 @@ function shutdown() {
   for (const client of packetStreams) closePacketStream(client);
   metricsStore.close();
   packetStore.close();
+  healthStore.close();
   visitStore.close();
   feedbackStore.close();
   nodeInfoStore.close();
