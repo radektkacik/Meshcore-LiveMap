@@ -1093,7 +1093,7 @@ export const STATIC_EN = {
   "Nízká": "Low",
   "Kritická": "Critical",
   "Stará data": "Stale data",
-  "Jen neaktivní nody (1 h)": "Only inactive nodes (1 h)",
+  "Jen neaktivní nody (12 h)": "Only inactive nodes (12 h)",
   "Skrýt trasy": "Hide routes",
   "Legenda": "Legend",
   "Top 5 % Užitečnost": "Top 5% usefulness",
