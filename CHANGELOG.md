@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-07 — Nové nody na mapě (beta)
+- Nově objevené nody mají po dobu **24 hodin** oranžový kroužek.
+- V popupu, tooltipu a detailu mají štítek **nový**.
+- V legende je položka **Nový nod (24 h)**.
+- Hranice se počítá z `first_seen`; starší nody vzhled nemění.
+- Build: `20261107-1430-98848dc`.
+
 ## 2026-11-07 — Správa vlastních fotek
 - Prostředí: produkce i beta
 - Build: 20261107-1221-7f965b3
