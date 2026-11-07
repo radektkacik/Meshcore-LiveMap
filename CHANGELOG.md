@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-07 — Neaktivita po 12 hodinách
+- Prostředí: produkce i beta
+- Build: 20261107-1443-4644ef0
+- Nod je nyní považovaný za neaktivní po **12 hodinách** bez aktivity, místo dřívější 1 hodiny.
+- Filtr se jmenuje **Jen neaktivní nody (12 h)**.
+- Platí i pro štítek AKTIVNÍ/NEAKTIVNÍ v popupu a detailu.
+
 ## 2026-11-07 — Nové nody na mapě
 - Prostředí: produkce i beta
 - Build: 20261107-1438-1b5521b
