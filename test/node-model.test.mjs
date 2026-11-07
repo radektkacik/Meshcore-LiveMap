@@ -28,12 +28,11 @@ test("node activity uses the newest valid activity timestamp", () => {
   assert.equal(isNodeActive({ last_seen: new Date(now - hour).toISOString() }, now, hour), false);
 });
 
-test("new nodes are detected for seven days from first_seen", () => {
+test("new nodes are detected for 24 hours from first_seen", () => {
   const day = 24 * hour;
   assert.equal(isNewNode({ first_seen: new Date(now - day).toISOString() }, now), true);
-  assert.equal(isNewNode({ first_seen: new Date(now - 7 * day).toISOString() }, now), true);
-  assert.equal(isNewNode({ first_seen: new Date(now - 8 * day).toISOString() }, now), false);
-  assert.equal(isNewNode({ first_seen: new Date(now + day).toISOString() }, now), false);
+  assert.equal(isNewNode({ first_seen: new Date(now - day - hour).toISOString() }, now), false);
+  assert.equal(isNewNode({ first_seen: new Date(now + hour).toISOString() }, now), false);
   assert.equal(isNewNode({}, now), false);
 });
 

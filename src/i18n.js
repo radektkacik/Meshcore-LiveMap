@@ -1083,7 +1083,7 @@ export const STATIC_EN = {
   "Animovat trasy": "Animate routes",
   "Zobrazit názvy nodů": "Show node names",
   "Jen nody s fotkou": "Only nodes with a photo",
-  "Nový nod (7 dní)": "New node (7 days)",
+  "Nový nod (24 h)": "New node (24 h)",
   "Jen nody s telemetrií": "Only nodes with telemetry",
   "Telemetrii vysílá pouze repeater s firmwarem mesh-cz v1.18.0.02rc8 nebo novějším. Standardní MeshCore firmware CzHealth data neposílá.": "Only repeaters running mesh-cz firmware v1.18.0.02rc8 or newer send telemetry. Standard MeshCore firmware does not send CzHealth data.",
   "Stav telemetrie": "Telemetry status",

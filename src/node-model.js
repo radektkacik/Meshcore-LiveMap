@@ -20,7 +20,7 @@ export function isNodeActive(node, now, activeMs) {
   return now - nodeLastActivity(node) < activeMs;
 }
 
-export function isNewNode(node, now, newMs = 7 * 24 * 60 * 60 * 1000) {
+export function isNewNode(node, now, newMs = 24 * 60 * 60 * 1000) {
   const firstSeen = Date.parse(node.first_seen || 0);
   const age = now - firstSeen;
   return Number.isFinite(firstSeen) && age >= 0 && age <= newMs;
