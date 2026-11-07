@@ -3,13 +3,14 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-07 — Správa vlastních fotek (beta)
+## 2026-11-07 — Správa vlastních fotek
+- Prostředí: produkce i beta
+- Build: 20261107-1221-7f965b3
 - Uživatel může upravit autora/popisek nebo smazat fotku, kterou nahrál.
 - Po uploadu se vydá náhodný token; prohlížeč si ho uloží lokálně a server ukládá jen jeho hash.
 - Volitelné heslo při uploadu umožňuje správu i z jiného zařízení nebo po ztrátě tokenu; heslo je na serveru uložené jako scrypt hash.
 - V lightboxu je akce „Upravit / smazat vlastní fotku“; token nebo heslo je nutné ověřit před každou změnou.
 - Starší fotky nemají vlastnický token/heslo a zůstávají spravovatelné přes administraci.
-- Build: `20261107-1200-4c2fb77`.
 
 ## 2026-11-07 — Více fotek na nod
 - Prostředí: produkce i beta
