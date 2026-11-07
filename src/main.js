@@ -2865,6 +2865,7 @@ function resetPhotoDialog() {
   elements.photoForm.reset();
   setPhotoStatus("");
   resetPhotoPreview();
+  renderPhotoManageUploads();
   elements.photoSubmit.disabled = false;
   state.photoUploading = false;
 }
@@ -3010,6 +3011,8 @@ function renderPhotoDialog() {
   elements.photoFileLabel.textContent = t("photos.files");
   elements.photoAuthorLabel.textContent = t("photos.author");
   elements.photoAuthor.placeholder = t("photos.authorPlaceholder");
+  elements.photoManagePasswordLabel.textContent = t("photos.managePassword");
+  elements.photoManagePasswordNote.textContent = t("photos.managePasswordNote");
   elements.photoConsentLabel.textContent = t("photos.consent");
   elements.photoNote.textContent = photoNoteText();
   elements.photoSubmit.textContent = t("photos.submit");
@@ -3019,6 +3022,57 @@ function renderPhotoDialog() {
     ? `${target.name || t("common.unknownNode")} · ${target.key.slice(0, 8).toUpperCase()}`
     : "";
 }
+
+const PHOTO_MANAGE_TOKENS_KEY = "meshcorePhotoManageTokens";
+
+function photoManageTokens() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PHOTO_MANAGE_TOKENS_KEY) || "{}");
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch {
+    return {};
+  }
+}
+
+function photoManageToken(photoId) {
+  const value = photoManageTokens()[String(photoId || "")];
+  return typeof value === "string" ? value : (typeof value?.token === "string" ? value.token : "");
+}
+
+function rememberPhotoManageToken(photoId, token, metadata = {}) {
+  if (!photoId || !token) return false;
+  try {
+    const tokens = photoManageTokens();
+    const previous = tokens[String(photoId)];
+    const previousMetadata = previous && typeof previous === "object" ? previous : {};
+    tokens[String(photoId)] = {
+      ...previousMetadata,
+      ...metadata,
+      token: String(token),
+      savedAt: Date.now(),
+    };
+    const ids = Object.keys(tokens);
+    while (ids.length > 500) delete tokens[ids.shift()];
+    localStorage.setItem(PHOTO_MANAGE_TOKENS_KEY, JSON.stringify(tokens));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function forgetPhotoManageToken(photoId) {
+  try {
+    const tokens = photoManageTokens();
+    delete tokens[String(photoId || "")];
+    localStorage.setItem(PHOTO_MANAGE_TOKENS_KEY, JSON.stringify(tokens));
+  } catch {}
+}
+
+state.photoManageUploads = Object.entries(photoManageTokens())
+  .filter(([, value]) => value && typeof value === "object" && value.node?.public_key && value.photo?.id)
+  .map(([, value]) => ({ node: value.node, photo: value.photo }))
+  .sort((a, b) => Number(b.photo.createdAt || 0) - Number(a.photo.createdAt || 0))
+  .slice(0, 50);
 
 function openPhotoDialog(node) {
   const key = String(node.public_key || "").toLowerCase();
@@ -3054,6 +3108,7 @@ function showPhotoLightbox() {
   elements.photoLightboxAuthor.hidden = !photo.author;
   elements.photoLightboxClose.setAttribute("aria-label", t("photos.close"));
   elements.photoReportOpen.textContent = t("photos.report");
+  elements.photoManageOpen.textContent = t("photos.manage");
   elements.photoLightboxPrev.setAttribute("aria-label", t("photos.previous"));
   elements.photoLightboxNext.setAttribute("aria-label", t("photos.next"));
   elements.photoLightboxCounter.textContent = `${state.lightboxIndex + 1} / ${photos.length}`;
@@ -3198,6 +3253,149 @@ function openPhotoReport() {
   elements.photoReportSubmit.disabled = false;
   renderPhotoReportDialog();
   if (!elements.photoReportDialog.open) elements.photoReportDialog.showModal();
+}
+
+function setPhotoManageStatus(text, isError = false) {
+  elements.photoManageStatus.textContent = text;
+  elements.photoManageStatus.classList.toggle("error", Boolean(isError));
+}
+
+function renderPhotoManageUploads() {
+  const container = elements.photoManageUploads;
+  if (!container) return;
+  const entries = state.photoManageUploads || [];
+  container.replaceChildren();
+  container.hidden = entries.length === 0;
+  for (const entry of entries) {
+    const button = document.createElement("button");
+    button.type = "button";
+    const label = entry.photo.caption || entry.photo.author || entry.photo.id.slice(0, 8);
+    button.textContent = t("photos.manageUpload", { caption: `${entry.node.name || t("common.unknownNode")} · ${label}` });
+    button.addEventListener("click", () => openPhotoManageDialog(entry.photo, entry.node));
+    container.appendChild(button);
+  }
+}
+
+function openPhotoManageDialog(photoValue = null, nodeValue = null) {
+  const current = photoValue && nodeValue
+    ? { node: nodeValue, photo: photoValue }
+    : state.lightboxPhoto;
+  if (!current?.photo?.id) return;
+  state.photoManageTarget = { ...current };
+  state.photoManageSaving = false;
+  const photo = current.photo;
+  const token = photoManageToken(photo.id);
+  elements.photoManageForm.reset();
+  elements.photoManageTitle.textContent = t("photos.manageTitle");
+  elements.photoManagePhoto.textContent = [current.node?.name || t("common.unknownNode"), photo.caption]
+    .filter(Boolean).join(" · ");
+  elements.photoManagePasswordAuthLabel.textContent = t("photos.managePasswordAuth");
+  elements.photoManagePasswordWrap.hidden = Boolean(token);
+  elements.photoManageAuthorLabel.textContent = t("photos.manageAuthor");
+  elements.photoManageCaptionLabel.textContent = t("photos.manageCaption");
+  elements.photoManageAuthor.value = photo.author || "";
+  elements.photoManageCaption.value = photo.caption || "";
+  elements.photoManageSave.textContent = t("photos.manageSave");
+  elements.photoManageDelete.textContent = t("photos.manageDelete");
+  elements.photoManageCancel.textContent = t("photos.cancel");
+  elements.photoManageClose.setAttribute("aria-label", t("photos.cancel"));
+  elements.photoManageNote.textContent = t(token ? "photos.manageNoteToken" : "photos.manageNotePassword");
+  setPhotoManageStatus("");
+  elements.photoManageSave.disabled = false;
+  elements.photoManageDelete.disabled = false;
+  if (!elements.photoManageDialog.open) elements.photoManageDialog.showModal();
+}
+
+function refreshNodePhotoList(nodeKey) {
+  const key = String(nodeKey || "").toLowerCase();
+  if (!key) return;
+  state.photoCache.delete(key);
+  const node = state.nodeByKey.get(key.toUpperCase()) || { public_key: key };
+  for (const section of document.querySelectorAll(".node-photos[data-node-key]")) {
+    if (section.dataset.nodeKey === key) void loadNodePhotos(section, node);
+  }
+}
+
+async function managePhoto(action) {
+  const target = state.photoManageTarget;
+  const photo = target?.photo;
+  if (!photo?.id || state.photoManageSaving) return;
+  const token = photoManageToken(photo.id);
+  const password = elements.photoManagePasswordAuth.value;
+  if (!token && !password) {
+    setPhotoManageStatus(t("photos.manageNeedAccess"), true);
+    return;
+  }
+
+  state.photoManageSaving = true;
+  elements.photoManageSave.disabled = true;
+  elements.photoManageDelete.disabled = true;
+  setPhotoManageStatus(t("photos.manageSaving"));
+  try {
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const response = await fetch(appPath(`/api/photos/${encodeURIComponent(photo.id)}/manage`), {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        action,
+        author: elements.photoManageAuthor.value.trim(),
+        caption: elements.photoManageCaption.value.trim(),
+        password: token ? "" : password,
+      }),
+      signal: AbortSignal.timeout(20_000),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      if (response.status === 403 && token) {
+        forgetPhotoManageToken(photo.id);
+        elements.photoManagePasswordWrap.hidden = false;
+        elements.photoManageNote.textContent = t("photos.manageNotePassword");
+      }
+      throw new Error(data.error || t("photos.manageFailed"));
+    }
+
+    if (action === "delete") {
+      forgetPhotoManageToken(photo.id);
+      const wasLightboxPhoto = state.lightboxPhoto?.photo?.id === photo.id;
+      const previousIndex = state.lightboxIndex;
+      if (wasLightboxPhoto) state.lightboxPhotos = state.lightboxPhotos.filter((entry) => entry.id !== photo.id);
+      state.photoManageUploads = state.photoManageUploads.filter((entry) => entry.photo.id !== photo.id);
+      renderPhotoManageUploads();
+      refreshNodePhotoList(photo.nodeKey || target.node?.public_key);
+      elements.photoManageDialog.close();
+      if (!wasLightboxPhoto) return;
+      if (state.lightboxPhotos.length) {
+        state.lightboxIndex = Math.min(previousIndex, state.lightboxPhotos.length - 1);
+        showPhotoLightbox();
+      } else if (elements.photoLightbox.open) {
+        elements.photoLightbox.close();
+      }
+      return;
+    }
+
+    const updated = data.photo || {};
+    const index = state.lightboxPhotos.findIndex((entry) => entry.id === photo.id);
+    if (index >= 0) state.lightboxPhotos[index] = { ...state.lightboxPhotos[index], ...updated };
+    state.photoManageTarget.photo = { ...photo, ...updated };
+    const uploaded = state.photoManageUploads.find((entry) => entry.photo.id === photo.id);
+    if (uploaded) {
+      uploaded.photo = { ...uploaded.photo, ...updated };
+      const savedToken = photoManageToken(photo.id);
+      if (savedToken) rememberPhotoManageToken(photo.id, savedToken, uploaded);
+    }
+    renderPhotoManageUploads();
+    state.photoCache.delete(String(photo.nodeKey || target.node?.public_key || "").toLowerCase());
+    if (state.lightboxPhoto?.photo?.id === photo.id) showPhotoLightbox();
+    refreshNodePhotoList(photo.nodeKey || target.node?.public_key);
+    setPhotoManageStatus(t("photos.manageSaved"));
+  } catch (error) {
+    setPhotoManageStatus(error?.message || t("photos.manageFailed"), true);
+  } finally {
+    state.photoManageSaving = false;
+    elements.photoManageSave.disabled = false;
+    elements.photoManageDelete.disabled = false;
+  }
 }
 
 function isHeicFile(file) {
@@ -7253,12 +7451,18 @@ elements.photoForm.addEventListener("submit", async (event) => {
     setPhotoStatus(t("photos.consentRequired"), true);
     return;
   }
+  const managePassword = elements.photoManagePassword.value;
+  if (managePassword && (managePassword.length < 8 || managePassword.length > 128)) {
+    setPhotoStatus(t("photos.managePasswordInvalid"), true);
+    return;
+  }
   state.photoUploading = true;
   elements.photoSubmit.disabled = true;
   let created = 0;
   let published = 0;
   let pending = 0;
   let failed = 0;
+  let tokenStorageFailed = 0;
   let lastError = "";
   const batchId = files.length > 1
     ? (globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`)
@@ -7290,6 +7494,7 @@ elements.photoForm.addEventListener("submit", async (event) => {
           "Content-Type": blob.type,
           "X-Photo-Author": encodeURIComponent(elements.photoAuthor.value.trim()),
           "X-Photo-Caption": encodeURIComponent(caption),
+          "X-Photo-Manage-Password": encodeURIComponent(managePassword),
           "X-Photo-Batch-Index": String(index),
           "X-Photo-Batch-Size": String(files.length),
           "X-Photo-Consent": "1",
@@ -7314,6 +7519,23 @@ elements.photoForm.addEventListener("submit", async (event) => {
           continue;
         }
         created += 1;
+        if (data.id && data.manageToken) {
+          const managedPhoto = {
+            author: elements.photoAuthor.value.trim(),
+            caption,
+            createdAt: Date.now(),
+            id: data.id,
+            nodeKey: target.key,
+            status: data.status,
+          };
+          const managedNode = { name: target.name, public_key: target.key };
+          if (!rememberPhotoManageToken(data.id, data.manageToken, { node: managedNode, photo: managedPhoto })) {
+            tokenStorageFailed += 1;
+          }
+          state.photoManageUploads.unshift({ node: managedNode, photo: managedPhoto });
+          state.photoManageUploads = state.photoManageUploads.slice(0, 50);
+          renderPhotoManageUploads();
+        }
         if (data.status === "approved") published += 1;
         else pending += 1;
         if (index === coverIndex) {
@@ -7335,6 +7557,8 @@ elements.photoForm.addEventListener("submit", async (event) => {
         if (!coverUploaded) statusText = `${statusText} ${t("photos.coverNotUploaded")}`;
         else if (coverPending) statusText = `${statusText} ${t("photos.coverPending")}`;
       }
+      if (tokenStorageFailed) statusText = `${statusText} ${t("photos.tokenStorageFailed")}`;
+      if (state.photoManageUploads.length) statusText = `${statusText} ${t("photos.manageUploadedHelp")}`;
       setPhotoStatus(statusText, failed > 0);
       if (published > 0) {
         state.photoCache.delete(target.key);
@@ -7351,7 +7575,7 @@ elements.photoForm.addEventListener("submit", async (event) => {
       }
       elements.photoForm.reset();
       resetPhotoPreview();
-      if (failed === 0) {
+      if (failed === 0 && state.photoManageUploads.length === 0) {
         setTimeout(() => {
           if (elements.photoDialog.open) elements.photoDialog.close();
         }, 1_800);
@@ -7722,6 +7946,24 @@ elements.photoLightbox.addEventListener("close", () => {
   state.lightboxPhotos = [];
   state.lightboxIndex = 0;
   state.lightboxNode = null;
+});
+elements.photoManageOpen.addEventListener("click", openPhotoManageDialog);
+elements.photoManageClose.addEventListener("click", () => elements.photoManageDialog.close());
+elements.photoManageCancel.addEventListener("click", () => elements.photoManageDialog.close());
+elements.photoManageDialog.addEventListener("click", (event) => {
+  if (event.target === elements.photoManageDialog) elements.photoManageDialog.close();
+});
+elements.photoManageDialog.addEventListener("close", () => {
+  state.photoManageTarget = null;
+  state.photoManageSaving = false;
+  elements.photoManagePasswordAuth.value = "";
+});
+elements.photoManageForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  void managePhoto("edit");
+});
+elements.photoManageDelete.addEventListener("click", () => {
+  if (window.confirm(t("photos.manageConfirmDelete"))) void managePhoto("delete");
 });
 elements.photoReportOpen.addEventListener("click", openPhotoReport);
 elements.photoReportClose.addEventListener("click", () => elements.photoReportDialog.close());

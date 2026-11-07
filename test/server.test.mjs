@@ -188,12 +188,35 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
         "X-Photo-Caption": encodeURIComponent("Testovací anténa"),
         "X-Photo-Consent": "1",
         "X-Photo-Key": photoKey,
+        "X-Photo-Manage-Password": encodeURIComponent("test-owner-password"),
       },
       body: tinyPng,
     });
     assert.equal(upload.status, 202);
     const uploaded = await upload.json();
     assert.equal(uploaded.status, "pending");
+    assert.match(uploaded.manageToken, /^[A-Za-z0-9_-]{40,}$/);
+    const manageUrl = `http://127.0.0.1:${appPort}/api/photos/${uploaded.id}/manage`;
+    const deniedManage = await fetch(manageUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "edit", password: "wrong-password", caption: "Nope", author: "" }),
+    });
+    assert.equal(deniedManage.status, 403);
+    const passwordManage = await fetch(manageUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "edit", password: "test-owner-password", caption: "Upraveno heslem", author: "Vlastník" }),
+    });
+    assert.equal(passwordManage.status, 200);
+    assert.equal((await passwordManage.json()).photo.caption, "Upraveno heslem");
+    const tokenManage = await fetch(manageUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${uploaded.manageToken}` },
+      body: JSON.stringify({ action: "edit", caption: "Upraveno tokenem", author: "Vlastník" }),
+    });
+    assert.equal(tokenManage.status, 200);
+    assert.equal((await tokenManage.json()).photo.caption, "Upraveno tokenem");
     await new Promise((resolve) => setTimeout(resolve, 150));
     assert.ok(telegramMessages.some((text) => text.includes("Nová fotka čeká na schválení")));
     const photoMessage = telegramCalls.find((call) => call.method === "sendMessage"
@@ -398,6 +421,8 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(approve.status, 303);
     const photoList = await (await fetch(`http://127.0.0.1:${appPort}/api/photos?key=${photoKey}`)).json();
     assert.equal(photoList.photos.length, 1);
+    assert.equal(photoList.photos[0].caption, "Upraveno tokenem");
+    assert.equal(Object.hasOwn(photoList.photos[0], "manageToken"), false);
     const setCover = await fetch(`http://127.0.0.1:${appPort}/admin/photos/moderate`, {
       method: "POST",
       headers: {
@@ -475,6 +500,27 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     const reportsAfter = await fetch(`http://127.0.0.1:${appPort}/api/photos/view?token=photo-token&status=reports`);
     assert.doesNotMatch(await reportsAfter.text(), /Chci tuto fotku smazat/);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos/view?token=wrong`)).status, 404);
+    const secondUpload = await fetch(`http://127.0.0.1:${appPort}/api/photos`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "image/png",
+        "X-Photo-Batch-Id": "owner-delete-test",
+        "X-Photo-Batch-Index": "1",
+        "X-Photo-Batch-Size": "2",
+        "X-Photo-Consent": "1",
+        "X-Photo-Key": photoKey,
+      },
+      body: tinyPng,
+    });
+    assert.equal(secondUpload.status, 202);
+    const secondPhoto = await secondUpload.json();
+    const ownerDelete = await fetch(`http://127.0.0.1:${appPort}/api/photos/${secondPhoto.id}/manage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${secondPhoto.manageToken}` },
+      body: JSON.stringify({ action: "delete" }),
+    });
+    assert.equal(ownerDelete.status, 200);
+    assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos/${secondPhoto.id}?token=photo-token`)).status, 404);
     const terrainTile = await fetch(`http://127.0.0.1:${appPort}/api/terrain/11/1/1.png`);
     assert.equal(terrainTile.status, 200);
     assert.equal(terrainTile.headers.get("content-type"), "image/png");

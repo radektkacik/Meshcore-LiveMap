@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import Database from "better-sqlite3";
 import { createPhotoStore, detectImage, PhotoError } from "../photos.mjs";
 
 function pngBuffer(width = 640, height = 480) {
@@ -90,6 +91,62 @@ test("photo store can publish a photo immediately when auto-approval is enabled"
     assert.equal(photo.status, "approved");
     assert.deepEqual(store.listApproved(nodeKey).map((item) => item.id), [photo.id]);
     assert.equal(store.stats().pending, 0);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("photo owners can manage metadata with a token or upload password", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
+  const store = createPhotoStore(directory);
+  const nodeKey = "e".repeat(64);
+  try {
+    const photo = store.create({
+      author: "Uploader",
+      buffer: pngBuffer(),
+      caption: "Original caption",
+      nodeKey,
+      ownerPassword: "correct horse",
+      ownerToken: "random-management-token",
+      status: "approved",
+    });
+    assert.equal(photo.ownerTokenHash, undefined);
+    assert.equal(photo.ownerPasswordHash, undefined);
+    assert.equal(store.authorizeOwner(photo.id, { token: "wrong-token" }), false);
+    assert.equal(store.authorizeOwner(photo.id, { password: "wrong password" }), false);
+    assert.equal(store.authorizeOwner(photo.id, { token: "random-management-token" }), true);
+    assert.equal(store.authorizeOwner(photo.id, { password: "correct horse" }), true);
+    const updated = store.updateOwnerMetadata(photo.id, { author: "New author", caption: "Updated caption" });
+    assert.equal(updated.author, "New author");
+    assert.equal(updated.caption, "Updated caption");
+    assert.equal(store.remove(photo.id), true);
+    assert.equal(store.authorizeOwner(photo.id, { token: "random-management-token" }), false);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("photo store migrates existing photo tables with owner credentials", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-migrate-"));
+  const db = new Database(join(directory, "photos.sqlite"));
+  db.exec(`CREATE TABLE photos (
+    id TEXT PRIMARY KEY, node_key TEXT NOT NULL, file TEXT NOT NULL, mime TEXT NOT NULL,
+    bytes INTEGER NOT NULL, width INTEGER, height INTEGER, caption TEXT, author TEXT,
+    ip_hash TEXT, status TEXT NOT NULL DEFAULT 'pending', created_at INTEGER NOT NULL, reviewed_at INTEGER
+  )`);
+  db.close();
+  const store = createPhotoStore(directory);
+  try {
+    const photo = store.create({
+      buffer: pngBuffer(),
+      nodeKey: "c".repeat(64),
+      ownerPassword: "migration-password",
+      ownerToken: "migration-token",
+    });
+    assert.equal(store.authorizeOwner(photo.id, { token: "migration-token" }), true);
+    assert.equal(store.authorizeOwner(photo.id, { password: "migration-password" }), true);
   } finally {
     store.close();
     rmSync(directory, { recursive: true, force: true });

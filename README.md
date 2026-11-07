@@ -175,10 +175,23 @@ přihlašovací údaje zůstávají pouze na serveru.
   a `X-Photo-Batch-Id`; volitelná hlavička `X-Photo-Cover: 1` označí fotku,
   která má být náhledem nodu. U pending fotky se náhled nastaví po schválení;
   správce může volbu kdykoli přepsat. Server mezi fotkami stejné dávky
-  přeskočí 10s pauzu a Telegram notifikaci pošle jednou za dávku. Ve výchozím stavu se fotka
-  uloží jako `pending` a zobrazí se až po schválení. S `PHOTO_AUTO_APPROVE=1`
-  se ihned uloží jako `approved`, zobrazí se v galerii a správce ji může
-  dodatečně smazat. `GET /api/photos/config` vrací `{ autoApprove }`.
+   přeskočí 10s pauzu a Telegram notifikaci pošle jednou za dávku. Ve výchozím stavu se fotka
+   uloží jako `pending` a zobrazí se až po schválení. S `PHOTO_AUTO_APPROVE=1`
+   se ihned uloží jako `approved`, zobrazí se v galerii a správce ji může
+   dodatečně smazat. `GET /api/photos/config` vrací `{ autoApprove }`.
+   Každá nahraná fotka vrátí jednorázový správcovský token, který se uloží do
+   `localStorage` prohlížeče; server ukládá jen jeho hash. Volitelné heslo pro
+   správu (8–128 znaků) se ukládá jako scrypt hash a umožní editaci popisku/autora
+   nebo smazání z jiného zařízení či po ztrátě tokenu. V lightboxu je akce
+   „Upravit / smazat vlastní fotku“. Starší fotky bez tokenu/hesla může spravovat
+   pouze administrátor.
+   Po nahrání dostane každý obrázek jedinečný správcovský token, uložený v
+   `localStorage` tohoto prohlížeče; token se ukládá pouze jako hash na serveru.
+   Volitelné heslo (8–128 znaků) umožní fotku upravit nebo smazat i z jiného
+   zařízení či po ztrátě tokenu. Heslo se ukládá pouze jako scrypt hash.
+   V lightboxu je volba „Upravit / smazat vlastní fotku“; správce může použít
+   administraci i bez uživatelského tokenu. Starší fotky nahrané před touto
+   funkcí nemají vlastnický token ani heslo a může je spravovat jen administrátor.
 - Detail nodu je dostupný na `/nod/<public_key>` (beta `/beta/nod/<public_key>`).
   Popup na mapě je zkrácený; plné info, fotky, komentáře a síťové údaje jsou
   v podstránce s taby.
@@ -409,4 +422,3 @@ svých poskytovatelů; MIT licence je nepřebírá. Ikona selfh.st je použita p
 CC BY 4.0.
 
 Odkaz na licenci je i v GUI v poznámce pod legendou (`LICENSE.txt`).
-

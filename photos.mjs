@@ -1,11 +1,36 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, normalize, sep } from "node:path";
 import { openSqliteStore } from "./sqlite-store.mjs";
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const MAX_DIMENSION = 8192;
+const MIN_OWNER_PASSWORD = 8;
+const MAX_OWNER_PASSWORD = 128;
 export const PHOTO_STATUSES = ["pending", "approved", "hidden"];
+
+function ownerTokenHash(token) {
+  return createHash("sha256").update(String(token || "")).digest("hex");
+}
+
+function hashOwnerPassword(password) {
+  const salt = randomBytes(16).toString("hex");
+  const hash = scryptSync(String(password), salt, 64).toString("hex");
+  return `scrypt$${salt}$${hash}`;
+}
+
+function ownerPasswordMatches(password, stored) {
+  if (typeof password !== "string" || password.length < MIN_OWNER_PASSWORD || password.length > MAX_OWNER_PASSWORD) return false;
+  const [scheme, salt, hash] = String(stored || "").split("$");
+  if (scheme !== "scrypt" || !salt || !hash) return false;
+  try {
+    const expected = Buffer.from(hash, "hex");
+    const actual = scryptSync(password, salt, 64);
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  } catch {
+    return false;
+  }
+}
 
 export class PhotoError extends Error {
   constructor(code, message) {
@@ -135,6 +160,8 @@ export function createPhotoStore(rootDir, {
       caption TEXT,
       author TEXT,
       ip_hash TEXT,
+      owner_token_hash TEXT,
+      owner_password_hash TEXT,
       status TEXT NOT NULL DEFAULT 'pending',
       created_at INTEGER NOT NULL,
       reviewed_at INTEGER
@@ -166,12 +193,21 @@ export function createPhotoStore(rootDir, {
     CREATE INDEX IF NOT EXISTS photo_reports_photo ON photo_reports (photo_id, status);
     CREATE INDEX IF NOT EXISTS photo_reports_status ON photo_reports (status, created_at);
   `);
+  const photoColumns = db.prepare("PRAGMA table_info(photos)").all();
+  if (!photoColumns.some((column) => column.name === "owner_token_hash")) {
+    db.exec("ALTER TABLE photos ADD COLUMN owner_token_hash TEXT");
+  }
+  if (!photoColumns.some((column) => column.name === "owner_password_hash")) {
+    db.exec("ALTER TABLE photos ADD COLUMN owner_password_hash TEXT");
+  }
 
   const insert = db.prepare(`
     INSERT INTO photos (
-      id, node_key, file, mime, bytes, width, height, caption, author, ip_hash, status, created_at
+      id, node_key, file, mime, bytes, width, height, caption, author, ip_hash,
+      owner_token_hash, owner_password_hash, status, created_at
     ) VALUES (
-      @id, @node_key, @file, @mime, @bytes, @width, @height, @caption, @author, @ip_hash, @status, @created_at
+      @id, @node_key, @file, @mime, @bytes, @width, @height, @caption, @author, @ip_hash,
+      @owner_token_hash, @owner_password_hash, @status, @created_at
     )
   `);
   const selectById = db.prepare("SELECT * FROM photos WHERE id = ?");
@@ -218,6 +254,7 @@ export function createPhotoStore(rootDir, {
   const countPending = db.prepare("SELECT COUNT(*) AS total FROM photos WHERE status = 'pending'");
   const updateStatus = db.prepare("UPDATE photos SET status = ?, reviewed_at = ? WHERE id = ?");
   const deleteRow = db.prepare("DELETE FROM photos WHERE id = ?");
+  const updatePhotoMetadata = db.prepare("UPDATE photos SET caption = ?, author = ? WHERE id = ?");
   const upsertCover = db.prepare(`
     INSERT INTO photo_covers (node_key, photo_id, updated_at)
     VALUES (?, ?, ?)
@@ -282,6 +319,10 @@ export function createPhotoStore(rootDir, {
       if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
         throw new PhotoError("invalid_image", "Fotka chybí.");
       }
+      if (entry?.ownerPassword && (typeof entry.ownerPassword !== "string"
+        || entry.ownerPassword.length < MIN_OWNER_PASSWORD || entry.ownerPassword.length > MAX_OWNER_PASSWORD)) {
+        throw new PhotoError("invalid_owner_password", "Heslo pro správu fotek musí mít 8 až 128 znaků.");
+      }
       if (buffer.length > maxBytes) throw new PhotoError("too_large", "Fotka je příliš velká.");
       const image = detectImage(buffer);
       if (!image) throw new PhotoError("invalid_image", "Nepodporovaný formát fotky.");
@@ -315,6 +356,8 @@ export function createPhotoStore(rootDir, {
         height: image.height,
         id,
         ip_hash: String(entry.ipHash || "").slice(0, 32),
+        owner_token_hash: entry.ownerToken ? ownerTokenHash(entry.ownerToken) : null,
+        owner_password_hash: entry.ownerPassword ? hashOwnerPassword(entry.ownerPassword) : null,
         mime: image.mime,
         node_key: nodeKey,
         status,
@@ -345,6 +388,23 @@ export function createPhotoStore(rootDir, {
     },
     filePath: (id) => absolutePath(selectById.get(String(id || ""))),
     get,
+    authorizeOwner(id, { token = "", password = "" } = {}) {
+      const row = selectById.get(String(id || ""));
+      if (!row) return false;
+      if (token && row.owner_token_hash) {
+        const expected = Buffer.from(row.owner_token_hash, "hex");
+        const actual = Buffer.from(ownerTokenHash(token), "hex");
+        if (expected.length === actual.length && timingSafeEqual(expected, actual)) return true;
+      }
+      return ownerPasswordMatches(password, row.owner_password_hash);
+    },
+    updateOwnerMetadata(id, { author = "", caption = "" } = {}) {
+      const safeId = String(id || "");
+      const row = selectById.get(safeId);
+      if (!row || row.status === "hidden") return null;
+      updatePhotoMetadata.run(String(caption || "").slice(0, 240), String(author || "").slice(0, 60), safeId);
+      return get(safeId);
+    },
     listAdmin(status = "all", limit = 200) {
       const safeLimit = Math.min(Math.max(1, Number(limit) || 200), 500);
       const rows = PHOTO_STATUSES.includes(status)

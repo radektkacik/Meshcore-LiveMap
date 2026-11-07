@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { createReadStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statfsSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { connect as connectTls } from "node:tls";
@@ -673,6 +673,10 @@ const checkPhotoReport = createRateLimiter({
     cooldown: "Mezi žádostmi je krátká pauza, zkuste to prosím za chvíli.",
     limit: "Příliš mnoho žádostí za hodinu, zkuste to později.",
   },
+});
+const checkPhotoManage = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
 });
 
 const nodeInfoRateLimit = Math.max(1, Number(process.env.NODE_INFO_RATE_LIMIT || 10));
@@ -2421,6 +2425,11 @@ async function handleRequest(request, response) {
       sendJson(response, 400, { error: "Je potřeba potvrdit právo fotku zveřejnit." });
       return;
     }
+    const ownerPassword = decodeHeaderValue(request.headers["x-photo-manage-password"] || "");
+    if (ownerPassword && (ownerPassword.length < 8 || ownerPassword.length > 128)) {
+      sendJson(response, 400, { error: "Heslo pro správu fotek musí mít 8 až 128 znaků." });
+      return;
+    }
     if (!photoToken) {
       sendJson(response, 503, { error: "Nahrávání fotek není nakonfigurované." });
       return;
@@ -2454,11 +2463,14 @@ async function handleRequest(request, response) {
       return;
     }
     try {
+      const manageToken = randomBytes(32).toString("base64url");
       const photo = photoStore.create({
         author: cleanPhotoText(decodeHeaderValue(request.headers["x-photo-author"]), 60),
         buffer,
         caption: cleanPhotoText(decodeHeaderValue(request.headers["x-photo-caption"]), 240),
         ipHash: hashIp(ip),
+        ownerPassword,
+        ownerToken: manageToken,
         nodeKey: key,
         status: photoAutoApprove ? "approved" : "pending",
       });
@@ -2468,7 +2480,7 @@ async function handleRequest(request, response) {
         String(request.headers["x-photo-batch-id"] || "").slice(0, 64),
         batch ? batchSize : 1,
       );
-      sendJson(response, 202, { id: photo.id, ok: true, status: photo.status });
+      sendJson(response, 202, { id: photo.id, manageToken, ok: true, status: photo.status });
     } catch (error) {
       if (error instanceof PhotoError) {
         const status = error.code === "too_large" || error.code === "too_large_dimensions" ? 413
@@ -2580,6 +2592,68 @@ async function handleRequest(request, response) {
       Location: `view?token=${encodeURIComponent(photoToken)}&status=${encodeURIComponent(status)}`,
     });
     response.end();
+    return;
+  }
+
+  const photoManageMatch = /^\/api\/photos\/([0-9a-f-]{36})\/manage$/.exec(url.pathname);
+  if (photoManageMatch) {
+    if (request.method !== "POST") {
+      methodNotAllowed(response, "POST");
+      return;
+    }
+    const id = photoManageMatch[1].toLowerCase();
+    const ip = clientIp(request);
+    const rate = checkPhotoManage(ip);
+    if (!rate.ok) {
+      sendJson(response, 429, { error: "Příliš mnoho pokusů o správu fotek. Zkuste to později." }, { "Retry-After": String(rate.retryAfter) });
+      return;
+    }
+    let payload;
+    try {
+      payload = JSON.parse(await readBody(request, 8192));
+    } catch {
+      sendJson(response, 400, { error: "Neplatný požadavek." });
+      return;
+    }
+    const photo = photoStore.get(id);
+    if (!photo) {
+      sendJson(response, 404, { error: "Fotka nebyla nalezena." });
+      return;
+    }
+    const admin = adminSessionValid(request);
+    const authHeader = String(request.headers.authorization || "");
+    const token = /^Bearer\s+([A-Za-z0-9_-]{32,})$/i.exec(authHeader)?.[1] || "";
+    const password = typeof payload?.password === "string" ? payload.password : "";
+    if (!admin && !photoStore.authorizeOwner(id, { token, password })) {
+      sendJson(response, 403, { error: "Nesprávný přístupový token nebo heslo." });
+      return;
+    }
+    const action = String(payload?.action || "");
+    if (action === "edit") {
+      if (photo.status === "hidden") {
+        sendJson(response, 409, { error: "Skrytou fotku může upravit pouze správce." });
+        return;
+      }
+      const updated = photoStore.updateOwnerMetadata(id, {
+        author: cleanPhotoText(payload?.author, 60),
+        caption: cleanPhotoText(payload?.caption, 240),
+      });
+      if (!updated) {
+        sendJson(response, 409, { error: "Fotku se nepodařilo upravit." });
+        return;
+      }
+      sendJson(response, 200, {
+        ok: true,
+        photo: { author: updated.author, caption: updated.caption, id: updated.id, status: updated.status },
+      });
+      return;
+    }
+    if (action === "delete") {
+      photoStore.remove(id);
+      sendJson(response, 200, { deleted: true, ok: true });
+      return;
+    }
+    sendJson(response, 400, { error: "Neznámá akce." });
     return;
   }
 
