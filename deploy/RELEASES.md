@@ -465,6 +465,7 @@
 | 2026-11-06 19:34 | `20261106T193409Z.tar.gz` | `20261106-1934-24fc93e` | Prod: chemie baterie a úrovně plná/ok/nízká/kritická, filtr a legenda Plná | `cz-health-store.mjs`, `src/main.js`, `src/style.css`, `src/i18n.js`, `index.html`, `test/cz-health.test.mjs` |
 | 2026-11-07 08:52 | `20261107T085240Z.tar.gz` | `20261107-0852-7f01719` | Prod: výchozí limit fotek na nod zvýšen z 8 na 12 | `photos.mjs`, `server.mjs`, `.env.example`, `README.md` |
 | 2026-11-07 08:53 | `20261107T085341Z.tar.gz` (stage APP_DIR) | `20261107-0853-7f01719` | Beta: stejná změna limitu fotek na 12 | `photos.mjs`, `server.mjs`, `.env.example`, `README.md` |
+| 2026-11-07 12:00 | `20261107T120052Z.tar.gz` (stage APP_DIR) | `20261107-1200-4c2fb77` | Beta: uživatel může upravit autora/popisek nebo smazat vlastní upload pomocí tokenu uloženého v prohlížeči, případně volitelného hesla | `photos.mjs`, `server.mjs`, `src/main.js`, `src/elements.js`, `src/app-state.js`, `index.html`, `src/i18n.js`, `src/style.css`, `test/*` |
 | 2026-11-06 19:20 | `20261106T192046Z.tar.gz` | `20261106-1920-e6ee871` | Prod: CzHealth v3, regiony, kompaktní faceplate, SUMMARY karta a neutrální ikona baterie | `cz-health.mjs`, `cz-health-store.mjs`, `src/main.js`, `src/style.css`, `src/i18n.js`, `index.html`, `deploy/*`, `test/cz-health.test.mjs` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
@@ -537,4 +538,3 @@ osobní jméno autora. Všech 51 commitů a 5 anotovaných tagů bylo znovu vytv
 s identitou `MeshCore.cz <noreply@meshcore.cz>`; dependabot commity zůstaly beze změny.
 Změnily se všechny SHA, takže build stampy v tabulce výše odkazují na původní,
 už neexistující commity. Tagy odpovídají novým commitům.
-
