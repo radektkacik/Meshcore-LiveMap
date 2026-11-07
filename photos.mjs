@@ -115,7 +115,7 @@ function mapRow(row) {
 export function createPhotoStore(rootDir, {
   maxBytes = 5 * 1024 * 1024,
   maxDimension = 2400,
-  maxPerNode = 8,
+  maxPerNode = 12,
   maxReports = 10_000,
   maxRows = 10_000,
   maxTotalBytes = 2 * 1024 * 1024 * 1024,

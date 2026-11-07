@@ -80,7 +80,7 @@ const photoAutoApprove = process.env.PHOTO_AUTO_APPROVE === "1";
 const photoStore = createPhotoStore(photoDir, {
   maxBytes: photoMaxBytes,
   maxDimension: Math.max(100, Number(process.env.PHOTO_MAX_DIMENSION || 2400)),
-  maxPerNode: Math.max(1, Number(process.env.PHOTO_MAX_PER_NODE || 8)),
+  maxPerNode: Math.max(1, Number(process.env.PHOTO_MAX_PER_NODE || 12)),
   maxRows: Math.max(10, Number(process.env.PHOTO_MAX_ROWS || 10_000)),
   maxTotalBytes: Math.max(1024 * 1024, Number(process.env.PHOTO_MAX_TOTAL_BYTES || 2 * 1024 * 1024 * 1024)),
 });
