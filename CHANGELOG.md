@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-07 — Více fotek na nod
+- Prostředí: produkce i beta
+- Build: 20261107-0853-7f01719
+- Výchozí limit fotek na jeden nod zvýšen z 8 na **12**.
+- Počet fotek v dávce zůstává 5; celkové limity uložiště se nemění.
+- Hodnotu lze dál přepsat proměnnou `PHOTO_MAX_PER_NODE`.
+
 ## 2026-11-06 — Úrovně baterie podle chemie
 - Prostředí: produkce i beta
 - Build: 20261106-1934-24fc93e
