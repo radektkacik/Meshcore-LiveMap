@@ -30,6 +30,7 @@ import {
 import { createPerfMonitor } from "./perf.js";
 import { observerAnchor } from "./observer-locations.js";
 import {
+  isNewNode,
   isNodeRoleAllowed,
   nodeLastActivity,
   nodeMatchesQuery,
@@ -474,13 +475,14 @@ function nodeHealthMapTitle(node) {
 
 function nodeMarkerStyle(node, tier) {
   const color = roleColor(node.role);
+  const isNew = isNewNode(node, nowMs());
   const base = {
     radius: node.role === "repeater" || node.role === "companion" ? 7 : 6,
-    color: "#202a33",
+    color: isNew ? "#f59e0b" : "#202a33",
     fillColor: color,
     fillOpacity: 1,
     opacity: 1,
-    weight: 1,
+    weight: isNew ? 3 : 1,
   };
   if (tier === "top") {
     return { ...base, fillColor: TOP_TIER_COLOR };
@@ -1839,7 +1841,7 @@ function nodePopupContent(node, active) {
   ], "", "node-basic-details");
   return `
     <header>
-      <div><small>${escapeHtml(roleLabel(node.role))}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
+      <div><small>${escapeHtml(roleLabel(node.role))}</small>${nodeNewBadge(node)}<h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3></div>
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
     </header>
     ${nodePhotos(node)}
@@ -1951,6 +1953,10 @@ function nodeCompactPublicKey(node) {
       <button class="node-key-copy" type="button">${t("common.copy")}</button>
     </div>
   `;
+}
+
+function nodeNewBadge(node) {
+  return isNewNode(node, nowMs()) ? `<span class="node-new-badge">${t("node.newBadge")}</span>` : "";
 }
 
 function nodeHealthBadge(node) {
@@ -2104,7 +2110,7 @@ function compactNodePopupContent(node, active) {
   return `
     <header>
       <div class="node-header-main">
-        <small>${escapeHtml(roleLabel(node.role))}</small><h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3>
+        <small>${escapeHtml(roleLabel(node.role))}</small>${nodeNewBadge(node)}<h3>${escapeHtml(node.name || t("common.unknownNode"))}</h3>
         ${nodeHealthBadge(node)}
       </div>
       <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
@@ -2140,7 +2146,7 @@ function nodeDetailShell(node, active) {
   return `
     <header class="node-detail-header">
       <div>
-        <small>${escapeHtml(roleLabel(node.role))}</small>
+        <small>${escapeHtml(roleLabel(node.role))}</small>${nodeNewBadge(node)}
         <h2 id="node-detail-title">${escapeHtml(node.name || t("common.unknownNode"))}</h2>
         <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
         ${nodeHealthBadge(node)}
@@ -3596,7 +3602,7 @@ function nodeTooltip(node) {
   const archiveHint = state.routeWindowMs
     ? `<small class="node-tooltip-hint">${escapeHtml(t("archive.nodeHint"))}</small>`
     : "";
-  return `<span class="node-tooltip-body">${photo}<span><strong>${escapeHtml(node.name || t("common.unknownNode"))}</strong><br>${escapeHtml(roleLabel(node.role))}${nodeHealthTooltip(node)}${archiveHint}</span></span>`;
+  return `<span class="node-tooltip-body">${photo}<span><strong>${escapeHtml(node.name || t("common.unknownNode"))}</strong><br>${escapeHtml(roleLabel(node.role))}${nodeNewBadge(node)}${nodeHealthTooltip(node)}${archiveHint}</span></span>`;
 }
 
 function refreshOpenNodePopup(entry) {
@@ -3946,7 +3952,7 @@ function shareUrlForNode(node) {
 }
 
 function nodeStyleKey(node, tier) {
-  return `${node.role || "unknown"}:${tier || "none"}`;
+  return `${node.role || "unknown"}:${tier || "none"}:${isNewNode(node, nowMs()) ? "new" : "old"}`;
 }
 
 function applyNodeStyle(entry, tier) {

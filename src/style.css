@@ -148,6 +148,7 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .legend i.second { background: #e3911c; }
 .legend i.repeater { background: #287fc9; }
 .legend i.companion { background: #0a9565; }
+.legend i.new { box-sizing: border-box; border: 2px solid #f59e0b; background: transparent; }
 .legend i.line { width: 13px; height: 2px; border-radius: 2px; }
 .legend i.advert { background: #2bbf88; }
 .legend i.direct { background: #246fc4; }
@@ -332,6 +333,8 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-popup-card header > span.inactive { background: #899990; }
 .node-header-main { flex: 1 1 auto; min-width: 0; }
 .node-header-main .node-health-badge { margin-top: 7px; }
+.node-new-badge { display: inline-block; margin-left: 5px; padding: 1px 4px; border-radius: 4px; color: #8a4b00; background: #fef3c7; font: 700 8px "DM Mono", monospace; letter-spacing: 0.04em; vertical-align: 1px; }
+html[data-theme="dark"] .node-new-badge { color: #fbbf24; background: rgba(245, 158, 11, 0.16); }
 .node-health-badge { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; border-radius: 4px; color: #3f584e; background: transparent; font: 500 12px "DM Mono", monospace; line-height: 18px; text-align: left; white-space: nowrap; cursor: pointer; appearance: none; }
 .node-health-badge:hover { opacity: 0.78; }
 .node-health-badge:focus-visible { outline: 2px solid rgba(7, 142, 98, 0.45); outline-offset: 2px; }

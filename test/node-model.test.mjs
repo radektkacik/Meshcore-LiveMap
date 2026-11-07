@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   activeUsefulnessScore,
+  isNewNode,
   isNodeActive,
   isNodeRoleAllowed,
   nodeLastActivity,
@@ -25,6 +26,15 @@ test("node activity uses the newest valid activity timestamp", () => {
   assert.equal(nodeLastActivity(node), now - 30 * 60 * 1000);
   assert.equal(isNodeActive(node, now, hour), true);
   assert.equal(isNodeActive({ last_seen: new Date(now - hour).toISOString() }, now, hour), false);
+});
+
+test("new nodes are detected for seven days from first_seen", () => {
+  const day = 24 * hour;
+  assert.equal(isNewNode({ first_seen: new Date(now - day).toISOString() }, now), true);
+  assert.equal(isNewNode({ first_seen: new Date(now - 7 * day).toISOString() }, now), true);
+  assert.equal(isNewNode({ first_seen: new Date(now - 8 * day).toISOString() }, now), false);
+  assert.equal(isNewNode({ first_seen: new Date(now + day).toISOString() }, now), false);
+  assert.equal(isNewNode({}, now), false);
 });
 
 test("ranking assigns top 5 % and top 15 % only to active nodes with valid scores", () => {
