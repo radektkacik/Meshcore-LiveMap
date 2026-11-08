@@ -5,9 +5,11 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-08 — Fotogalerie všech fotek (beta)
 - Prostředí: beta
-- Build: 20261108-1659-a20d200
+- Build: 20261108-1707-5ff10bd
 - Vedle filtru **Jen nody s fotkou** je tlačítko **Galerie**.
-- Galerie zobrazí všechny schválené fotky všech nodů, nejnovější první.
+- Galerie zobrazí všechny schválené fotky všech nodů.
+- Fotky jsou seskupené a seřazené podle názvu nodu; v každém nodu jsou nejnovější první.
+- Fotky nahrané za posledních **24 hodin** jsou nahoře v sekci **Nově nahrané** a mají badge **nový**.
 - U každé fotky je název nodu, popis/author a datum; kliknutím se otevře lightbox.
 - V lightboxu lze listovat všemi fotkami galerie a přeskakovat mezi nody.
 - Tlačítko **Přejít na nod** zavře galerii, přiblíží mapu na daný nod a otevře jeho popup.
