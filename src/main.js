@@ -34,6 +34,7 @@ import { createPhotoLightboxController } from "./photo-lightbox-controller.js";
 import { createPhotoManageController } from "./photo-manage-controller.js";
 import { createPhotoTokenStore } from "./photo-token-store.js";
 import { createPhotoUploadController } from "./photo-upload-controller.js";
+import { createSearchController } from "./search-controller.js";
 import {
   isNewNode,
   isNodeRoleAllowed,
@@ -6485,8 +6486,6 @@ window.addEventListener("resize", () => {
 elements.activityResize.setAttribute("aria-label", t("activity.resize"));
 elements.activityResize.title = t("activity.resizeHint");
 
-const nodeSearch = document.querySelector("#node-search");
-const searchResults = document.querySelector("#search-results");
 
 L.DomEvent.disableClickPropagation(hud);
 L.DomEvent.disableScrollPropagation(hud);
@@ -6681,67 +6680,9 @@ for (const button of elements.statsCounts.querySelectorAll("button")) {
   });
 }
 
-const SEARCH_LIMIT_PER_TYPE = 4;
-let searchActiveIndex = -1;
-let searchRemotePrefix = "";
-let searchRemoteResults = [];
-let searchRemoteRequestId = 0;
-let searchRemoteTimer = null;
-
 function shortNodePrefix(node) {
   const size = Math.max(Number(node.multi_byte_max_hash_size) || 0, Number(node.hash_size) || 0) || 2;
   return String(node.public_key || "").slice(0, size * 2).toUpperCase();
-}
-
-function searchPacketCandidates() {
-  const byHash = new Map();
-  const add = (route) => {
-    const hash = String(route.packetHash || "").toUpperCase();
-    if (!hash) return;
-    const previous = byHash.get(hash);
-    if (!previous || (route.timestamp || 0) > (previous.timestamp || 0)) byHash.set(hash, route);
-  };
-  for (const route of routeStore.history) add(route);
-  for (const route of routeStore.liveByVersion.values()) add(route);
-  return [...byHash.values()];
-}
-
-function searchResultTitle(kind, item) {
-  if (kind === "node") return item.name || t("common.unknownNode");
-  if (kind === "observer") return item.name || t("packet.unknownObserver");
-  if (kind === "packet") return `#${String(item.hash || "").toUpperCase()}`;
-  const text = String(item.text || "");
-  return `${item.channel} · ${text.length > 54 ? `${text.slice(0, 54)}…` : text}`;
-}
-
-function searchResultMeta(kind, item) {
-  if (kind === "node") {
-    return [
-      roleLabel(item.role),
-      shortNodePrefix(item),
-      validCoords(item.lat, item.lon) ? null : t("node.noLocation"),
-    ].filter(Boolean).join(" · ");
-  }
-  if (kind === "observer") return [item.iata, t(`network.${observerHealth(item)}`)].filter(Boolean).join(" · ");
-  if (kind === "packet") return [item.typeLabel, searchFormatTime(item.timestamp)].filter(Boolean).join(" · ");
-  return [item.sender, searchFormatTime(item.timestamp)].filter(Boolean).join(" · ");
-}
-
-function searchFormatTime(value) {
-  const timestamp = Number(value);
-  return Number.isFinite(timestamp) && timestamp > 0 ? formatDateTimeShort(timestamp) : "";
-}
-
-function searchResultButtons() {
-  return [...searchResults.querySelectorAll("button")];
-}
-
-function highlightSearchResult(index) {
-  const buttons = searchResultButtons();
-  if (!buttons.length) return;
-  searchActiveIndex = (index + buttons.length) % buttons.length;
-  buttons.forEach((button, position) => button.classList.toggle("active", position === searchActiveIndex));
-  buttons[searchActiveIndex].scrollIntoView({ block: "nearest" });
 }
 
 function revealSearchNode(node) {
@@ -6778,150 +6719,31 @@ async function revealSearchPacket(hash) {
   await openPacketByHash(hash, { showOnMap: true });
 }
 
-function selectSearchResult(kind, item) {
-  searchResults.hidden = true;
-  nodeSearch.setAttribute("aria-expanded", "false");
-  searchActiveIndex = -1;
-  if (kind === "node") nodeSearch.value = item.name || "";
-  nodeSearch.blur();
-  if (kind === "node") revealSearchNode(item);
-  else if (kind === "observer") void revealSearchObserver(item);
-  else if (kind === "packet") void revealSearchPacket(item.hash);
-  else if (kind === "channel") void revealSearchPacket(item.hash);
-}
-
-function renderSearchResults() {
-  searchActiveIndex = -1;
-  const parsed = parseNodeQuery(nodeSearch.value);
-  const packets = searchPacketCandidates();
-  if (searchRemotePrefix && parsed.hexQuery === searchRemotePrefix) {
-    packets.push(...searchRemoteResults);
-  }
-  const result = searchEntities({
-    channels: feedState.channelMessages,
-    limit: SEARCH_LIMIT_PER_TYPE,
-    nodes: [...state.nodeByKey.values()],
-    observers: state.observers,
-    packets,
-    query: nodeSearch.value,
-  });
-  const groups = [
-    ["node", t("search.nodes"), result.nodes],
-    ["observer", t("search.observers"), result.observers],
-    ["packet", t("search.packets"), result.packets],
-    ["channel", t("search.channels"), result.channels],
-  ].filter(([, , items]) => items.length);
-
-  searchResults.replaceChildren();
-  nodeSearch.setAttribute("aria-expanded", String(groups.length > 0));
-  if (!groups.length) {
-    searchResults.hidden = true;
-    return;
-  }
-
-  for (const [kind, label, items] of groups) {
-    const heading = document.createElement("li");
-    heading.className = "search-group-title";
-    heading.textContent = label;
-    searchResults.appendChild(heading);
-    for (const item of items) {
-      const row = document.createElement("li");
-      const button = document.createElement("button");
-      button.type = "button";
-      button.innerHTML = `<strong>${escapeHtml(searchResultTitle(kind, item))}</strong><small>${escapeHtml(searchResultMeta(kind, item))}</small>`;
-      button.addEventListener("click", () => selectSearchResult(kind, item));
-      row.appendChild(button);
-      searchResults.appendChild(row);
+const searchController = createSearchController({
+  elements,
+  ensureData: (refresh) => {
+    if (!state.observersLoadedAt && !state.observersLoading) {
+      void loadObservers().then(refresh);
     }
-  }
-  searchResults.hidden = false;
-}
-
-function refreshSearchIfActive() {
-  if (nodeSearch.value.trim().length >= 2) renderSearchResults();
-}
-
-function scheduleRemotePacketSearch() {
-  if (searchRemoteTimer) clearTimeout(searchRemoteTimer);
-  const { hexQuery } = parseNodeQuery(nodeSearch.value);
-  if (!hexQuery || hexQuery.length < 2) {
-    searchRemotePrefix = "";
-    searchRemoteResults = [];
-    return;
-  }
-  searchRemoteTimer = setTimeout(() => {
-    void loadRemotePacketSearch(hexQuery);
-  }, 180);
-}
-
-async function loadRemotePacketSearch(prefix) {
-  const requestId = ++searchRemoteRequestId;
-  try {
-    const data = await getJson(`/api/search?hash=${encodeURIComponent(prefix)}`);
-    if (requestId !== searchRemoteRequestId) return;
-    searchRemotePrefix = prefix;
-    searchRemoteResults = (data.hashes || []).map((row) => ({
-      hash: String(row.hash || "").toUpperCase(),
-      timestamp: Number(row.observed_at) || 0,
-      typeLabel: TYPE_LABELS[Number(row.payload_type)] || "?",
-    }));
-    if (parseNodeQuery(nodeSearch.value).hexQuery === prefix) renderSearchResults();
-  } catch (error) {
-    console.error("Hledání paketů se nepodařilo", error);
-  }
-}
-
-function ensureSearchData() {
-  if (!state.observersLoadedAt && !state.observersLoading) {
-    void loadObservers().then(refreshSearchIfActive);
-  }
-  if (nodeSearch.value.trim().length >= 2 && !feedState.channelsLoadedAt && !feedState.channelsLoading
-    && Date.now() - feedState.channelsFailedAt > 60_000) {
-    void fetchChannelMessages().then((messages) => {
-      if (messages) refreshSearchIfActive();
-    });
-  }
-}
-
-nodeSearch.addEventListener("input", () => {
-  ensureSearchData();
-  scheduleRemotePacketSearch();
-  renderSearchResults();
+    if (elements.nodeSearch.value.trim().length >= 2 && !feedState.channelsLoadedAt && !feedState.channelsLoading
+      && Date.now() - feedState.channelsFailedAt > 60_000) {
+      void fetchChannelMessages().then((messages) => {
+        if (messages) refresh();
+      });
+    }
+  },
+  feedState,
+  getJson,
+  observerHealth,
+  onRevealNode: revealSearchNode,
+  onRevealObserver: revealSearchObserver,
+  onRevealPacket: revealSearchPacket,
+  routeStore,
+  shortNodePrefix,
+  state,
+  typeLabels: TYPE_LABELS,
 });
-
-nodeSearch.addEventListener("focus", () => {
-  ensureSearchData();
-  scheduleRemotePacketSearch();
-  if (nodeSearch.value.trim()) renderSearchResults();
-});
-
-nodeSearch.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") {
-    searchResults.hidden = true;
-    nodeSearch.setAttribute("aria-expanded", "false");
-    nodeSearch.blur();
-    return;
-  }
-  const buttons = searchResultButtons();
-  if (!buttons.length) return;
-  if (event.key === "ArrowDown") {
-    event.preventDefault();
-    highlightSearchResult(searchActiveIndex + 1);
-  } else if (event.key === "ArrowUp") {
-    event.preventDefault();
-    highlightSearchResult(searchActiveIndex - 1);
-  } else if (event.key === "Enter") {
-    event.preventDefault();
-    buttons[searchActiveIndex >= 0 ? searchActiveIndex : 0].click();
-  }
-});
-
-document.addEventListener("click", (event) => {
-  if (!event.target.closest(".node-search")) {
-    searchResults.hidden = true;
-    nodeSearch.setAttribute("aria-expanded", "false");
-  }
-});
+searchController.bind();
 
 document.addEventListener("click", (event) => {
   const badge = event.target instanceof Element ? event.target.closest(".node-health-badge") : null;

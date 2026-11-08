@@ -217,6 +217,8 @@ export const elements = {
   healthStatusSelect: document.querySelector("#health-status-select"),
   inactiveOnlyToggle: document.querySelector("#inactive-only-toggle"),
   nodeLabelsToggle: document.querySelector("#node-labels-toggle"),
+  nodeSearch: document.querySelector("#node-search"),
+  searchResults: document.querySelector("#search-results"),
   photosOnlyToggle: document.querySelector("#photos-only-toggle"),
   observersToggle: document.querySelector("#observers-toggle"),
   otherTypesToggle: document.querySelector("#other-types-toggle"),
