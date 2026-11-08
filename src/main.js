@@ -6845,6 +6845,7 @@ async function start() {
   void loadRouteHistory();
   if (!nodesLoaded) setConnection(false, t("connection.nodesFailed"));
   if (initialLosLink) initSharedLos(initialLosLink);
+  if (INITIAL_PARAMS.get("gallery") === "1") photoGallery.open();
   if (INITIAL_PACKET_HASH) void openPacketByHash(INITIAL_PACKET_HASH);
 }
 
