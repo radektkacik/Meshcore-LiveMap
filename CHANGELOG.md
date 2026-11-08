@@ -5,14 +5,16 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-08 — Modularizace serveru
 - Prostředí: produkce i beta
-- Build: 20261108-2000-c896fff
-- `server.mjs` zmenšen z 3 348 na 1 729 řádků.
+- Build: 20261108-2017-fae08cc
+- `server.mjs` zmenšen z 3 348 na 1 474 řádků.
 - HTTP routing je v `http-server.mjs`.
 - Přihlašování a admin session jsou v `admin-auth.mjs`.
 - MQTT příjem, reconnect a CzHealth ingest jsou v `mqtt-ingest.mjs`.
+- Periodické collectory jsou v `collectors.mjs`.
+- Výšky a terénní dlaždice jsou v `elevation-terrain.mjs`.
 - Provozní monitoring je v `monitor.mjs`.
 - Deploy skripty a release kontrola byly rozšířené o nové moduly.
-- Ověřeno: health, MQTT, veřejné API, admin login, statistiky, hledání, fotogalerie.
+- Ověřeno: health, MQTT, veřejné API, admin login, statistiky, hledání, fotogalerie, terénní dlaždice.
 
 ## 2026-11-08 — Fotogalerie všech fotek
 - Prostředí: produkce i beta
