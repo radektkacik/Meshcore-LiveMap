@@ -198,9 +198,8 @@ if (IS_BETA) {
   elements.betaNoticeLink.href = getLocale() === "en"
     ? "https://mapa.meshcore.cz/?lang=en"
     : "https://mapa.meshcore.cz/";
-} else {
-  elements.exportToggle.hidden = true;
 }
+elements.exportToggle.hidden = true;
 
 const nextLocale = getLocale() === "cs" ? "en" : "cs";
 const langButton = document.createElement("button");
@@ -244,8 +243,6 @@ function initialRouteRetentionMs() {
 
 const initialRetentionMs = initialRouteRetentionMs();
 elements.routeRetention.value = String(initialRetentionMs);
-if (elements.shareView) elements.shareView.hidden = !IS_BETA;
-for (const item of document.querySelectorAll(".beta-legend")) item.hidden = !IS_BETA;
 
 const state = createState({
   elements,
@@ -972,10 +969,6 @@ function renderObservers() {
         })
         .on("click", (event) => {
           L.DomEvent.stopPropagation(event);
-          if (IS_BETA && isMobileSheet()) {
-            showMobileSheet(observerClusterPopupHtml(observers, position));
-            return;
-          }
           clusterMarker.openPopup();
         })
         .on("popupopen", (event) => {
