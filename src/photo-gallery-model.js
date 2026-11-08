@@ -1,4 +1,4 @@
-export const NEW_PHOTO_MS = 24 * 60 * 60 * 1000;
+export const NEW_PHOTO_MS = 3 * 24 * 60 * 60 * 1000;
 
 function createdAtValue(photo) {
   const value = Number(photo?.createdAt);

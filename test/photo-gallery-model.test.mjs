@@ -14,7 +14,8 @@ function photo(id, nodeName, ageMs, nodeKey) {
   };
 }
 
-test("photo is new only within the upload window", () => {
+test("photo is new only within the three-day upload window", () => {
+  assert.equal(NEW_PHOTO_MS, 3 * 24 * hour);
   assert.equal(isNewPhoto(photo("a", "A", hour), now), true);
   assert.equal(isNewPhoto(photo("b", "B", NEW_PHOTO_MS), now), true);
   assert.equal(isNewPhoto(photo("c", "C", NEW_PHOTO_MS + hour), now), false);

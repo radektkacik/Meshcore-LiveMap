@@ -2689,6 +2689,7 @@ const photoGallery = createPhotoGalleryController({
   getJson,
   getLocale,
   nowMs,
+  onOpenNode: (photo) => revealPhotoNode(photo, null),
   onOpenPhoto: (photo, photos, index) => openPhotoLightbox(photo, null, photos, index),
   state,
   t,

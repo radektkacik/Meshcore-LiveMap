@@ -9,7 +9,8 @@ export function createPhotoGalleryController({
   getJson,
   getLocale,
   nowMs = () => Date.now(),
-  onOpenPhoto,
+  onOpenNode = () => {},
+  onOpenPhoto = () => {},
   state,
   t,
   tCount,
@@ -39,30 +40,39 @@ export function createPhotoGalleryController({
   }
 
   function createCard(photo, index, isNew) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "photo-gallery-item";
-    button.dataset.index = String(index);
+    const item = document.createElement("article");
+    item.className = "photo-gallery-item";
+    const photoButton = document.createElement("button");
+    photoButton.type = "button";
+    photoButton.className = "photo-gallery-photo";
+    photoButton.dataset.index = String(index);
     const nodeName = photo.nodeName || t("common.unknownNode");
-    button.title = [nodeName, photo.caption, photo.author].filter(Boolean).join(" · ");
+    photoButton.title = [nodeName, photo.caption, photo.author].filter(Boolean).join(" · ");
+    photoButton.setAttribute("aria-label", t("photos.openAria"));
     if (isNew) {
       const badge = document.createElement("span");
       badge.className = "photo-gallery-new-badge";
       badge.textContent = t("photos.galleryNewBadge");
       badge.title = t("photos.galleryNewBadgeTitle");
-      button.appendChild(badge);
+      photoButton.appendChild(badge);
     }
     const image = document.createElement("img");
     image.src = appPath(`/api/photos/${encodeURIComponent(photo.id)}`);
     image.alt = t("photos.alt", { name: nodeName });
     image.loading = "lazy";
     image.decoding = "async";
-    button.appendChild(image);
-    const meta = document.createElement("span");
+    photoButton.appendChild(image);
+    item.appendChild(photoButton);
+
+    const meta = document.createElement("div");
     meta.className = "photo-gallery-meta";
-    const name = document.createElement("strong");
-    name.textContent = nodeName;
-    meta.appendChild(name);
+    const nodeButton = document.createElement("button");
+    nodeButton.type = "button";
+    nodeButton.className = "photo-gallery-node-link";
+    nodeButton.dataset.index = String(index);
+    nodeButton.textContent = nodeName;
+    nodeButton.title = t("photos.openNodeTitle");
+    meta.appendChild(nodeButton);
     const detail = photo.caption || photo.author;
     if (detail) {
       const small = document.createElement("small");
@@ -75,8 +85,8 @@ export function createPhotoGalleryController({
       date.textContent = formatDateTimeShort(photo.createdAt);
       meta.appendChild(date);
     }
-    button.appendChild(meta);
-    return button;
+    item.appendChild(meta);
+    return item;
   }
 
   function appendSection(title, groupPhotos, indexById, now) {
@@ -85,7 +95,13 @@ export function createPhotoGalleryController({
     const head = document.createElement("div");
     head.className = "photo-gallery-section-head";
     const heading = document.createElement("h3");
-    heading.textContent = title;
+    const nodeButton = document.createElement("button");
+    nodeButton.type = "button";
+    nodeButton.className = "photo-gallery-section-node";
+    nodeButton.textContent = title;
+    nodeButton.title = t("photos.openNodeTitle");
+    nodeButton.addEventListener("click", () => onOpenNode(groupPhotos[0]));
+    heading.appendChild(nodeButton);
     const count = document.createElement("small");
     count.textContent = tCount("photos.galleryCount", groupPhotos.length);
     head.append(heading, count);
@@ -203,9 +219,15 @@ export function createPhotoGalleryController({
       render();
     });
     elements.photoGalleryGrid.addEventListener("click", (event) => {
-      const button = event.target.closest(".photo-gallery-item");
-      if (!button) return;
-      const index = Number(button.dataset.index);
+      const nodeButton = event.target.closest(".photo-gallery-node-link");
+      if (nodeButton) {
+        const photo = view[Number(nodeButton.dataset.index)];
+        if (photo) onOpenNode(photo);
+        return;
+      }
+      const photoButton = event.target.closest(".photo-gallery-photo");
+      if (!photoButton) return;
+      const index = Number(photoButton.dataset.index);
       const photo = view[index];
       if (photo) onOpenPhoto(photo, view, index);
     });

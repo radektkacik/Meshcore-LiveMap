@@ -443,7 +443,7 @@ const cs = {
   "photos.galleryNote": "Všechny schválené fotky nodů. Kliknutím otevřete fotku.",
   "photos.gallerySearch": "Hledat nod, popis nebo autora…",
   "photos.galleryNewBadge": "nový",
-  "photos.galleryNewBadgeTitle": "Nahráno před méně než 24 h",
+  "photos.galleryNewBadgeTitle": "Nahráno před méně než 3 dny",
   "photos.galleryCount": {
     one: "{count} fotka",
     few: "{count} fotky",
@@ -986,7 +986,7 @@ const en = {
   "photos.galleryNote": "All approved node photos. Click a photo to open it.",
   "photos.gallerySearch": "Search node, caption or author…",
   "photos.galleryNewBadge": "new",
-  "photos.galleryNewBadgeTitle": "Uploaded less than 24 hours ago",
+  "photos.galleryNewBadgeTitle": "Uploaded less than 3 days ago",
   "photos.galleryCount": {
     one: "{count} photo",
     other: "{count} photos"
