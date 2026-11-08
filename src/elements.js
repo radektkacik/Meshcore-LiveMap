@@ -129,6 +129,7 @@ export const elements = {
   photoLightboxZoomOut: document.querySelector("#photo-lightbox-zoom-out"),
   photoLightboxZoomReset: document.querySelector("#photo-lightbox-zoom-reset"),
   photoManageOpen: document.querySelector("#photo-manage-open"),
+  photoNodeOpen: document.querySelector("#photo-node-open"),
   photoManagePassword: document.querySelector("#photo-manage-password"),
   photoManagePasswordLabel: document.querySelector("#photo-manage-password-label"),
   photoManagePasswordNote: document.querySelector("#photo-manage-password-note"),

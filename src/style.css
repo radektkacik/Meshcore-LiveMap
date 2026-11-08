@@ -904,6 +904,9 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 .photo-lightbox p { margin: 8px 12px 0; text-align: center; font-size: 12px; }
 #photo-lightbox-node { margin-top: 6px; color: #d7e3e8; font: 11px "DM Mono", monospace; }
 #photo-lightbox-author { margin-top: 2px; color: #9fb0b8; font: 11px "DM Mono", monospace; }
+.photo-node-open { display: block; margin: 8px auto 4px; padding: 5px 12px; border: 1px solid rgba(36, 111, 196, 0.5); border-radius: 6px; color: #cfe6ff; background: rgba(36, 111, 196, 0.2); font: 700 10px "DM Mono", monospace; cursor: pointer; }
+.photo-node-open:hover { border-color: #246fc4; background: rgba(36, 111, 196, 0.34); }
+.photo-node-open[hidden] { display: none; }
 .photo-report-open { display: block; margin: 8px auto 4px; padding: 5px 10px; border: 1px solid rgba(192, 57, 43, 0.35); border-radius: 6px; color: #ffb3a8; background: rgba(192, 57, 43, 0.14); font: 10px "DM Mono", monospace; cursor: pointer; }
 .photo-report-open:hover { border-color: #c0392b; background: rgba(192, 57, 43, 0.24); }
 .photo-manage-open { display: block; margin: 8px auto 4px; padding: 5px 10px; border: 1px solid rgba(7, 142, 98, 0.42); border-radius: 6px; color: #a9f0d0; background: rgba(7, 142, 98, 0.16); font: 10px "DM Mono", monospace; cursor: pointer; }

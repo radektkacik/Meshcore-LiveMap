@@ -3231,6 +3231,18 @@ function photoNodeForLightbox(photo) {
   return state.lightboxNode || {};
 }
 
+function revealPhotoNode(photo, nodeValue) {
+  const key = String(photo?.nodeKey || nodeValue?.public_key || "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(key)) return;
+  const node = state.nodeByKey.get(key.toUpperCase())
+    || nodeValue
+    || { name: photo?.nodeName || t("common.unknownNode"), public_key: key };
+  if (elements.photoLightbox.open) elements.photoLightbox.close();
+  if (elements.photoGalleryDialog.open) elements.photoGalleryDialog.close();
+  if (elements.nodeDetailPage.open) closeNodeDetail();
+  revealSearchNode(node);
+}
+
 function openPhotoLightbox(photo, node, photos = [photo], index = 0) {
   state.lightboxPhotos = Array.isArray(photos) && photos.length ? photos : [photo];
   state.lightboxIndex = Math.max(0, Math.min(state.lightboxPhotos.length - 1, Number(index) || 0));
@@ -3256,6 +3268,10 @@ function showPhotoLightbox() {
   elements.photoLightboxAuthor.textContent = photo.author || "";
   elements.photoLightboxAuthor.hidden = !photo.author;
   elements.photoLightboxClose.setAttribute("aria-label", t("photos.close"));
+  elements.photoNodeOpen.hidden = !/^[0-9a-f]{64}$/.test(String(photo.nodeKey || node.public_key || "").toLowerCase());
+  elements.photoNodeOpen.textContent = t("photos.openNode");
+  elements.photoNodeOpen.title = t("photos.openNodeTitle");
+  elements.photoNodeOpen.setAttribute("aria-label", t("photos.openNodeTitle"));
   elements.photoReportOpen.textContent = t("photos.report");
   elements.photoManageOpen.textContent = t("photos.manage");
   elements.photoLightboxPrev.setAttribute("aria-label", t("photos.previous"));
@@ -8086,6 +8102,7 @@ elements.photoLightbox.addEventListener("close", () => {
   elements.photoLightboxNode.hidden = true;
   elements.photoLightboxCaption.textContent = "";
   elements.photoLightboxAuthor.textContent = "";
+  elements.photoNodeOpen.hidden = true;
   state.photoDrag = null;
   state.photoPointers.clear();
   state.photoPinch = null;
@@ -8115,6 +8132,10 @@ elements.photoGalleryGrid.addEventListener("click", (event) => {
   if (!button) return;
   const photo = state.photoGalleryView[Number(button.dataset.index)];
   if (photo) openPhotoLightbox(photo, null, state.photoGalleryView, Number(button.dataset.index));
+});
+elements.photoNodeOpen.addEventListener("click", () => {
+  const current = state.lightboxPhoto;
+  if (current?.photo) revealPhotoNode(current.photo, current.node);
 });
 elements.photoManageOpen.addEventListener("click", openPhotoManageDialog);
 elements.photoManageClose.addEventListener("click", () => elements.photoManageDialog.close());
