@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-08 — Sdílený odkaz na fotogalerii
+- Prostředí: produkce i beta
+- Build: 20261108-2057-ac924c0
+- Galerii lze otevřít přímo odkazem `?gallery=1`.
+- Produkce: `https://mapa.meshcore.cz/?gallery=1`
+- Beta: `https://mapa.meshcore.cz/beta/?gallery=1`
+
 ## 2026-11-08 — Modularizace serveru
 - Prostředí: produkce i beta
 - Build: 20261108-2017-fae08cc
