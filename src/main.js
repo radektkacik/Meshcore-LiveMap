@@ -2747,6 +2747,18 @@ const photoUpload = createPhotoUploadController({
 });
 photoUpload.bind();
 
+function revealPhotoNode(photo, nodeValue) {
+  const key = String(photo?.nodeKey || nodeValue?.public_key || "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(key)) return;
+  const node = state.nodeByKey.get(key.toUpperCase())
+    || nodeValue
+    || { name: photo?.nodeName || t("common.unknownNode"), public_key: key };
+  photoLightbox.close();
+  if (elements.photoGalleryDialog.open) elements.photoGalleryDialog.close();
+  if (elements.nodeDetailPage.open) closeNodeDetail();
+  revealSearchNode(node);
+}
+
 function analyticsNumber(value, suffix = "") {
   const number = Number(value);
   return Number.isFinite(number) ? `${formatDecimal(number, 1)}${suffix}` : "—";
