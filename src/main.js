@@ -29,6 +29,7 @@ import {
 } from "./export-model.js";
 import { createPerfMonitor } from "./perf.js";
 import { observerAnchor } from "./observer-locations.js";
+import { buildPhotoGallerySections } from "./photo-gallery-model.js";
 import {
   isNewNode,
   isNodeRoleAllowed,
@@ -2699,10 +2700,70 @@ function photoGalleryFiltered() {
     .some((value) => String(value || "").toLowerCase().includes(query)));
 }
 
+function photoGalleryCard(photo, index, { isNew = false } = {}) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "photo-gallery-item";
+  button.dataset.index = String(index);
+  const nodeName = photo.nodeName || t("common.unknownNode");
+  button.title = [nodeName, photo.caption, photo.author].filter(Boolean).join(" · ");
+  if (isNew) {
+    const badge = document.createElement("span");
+    badge.className = "photo-gallery-new-badge";
+    badge.textContent = t("photos.galleryNewBadge");
+    badge.title = t("photos.galleryNewBadgeTitle");
+    button.appendChild(badge);
+  }
+  const image = document.createElement("img");
+  image.src = appPath(`/api/photos/${encodeURIComponent(photo.id)}`);
+  image.alt = t("photos.alt", { name: nodeName });
+  image.loading = "lazy";
+  image.decoding = "async";
+  button.appendChild(image);
+  const meta = document.createElement("span");
+  meta.className = "photo-gallery-meta";
+  const name = document.createElement("strong");
+  name.textContent = nodeName;
+  meta.appendChild(name);
+  const detail = photo.caption || photo.author;
+  if (detail) {
+    const small = document.createElement("small");
+    small.textContent = detail;
+    meta.appendChild(small);
+  }
+  if (photo.createdAt) {
+    const date = document.createElement("small");
+    date.className = "photo-gallery-date";
+    date.textContent = formatDateTimeShort(photo.createdAt);
+    meta.appendChild(date);
+  }
+  button.appendChild(meta);
+  return button;
+}
+
+function appendPhotoGallerySection(title, photos, indexById, { isNew = false } = {}) {
+  if (!photos.length) return;
+  const section = document.createElement("section");
+  section.className = `photo-gallery-section${isNew ? " new" : ""}`;
+  const head = document.createElement("div");
+  head.className = "photo-gallery-section-head";
+  const heading = document.createElement("h3");
+  heading.textContent = title;
+  const count = document.createElement("small");
+  count.textContent = tCount("photos.galleryCount", photos.length);
+  head.append(heading, count);
+  const cards = document.createElement("div");
+  cards.className = "photo-gallery-cards";
+  for (const photo of photos) {
+    cards.appendChild(photoGalleryCard(photo, indexById.get(photo.id) ?? 0, { isNew }));
+  }
+  section.append(head, cards);
+  elements.photoGalleryGrid.appendChild(section);
+}
+
 function renderPhotoGallery() {
   renderPhotoGalleryLabels();
   const photos = photoGalleryFiltered();
-  state.photoGalleryView = photos;
   elements.photoGalleryGrid.replaceChildren();
 
   if (state.photoGalleryLoading && !state.photoGalleryPhotos.length) {
@@ -2729,39 +2790,17 @@ function renderPhotoGallery() {
   const nodeCount = new Set(photos.map((photo) => photo.nodeKey).filter(Boolean)).size;
   elements.photoGallerySummary.textContent = `${tCount("photos.galleryCount", photos.length)} · ${tCount("photos.galleryNodes", nodeCount)}`;
 
-  photos.forEach((photo, index) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "photo-gallery-item";
-    button.dataset.index = String(index);
-    const nodeName = photo.nodeName || t("common.unknownNode");
-    button.title = [nodeName, photo.caption, photo.author].filter(Boolean).join(" · ");
-    const image = document.createElement("img");
-    image.src = appPath(`/api/photos/${encodeURIComponent(photo.id)}`);
-    image.alt = t("photos.alt", { name: nodeName });
-    image.loading = "lazy";
-    image.decoding = "async";
-    button.appendChild(image);
-    const meta = document.createElement("span");
-    meta.className = "photo-gallery-meta";
-    const name = document.createElement("strong");
-    name.textContent = nodeName;
-    meta.appendChild(name);
-    const detail = photo.caption || photo.author;
-    if (detail) {
-      const small = document.createElement("small");
-      small.textContent = detail;
-      meta.appendChild(small);
-    }
-    if (photo.createdAt) {
-      const date = document.createElement("small");
-      date.className = "photo-gallery-date";
-      date.textContent = formatDateTimeShort(photo.createdAt);
-      meta.appendChild(date);
-    }
-    button.appendChild(meta);
-    elements.photoGalleryGrid.appendChild(button);
+  const { groups, recent } = buildPhotoGallerySections(photos, {
+    collator: new Intl.Collator(getLocale(), { numeric: true, sensitivity: "base" }),
+    now: nowMs(),
   });
+  const ordered = [...recent, ...groups.flatMap((group) => group.photos)];
+  state.photoGalleryView = ordered;
+  const indexById = new Map(ordered.map((photo, index) => [photo.id, index]));
+  appendPhotoGallerySection(t("photos.galleryNewSection"), recent, indexById, { isNew: true });
+  for (const group of groups) {
+    appendPhotoGallerySection(group.nodeName || t("common.unknownNode"), group.photos, indexById);
+  }
 }
 
 async function loadPhotoGallery(force = false) {
