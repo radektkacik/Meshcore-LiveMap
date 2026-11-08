@@ -220,6 +220,10 @@ export function createPhotoStore(rootDir, {
     SELECT * FROM photos WHERE node_key = ? AND status = 'approved'
     ORDER BY created_at DESC LIMIT ?
   `);
+  const selectApprovedAll = db.prepare(`
+    SELECT * FROM photos WHERE status = 'approved'
+    ORDER BY created_at DESC, rowid DESC LIMIT ?
+  `);
   const selectApprovedNodeCounts = db.prepare(`
     SELECT p.node_key, COUNT(*) AS total,
       COALESCE(
@@ -416,6 +420,9 @@ export function createPhotoStore(rootDir, {
       const key = String(nodeKey || "").toLowerCase();
       if (!/^[0-9a-f]{64}$/.test(key)) return [];
       return selectApproved.all(key, Math.min(Math.max(1, Number(limit) || 12), 30)).map(mapRow);
+    },
+    listApprovedAll(limit = 1000) {
+      return selectApprovedAll.all(Math.min(Math.max(1, Number(limit) || 1000), 5000)).map(mapRow);
     },
     listApprovedNodeCounts(limit = 5000) {
       return selectApprovedNodeCounts.all(Math.min(Math.max(1, Number(limit) || 5000), 10_000)).map((row) => ({

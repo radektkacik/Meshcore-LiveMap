@@ -162,10 +162,13 @@
               <span><strong>Skrýt trasy</strong></span>
             </label>
 
-            <label class="packet-filter">
-              <input id="photos-only-toggle" type="checkbox" />
-              <span><strong>Jen nody s fotkou</strong></span>
-            </label>
+            <div class="photo-filter-row">
+              <label class="packet-filter">
+                <input id="photos-only-toggle" type="checkbox" />
+                <span><strong>Jen nody s fotkou</strong></span>
+              </label>
+              <button id="photo-gallery-open" class="photo-gallery-trigger" type="button" title="Otevřít galerii všech fotek">Galerie</button>
+            </div>
 
             <label class="packet-filter" title="Telemetrii vysílá pouze repeater s firmwarem mesh-cz v1.18.0.02rc8 nebo novějším. Standardní MeshCore firmware CzHealth data neposílá.">
               <input id="health-only-toggle" type="checkbox" />
@@ -436,6 +439,20 @@
         </form>
       </dialog>
 
+      <dialog id="photo-gallery-dialog" class="photo-dialog photo-gallery-dialog" aria-labelledby="photo-gallery-title">
+        <button id="photo-gallery-close" class="feedback-close" type="button">×</button>
+        <header class="photo-gallery-header">
+          <div>
+            <h2 id="photo-gallery-title">Fotogalerie</h2>
+            <p id="photo-gallery-summary"></p>
+          </div>
+          <input id="photo-gallery-search" class="photo-gallery-search" type="search" autocomplete="off" placeholder="Hledat nod, popis nebo autora…" />
+        </header>
+        <p id="photo-gallery-status" class="feedback-status" role="status"></p>
+        <div id="photo-gallery-grid" class="photo-gallery-grid"></div>
+        <p id="photo-gallery-note" class="photo-note"></p>
+      </dialog>
+
       <dialog id="photo-lightbox" class="photo-lightbox" aria-label="Fotka nodu">
         <button id="photo-lightbox-close" class="qr-dialog-close" type="button">×</button>
         <button id="photo-lightbox-prev" class="photo-lightbox-nav prev" type="button">‹</button>
@@ -443,6 +460,7 @@
         <div id="photo-lightbox-stage" class="photo-lightbox-stage">
           <img id="photo-lightbox-img" alt="" />
         </div>
+        <p id="photo-lightbox-node"></p>
         <p id="photo-lightbox-caption"></p>
         <p id="photo-lightbox-author"></p>
         <div id="photo-lightbox-counter" class="photo-lightbox-counter"></div>

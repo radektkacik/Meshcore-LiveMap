@@ -165,7 +165,9 @@ přihlašovací údaje zůstávají pouze na serveru.
 - `GET /api/photos?key=<public_key>` vrací schválené fotky nodu. `GET
   /api/photos/nodes` vrací počty schválených fotek podle nodů (`nodeKey`,
   `count`, `coverId` zvolené fotky) pro přepínač „Jen nody s fotkou“ v HUD
-  a malý náhled v tooltipu při najetí na nod. Správce může v `/admin/photos`
+  a malý náhled v tooltipu při najetí na nod. `GET /api/photos/all` vrací
+  nejnovější schválené fotky všech nodů včetně `nodeKey` a `nodeName`; používá
+  je fotogalerie otevíraná tlačítkem „Galerie“ vedle filtru. Správce může v `/admin/photos`
   u schválené fotky zvolit „Nastavit jako náhled“; bez volby se použije
   nejnovější schválená fotka. `POST /api/photos`
   přijímá binární JPEG/PNG/WebP (max 5 MB) s hlavičkami `X-Photo-Key`,

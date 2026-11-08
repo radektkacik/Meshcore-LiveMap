@@ -220,6 +220,28 @@ test("photo store lists approved node counts", () => {
   }
 });
 
+test("photo store lists all approved photos across nodes newest first", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
+  const store = createPhotoStore(directory);
+  const first = "1".repeat(64);
+  const second = "2".repeat(64);
+  try {
+    const older = store.create({ buffer: pngBuffer(), caption: "Starší", nodeKey: first });
+    const newer = store.create({ buffer: pngBuffer(), caption: "Novější", nodeKey: second });
+    const hidden = store.create({ buffer: pngBuffer(), caption: "Skrytá", nodeKey: second });
+    store.setStatus(older.id, "approved");
+    store.setStatus(newer.id, "approved");
+    store.setStatus(hidden.id, "hidden");
+    assert.deepEqual(store.listApprovedAll().map((photo) => photo.id), [newer.id, older.id]);
+    store.setStatus(newer.id, "hidden");
+    assert.deepEqual(store.listApprovedAll().map((photo) => photo.id), [older.id]);
+    assert.deepEqual(store.listApprovedAll(1).map((photo) => photo.id), [older.id]);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("pending cover request applies when the photo is approved", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
   const store = createPhotoStore(directory);

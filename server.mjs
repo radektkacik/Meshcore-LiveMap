@@ -2557,6 +2557,30 @@ async function handleRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/photos/all") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      methodNotAllowed(response, "GET, HEAD");
+      return;
+    }
+    const names = photoNodeNames();
+    const photos = photoStore.listApprovedAll(2000).map((photo) => ({
+      author: photo.author,
+      caption: photo.caption,
+      createdAt: photo.createdAt,
+      height: photo.height,
+      id: photo.id,
+      nodeKey: photo.nodeKey,
+      nodeName: names.get(photo.nodeKey) || photo.nodeKey.slice(0, 8),
+      width: photo.width,
+    }));
+    response.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+    });
+    response.end(request.method === "HEAD" ? undefined : JSON.stringify({ photos }));
+    return;
+  }
+
   if (url.pathname === "/api/photos/view") {
     if (!photoToken || url.searchParams.get("token") !== photoToken) {
       response.writeHead(404).end("Not Found");

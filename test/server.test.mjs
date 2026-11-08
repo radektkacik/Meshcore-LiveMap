@@ -423,6 +423,16 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(photoList.photos.length, 1);
     assert.equal(photoList.photos[0].caption, "Upraveno tokenem");
     assert.equal(Object.hasOwn(photoList.photos[0], "manageToken"), false);
+    const allPhotosResponse = await fetch(`http://127.0.0.1:${appPort}/api/photos/all`);
+    assert.equal(allPhotosResponse.status, 200);
+    const allPhotos = await allPhotosResponse.json();
+    assert.equal(allPhotos.photos.length, 1);
+    assert.equal(allPhotos.photos[0].id, uploaded.id);
+    assert.equal(allPhotos.photos[0].nodeKey, photoKey);
+    assert.equal(typeof allPhotos.photos[0].nodeName, "string");
+    assert.ok(allPhotos.photos[0].nodeName.length > 0);
+    assert.equal(Object.hasOwn(allPhotos.photos[0], "file"), false);
+    assert.equal(Object.hasOwn(allPhotos.photos[0], "owner_token_hash"), false);
     const setCover = await fetch(`http://127.0.0.1:${appPort}/admin/photos/moderate`, {
       method: "POST",
       headers: {
