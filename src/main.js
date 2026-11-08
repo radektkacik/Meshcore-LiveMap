@@ -31,6 +31,9 @@ import { createPerfMonitor } from "./perf.js";
 import { observerAnchor } from "./observer-locations.js";
 import { createPhotoGalleryController } from "./photo-gallery-controller.js";
 import { createPhotoLightboxController } from "./photo-lightbox-controller.js";
+import { createPhotoManageController } from "./photo-manage-controller.js";
+import { createPhotoTokenStore } from "./photo-token-store.js";
+import { createPhotoUploadController } from "./photo-upload-controller.js";
 import {
   isNewNode,
   isNodeRoleAllowed,
@@ -1355,7 +1358,7 @@ function setupNodePopup(popup, node) {
   root.querySelector(".node-photo-add")?.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    openPhotoDialog(node);
+    photoUpload.open(node);
   });
   root.querySelector(".node-popup-close")?.addEventListener("click", (event) => {
     event.preventDefault();
@@ -2701,13 +2704,53 @@ photoGallery.bind();
 const photoLightbox = createPhotoLightboxController({
   appPath,
   elements,
-  onManage: (photo, node) => openPhotoManageDialog(photo, node),
+  onManage: (photo, node) => photoManage.open(photo, node),
   onOpenNode: (photo, node) => revealPhotoNode(photo, node),
   postJson,
   resolveNode: (key) => state.nodeByKey.get(key.toUpperCase()) || null,
   t,
 });
 photoLightbox.bind();
+
+const photoTokenStore = createPhotoTokenStore();
+const photoManage = createPhotoManageController({
+  appPath,
+  elements,
+  getCurrentPhoto: () => photoLightbox.current(),
+  onPhotoDeleted: (photo) => {
+    photoGallery.removePhoto(photo.id);
+    photoLightbox.removePhoto(photo.id);
+  },
+  onPhotoUpdated: (photo) => {
+    photoGallery.updatePhoto(photo);
+    photoLightbox.updatePhoto(photo.id, photo);
+  },
+  refreshNodePhotoList,
+  t,
+  tokenStore: photoTokenStore,
+});
+photoManage.bind();
+photoManage.renderUploads();
+
+const photoUpload = createPhotoUploadController({
+  appPath,
+  elements,
+  manage: photoManage,
+  onPublished: (target) => {
+    state.photoCache.delete(target.key);
+    const section = document.querySelector(`.node-photos[data-node-key="${target.key}"]`);
+    if (section) {
+      void loadNodePhotos(section, { name: target.name, public_key: target.key });
+    }
+    void loadPhotoNodes(true).then(() => {
+      if (state.photosOnly) refreshNodeState();
+    }).catch(() => {});
+  },
+  onUploaded: () => photoGallery.invalidate(),
+  t,
+  tCount,
+});
+photoUpload.bind();
 
 function analyticsNumber(value, suffix = "") {
   const number = Number(value);
@@ -2830,79 +2873,6 @@ async function loadNodeAnalytics(root, node) {
   }
 }
 
-function setPhotoStatus(text, isError = false) {
-  elements.photoStatus.textContent = text;
-  elements.photoStatus.classList.toggle("error", Boolean(isError));
-}
-
-function resetPhotoPreview() {
-  for (const url of state.photoPreviewUrls) URL.revokeObjectURL(url);
-  state.photoPreviewUrls = [];
-  elements.photoPreviewWrap.replaceChildren();
-  elements.photoPreviewWrap.hidden = true;
-}
-
-function renderPhotoPreviews(files) {
-  resetPhotoPreview();
-  if (!files.length) return;
-  elements.photoPreviewWrap.hidden = false;
-  const showCoverChoice = files.length > 1;
-  files.forEach((file, index) => {
-    const url = URL.createObjectURL(file);
-    state.photoPreviewUrls.push(url);
-    const item = document.createElement("div");
-    item.className = "photo-preview-item";
-    const image = document.createElement("img");
-    image.alt = t("photos.previewAlt");
-    image.src = url;
-    const caption = document.createElement("input");
-    caption.type = "text";
-    caption.className = "photo-caption-input";
-    caption.maxLength = 240;
-    caption.placeholder = t("photos.captionPlaceholder");
-    caption.setAttribute("aria-label", t("photos.caption"));
-    item.append(image, caption);
-    if (showCoverChoice) {
-      const cover = document.createElement("label");
-      cover.className = "photo-cover-pick";
-      cover.title = t("photos.coverPickTitle");
-      const radio = document.createElement("input");
-      radio.type = "radio";
-      radio.name = "photo-cover";
-      radio.value = String(index);
-      radio.setAttribute("aria-label", t("photos.coverPickTitle"));
-      const text = document.createElement("span");
-      text.textContent = t("photos.coverPick");
-      cover.append(radio, text);
-      item.appendChild(cover);
-    }
-    elements.photoPreviewWrap.appendChild(item);
-  });
-}
-
-function photoNoteText() {
-  return state.photoAutoApprove ? t("photos.noteAuto") : t("photos.note");
-}
-
-async function loadPhotoConfig() {
-  if (state.photoAutoApprove !== null) return;
-  try {
-    const data = await getJson("/api/photos/config");
-    state.photoAutoApprove = data.autoApprove === true;
-  } catch {
-    state.photoAutoApprove = false;
-  }
-  if (elements.photoDialog.open) elements.photoNote.textContent = photoNoteText();
-}
-
-function resetPhotoDialog() {
-  elements.photoForm.reset();
-  setPhotoStatus("");
-  resetPhotoPreview();
-  renderPhotoManageUploads();
-  elements.photoSubmit.disabled = false;
-  state.photoUploading = false;
-}
 
 function setCommentsStatus(text, isError = false) {
   elements.commentsStatus.textContent = text;
@@ -3039,147 +3009,7 @@ function openCommentsDialog(node) {
   void loadComments();
 }
 
-function renderPhotoDialog() {
-  elements.photoTitle.textContent = t("photos.addTitle");
-  elements.photoClose.setAttribute("aria-label", t("photos.cancel"));
-  elements.photoFileLabel.textContent = t("photos.files");
-  elements.photoAuthorLabel.textContent = t("photos.author");
-  elements.photoAuthor.placeholder = t("photos.authorPlaceholder");
-  elements.photoManagePasswordLabel.textContent = t("photos.managePassword");
-  elements.photoManagePasswordNote.textContent = t("photos.managePasswordNote");
-  elements.photoConsentLabel.textContent = t("photos.consent");
-  elements.photoNote.textContent = photoNoteText();
-  elements.photoSubmit.textContent = t("photos.submit");
-  elements.photoCancel.textContent = t("photos.cancel");
-  const target = state.photoTarget;
-  elements.photoNode.textContent = target
-    ? `${target.name || t("common.unknownNode")} · ${target.key.slice(0, 8).toUpperCase()}`
-    : "";
-}
 
-const PHOTO_MANAGE_TOKENS_KEY = "meshcorePhotoManageTokens";
-
-function photoManageTokens() {
-  try {
-    const value = JSON.parse(localStorage.getItem(PHOTO_MANAGE_TOKENS_KEY) || "{}");
-    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  } catch {
-    return {};
-  }
-}
-
-function photoManageToken(photoId) {
-  const value = photoManageTokens()[String(photoId || "")];
-  return typeof value === "string" ? value : (typeof value?.token === "string" ? value.token : "");
-}
-
-function rememberPhotoManageToken(photoId, token, metadata = {}) {
-  if (!photoId || !token) return false;
-  try {
-    const tokens = photoManageTokens();
-    const previous = tokens[String(photoId)];
-    const previousMetadata = previous && typeof previous === "object" ? previous : {};
-    tokens[String(photoId)] = {
-      ...previousMetadata,
-      ...metadata,
-      token: String(token),
-      savedAt: Date.now(),
-    };
-    const ids = Object.keys(tokens);
-    while (ids.length > 500) delete tokens[ids.shift()];
-    localStorage.setItem(PHOTO_MANAGE_TOKENS_KEY, JSON.stringify(tokens));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function forgetPhotoManageToken(photoId) {
-  try {
-    const tokens = photoManageTokens();
-    delete tokens[String(photoId || "")];
-    localStorage.setItem(PHOTO_MANAGE_TOKENS_KEY, JSON.stringify(tokens));
-  } catch {}
-}
-
-state.photoManageUploads = Object.entries(photoManageTokens())
-  .filter(([, value]) => value && typeof value === "object" && value.node?.public_key && value.photo?.id)
-  .map(([, value]) => ({ node: value.node, photo: value.photo }))
-  .sort((a, b) => Number(b.photo.createdAt || 0) - Number(a.photo.createdAt || 0))
-  .slice(0, 50);
-
-function openPhotoDialog(node) {
-  const key = String(node.public_key || "").toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(key)) return;
-  state.photoTarget = { key, name: node.name || t("common.unknownNode") };
-  resetPhotoDialog();
-  renderPhotoDialog();
-  void loadPhotoConfig();
-  if (!elements.photoDialog.open) elements.photoDialog.showModal();
-}
-
-function revealPhotoNode(photo, nodeValue) {
-  const key = String(photo?.nodeKey || nodeValue?.public_key || "").toLowerCase();
-  if (!/^[0-9a-f]{64}$/.test(key)) return;
-  const node = state.nodeByKey.get(key.toUpperCase())
-    || nodeValue
-    || { name: photo?.nodeName || t("common.unknownNode"), public_key: key };
-  photoLightbox.close();
-  if (elements.photoGalleryDialog.open) elements.photoGalleryDialog.close();
-  if (elements.nodeDetailPage.open) closeNodeDetail();
-  revealSearchNode(node);
-}
-
-function setPhotoManageStatus(text, isError = false) {
-  elements.photoManageStatus.textContent = text;
-  elements.photoManageStatus.classList.toggle("error", Boolean(isError));
-}
-
-function renderPhotoManageUploads() {
-  const container = elements.photoManageUploads;
-  if (!container) return;
-  const entries = state.photoManageUploads || [];
-  container.replaceChildren();
-  container.hidden = entries.length === 0;
-  for (const entry of entries) {
-    const button = document.createElement("button");
-    button.type = "button";
-    const label = entry.photo.caption || entry.photo.author || entry.photo.id.slice(0, 8);
-    button.textContent = t("photos.manageUpload", { caption: `${entry.node.name || t("common.unknownNode")} · ${label}` });
-    button.addEventListener("click", () => openPhotoManageDialog(entry.photo, entry.node));
-    container.appendChild(button);
-  }
-}
-
-function openPhotoManageDialog(photoValue = null, nodeValue = null) {
-  const current = photoValue && nodeValue
-    ? { node: nodeValue, photo: photoValue }
-    : photoLightbox.current();
-  if (!current?.photo?.id) return;
-  state.photoManageTarget = { ...current };
-  state.photoManageSaving = false;
-  const photo = current.photo;
-  const token = photoManageToken(photo.id);
-  elements.photoManageForm.reset();
-  elements.photoManageTitle.textContent = t("photos.manageTitle");
-  elements.photoManagePhoto.textContent = [current.node?.name || t("common.unknownNode"), photo.caption]
-    .filter(Boolean).join(" · ");
-  elements.photoManagePasswordAuthLabel.textContent = t("photos.managePasswordAuth");
-  elements.photoManagePasswordWrap.hidden = Boolean(token);
-  elements.photoManageAuthorLabel.textContent = t("photos.manageAuthor");
-  elements.photoManageCaptionLabel.textContent = t("photos.manageCaption");
-  elements.photoManageAuthor.value = photo.author || "";
-  elements.photoManageCaption.value = photo.caption || "";
-  elements.photoManageSave.textContent = t("photos.manageSave");
-  elements.photoManageDelete.textContent = t("photos.manageDelete");
-  elements.photoManageCancel.textContent = t("photos.cancel");
-  elements.photoManageClose.setAttribute("aria-label", t("photos.cancel"));
-  elements.photoManageNote.textContent = t(token ? "photos.manageNoteToken" : "photos.manageNotePassword");
-  setPhotoManageStatus("");
-  elements.photoManageSave.disabled = false;
-  elements.photoManageDelete.disabled = false;
-  if (!elements.photoManageDialog.open) elements.photoManageDialog.showModal();
-}
 
 function refreshNodePhotoList(nodeKey) {
   const key = String(nodeKey || "").toLowerCase();
@@ -3191,172 +3021,6 @@ function refreshNodePhotoList(nodeKey) {
   }
 }
 
-async function managePhoto(action) {
-  const target = state.photoManageTarget;
-  const photo = target?.photo;
-  if (!photo?.id || state.photoManageSaving) return;
-  const token = photoManageToken(photo.id);
-  const password = elements.photoManagePasswordAuth.value;
-  if (!token && !password) {
-    setPhotoManageStatus(t("photos.manageNeedAccess"), true);
-    return;
-  }
-
-  state.photoManageSaving = true;
-  elements.photoManageSave.disabled = true;
-  elements.photoManageDelete.disabled = true;
-  setPhotoManageStatus(t("photos.manageSaving"));
-  try {
-    const headers = { "Content-Type": "application/json" };
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const response = await fetch(appPath(`/api/photos/${encodeURIComponent(photo.id)}/manage`), {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        action,
-        author: elements.photoManageAuthor.value.trim(),
-        caption: elements.photoManageCaption.value.trim(),
-        password: token ? "" : password,
-      }),
-      signal: AbortSignal.timeout(20_000),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      if (response.status === 403 && token) {
-        forgetPhotoManageToken(photo.id);
-        elements.photoManagePasswordWrap.hidden = false;
-        elements.photoManageNote.textContent = t("photos.manageNotePassword");
-      }
-      throw new Error(data.error || t("photos.manageFailed"));
-    }
-
-    if (action === "delete") {
-      forgetPhotoManageToken(photo.id);
-      const wasLightboxPhoto = photoLightbox.current()?.photo?.id === photo.id;
-      state.photoManageUploads = state.photoManageUploads.filter((entry) => entry.photo.id !== photo.id);
-      photoGallery.removePhoto(photo.id);
-      renderPhotoManageUploads();
-      refreshNodePhotoList(photo.nodeKey || target.node?.public_key);
-      if (wasLightboxPhoto) photoLightbox.removePhoto(photo.id);
-      elements.photoManageDialog.close();
-      return;
-    }
-
-    const updated = data.photo || {};
-    state.photoManageTarget.photo = { ...photo, ...updated };
-    photoGallery.updatePhoto(state.photoManageTarget.photo);
-    photoLightbox.updatePhoto(photo.id, updated);
-    const uploaded = state.photoManageUploads.find((entry) => entry.photo.id === photo.id);
-    if (uploaded) {
-      uploaded.photo = { ...uploaded.photo, ...updated };
-      const savedToken = photoManageToken(photo.id);
-      if (savedToken) rememberPhotoManageToken(photo.id, savedToken, uploaded);
-    }
-    renderPhotoManageUploads();
-    state.photoCache.delete(String(photo.nodeKey || target.node?.public_key || "").toLowerCase());
-    refreshNodePhotoList(photo.nodeKey || target.node?.public_key);
-    setPhotoManageStatus(t("photos.manageSaved"));
-  } catch (error) {
-    setPhotoManageStatus(error?.message || t("photos.manageFailed"), true);
-  } finally {
-    state.photoManageSaving = false;
-    elements.photoManageSave.disabled = false;
-    elements.photoManageDelete.disabled = false;
-  }
-}
-
-function isHeicFile(file) {
-  const name = String(file?.name || "").toLowerCase();
-  const type = String(file?.type || "").toLowerCase();
-  return type === "image/heic" || type === "image/heif"
-    || name.endsWith(".heic") || name.endsWith(".heif");
-}
-
-async function decodeHeic(file) {
-  const module = await import("libheif-js/wasm-bundle");
-  const libheif = module.default || module;
-  const decoder = new libheif.HeifDecoder();
-  const images = decoder.decode(new Uint8Array(await file.arrayBuffer()));
-  try {
-    if (!images?.length) throw new Error("heic");
-    const image = images[0];
-    const width = image.get_width();
-    const height = image.get_height();
-    if (!width || !height || width * height > 40_000_000) throw new Error("heic");
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error("heic");
-    const imageData = context.createImageData(width, height);
-    await new Promise((resolve, reject) => {
-      image.display(imageData, (data) => {
-        if (data) resolve();
-        else reject(new Error("heic"));
-      });
-    });
-    context.putImageData(imageData, 0, 0);
-    return canvas;
-  } finally {
-    for (const image of images || []) image.free?.();
-  }
-}
-
-async function loadPhotoBitmap(file) {
-  let source = file;
-  if (isHeicFile(file)) {
-    try {
-      source = await decodeHeic(file);
-    } catch (error) {
-      console.error("HEIC se nepodařilo převést", error);
-      throw new Error("heic");
-    }
-  }
-  if (typeof createImageBitmap === "function") {
-    try {
-      return await createImageBitmap(source);
-    } catch {}
-  }
-  const url = URL.createObjectURL(source);
-  try {
-    const image = new Image();
-    await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("Image decode timed out")), 10_000);
-      image.onload = () => {
-        clearTimeout(timer);
-        resolve();
-      };
-      image.onerror = () => {
-        clearTimeout(timer);
-        reject(new Error("Image decode failed"));
-      };
-      image.src = url;
-    });
-    return image;
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}
-
-async function preparePhotoBlob(file) {
-  const bitmap = await loadPhotoBitmap(file);
-  const max = 2000;
-  const width = Number(bitmap.width) || 0;
-  const height = Number(bitmap.height) || 0;
-  if (!width || !height) throw new Error("Invalid image");
-  const scale = Math.min(1, max / Math.max(width, height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(width * scale));
-  canvas.height = Math.max(1, Math.round(height * scale));
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Canvas unavailable");
-  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  if (typeof bitmap.close === "function") bitmap.close();
-  const type = canvas.toDataURL("image/webp").startsWith("data:image/webp") ? "image/webp" : "image/jpeg";
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, type, 0.9));
-  if (!blob) throw new Error("Canvas export failed");
-  return blob;
-}
 
 async function getJsonWithResponse(path) {
   const response = await fetch(appPath(path), {
@@ -7299,163 +6963,6 @@ createExportController({
   loadObservers,
 });
 
-elements.photoFile.addEventListener("change", () => {
-  const files = [...(elements.photoFile.files || [])];
-  renderPhotoPreviews(files.slice(0, 5));
-  setPhotoStatus(files.length > 5 ? t("photos.tooMany") : "");
-});
-
-elements.photoForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (state.photoUploading) return;
-  const files = [...(elements.photoFile.files || [])].slice(0, 5);
-  const target = state.photoTarget;
-  if (!files.length || !target) {
-    setPhotoStatus(t("photos.invalid"), true);
-    return;
-  }
-  if (!elements.photoConsent.checked) {
-    setPhotoStatus(t("photos.consentRequired"), true);
-    return;
-  }
-  const managePassword = elements.photoManagePassword.value;
-  if (managePassword && (managePassword.length < 8 || managePassword.length > 128)) {
-    setPhotoStatus(t("photos.managePasswordInvalid"), true);
-    return;
-  }
-  state.photoUploading = true;
-  elements.photoSubmit.disabled = true;
-  let created = 0;
-  let published = 0;
-  let pending = 0;
-  let failed = 0;
-  let tokenStorageFailed = 0;
-  let lastError = "";
-  const batchId = files.length > 1
-    ? (globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`)
-    : "";
-  const coverChoice = elements.photoPreviewWrap.querySelector('input[name="photo-cover"]:checked');
-  const coverIndex = coverChoice ? Number(coverChoice.value) : -1;
-  let coverUploaded = false;
-  let coverPending = false;
-  try {
-    for (let index = 0; index < files.length; index += 1) {
-      setPhotoStatus(t("photos.uploadingFile", { current: index + 1, total: files.length }));
-      let blob;
-      try {
-        blob = await preparePhotoBlob(files[index]);
-      } catch (error) {
-        failed += 1;
-        lastError = error?.message === "heic" ? t("photos.heicFailed") : t("photos.invalid");
-        continue;
-      }
-      if (blob.size > 5 * 1024 * 1024) {
-        failed += 1;
-        lastError = t("photos.tooLarge");
-        continue;
-      }
-      try {
-        const caption = elements.photoPreviewWrap
-          .querySelectorAll(".photo-caption-input")[index]?.value.trim() || "";
-        const headers = {
-          "Content-Type": blob.type,
-          "X-Photo-Author": encodeURIComponent(elements.photoAuthor.value.trim()),
-          "X-Photo-Caption": encodeURIComponent(caption),
-          "X-Photo-Manage-Password": encodeURIComponent(managePassword),
-          "X-Photo-Batch-Index": String(index),
-          "X-Photo-Batch-Size": String(files.length),
-          "X-Photo-Consent": "1",
-          "X-Photo-Key": target.key,
-        };
-        if (batchId) headers["X-Photo-Batch-Id"] = batchId;
-        if (index === coverIndex) headers["X-Photo-Cover"] = "1";
-        const response = await fetch(appPath("/api/photos"), {
-          method: "POST",
-          headers,
-          body: blob,
-          signal: AbortSignal.timeout(60_000),
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          lastError = data.error || t("photos.failed");
-          if (response.status === 429) {
-            failed += files.length - index;
-            break;
-          }
-          failed += 1;
-          continue;
-        }
-        created += 1;
-        if (data.id && data.manageToken) {
-          const managedPhoto = {
-            author: elements.photoAuthor.value.trim(),
-            caption,
-            createdAt: Date.now(),
-            id: data.id,
-            nodeKey: target.key,
-            status: data.status,
-          };
-          const managedNode = { name: target.name, public_key: target.key };
-          if (!rememberPhotoManageToken(data.id, data.manageToken, { node: managedNode, photo: managedPhoto })) {
-            tokenStorageFailed += 1;
-          }
-          state.photoManageUploads.unshift({ node: managedNode, photo: managedPhoto });
-          state.photoManageUploads = state.photoManageUploads.slice(0, 50);
-          renderPhotoManageUploads();
-        }
-        if (data.status === "approved") published += 1;
-        else pending += 1;
-        if (index === coverIndex) {
-          coverUploaded = true;
-          coverPending = data.status !== "approved";
-        }
-      } catch (error) {
-        failed += 1;
-        lastError = error?.message || t("photos.failed");
-      }
-    }
-    if (created > 0) {
-      photoGallery.invalidate();
-      let statusText = t("photos.failed");
-      if (failed > 0) statusText = t("photos.partial", { created, failed, total: files.length });
-      else if (published === created) statusText = tCount("photos.publishedCount", published);
-      else if (pending === created) statusText = tCount("photos.pendingCount", pending);
-      else statusText = t("photos.mixed", { pending, published });
-      if (coverIndex >= 0 && created > 0) {
-        if (!coverUploaded) statusText = `${statusText} ${t("photos.coverNotUploaded")}`;
-        else if (coverPending) statusText = `${statusText} ${t("photos.coverPending")}`;
-      }
-      if (tokenStorageFailed) statusText = `${statusText} ${t("photos.tokenStorageFailed")}`;
-      if (state.photoManageUploads.length) statusText = `${statusText} ${t("photos.manageUploadedHelp")}`;
-      setPhotoStatus(statusText, failed > 0);
-      if (published > 0) {
-        state.photoCache.delete(target.key);
-        const section = document.querySelector(`.node-photos[data-node-key="${target.key}"]`);
-        if (section) {
-          void loadNodePhotos(section, {
-            name: target.name,
-            public_key: target.key,
-          });
-        }
-        void loadPhotoNodes(true).then(() => {
-          if (state.photosOnly) refreshNodeState();
-        }).catch(() => {});
-      }
-      elements.photoForm.reset();
-      resetPhotoPreview();
-      if (failed === 0 && state.photoManageUploads.length === 0) {
-        setTimeout(() => {
-          if (elements.photoDialog.open) elements.photoDialog.close();
-        }, 1_800);
-      }
-    } else {
-      setPhotoStatus(lastError || t("photos.failed"), true);
-    }
-  } finally {
-    state.photoUploading = false;
-    elements.photoSubmit.disabled = false;
-  }
-});
 
 elements.commentsClose.addEventListener("click", () => elements.commentsDialog.close());
 elements.commentsCancel.addEventListener("click", () => elements.commentsDialog.close());
@@ -7576,29 +7083,6 @@ elements.nodeInfoForm.addEventListener("submit", async (event) => {
   }
 });
 
-elements.photoClose.addEventListener("click", () => elements.photoDialog.close());
-elements.photoCancel.addEventListener("click", () => elements.photoDialog.close());
-elements.photoDialog.addEventListener("click", (event) => {
-  if (event.target === elements.photoDialog) elements.photoDialog.close();
-});
-elements.photoDialog.addEventListener("close", resetPhotoDialog);
-elements.photoManageClose.addEventListener("click", () => elements.photoManageDialog.close());
-elements.photoManageCancel.addEventListener("click", () => elements.photoManageDialog.close());
-elements.photoManageDialog.addEventListener("click", (event) => {
-  if (event.target === elements.photoManageDialog) elements.photoManageDialog.close();
-});
-elements.photoManageDialog.addEventListener("close", () => {
-  state.photoManageTarget = null;
-  state.photoManageSaving = false;
-  elements.photoManagePasswordAuth.value = "";
-});
-elements.photoManageForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  void managePhoto("edit");
-});
-elements.photoManageDelete.addEventListener("click", () => {
-  if (window.confirm(t("photos.manageConfirmDelete"))) void managePhoto("delete");
-});
 elements.mobileSheetClose.addEventListener("click", closeMobileSheet);
 elements.mobileSheet.addEventListener("click", (event) => {
   if (event.target === elements.mobileSheet) closeMobileSheet();
