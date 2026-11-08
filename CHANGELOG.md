@@ -5,7 +5,7 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-08 — Fotogalerie všech fotek
 - Prostředí: produkce i beta
-- Build: 20261108-1911-804b222
+- Build: 20261108-1921-da54c4f
 - Beta používá stejné funkční UI jako produkce; export, sdílení pohledu a beta-only legendu už beta navíc nezobrazuje.
 - Vedle filtru **Jen nody s fotkou** je tlačítko **Galerie**.
 - Galerie zobrazí všechny schválené fotky všech nodů.
@@ -22,6 +22,7 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 - Lightbox, zoom, swipe, report a otevírání správy jsou v samostatném `photo-lightbox-controller.js`.
 - Upload, HEIC převod, tokeny a správa fotek jsou v samostatných `photo-upload-controller.js`, `photo-manage-controller.js`, `photo-token-store.js` a `photo-file-utils.js`.
 - Hledání nodů, observerů, paketů a kanálů je v samostatném `search-controller.js`.
+- Statistiky sítě, žebříčky nodů a statistiky návštěv jsou v samostatném `stats-controller.js`.
 
 ## 2026-11-07 — Neaktivita po 12 hodinách
 - Prostředí: produkce i beta
