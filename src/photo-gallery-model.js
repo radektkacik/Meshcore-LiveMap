@@ -15,37 +15,6 @@ function byNewest(first, second) {
   return createdAtValue(second) - createdAtValue(first);
 }
 
-export function buildPhotoGallerySections(photos, {
-  now = Date.now(),
-  newMs = NEW_PHOTO_MS,
-  collator = new Intl.Collator("cs", { numeric: true, sensitivity: "base" }),
-} = {}) {
-  const list = Array.isArray(photos) ? photos.filter(Boolean) : [];
-  const recent = [];
-  const byNode = new Map();
-
-  for (const photo of list) {
-    if (isNewPhoto(photo, now, newMs)) {
-      recent.push(photo);
-      continue;
-    }
-    const nodeName = String(photo.nodeName || "").trim();
-    const nodeKey = String(photo.nodeKey || "").toLowerCase();
-    const groupKey = nodeKey || nodeName;
-    let group = byNode.get(groupKey);
-    if (!group) {
-      group = { nodeKey, nodeName, photos: [] };
-      byNode.set(groupKey, group);
-    }
-    if (!group.nodeName && nodeName) group.nodeName = nodeName;
-    group.photos.push(photo);
-  }
-
-  recent.sort(byNewest);
-  const groups = [...byNode.values()]
-    .map((group) => ({ ...group, photos: group.photos.sort(byNewest) }))
-    .sort((first, second) => collator.compare(first.nodeName, second.nodeName)
-      || collator.compare(first.nodeKey, second.nodeKey));
-
-  return { groups, recent };
+export function sortPhotosNewestFirst(photos) {
+  return (Array.isArray(photos) ? photos.filter(Boolean) : []).slice().sort(byNewest);
 }

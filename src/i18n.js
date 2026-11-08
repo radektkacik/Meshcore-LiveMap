@@ -442,7 +442,6 @@ const cs = {
   "photos.galleryFailed": "Galerii se nepodařilo načíst.",
   "photos.galleryNote": "Všechny schválené fotky nodů. Kliknutím otevřete fotku.",
   "photos.gallerySearch": "Hledat nod, popis nebo autora…",
-  "photos.galleryNewSection": "Nově nahrané",
   "photos.galleryNewBadge": "nový",
   "photos.galleryNewBadgeTitle": "Nahráno před méně než 24 h",
   "photos.galleryCount": {
@@ -986,7 +985,6 @@ const en = {
   "photos.galleryFailed": "The gallery could not be loaded.",
   "photos.galleryNote": "All approved node photos. Click a photo to open it.",
   "photos.gallerySearch": "Search node, caption or author…",
-  "photos.galleryNewSection": "Recently uploaded",
   "photos.galleryNewBadge": "new",
   "photos.galleryNewBadgeTitle": "Uploaded less than 24 hours ago",
   "photos.galleryCount": {
