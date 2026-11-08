@@ -5,7 +5,7 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-08 — Fotogalerie všech fotek
 - Prostředí: produkce i beta
-- Build: 20261108-1737-5eb5da5
+- Build: 20261108-1754-6063ce0
 - Vedle filtru **Jen nody s fotkou** je tlačítko **Galerie**.
 - Galerie zobrazí všechny schválené fotky všech nodů.
 - Fotky jsou seskupené podle nodu.
@@ -18,6 +18,7 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 - Hledání filtruje podle názvu nodu, popisu nebo autora.
 - Nový endpoint `GET /api/photos/all` vrací jen schválené fotky a veřejná metadata.
 - Logika galerie je v samostatném `photo-gallery-controller.js`; řazení a badge řeší `photo-gallery-model.js`.
+- Lightbox, zoom, swipe, report a otevírání správy jsou v samostatném `photo-lightbox-controller.js`.
 
 ## 2026-11-07 — Neaktivita po 12 hodinách
 - Prostředí: produkce i beta
