@@ -29,7 +29,7 @@ import {
 } from "./export-model.js";
 import { createPerfMonitor } from "./perf.js";
 import { observerAnchor } from "./observer-locations.js";
-import { buildPhotoGallerySections, isNewPhoto } from "./photo-gallery-model.js";
+import { createPhotoGalleryController } from "./photo-gallery-controller.js";
 import {
   isNewNode,
   isNodeRoleAllowed,
@@ -2682,176 +2682,19 @@ function renderNodePhotos(list, photos, node) {
   });
 }
 
-function renderPhotoGalleryLabels() {
-  elements.photoGalleryOpen.textContent = t("photos.galleryOpen");
-  elements.photoGalleryOpen.title = t("photos.galleryOpenTitle");
-  elements.photoGalleryOpen.setAttribute("aria-label", t("photos.galleryOpenTitle"));
-  elements.photoGalleryTitle.textContent = t("photos.gallery");
-  elements.photoGalleryClose.setAttribute("aria-label", t("photos.cancel"));
-  elements.photoGallerySearch.placeholder = t("photos.gallerySearch");
-  elements.photoGalleryNote.textContent = t("photos.galleryNote");
-}
-
-function photoGalleryFiltered() {
-  const query = state.photoGalleryQuery.trim().toLowerCase();
-  const photos = Array.isArray(state.photoGalleryPhotos) ? state.photoGalleryPhotos : [];
-  if (!query) return photos;
-  return photos.filter((photo) => [photo.nodeName, photo.caption, photo.author]
-    .some((value) => String(value || "").toLowerCase().includes(query)));
-}
-
-function photoGalleryCard(photo, index, { isNew = false } = {}) {
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "photo-gallery-item";
-  button.dataset.index = String(index);
-  const nodeName = photo.nodeName || t("common.unknownNode");
-  button.title = [nodeName, photo.caption, photo.author].filter(Boolean).join(" · ");
-  if (isNew) {
-    const badge = document.createElement("span");
-    badge.className = "photo-gallery-new-badge";
-    badge.textContent = t("photos.galleryNewBadge");
-    badge.title = t("photos.galleryNewBadgeTitle");
-    button.appendChild(badge);
-  }
-  const image = document.createElement("img");
-  image.src = appPath(`/api/photos/${encodeURIComponent(photo.id)}`);
-  image.alt = t("photos.alt", { name: nodeName });
-  image.loading = "lazy";
-  image.decoding = "async";
-  button.appendChild(image);
-  const meta = document.createElement("span");
-  meta.className = "photo-gallery-meta";
-  const name = document.createElement("strong");
-  name.textContent = nodeName;
-  meta.appendChild(name);
-  const detail = photo.caption || photo.author;
-  if (detail) {
-    const small = document.createElement("small");
-    small.textContent = detail;
-    meta.appendChild(small);
-  }
-  if (photo.createdAt) {
-    const date = document.createElement("small");
-    date.className = "photo-gallery-date";
-    date.textContent = formatDateTimeShort(photo.createdAt);
-    meta.appendChild(date);
-  }
-  button.appendChild(meta);
-  return button;
-}
-
-function appendPhotoGallerySection(title, photos, indexById, now) {
-  if (!photos.length) return;
-  const section = document.createElement("section");
-  section.className = "photo-gallery-section";
-  const head = document.createElement("div");
-  head.className = "photo-gallery-section-head";
-  const heading = document.createElement("h3");
-  heading.textContent = title;
-  const count = document.createElement("small");
-  count.textContent = tCount("photos.galleryCount", photos.length);
-  head.append(heading, count);
-  const cards = document.createElement("div");
-  cards.className = "photo-gallery-cards";
-  for (const photo of photos) {
-    cards.appendChild(photoGalleryCard(photo, indexById.get(photo.id) ?? 0, {
-      isNew: isNewPhoto(photo, now),
-    }));
-  }
-  section.append(head, cards);
-  elements.photoGalleryGrid.appendChild(section);
-}
-
-function renderPhotoGallery() {
-  renderPhotoGalleryLabels();
-  const photos = photoGalleryFiltered();
-  elements.photoGalleryGrid.replaceChildren();
-
-  if (state.photoGalleryLoading && !state.photoGalleryPhotos.length) {
-    elements.photoGallerySummary.textContent = "";
-    elements.photoGalleryStatus.hidden = false;
-    elements.photoGalleryStatus.classList.remove("error");
-    elements.photoGalleryStatus.textContent = t("photos.galleryLoading");
-    return;
-  }
-
-  elements.photoGalleryStatus.hidden = !state.photoGalleryError;
-  elements.photoGalleryStatus.classList.toggle("error", state.photoGalleryError);
-  elements.photoGalleryStatus.textContent = state.photoGalleryError ? t("photos.galleryFailed") : "";
-
-  if (!photos.length) {
-    elements.photoGallerySummary.textContent = "";
-    const empty = document.createElement("p");
-    empty.className = "photo-gallery-empty";
-    empty.textContent = state.photoGalleryPhotos.length ? t("search.empty") : t("photos.galleryEmpty");
-    elements.photoGalleryGrid.appendChild(empty);
-    return;
-  }
-
-  const nodeCount = new Set(photos.map((photo) => photo.nodeKey).filter(Boolean)).size;
-  elements.photoGallerySummary.textContent = `${tCount("photos.galleryCount", photos.length)} · ${tCount("photos.galleryNodes", nodeCount)}`;
-
-  const groups = buildPhotoGallerySections(photos, {
-    collator: new Intl.Collator(getLocale(), { numeric: true, sensitivity: "base" }),
-  });
-  const ordered = groups.flatMap((group) => group.photos);
-  state.photoGalleryView = ordered;
-  const now = nowMs();
-  const indexById = new Map(ordered.map((photo, index) => [photo.id, index]));
-  for (const group of groups) {
-    appendPhotoGallerySection(group.nodeName || t("common.unknownNode"), group.photos, indexById, now);
-  }
-}
-
-async function loadPhotoGallery(force = false) {
-  if (!force && state.photoGalleryLoadedAt && Date.now() - state.photoGalleryLoadedAt < 60_000) return;
-  if (state.photoGalleryLoading) return;
-  state.photoGalleryLoading = true;
-  state.photoGalleryError = false;
-  renderPhotoGallery();
-  try {
-    const data = await getJson("/api/photos/all");
-    state.photoGalleryPhotos = (Array.isArray(data.photos) ? data.photos : []).map((photo) => {
-      const nodeKey = String(photo.nodeKey || "").toLowerCase();
-      const known = nodeKey ? state.nodeByKey.get(nodeKey.toUpperCase()) : null;
-      return {
-        ...photo,
-        nodeKey,
-        nodeName: known?.name || String(photo.nodeName || "").trim() || t("common.unknownNode"),
-      };
-    });
-    state.photoGalleryLoadedAt = Date.now();
-  } catch (error) {
-    console.error("Fotogalerii se nepodařilo načíst", error);
-    state.photoGalleryError = true;
-  } finally {
-    state.photoGalleryLoading = false;
-    if (elements.photoGalleryDialog.open) renderPhotoGallery();
-  }
-}
-
-function openPhotoGallery() {
-  if (!elements.photoGalleryDialog.open) elements.photoGalleryDialog.showModal();
-  state.photoGalleryQuery = "";
-  elements.photoGallerySearch.value = "";
-  elements.photoGalleryGrid.scrollTop = 0;
-  renderPhotoGallery();
-  void loadPhotoGallery();
-}
-
-function updatePhotoGalleryPhoto(photo) {
-  const index = state.photoGalleryPhotos.findIndex((entry) => entry.id === photo?.id);
-  if (index < 0) return;
-  state.photoGalleryPhotos[index] = { ...state.photoGalleryPhotos[index], ...photo };
-  if (elements.photoGalleryDialog.open) renderPhotoGallery();
-}
-
-function removePhotoGalleryPhoto(photoId) {
-  const id = String(photoId || "");
-  state.photoGalleryPhotos = state.photoGalleryPhotos.filter((entry) => entry.id !== id);
-  if (elements.photoGalleryDialog.open) renderPhotoGallery();
-}
+const photoGallery = createPhotoGalleryController({
+  appPath,
+  elements,
+  formatDateTimeShort,
+  getJson,
+  getLocale,
+  nowMs,
+  onOpenPhoto: (photo, photos, index) => openPhotoLightbox(photo, null, photos, index),
+  state,
+  t,
+  tCount,
+});
+photoGallery.bind();
 
 function analyticsNumber(value, suffix = "") {
   const number = Number(value);
@@ -3566,7 +3409,7 @@ async function managePhoto(action) {
       const previousIndex = state.lightboxIndex;
       if (wasLightboxPhoto) state.lightboxPhotos = state.lightboxPhotos.filter((entry) => entry.id !== photo.id);
       state.photoManageUploads = state.photoManageUploads.filter((entry) => entry.photo.id !== photo.id);
-      removePhotoGalleryPhoto(photo.id);
+      photoGallery.removePhoto(photo.id);
       renderPhotoManageUploads();
       refreshNodePhotoList(photo.nodeKey || target.node?.public_key);
       elements.photoManageDialog.close();
@@ -3584,7 +3427,7 @@ async function managePhoto(action) {
     const index = state.lightboxPhotos.findIndex((entry) => entry.id === photo.id);
     if (index >= 0) state.lightboxPhotos[index] = { ...state.lightboxPhotos[index], ...updated };
     state.photoManageTarget.photo = { ...photo, ...updated };
-    updatePhotoGalleryPhoto(state.photoManageTarget.photo);
+    photoGallery.updatePhoto(state.photoManageTarget.photo);
     const uploaded = state.photoManageUploads.find((entry) => entry.photo.id === photo.id);
     if (uploaded) {
       uploaded.photo = { ...uploaded.photo, ...updated };
@@ -7755,7 +7598,7 @@ elements.photoForm.addEventListener("submit", async (event) => {
       }
     }
     if (created > 0) {
-      state.photoGalleryLoadedAt = 0;
+      photoGallery.invalidate();
       let statusText = t("photos.failed");
       if (failed > 0) statusText = t("photos.partial", { created, failed, total: files.length });
       else if (published === created) statusText = tCount("photos.publishedCount", published);
@@ -8157,21 +8000,6 @@ elements.photoLightbox.addEventListener("close", () => {
   state.lightboxPhotos = [];
   state.lightboxIndex = 0;
   state.lightboxNode = null;
-});
-elements.photoGalleryOpen.addEventListener("click", openPhotoGallery);
-elements.photoGalleryClose.addEventListener("click", () => elements.photoGalleryDialog.close());
-elements.photoGalleryDialog.addEventListener("click", (event) => {
-  if (event.target === elements.photoGalleryDialog) elements.photoGalleryDialog.close();
-});
-elements.photoGallerySearch.addEventListener("input", () => {
-  state.photoGalleryQuery = elements.photoGallerySearch.value;
-  renderPhotoGallery();
-});
-elements.photoGalleryGrid.addEventListener("click", (event) => {
-  const button = event.target.closest(".photo-gallery-item");
-  if (!button) return;
-  const photo = state.photoGalleryView[Number(button.dataset.index)];
-  if (photo) openPhotoLightbox(photo, null, state.photoGalleryView, Number(button.dataset.index));
 });
 elements.photoNodeOpen.addEventListener("click", () => {
   const current = state.lightboxPhoto;
