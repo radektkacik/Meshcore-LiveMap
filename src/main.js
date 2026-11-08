@@ -29,7 +29,7 @@ import {
 } from "./export-model.js";
 import { createPerfMonitor } from "./perf.js";
 import { observerAnchor } from "./observer-locations.js";
-import { isNewPhoto, sortPhotosNewestFirst } from "./photo-gallery-model.js";
+import { buildPhotoGallerySections, isNewPhoto } from "./photo-gallery-model.js";
 import {
   isNewNode,
   isNodeRoleAllowed,
@@ -2741,6 +2741,28 @@ function photoGalleryCard(photo, index, { isNew = false } = {}) {
   return button;
 }
 
+function appendPhotoGallerySection(title, photos, indexById, now) {
+  if (!photos.length) return;
+  const section = document.createElement("section");
+  section.className = "photo-gallery-section";
+  const head = document.createElement("div");
+  head.className = "photo-gallery-section-head";
+  const heading = document.createElement("h3");
+  heading.textContent = title;
+  const count = document.createElement("small");
+  count.textContent = tCount("photos.galleryCount", photos.length);
+  head.append(heading, count);
+  const cards = document.createElement("div");
+  cards.className = "photo-gallery-cards";
+  for (const photo of photos) {
+    cards.appendChild(photoGalleryCard(photo, indexById.get(photo.id) ?? 0, {
+      isNew: isNewPhoto(photo, now),
+    }));
+  }
+  section.append(head, cards);
+  elements.photoGalleryGrid.appendChild(section);
+}
+
 function renderPhotoGallery() {
   renderPhotoGalleryLabels();
   const photos = photoGalleryFiltered();
@@ -2770,14 +2792,16 @@ function renderPhotoGallery() {
   const nodeCount = new Set(photos.map((photo) => photo.nodeKey).filter(Boolean)).size;
   elements.photoGallerySummary.textContent = `${tCount("photos.galleryCount", photos.length)} · ${tCount("photos.galleryNodes", nodeCount)}`;
 
-  const ordered = sortPhotosNewestFirst(photos);
+  const groups = buildPhotoGallerySections(photos, {
+    collator: new Intl.Collator(getLocale(), { numeric: true, sensitivity: "base" }),
+  });
+  const ordered = groups.flatMap((group) => group.photos);
   state.photoGalleryView = ordered;
   const now = nowMs();
-  ordered.forEach((photo, index) => {
-    elements.photoGalleryGrid.appendChild(photoGalleryCard(photo, index, {
-      isNew: isNewPhoto(photo, now),
-    }));
-  });
+  const indexById = new Map(ordered.map((photo, index) => [photo.id, index]));
+  for (const group of groups) {
+    appendPhotoGallerySection(group.nodeName || t("common.unknownNode"), group.photos, indexById, now);
+  }
 }
 
 async function loadPhotoGallery(force = false) {

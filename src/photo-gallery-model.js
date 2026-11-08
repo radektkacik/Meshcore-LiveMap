@@ -15,6 +15,28 @@ function byNewest(first, second) {
   return createdAtValue(second) - createdAtValue(first);
 }
 
-export function sortPhotosNewestFirst(photos) {
-  return (Array.isArray(photos) ? photos.filter(Boolean) : []).slice().sort(byNewest);
+export function buildPhotoGallerySections(photos, {
+  collator = new Intl.Collator("cs", { numeric: true, sensitivity: "base" }),
+} = {}) {
+  const groups = new Map();
+  for (const photo of Array.isArray(photos) ? photos : []) {
+    if (!photo) continue;
+    const nodeName = String(photo.nodeName || "").trim();
+    const nodeKey = String(photo.nodeKey || "").toLowerCase();
+    const groupKey = nodeKey || nodeName;
+    let group = groups.get(groupKey);
+    if (!group) {
+      group = { latestCreatedAt: 0, nodeKey, nodeName, photos: [] };
+      groups.set(groupKey, group);
+    }
+    if (!group.nodeName && nodeName) group.nodeName = nodeName;
+    group.latestCreatedAt = Math.max(group.latestCreatedAt, createdAtValue(photo));
+    group.photos.push(photo);
+  }
+
+  return [...groups.values()]
+    .map((group) => ({ ...group, photos: group.photos.sort(byNewest) }))
+    .sort((first, second) => second.latestCreatedAt - first.latestCreatedAt
+      || collator.compare(first.nodeName, second.nodeName)
+      || collator.compare(first.nodeKey, second.nodeKey));
 }
