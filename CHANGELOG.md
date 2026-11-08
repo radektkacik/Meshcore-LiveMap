@@ -3,6 +3,16 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-08 — Fotogalerie všech fotek (beta)
+- Prostředí: beta
+- Build: 20261108-1653-14e4798
+- Vedle filtru **Jen nody s fotkou** je tlačítko **Galerie**.
+- Galerie zobrazí všechny schválené fotky všech nodů, nejnovější první.
+- U každé fotky je název nodu, popis/author a datum; kliknutím se otevře lightbox.
+- V lightboxu lze listovat všemi fotkami galerie a přeskakovat mezi nody.
+- Hledání filtruje podle názvu nodu, popisu nebo autora.
+- Nový endpoint `GET /api/photos/all` vrací jen schválené fotky a veřejná metadata.
+
 ## 2026-11-07 — Neaktivita po 12 hodinách
 - Prostředí: produkce i beta
 - Build: 20261107-1443-4644ef0
