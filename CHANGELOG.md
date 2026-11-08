@@ -5,7 +5,8 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-08 — Fotogalerie všech fotek
 - Prostředí: produkce i beta
-- Build: 20261108-1904-e40238a
+- Build: 20261108-1911-804b222
+- Beta používá stejné funkční UI jako produkce; export, sdílení pohledu a beta-only legendu už beta navíc nezobrazuje.
 - Vedle filtru **Jen nody s fotkou** je tlačítko **Galerie**.
 - Galerie zobrazí všechny schválené fotky všech nodů.
 - Fotky jsou seskupené podle nodu.
