@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -46,6 +46,12 @@ export function createRateLimiter({ windowMs = HOUR_MS, cooldownMs = 0, limit = 
 
 export function hashIp(ip) {
   return createHash("sha256").update(ip || "unknown").digest("hex").slice(0, 16);
+}
+
+export function safeEqualText(left, right) {
+  const first = Buffer.from(String(left ?? ""));
+  const second = Buffer.from(String(right ?? ""));
+  return first.length === second.length && timingSafeEqual(first, second);
 }
 
 export function formatCsDate(value) {

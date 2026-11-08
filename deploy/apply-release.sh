@@ -16,7 +16,7 @@ APP_USER=${APP_USER:-meshcore-map}
 APP_GROUP=${APP_GROUP:-meshcore-map}
 ROLLBACK_SCRIPT=${ROLLBACK_SCRIPT:-/root/rollback-meshcore.sh}
 
-for file in server.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs cz-health.mjs cz-health-store.mjs visit-stats.mjs feedback.mjs photos.mjs node-info.mjs comments.mjs repeater-pages.mjs notify.mjs html.mjs sqlite-store.mjs admin-pages.mjs legacy-pages.mjs http-utils.mjs package.json package-lock.json dist/index.html \
+for file in server.mjs http-server.mjs admin-auth.mjs monitor.mjs mqtt-ingest.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs cz-health.mjs cz-health-store.mjs visit-stats.mjs feedback.mjs photos.mjs node-info.mjs comments.mjs repeater-pages.mjs notify.mjs html.mjs sqlite-store.mjs admin-pages.mjs legacy-pages.mjs http-utils.mjs package.json package-lock.json dist/index.html \
   rollback-vps.sh \
   "$STORAGE_CONF_NAME" \
   node_modules/@michaelhart/meshcore-decoder/package.json \
@@ -26,6 +26,10 @@ done
 
 cd "$STAGE"
 node --check server.mjs
+node --check http-server.mjs
+node --check admin-auth.mjs
+node --check monitor.mjs
+node --check mqtt-ingest.mjs
 node --check backend-utils.mjs
 node --check node-metrics.mjs
 node --check packet-store.mjs
@@ -74,7 +78,7 @@ rollback() {
   if [[ "$keep_node_modules" != true ]]; then
     rm -rf "$APP_DIR/node_modules"
   fi
-  rm -f "$APP_DIR/backend-utils.mjs" "$APP_DIR/node-metrics.mjs" "$APP_DIR/packet-store.mjs" "$APP_DIR/cz-health.mjs" "$APP_DIR/cz-health-store.mjs" "$APP_DIR/visit-stats.mjs" "$APP_DIR/feedback.mjs" "$APP_DIR/photos.mjs" "$APP_DIR/node-info.mjs" "$APP_DIR/comments.mjs" "$APP_DIR/repeater-pages.mjs" "$APP_DIR/notify.mjs" "$APP_DIR/html.mjs" "$APP_DIR/sqlite-store.mjs" "$APP_DIR/admin-pages.mjs" "$APP_DIR/legacy-pages.mjs" "$APP_DIR/http-utils.mjs"
+  rm -f "$APP_DIR/http-server.mjs" "$APP_DIR/admin-auth.mjs" "$APP_DIR/monitor.mjs" "$APP_DIR/mqtt-ingest.mjs" "$APP_DIR/backend-utils.mjs" "$APP_DIR/node-metrics.mjs" "$APP_DIR/packet-store.mjs" "$APP_DIR/cz-health.mjs" "$APP_DIR/cz-health-store.mjs" "$APP_DIR/visit-stats.mjs" "$APP_DIR/feedback.mjs" "$APP_DIR/photos.mjs" "$APP_DIR/node-info.mjs" "$APP_DIR/comments.mjs" "$APP_DIR/repeater-pages.mjs" "$APP_DIR/notify.mjs" "$APP_DIR/html.mjs" "$APP_DIR/sqlite-store.mjs" "$APP_DIR/admin-pages.mjs" "$APP_DIR/legacy-pages.mjs" "$APP_DIR/http-utils.mjs"
   tar -xzf "$BACKUP_FILE" -C "$APP_DIR"
   if [[ ! -d "$APP_DIR/node_modules" ]]; then
     echo "Závislosti nejsou v záloze ani v aplikaci; instaluji z package-lock.json" >&2
@@ -109,6 +113,18 @@ trap rollback_on_error ERR
 systemctl stop "$SERVICE"
 service_stopped=true
 backup_paths=(server.mjs package.json package-lock.json dist data)
+if [[ -f "$APP_DIR/http-server.mjs" ]]; then
+  backup_paths+=(http-server.mjs)
+fi
+if [[ -f "$APP_DIR/admin-auth.mjs" ]]; then
+  backup_paths+=(admin-auth.mjs)
+fi
+if [[ -f "$APP_DIR/monitor.mjs" ]]; then
+  backup_paths+=(monitor.mjs)
+fi
+if [[ -f "$APP_DIR/mqtt-ingest.mjs" ]]; then
+  backup_paths+=(mqtt-ingest.mjs)
+fi
 if [[ -f "$APP_DIR/node-metrics.mjs" ]]; then
   backup_paths+=(node-metrics.mjs)
 fi
@@ -180,6 +196,10 @@ install -o root -g root -m 644 "$STAGE/$STORAGE_CONF_NAME" "$OVERRIDE_FILE"
 systemctl daemon-reload
 rm -rf "$APP_DIR/dist" "$APP_DIR/node_modules"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/server.mjs" "$APP_DIR/server.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/http-server.mjs" "$APP_DIR/http-server.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/admin-auth.mjs" "$APP_DIR/admin-auth.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/monitor.mjs" "$APP_DIR/monitor.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/mqtt-ingest.mjs" "$APP_DIR/mqtt-ingest.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/backend-utils.mjs" "$APP_DIR/backend-utils.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/node-metrics.mjs" "$APP_DIR/node-metrics.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/packet-store.mjs" "$APP_DIR/packet-store.mjs"
