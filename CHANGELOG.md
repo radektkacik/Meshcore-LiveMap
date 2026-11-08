@@ -5,7 +5,7 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-08 — Fotogalerie všech fotek
 - Prostředí: produkce i beta
-- Build: 20261108-1921-da54c4f
+- Build: 20261108-1927-32fb548
 - Beta používá stejné funkční UI jako produkce; export, sdílení pohledu a beta-only legendu už beta navíc nezobrazuje.
 - Vedle filtru **Jen nody s fotkou** je tlačítko **Galerie**.
 - Galerie zobrazí všechny schválené fotky všech nodů.
@@ -16,6 +16,7 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 - Kliknutím na název nodu v kartě nebo v záhlaví sekce přejdeš přímo na nod na mapě.
 - Kliknutím na fotku se otevře lightbox; lze v něm listovat všemi fotkami galerie.
 - Tlačítko **Přejít na nod** v lightboxu zavře galerii a zobrazí nod na mapě.
+- Opraveno: proklik z názvu nodu v galerii i ze záhlaví sekce znovu otevírá nod na mapě.
 - Hledání filtruje podle názvu nodu, popisu nebo autora.
 - Nový endpoint `GET /api/photos/all` vrací jen schválené fotky a veřejná metadata.
 - Logika galerie je v samostatném `photo-gallery-controller.js`; řazení a badge řeší `photo-gallery-model.js`.
