@@ -30,6 +30,7 @@ import {
 import { createPerfMonitor } from "./perf.js";
 import { observerAnchor } from "./observer-locations.js";
 import { createPhotoGalleryController } from "./photo-gallery-controller.js";
+import { createPhotoLightboxController } from "./photo-lightbox-controller.js";
 import {
   isNewNode,
   isNodeRoleAllowed,
@@ -2676,7 +2677,7 @@ function renderNodePhotos(list, photos, node) {
     button.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
-      openPhotoLightbox(photo, node, photos, index);
+      photoLightbox.open(photo, node, photos, index);
     });
     list.appendChild(button);
   });
@@ -2690,12 +2691,23 @@ const photoGallery = createPhotoGalleryController({
   getLocale,
   nowMs,
   onOpenNode: (photo) => revealPhotoNode(photo, null),
-  onOpenPhoto: (photo, photos, index) => openPhotoLightbox(photo, null, photos, index),
+  onOpenPhoto: (photo, photos, index) => photoLightbox.open(photo, null, photos, index),
   state,
   t,
   tCount,
 });
 photoGallery.bind();
+
+const photoLightbox = createPhotoLightboxController({
+  appPath,
+  elements,
+  onManage: (photo, node) => openPhotoManageDialog(photo, node),
+  onOpenNode: (photo, node) => revealPhotoNode(photo, node),
+  postJson,
+  resolveNode: (key) => state.nodeByKey.get(key.toUpperCase()) || null,
+  t,
+});
+photoLightbox.bind();
 
 function analyticsNumber(value, suffix = "") {
   const number = Number(value);
@@ -3106,202 +3118,16 @@ function openPhotoDialog(node) {
   if (!elements.photoDialog.open) elements.photoDialog.showModal();
 }
 
-function photoNodeForLightbox(photo) {
-  const nodeKey = String(photo?.nodeKey || "").toLowerCase();
-  if (nodeKey) {
-    return state.nodeByKey.get(nodeKey.toUpperCase())
-      || { name: photo.nodeName || nodeKey.slice(0, 8), public_key: nodeKey };
-  }
-  return state.lightboxNode || {};
-}
-
 function revealPhotoNode(photo, nodeValue) {
   const key = String(photo?.nodeKey || nodeValue?.public_key || "").toLowerCase();
   if (!/^[0-9a-f]{64}$/.test(key)) return;
   const node = state.nodeByKey.get(key.toUpperCase())
     || nodeValue
     || { name: photo?.nodeName || t("common.unknownNode"), public_key: key };
-  if (elements.photoLightbox.open) elements.photoLightbox.close();
+  photoLightbox.close();
   if (elements.photoGalleryDialog.open) elements.photoGalleryDialog.close();
   if (elements.nodeDetailPage.open) closeNodeDetail();
   revealSearchNode(node);
-}
-
-function openPhotoLightbox(photo, node, photos = [photo], index = 0) {
-  state.lightboxPhotos = Array.isArray(photos) && photos.length ? photos : [photo];
-  state.lightboxIndex = Math.max(0, Math.min(state.lightboxPhotos.length - 1, Number(index) || 0));
-  state.lightboxNode = node;
-  showPhotoLightbox();
-  if (!elements.photoLightbox.open) elements.photoLightbox.showModal();
-  requestAnimationFrame(resetPhotoZoom);
-}
-
-function showPhotoLightbox() {
-  const photos = state.lightboxPhotos;
-  const photo = photos[state.lightboxIndex];
-  const node = photoNodeForLightbox(photo);
-  if (!photo) return;
-  state.lightboxPhoto = { node, photo };
-  elements.photoLightboxImg.style.transform = "";
-  elements.photoLightboxImg.src = appPath(`/api/photos/${encodeURIComponent(photo.id)}`);
-  elements.photoLightboxImg.alt = t("photos.alt", { name: node.name || t("common.unknownNode") });
-  elements.photoLightboxNode.textContent = photo.nodeKey ? (node.name || t("common.unknownNode")) : "";
-  elements.photoLightboxNode.hidden = !photo.nodeKey;
-  elements.photoLightboxCaption.textContent = photo.caption || "";
-  elements.photoLightboxCaption.hidden = !photo.caption;
-  elements.photoLightboxAuthor.textContent = photo.author || "";
-  elements.photoLightboxAuthor.hidden = !photo.author;
-  elements.photoLightboxClose.setAttribute("aria-label", t("photos.close"));
-  elements.photoNodeOpen.hidden = !/^[0-9a-f]{64}$/.test(String(photo.nodeKey || node.public_key || "").toLowerCase());
-  elements.photoNodeOpen.textContent = t("photos.openNode");
-  elements.photoNodeOpen.title = t("photos.openNodeTitle");
-  elements.photoNodeOpen.setAttribute("aria-label", t("photos.openNodeTitle"));
-  elements.photoReportOpen.textContent = t("photos.report");
-  elements.photoManageOpen.textContent = t("photos.manage");
-  elements.photoLightboxPrev.setAttribute("aria-label", t("photos.previous"));
-  elements.photoLightboxNext.setAttribute("aria-label", t("photos.next"));
-  elements.photoLightboxCounter.textContent = `${state.lightboxIndex + 1} / ${photos.length}`;
-  const multiple = photos.length > 1;
-  elements.photoLightboxPrev.hidden = !multiple;
-  elements.photoLightboxNext.hidden = !multiple;
-  elements.photoLightboxCounter.hidden = !multiple;
-  elements.photoLightboxZoomIn.title = t("photos.zoomIn");
-  elements.photoLightboxZoomIn.setAttribute("aria-label", t("photos.zoomIn"));
-  elements.photoLightboxZoomOut.title = t("photos.zoomOut");
-  elements.photoLightboxZoomOut.setAttribute("aria-label", t("photos.zoomOut"));
-  elements.photoLightboxZoomReset.title = t("photos.zoomReset");
-  elements.photoLightboxZoomReset.setAttribute("aria-label", t("photos.zoomReset"));
-  schedulePhotoZoomReset();
-}
-
-function photoZoomBounds() {
-  const img = elements.photoLightboxImg;
-  const stage = elements.photoLightboxStage.getBoundingClientRect();
-  const width = img.naturalWidth;
-  const height = img.naturalHeight;
-  if (!width || !height || !stage.width || !stage.height) return null;
-  const fit = Math.min(stage.width / width, stage.height / height, 1);
-  const max = Math.max(1, Math.min(4, fit * 6));
-  return { fit, height, max, stage, width };
-}
-
-function applyPhotoZoom() {
-  const bounds = photoZoomBounds();
-  if (!bounds) return;
-  const { height, stage, width } = bounds;
-  const zoomedWidth = width * state.photoZoom;
-  const zoomedHeight = height * state.photoZoom;
-  state.photoPanX = zoomedWidth <= stage.width
-    ? (stage.width - zoomedWidth) / 2
-    : Math.max(stage.width - zoomedWidth, Math.min(0, state.photoPanX));
-  state.photoPanY = zoomedHeight <= stage.height
-    ? (stage.height - zoomedHeight) / 2
-    : Math.max(stage.height - zoomedHeight, Math.min(0, state.photoPanY));
-  elements.photoLightboxImg.style.transform = `translate(${state.photoPanX}px, ${state.photoPanY}px) scale(${state.photoZoom})`;
-  elements.photoLightboxZoomLabel.textContent = `${Math.round(state.photoZoom * 100)} %`;
-}
-
-function resetPhotoZoom() {
-  const bounds = photoZoomBounds();
-  if (!bounds) return;
-  state.photoZoomFit = bounds.fit;
-  state.photoZoom = bounds.fit;
-  state.photoPanX = 0;
-  state.photoPanY = 0;
-  applyPhotoZoom();
-}
-
-function schedulePhotoZoomReset() {
-  const img = elements.photoLightboxImg;
-  if (typeof img.decode === "function") {
-    img.decode()
-      .then(() => requestAnimationFrame(() => {
-        resetPhotoZoom();
-        setTimeout(resetPhotoZoom, 100);
-      }))
-      .catch(() => {});
-  }
-  if (img.complete && img.naturalWidth) {
-    requestAnimationFrame(resetPhotoZoom);
-    setTimeout(resetPhotoZoom, 100);
-    return;
-  }
-  img.addEventListener("load", () => {
-    requestAnimationFrame(resetPhotoZoom);
-    setTimeout(resetPhotoZoom, 100);
-  }, { once: true });
-}
-
-function zoomPhotoAt(nextZoom, clientX, clientY) {
-  const bounds = photoZoomBounds();
-  if (!bounds) return;
-  const rect = bounds.stage;
-  const anchorX = clientX == null ? rect.width / 2 : clientX - rect.left;
-  const anchorY = clientY == null ? rect.height / 2 : clientY - rect.top;
-  const previous = state.photoZoom || bounds.fit;
-  const target = Math.max(bounds.fit, Math.min(bounds.max, nextZoom));
-  state.photoPanX = anchorX - (anchorX - state.photoPanX) * (target / previous);
-  state.photoPanY = anchorY - (anchorY - state.photoPanY) * (target / previous);
-  state.photoZoom = target;
-  applyPhotoZoom();
-}
-
-function zoomPhotoBy(factor, clientX, clientY) {
-  zoomPhotoAt((state.photoZoom || state.photoZoomFit) * factor, clientX, clientY);
-}
-
-function stepPhotoLightbox(delta) {
-  const total = state.lightboxPhotos.length;
-  if (total < 2) return;
-  state.lightboxIndex = (state.lightboxIndex + delta + total) % total;
-  showPhotoLightbox();
-}
-
-function setPhotoReportStatus(text, isError = false) {
-  elements.photoReportStatus.textContent = text;
-  elements.photoReportStatus.classList.toggle("error", Boolean(isError));
-}
-
-function renderPhotoReportDialog() {
-  elements.photoReportTitle.textContent = t("photos.reportTitle");
-  elements.photoReportClose.setAttribute("aria-label", t("photos.reportClose"));
-  elements.photoReportReasonLabel.textContent = t("photos.reportReason");
-  elements.photoReportMessageLabel.textContent = t("photos.reportMessage");
-  elements.photoReportMessage.placeholder = t("photos.reportMessagePlaceholder");
-  elements.photoReportContactLabel.textContent = t("photos.reportContact");
-  elements.photoReportContact.placeholder = t("photos.reportContactPlaceholder");
-  elements.photoReportNote.textContent = t("photos.reportNote");
-  elements.photoReportSubmit.textContent = t("photos.reportSubmit");
-  elements.photoReportCancel.textContent = t("photos.reportCancel");
-  elements.photoReportReason.replaceChildren(...[
-    ["owner", t("photos.reportReasonOwner")],
-    ["privacy", t("photos.reportReasonPrivacy")],
-    ["inappropriate", t("photos.reportReasonInappropriate")],
-    ["other", t("photos.reportReasonOther")],
-  ].map(([value, label]) => {
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = label;
-    return option;
-  }));
-  const current = state.reportPhoto;
-  if (current) {
-    const name = current.node?.name || t("common.unknownNode");
-    elements.photoReportPhoto.textContent = current.photo.caption
-      ? `${name} · ${current.photo.caption}`
-      : name;
-  }
-}
-
-function openPhotoReport() {
-  if (!state.lightboxPhoto) return;
-  state.reportPhoto = state.lightboxPhoto;
-  if (elements.photoLightbox.open) elements.photoLightbox.close();
-  elements.photoReportForm.reset();
-  setPhotoReportStatus("");
-  elements.photoReportSubmit.disabled = false;
-  renderPhotoReportDialog();
-  if (!elements.photoReportDialog.open) elements.photoReportDialog.showModal();
 }
 
 function setPhotoManageStatus(text, isError = false) {
@@ -3328,7 +3154,7 @@ function renderPhotoManageUploads() {
 function openPhotoManageDialog(photoValue = null, nodeValue = null) {
   const current = photoValue && nodeValue
     ? { node: nodeValue, photo: photoValue }
-    : state.lightboxPhoto;
+    : photoLightbox.current();
   if (!current?.photo?.id) return;
   state.photoManageTarget = { ...current };
   state.photoManageSaving = false;
@@ -3406,29 +3232,20 @@ async function managePhoto(action) {
 
     if (action === "delete") {
       forgetPhotoManageToken(photo.id);
-      const wasLightboxPhoto = state.lightboxPhoto?.photo?.id === photo.id;
-      const previousIndex = state.lightboxIndex;
-      if (wasLightboxPhoto) state.lightboxPhotos = state.lightboxPhotos.filter((entry) => entry.id !== photo.id);
+      const wasLightboxPhoto = photoLightbox.current()?.photo?.id === photo.id;
       state.photoManageUploads = state.photoManageUploads.filter((entry) => entry.photo.id !== photo.id);
       photoGallery.removePhoto(photo.id);
       renderPhotoManageUploads();
       refreshNodePhotoList(photo.nodeKey || target.node?.public_key);
+      if (wasLightboxPhoto) photoLightbox.removePhoto(photo.id);
       elements.photoManageDialog.close();
-      if (!wasLightboxPhoto) return;
-      if (state.lightboxPhotos.length) {
-        state.lightboxIndex = Math.min(previousIndex, state.lightboxPhotos.length - 1);
-        showPhotoLightbox();
-      } else if (elements.photoLightbox.open) {
-        elements.photoLightbox.close();
-      }
       return;
     }
 
     const updated = data.photo || {};
-    const index = state.lightboxPhotos.findIndex((entry) => entry.id === photo.id);
-    if (index >= 0) state.lightboxPhotos[index] = { ...state.lightboxPhotos[index], ...updated };
     state.photoManageTarget.photo = { ...photo, ...updated };
     photoGallery.updatePhoto(state.photoManageTarget.photo);
+    photoLightbox.updatePhoto(photo.id, updated);
     const uploaded = state.photoManageUploads.find((entry) => entry.photo.id === photo.id);
     if (uploaded) {
       uploaded.photo = { ...uploaded.photo, ...updated };
@@ -3437,7 +3254,6 @@ async function managePhoto(action) {
     }
     renderPhotoManageUploads();
     state.photoCache.delete(String(photo.nodeKey || target.node?.public_key || "").toLowerCase());
-    if (state.lightboxPhoto?.photo?.id === photo.id) showPhotoLightbox();
     refreshNodePhotoList(photo.nodeKey || target.node?.public_key);
     setPhotoManageStatus(t("photos.manageSaved"));
   } catch (error) {
@@ -7766,247 +7582,6 @@ elements.photoDialog.addEventListener("click", (event) => {
   if (event.target === elements.photoDialog) elements.photoDialog.close();
 });
 elements.photoDialog.addEventListener("close", resetPhotoDialog);
-elements.photoLightboxClose.addEventListener("click", () => elements.photoLightbox.close());
-elements.photoLightboxPrev.addEventListener("click", () => stepPhotoLightbox(-1));
-elements.photoLightboxNext.addEventListener("click", () => stepPhotoLightbox(1));
-elements.photoLightboxZoomIn.addEventListener("click", () => zoomPhotoBy(1.4));
-elements.photoLightboxZoomOut.addEventListener("click", () => zoomPhotoBy(1 / 1.4));
-elements.photoLightboxZoomReset.addEventListener("click", () => {
-  zoomPhotoAt(1, null, null);
-});
-elements.photoLightboxStage.addEventListener("wheel", (event) => {
-  if (!elements.photoLightbox.open) return;
-  event.preventDefault();
-  zoomPhotoBy(Math.exp(-event.deltaY * 0.0015), event.clientX, event.clientY);
-}, { passive: false });
-function photoPinchPoints() {
-  return [...state.photoPointers.values()].slice(0, 2);
-}
-
-function beginPhotoPinch() {
-  const points = photoPinchPoints();
-  const bounds = photoZoomBounds();
-  if (points.length < 2 || !bounds) return;
-  if (state.photoSwipe) {
-    state.photoSwipe = null;
-    applyPhotoZoom();
-  }
-  const rect = bounds.stage;
-  const centerX = (points[0].x + points[1].x) / 2 - rect.left;
-  const centerY = (points[0].y + points[1].y) / 2 - rect.top;
-  state.photoPinch = {
-    max: bounds.max,
-    min: bounds.fit,
-    startCenterX: centerX,
-    startCenterY: centerY,
-    startDistance: Math.max(1, Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y)),
-    startPanX: state.photoPanX,
-    startPanY: state.photoPanY,
-    startZoom: state.photoZoom || bounds.fit,
-  };
-  state.photoDrag = null;
-  elements.photoLightboxStage.classList.remove("dragging");
-  elements.photoLightboxStage.classList.add("pinching");
-}
-
-function updatePhotoPinch() {
-  const pinch = state.photoPinch;
-  const points = photoPinchPoints();
-  const bounds = photoZoomBounds();
-  if (!pinch || points.length < 2 || !bounds) return;
-  const rect = bounds.stage;
-  const distance = Math.max(1, Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y));
-  const centerX = (points[0].x + points[1].x) / 2 - rect.left;
-  const centerY = (points[0].y + points[1].y) / 2 - rect.top;
-  const nextZoom = Math.max(pinch.min, Math.min(pinch.max, pinch.startZoom * (distance / pinch.startDistance)));
-  const ratio = nextZoom / pinch.startZoom;
-  state.photoZoom = nextZoom;
-  state.photoPanX = centerX - (pinch.startCenterX - pinch.startPanX) * ratio;
-  state.photoPanY = centerY - (pinch.startCenterY - pinch.startPanY) * ratio;
-  applyPhotoZoom();
-}
-
-const PHOTO_SWIPE_MIN_PX = 48;
-const PHOTO_SWIPE_DOMINANCE = 1.25;
-
-elements.photoLightboxStage.addEventListener("pointerdown", (event) => {
-  if (!elements.photoLightbox.open) return;
-  if (event.pointerType === "mouse" && event.button !== 0) return;
-  state.photoPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-  if (state.photoPointers.size >= 2) {
-    event.preventDefault();
-    if (state.photoSwipe) {
-      state.photoSwipe = null;
-      applyPhotoZoom();
-    }
-    if (!state.photoPinch) beginPhotoPinch();
-    for (const pointerId of state.photoPointers.keys()) {
-      try {
-        elements.photoLightboxStage.setPointerCapture(pointerId);
-      } catch {
-        // The pointer may already be gone.
-      }
-    }
-    return;
-  }
-  if (state.photoZoom > state.photoZoomFit + 0.001) {
-    event.preventDefault();
-    state.photoDrag = {
-      id: event.pointerId,
-      panX: state.photoPanX,
-      panY: state.photoPanY,
-      x: event.clientX,
-      y: event.clientY,
-    };
-    elements.photoLightboxStage.classList.add("dragging");
-    elements.photoLightboxStage.setPointerCapture(event.pointerId);
-    return;
-  }
-  if (event.pointerType === "mouse" || state.lightboxPhotos.length < 2) return;
-  state.photoSwipe = {
-    dx: 0,
-    dy: 0,
-    id: event.pointerId,
-    startX: event.clientX,
-    startY: event.clientY,
-  };
-  elements.photoLightboxStage.classList.add("swiping");
-  elements.photoLightboxStage.setPointerCapture(event.pointerId);
-});
-elements.photoLightboxStage.addEventListener("pointermove", (event) => {
-  if (!state.photoPointers.has(event.pointerId)) return;
-  state.photoPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-  if (state.photoPinch) {
-    event.preventDefault();
-    updatePhotoPinch();
-    return;
-  }
-  const swipe = state.photoSwipe;
-  if (swipe && swipe.id === event.pointerId) {
-    swipe.dx = event.clientX - swipe.startX;
-    swipe.dy = event.clientY - swipe.startY;
-    if (Math.abs(swipe.dx) > 8 && Math.abs(swipe.dx) > Math.abs(swipe.dy)) {
-      event.preventDefault();
-      elements.photoLightboxImg.style.transform = `translate(${state.photoPanX + swipe.dx * 0.28}px, ${state.photoPanY}px) scale(${state.photoZoom})`;
-    }
-    return;
-  }
-  const drag = state.photoDrag;
-  if (!drag || drag.id !== event.pointerId) return;
-  state.photoPanX = drag.panX + (event.clientX - drag.x);
-  state.photoPanY = drag.panY + (event.clientY - drag.y);
-  applyPhotoZoom();
-});
-const endPhotoPointer = (event) => {
-  const swipe = state.photoSwipe;
-  const swipeEnded = swipe?.id === event.pointerId;
-  state.photoPointers.delete(event.pointerId);
-  if (state.photoPinch && state.photoPointers.size < 2) {
-    state.photoPinch = null;
-    elements.photoLightboxStage.classList.remove("pinching");
-    const remaining = [...state.photoPointers.entries()][0];
-    if (remaining && state.photoZoom > state.photoZoomFit + 0.001) {
-      const [id, point] = remaining;
-      state.photoDrag = {
-        id,
-        panX: state.photoPanX,
-        panY: state.photoPanY,
-        x: point.x,
-        y: point.y,
-      };
-      elements.photoLightboxStage.classList.add("dragging");
-      try {
-        elements.photoLightboxStage.setPointerCapture(id);
-      } catch {
-        // The remaining pointer may already be gone.
-      }
-    }
-  }
-  if (swipeEnded) {
-    state.photoSwipe = null;
-    elements.photoLightboxStage.classList.remove("swiping");
-    const absX = Math.abs(swipe.dx);
-    const absY = Math.abs(swipe.dy);
-    const navigate = event.type === "pointerup"
-      && absX >= PHOTO_SWIPE_MIN_PX
-      && absX > absY * PHOTO_SWIPE_DOMINANCE;
-    if (navigate) {
-      state.photoSuppressTapUntil = performance.now() + 450;
-      stepPhotoLightbox(swipe.dx < 0 ? 1 : -1);
-    } else {
-      applyPhotoZoom();
-    }
-  }
-  if (state.photoDrag?.id === event.pointerId) {
-    state.photoDrag = null;
-    elements.photoLightboxStage.classList.remove("dragging");
-  }
-  if (elements.photoLightboxStage.hasPointerCapture(event.pointerId)) {
-    elements.photoLightboxStage.releasePointerCapture(event.pointerId);
-  }
-};
-elements.photoLightboxStage.addEventListener("pointerup", endPhotoPointer);
-elements.photoLightboxStage.addEventListener("pointercancel", endPhotoPointer);
-elements.photoLightboxStage.addEventListener("lostpointercapture", (event) => {
-  if (state.photoPointers.has(event.pointerId)) endPhotoPointer(event);
-});
-elements.photoLightboxStage.addEventListener("dblclick", (event) => {
-  if (performance.now() < state.photoSuppressTapUntil) {
-    event.preventDefault();
-    return;
-  }
-  if (state.photoZoom > state.photoZoomFit * 1.1) resetPhotoZoom();
-  else zoomPhotoAt(1, event.clientX, event.clientY);
-});
-window.addEventListener("resize", () => {
-  if (elements.photoLightbox.open) resetPhotoZoom();
-});
-elements.photoLightbox.addEventListener("keydown", (event) => {
-  if (event.key === "ArrowLeft") {
-    event.preventDefault();
-    stepPhotoLightbox(-1);
-  } else if (event.key === "ArrowRight") {
-    event.preventDefault();
-    stepPhotoLightbox(1);
-  }
-});
-elements.photoLightbox.addEventListener("click", (event) => {
-  const suppressed = performance.now() < state.photoSuppressTapUntil
-    && (event.target === elements.photoLightbox || elements.photoLightboxStage.contains(event.target));
-  if (suppressed) {
-    event.preventDefault();
-    return;
-  }
-  if (event.target === elements.photoLightbox) elements.photoLightbox.close();
-});
-elements.photoLightbox.addEventListener("close", () => {
-  elements.photoLightboxImg.style.transform = "";
-  elements.photoLightboxImg.removeAttribute("src");
-  elements.photoLightboxNode.textContent = "";
-  elements.photoLightboxNode.hidden = true;
-  elements.photoLightboxCaption.textContent = "";
-  elements.photoLightboxAuthor.textContent = "";
-  elements.photoNodeOpen.hidden = true;
-  state.photoDrag = null;
-  state.photoPointers.clear();
-  state.photoPinch = null;
-  state.photoSwipe = null;
-  state.photoSuppressTapUntil = 0;
-  elements.photoLightboxStage.classList.remove("dragging", "pinching", "swiping");
-  state.photoZoom = 1;
-  state.photoZoomFit = 1;
-  state.photoPanX = 0;
-  state.photoPanY = 0;
-  state.lightboxPhoto = null;
-  state.lightboxPhotos = [];
-  state.lightboxIndex = 0;
-  state.lightboxNode = null;
-});
-elements.photoNodeOpen.addEventListener("click", () => {
-  const current = state.lightboxPhoto;
-  if (current?.photo) revealPhotoNode(current.photo, current.node);
-});
-elements.photoManageOpen.addEventListener("click", openPhotoManageDialog);
 elements.photoManageClose.addEventListener("click", () => elements.photoManageDialog.close());
 elements.photoManageCancel.addEventListener("click", () => elements.photoManageDialog.close());
 elements.photoManageDialog.addEventListener("click", (event) => {
@@ -8024,47 +7599,6 @@ elements.photoManageForm.addEventListener("submit", (event) => {
 elements.photoManageDelete.addEventListener("click", () => {
   if (window.confirm(t("photos.manageConfirmDelete"))) void managePhoto("delete");
 });
-elements.photoReportOpen.addEventListener("click", openPhotoReport);
-elements.photoReportClose.addEventListener("click", () => elements.photoReportDialog.close());
-elements.photoReportCancel.addEventListener("click", () => elements.photoReportDialog.close());
-elements.photoReportDialog.addEventListener("click", (event) => {
-  if (event.target === elements.photoReportDialog) elements.photoReportDialog.close();
-});
-elements.photoReportDialog.addEventListener("close", () => {
-  state.reportPhoto = null;
-  elements.photoReportForm.reset();
-  setPhotoReportStatus("");
-});
-elements.photoReportForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const current = state.reportPhoto;
-  if (!current) return;
-  const message = elements.photoReportMessage.value.trim();
-  if (message.length < 5) {
-    setPhotoReportStatus(t("photos.reportTooShort"), true);
-    return;
-  }
-  elements.photoReportSubmit.disabled = true;
-  setPhotoReportStatus(t("photos.reportSending"));
-  try {
-    await postJson("/api/photos/report", {
-      contact: elements.photoReportContact.value.trim(),
-      message,
-      photoId: current.photo.id,
-      reason: elements.photoReportReason.value,
-    });
-    setPhotoReportStatus(t("photos.reportSent"));
-    elements.photoReportForm.reset();
-    setTimeout(() => {
-      if (elements.photoReportDialog.open) elements.photoReportDialog.close();
-    }, 2_000);
-  } catch (error) {
-    setPhotoReportStatus(error.message || t("photos.reportFailed"), true);
-  } finally {
-    elements.photoReportSubmit.disabled = false;
-  }
-});
-
 elements.mobileSheetClose.addEventListener("click", closeMobileSheet);
 elements.mobileSheet.addEventListener("click", (event) => {
   if (event.target === elements.mobileSheet) closeMobileSheet();
