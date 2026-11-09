@@ -167,7 +167,11 @@ přihlašovací údaje zůstávají pouze na serveru.
   `count`, `coverId` zvolené fotky) pro přepínač „Jen nody s fotkou“ v HUD
   a malý náhled v tooltipu při najetí na nod. `GET /api/photos/all` vrací
   nejnovější schválené fotky všech nodů včetně `nodeKey` a `nodeName`; používá
-  je fotogalerie otevíraná tlačítkem „Galerie“ vedle filtru. Správce může v `/admin/photos`
+  je fotogalerie otevíraná tlačítkem „Galerie“ vedle filtru nebo odkazem
+  `?gallery=1`. Fotky mají anonymní hodnocení `likes`/`dislikes`;
+  `POST /api/photos/:id/vote` s hlavičkou `X-Photo-Voter` a tělem
+  `{ "value": 1 | -1 | 0 }` hlas uloží, změní nebo zruší. Jeden prohlížeč má
+  jeden hlas na fotku, server ukládá jen jeho hash. Správce může v `/admin/photos`
   u schválené fotky zvolit „Nastavit jako náhled“; bez volby se použije
   nejnovější schválená fotka. `POST /api/photos`
   přijímá binární JPEG/PNG/WebP (max 5 MB) s hlavičkami `X-Photo-Key`,

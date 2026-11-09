@@ -3,6 +3,15 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-09 — Hodnocení fotek
+- Prostředí: produkce i beta
+- Build: 20261109-0826-71886d0
+- U fotek lze anonymně kliknout na **👍 like** nebo **👎 dislike**.
+- Jeden prohlížeč má jeden hlas na fotku; opakovaným kliknutím se hlas zruší.
+- Počty jsou vidět v galerii i v lightboxu a aktualizují se okamžitě.
+- Hlasy se ukládají lokálně do `photos.sqlite`; server uchovává jen hash anonymního voliče.
+- Přidán `POST /api/photos/:id/vote`.
+
 ## 2026-11-08 — Sdílený odkaz na fotogalerii
 - Prostředí: produkce i beta
 - Build: 20261108-2057-ac924c0
