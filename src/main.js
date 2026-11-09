@@ -1973,7 +1973,6 @@ function nodeHealthBadge(node) {
     ? Number(health.humidityPct)
     : null;
   if (battery == null && temperature == null && humidity == null) return "";
-  const prefix = shortNodePrefix(node);
   const status = health?.batteryStatus && ALL_HEALTH_STATUSES.includes(health.batteryStatus)
     ? health.batteryStatus
     : "unknown";
@@ -1982,14 +1981,12 @@ function nodeHealthBadge(node) {
   const temperatureText = temperature == null ? null : `${formatDecimal(temperature, 1)} °C`;
   const humidityText = humidity == null ? null : `${formatNumber(humidity)} %`;
   const title = [
-    prefix ? `${t("node.prefix")}: ${prefix}` : null,
     voltageText ? `${t("node.battery")}: ${voltageText}` : null,
     statusText,
     temperatureText ? `${t("node.temperature")}: ${temperatureText}` : null,
     humidityText ? `${t("node.humidity")}: ${humidityText}` : null,
   ].filter(Boolean).join(" · ");
   return `<button type="button" class="node-health-badge ${status}" data-health-node-key="${escapeHtml(node.public_key.toUpperCase())}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
-    ${prefix ? `<span class="node-health-prefix">${escapeHtml(prefix)}</span><span class="node-health-divider" aria-hidden="true">·</span>` : ""}
     ${battery == null ? "" : batteryStatusIcon(status)}
     ${voltageText ? `<span class="node-health-voltage">${escapeHtml(voltageText)}</span>` : ""}
     ${temperatureText ? `${THERMOMETER_ICON}<span class="node-health-temperature">${escapeHtml(temperatureText)}</span>` : ""}
@@ -3204,10 +3201,14 @@ function nodeTooltip(node) {
   const photo = coverId
     ? `<img class="node-tooltip-photo" src="${appPath(`/api/photos/${encodeURIComponent(coverId)}`)}" alt="" loading="lazy" decoding="async" />`
     : "";
+  const prefix = shortNodePrefix(node);
+  const identity = [escapeHtml(roleLabel(node.role)), prefix ? `<span class="node-tooltip-prefix">${escapeHtml(prefix)}</span>` : ""]
+    .filter(Boolean)
+    .join(" · ");
   const archiveHint = state.routeWindowMs
     ? `<small class="node-tooltip-hint">${escapeHtml(t("archive.nodeHint"))}</small>`
     : "";
-  return `<span class="node-tooltip-body">${photo}<span><strong>${escapeHtml(node.name || t("common.unknownNode"))}</strong><br>${escapeHtml(roleLabel(node.role))}${nodeNewBadge(node)}${nodeHealthTooltip(node)}${archiveHint}</span></span>`;
+  return `<span class="node-tooltip-body">${photo}<span><strong>${escapeHtml(node.name || t("common.unknownNode"))}</strong><br>${identity}${nodeNewBadge(node)}${nodeHealthTooltip(node)}${archiveHint}</span></span>`;
 }
 
 function refreshOpenNodePopup(entry) {
