@@ -12,6 +12,8 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 - v3 DAY, SUMMARY i CONFIG zůstávají beze změny funkční; historická data se nemažou.
 - Společné úložiště vede obě verze vedle sebe a historii doplňuje bez duplicit od více observerů.
 - Ověřeno na živých RC9 datech: `OVA-Test` (3,09 V, -475 mA), `Portable_26ED` (3,79 V, 24,5 °C), `Lp00` (LTO vlastik, BMS, bez hodnocení stavu baterie) a v4 CONFIG regionů.
+- Po nasazení na produkci se zobrazovalo 13 v4 a 12 v3 nodů s telemetrií.
+- Produkce: release `20261109T191635Z`, záloha `/opt/meshcore-live-map/backups/20261109T191635Z.tar.gz`; beta build `20261109-1906-1d623b1`.
 - Testy: 162 prošlo, 3 přeskočeny.
 
 ## 2026-11-09 — Prefix nodu v tooltipu
