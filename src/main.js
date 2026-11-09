@@ -2673,12 +2673,21 @@ function renderNodePhotos(list, photos, node) {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "node-photo";
+    button.dataset.photoId = photo.id;
     button.title = photo.caption || t("photos.openAria");
     button.setAttribute("aria-label", t("photos.openAria"));
     const image = document.createElement("img");
     image.src = appPath(`/api/photos/${encodeURIComponent(photo.id)}`);
     image.alt = t("photos.alt", { name: node.name || t("common.unknownNode") });
     button.appendChild(image);
+    const likes = Number(photo.likes) || 0;
+    if (likes > 0) {
+      const like = document.createElement("span");
+      like.className = "node-photo-like";
+      like.title = t("photos.like");
+      like.textContent = `👍 ${likes}`;
+      button.appendChild(like);
+    }
     if (photo.caption) {
       const caption = document.createElement("small");
       caption.textContent = photo.caption;
@@ -2772,6 +2781,7 @@ async function votePhoto(photo, value) {
     const cached = state.photoCache.get(String(photo.nodeKey || "").toLowerCase());
     const cachedPhoto = cached?.photos?.find((entry) => entry.id === photo.id);
     if (cachedPhoto) Object.assign(cachedPhoto, summary);
+    refreshNodePhotoList(photo.nodeKey);
     return summary;
   } catch (error) {
     console.error(t("photos.voteFailed"), error);

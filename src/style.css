@@ -516,7 +516,8 @@ html[data-theme="dark"] .node-trend-button:hover { color: #d7e2dc; background: r
 .node-photo-add { padding: 4px 7px; border: 1px solid rgba(7, 142, 98, 0.32); border-radius: 6px; color: #087a57; background: #edf7f1; font: 10px "DM Mono", monospace; cursor: pointer; }
 .node-photo-add:hover { border-color: var(--green); background: #e4f3ea; }
 .node-photos-list { display: flex; gap: 6px; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: 2px; }
-.node-photo { flex: 0 0 96px; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: #fff; cursor: pointer; text-align: left; }
+.node-photo { position: relative; flex: 0 0 96px; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 7px; background: #fff; cursor: pointer; text-align: left; }
+.node-photo-like { position: absolute; top: 4px; right: 4px; z-index: 1; padding: 1px 4px; border-radius: 5px; color: #fff; background: rgba(10, 16, 20, 0.72); font: 8px "DM Mono", monospace; pointer-events: none; }
 .node-photo:hover { border-color: rgba(7, 142, 98, 0.4); }
 .node-photo img { display: block; width: 96px; height: 72px; object-fit: cover; background: #eef2ef; }
 .node-photo small { display: block; overflow: hidden; padding: 4px 5px; color: var(--muted); font: 9px "DM Mono", monospace; text-overflow: ellipsis; white-space: nowrap; }
