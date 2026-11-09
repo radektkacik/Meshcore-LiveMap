@@ -2700,7 +2700,7 @@ const photoGallery = createPhotoGalleryController({
   state,
   t,
   tCount,
-  votingEnabled: IS_BETA,
+  votingEnabled: true,
 });
 photoGallery.bind();
 
