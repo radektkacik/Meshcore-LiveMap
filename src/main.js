@@ -1973,6 +1973,7 @@ function nodeHealthBadge(node) {
     ? Number(health.humidityPct)
     : null;
   if (battery == null && temperature == null && humidity == null) return "";
+  const prefix = shortNodePrefix(node);
   const status = health?.batteryStatus && ALL_HEALTH_STATUSES.includes(health.batteryStatus)
     ? health.batteryStatus
     : "unknown";
@@ -1981,12 +1982,14 @@ function nodeHealthBadge(node) {
   const temperatureText = temperature == null ? null : `${formatDecimal(temperature, 1)} °C`;
   const humidityText = humidity == null ? null : `${formatNumber(humidity)} %`;
   const title = [
+    prefix ? `${t("node.prefix")}: ${prefix}` : null,
     voltageText ? `${t("node.battery")}: ${voltageText}` : null,
     statusText,
     temperatureText ? `${t("node.temperature")}: ${temperatureText}` : null,
     humidityText ? `${t("node.humidity")}: ${humidityText}` : null,
   ].filter(Boolean).join(" · ");
   return `<button type="button" class="node-health-badge ${status}" data-health-node-key="${escapeHtml(node.public_key.toUpperCase())}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
+    ${prefix ? `<span class="node-health-prefix">${escapeHtml(prefix)}</span><span class="node-health-divider" aria-hidden="true">·</span>` : ""}
     ${battery == null ? "" : batteryStatusIcon(status)}
     ${voltageText ? `<span class="node-health-voltage">${escapeHtml(voltageText)}</span>` : ""}
     ${temperatureText ? `${THERMOMETER_ICON}<span class="node-health-temperature">${escapeHtml(temperatureText)}</span>` : ""}

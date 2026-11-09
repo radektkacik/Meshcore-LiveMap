@@ -342,6 +342,8 @@ html[data-theme="dark"] .node-new-badge { color: #fbbf24; background: rgba(245, 
 .node-health-badge { display: inline-flex; align-items: center; gap: 4px; padding: 0; border: 0; border-radius: 4px; color: #3f584e; background: transparent; font: 500 12px "DM Mono", monospace; line-height: 18px; text-align: left; white-space: nowrap; cursor: pointer; appearance: none; }
 .node-health-badge:hover { opacity: 0.78; }
 .node-health-badge:focus-visible { outline: 2px solid rgba(7, 142, 98, 0.45); outline-offset: 2px; }
+.node-health-prefix { color: #667b70; font-weight: 700; letter-spacing: 0.02em; }
+.node-health-divider { color: #9aa9a1; font-weight: 400; }
 .node-health-battery { flex: 0 0 auto; width: 18px; height: 18px; color: #899990; }
 .node-health-thermometer,
 .node-health-humidity-icon { flex: 0 0 auto; width: 15px; height: 15px; color: #667b70; }
