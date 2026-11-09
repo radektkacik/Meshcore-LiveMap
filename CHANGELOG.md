@@ -3,9 +3,9 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-09 — Vlhkost v hlavičce nodu (beta)
-- Prostředí: beta
-- Build: 20261109-0941-1d3c263
+## 2026-11-09 — Vlhkost v hlavičce nodu
+- Prostředí: produkce i beta
+- Build: 20261109-1046-aee0de1
 - Pokud telemetrie posílá vlhkost, zobrazí se v hlavičce nodu vedle baterie a teploty.
 - Pokud vlhkost nemá, hlavička ji vůbec neuvádí.
 
