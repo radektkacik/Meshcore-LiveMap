@@ -2693,8 +2693,10 @@ const photoGallery = createPhotoGalleryController({
   getJson: (path) => getPhotoJson(appPath, path),
   getLocale,
   nowMs,
+  nodeLinksEnabled: IS_BETA,
   onOpenNode: (photo) => revealPhotoNode(photo, null),
   onOpenPhoto: (photo, photos, index) => photoLightbox.open(photo, null, photos, index),
+  onShareNode: shareNodeGallery,
   onVote: votePhoto,
   state,
   t,
@@ -2769,6 +2771,30 @@ async function votePhoto(photo, value) {
     console.error(t("photos.voteFailed"), error);
     return null;
   }
+}
+
+function galleryShareUrl(nodeKey = "") {
+  const url = new URL(location.href);
+  url.pathname = MAP_PATH;
+  url.search = "";
+  url.searchParams.set("gallery", "1");
+  if (nodeKey) url.searchParams.set("galleryNode", nodeKey);
+  return url.toString();
+}
+
+async function shareNodeGallery(photo) {
+  const key = String(photo?.nodeKey || "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(key)) return;
+  const ok = await copyText(galleryShareUrl(key));
+  const message = t(ok ? "photos.galleryNodeLinkCopied" : "common.copyFailed");
+  elements.photoGalleryStatus.hidden = false;
+  elements.photoGalleryStatus.classList.toggle("error", !ok);
+  elements.photoGalleryStatus.textContent = message;
+  setTimeout(() => {
+    if (elements.photoGalleryStatus.textContent !== message) return;
+    elements.photoGalleryStatus.hidden = true;
+    elements.photoGalleryStatus.textContent = "";
+  }, 3_000);
 }
 
 function revealPhotoNode(photo, nodeValue) {
@@ -6869,7 +6895,10 @@ async function start() {
   void loadRouteHistory();
   if (!nodesLoaded) setConnection(false, t("connection.nodesFailed"));
   if (initialLosLink) initSharedLos(initialLosLink);
-  if (INITIAL_PARAMS.get("gallery") === "1") photoGallery.open();
+  if (INITIAL_PARAMS.get("gallery") === "1") {
+    const galleryNode = String(INITIAL_PARAMS.get("galleryNode") || "").toLowerCase();
+    photoGallery.open(IS_BETA && /^[0-9a-f]{64}$/.test(galleryNode) ? { nodeKey: galleryNode } : {});
+  }
   if (INITIAL_PACKET_HASH) void openPacketByHash(INITIAL_PACKET_HASH);
 }
 

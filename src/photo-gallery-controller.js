@@ -9,8 +9,10 @@ export function createPhotoGalleryController({
   getJson,
   getLocale,
   nowMs = () => Date.now(),
+  nodeLinksEnabled = false,
   onOpenNode = () => {},
   onOpenPhoto = () => {},
+  onShareNode = () => {},
   onVote = () => {},
   state,
   t,
@@ -20,6 +22,7 @@ export function createPhotoGalleryController({
   let error = false;
   let loadedAt = 0;
   let loading = false;
+  let nodeFilter = "";
   let photos = [];
   let query = "";
   let view = [];
@@ -36,9 +39,12 @@ export function createPhotoGalleryController({
 
   function filteredPhotos() {
     const needle = query.trim().toLowerCase();
-    if (!needle) return photos;
-    return photos.filter((photo) => [photo.nodeName, photo.caption, photo.author]
-      .some((value) => String(value || "").toLowerCase().includes(needle)));
+    return photos.filter((photo) => {
+      if (nodeFilter && photo.nodeKey !== nodeFilter) return false;
+      if (!needle) return true;
+      return [photo.nodeName, photo.caption, photo.author]
+        .some((value) => String(value || "").toLowerCase().includes(needle));
+    });
   }
 
   function createCard(photo, index, isNew) {
@@ -129,9 +135,26 @@ export function createPhotoGalleryController({
     nodeButton.title = t("photos.openNodeTitle");
     nodeButton.addEventListener("click", () => onOpenNode(groupPhotos[0]));
     heading.appendChild(nodeButton);
+    const actions = document.createElement("div");
+    actions.className = "photo-gallery-section-actions";
+    if (nodeLinksEnabled && groupPhotos[0]?.nodeKey) {
+      const share = document.createElement("button");
+      share.type = "button";
+      share.className = "photo-gallery-share-node";
+      share.textContent = t("photos.galleryNodeShare");
+      share.title = t("photos.galleryNodeShareTitle", { name: title });
+      share.setAttribute("aria-label", t("photos.galleryNodeShareTitle", { name: title }));
+      share.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void onShareNode(groupPhotos[0]);
+      });
+      actions.appendChild(share);
+    }
     const count = document.createElement("small");
     count.textContent = tCount("photos.galleryCount", groupPhotos.length);
-    head.append(heading, count);
+    actions.appendChild(count);
+    head.append(heading, actions);
     const cards = document.createElement("div");
     cards.className = "photo-gallery-cards";
     for (const photo of groupPhotos) {
@@ -162,13 +185,20 @@ export function createPhotoGalleryController({
       elements.photoGallerySummary.textContent = "";
       const empty = document.createElement("p");
       empty.className = "photo-gallery-empty";
-      empty.textContent = photos.length ? t("search.empty") : t("photos.galleryEmpty");
+      empty.textContent = nodeFilter
+        ? t("photos.galleryNodeEmpty")
+        : photos.length ? t("search.empty") : t("photos.galleryEmpty");
       elements.photoGalleryGrid.appendChild(empty);
       return;
     }
 
-    const nodeCount = new Set(visible.map((photo) => photo.nodeKey).filter(Boolean)).size;
-    elements.photoGallerySummary.textContent = `${tCount("photos.galleryCount", visible.length)} · ${tCount("photos.galleryNodes", nodeCount)}`;
+    if (nodeFilter) {
+      const nodeName = photos.find((photo) => photo.nodeKey === nodeFilter)?.nodeName || nodeFilter.slice(0, 8);
+      elements.photoGallerySummary.textContent = `${t("photos.galleryNodeFilter", { name: nodeName })} · ${tCount("photos.galleryCount", visible.length)}`;
+    } else {
+      const nodeCount = new Set(visible.map((photo) => photo.nodeKey).filter(Boolean)).size;
+      elements.photoGallerySummary.textContent = `${tCount("photos.galleryCount", visible.length)} · ${tCount("photos.galleryNodes", nodeCount)}`;
+    }
 
     const groups = buildPhotoGallerySections(visible, {
       collator: new Intl.Collator(getLocale(), { numeric: true, sensitivity: "base" }),
@@ -209,8 +239,9 @@ export function createPhotoGalleryController({
     }
   }
 
-  function open() {
+  function open(options = {}) {
     if (!elements.photoGalleryDialog.open) elements.photoGalleryDialog.showModal();
+    nodeFilter = nodeLinksEnabled ? String(options.nodeKey || "").toLowerCase() : "";
     query = "";
     elements.photoGallerySearch.value = "";
     elements.photoGalleryGrid.scrollTop = 0;

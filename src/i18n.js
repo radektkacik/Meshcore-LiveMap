@@ -442,6 +442,11 @@ const cs = {
   "photos.galleryFailed": "Galerii se nepodařilo načíst.",
   "photos.galleryNote": "Všechny schválené fotky nodů. Kliknutím otevřete fotku.",
   "photos.gallerySearch": "Hledat nod, popis nebo autora…",
+  "photos.galleryNodeShare": "Sdílet",
+  "photos.galleryNodeShareTitle": "Kopírovat odkaz na galerii nodu {name}",
+  "photos.galleryNodeFilter": "Jen nod {name}",
+  "photos.galleryNodeEmpty": "Tento nod zatím nemá fotky.",
+  "photos.galleryNodeLinkCopied": "Odkaz na galerii nodu zkopírován.",
   "photos.galleryNewBadge": "nový",
   "photos.galleryNewBadgeTitle": "Nahráno před méně než 3 dny",
   "photos.galleryCount": {
@@ -988,6 +993,11 @@ const en = {
   "photos.galleryFailed": "The gallery could not be loaded.",
   "photos.galleryNote": "All approved node photos. Click a photo to open it.",
   "photos.gallerySearch": "Search node, caption or author…",
+  "photos.galleryNodeShare": "Share",
+  "photos.galleryNodeShareTitle": "Copy gallery link for node {name}",
+  "photos.galleryNodeFilter": "Node: {name}",
+  "photos.galleryNodeEmpty": "This node has no photos yet.",
+  "photos.galleryNodeLinkCopied": "Node gallery link copied.",
   "photos.galleryNewBadge": "new",
   "photos.galleryNewBadgeTitle": "Uploaded less than 3 days ago",
   "photos.galleryCount": {
