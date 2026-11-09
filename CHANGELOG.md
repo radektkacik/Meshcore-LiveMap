@@ -3,22 +3,20 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-09 — Odkaz na galerii konkrétního nodu (beta)
-- Prostředí: beta
-- Build: 20261109-0914-8bfde1a
+## 2026-11-09 — Odkaz na galerii konkrétního nodu
+- Prostředí: produkce i beta
+- Build: 20261109-0924-2355a50
 - V záhlaví každé nodové sekce v galerii je tlačítko **Sdílet**.
 - Zkopíruje odkaz ve tvaru `?gallery=1&galleryNode=<public_key>`.
 - Odkaz otevře fotogalerii filtrovanou přesně na daný nod.
-- Produkce zůstává beze změny.
 
-## 2026-11-09 — Hodnocení fotek (beta)
-- Prostředí: beta
-- Build: 20261109-0918-b997b9f
-- Produkce zůstává bez hlasování na buildu `20261109-0844-ac924c0`.
-- Hlasování je nově beta-only: na produkci se nezobrazí a `/api/photos/:id/vote` vrací 404.
+## 2026-11-09 — Hodnocení fotek
+- Prostředí: produkce i beta
+- Build: 20261109-0924-2355a50
 - U fotek lze anonymně kliknout na **👍 like** nebo **👎 dislike**.
 - Hlasovací tlačítka jsou overlay přímo na fotce, ne pod ní; v lightboxu jsou v pravém dolním rohu fotky.
 - V přehledu galerie se zobrazují jen nenulové počty jako statické odznaky; lajkovat se dá v detailu/lightboxu.
+- Hlasování lze vypnout přes `PHOTO_VOTING=0`.
 - Jeden prohlížeč má jeden hlas na fotku; opakovaným kliknutím se hlas zruší.
 - Počty jsou vidět v galerii i v lightboxu a aktualizují se okamžitě.
 - Hlasy se ukládají lokálně do `photos.sqlite`; server uchovává jen hash anonymního voliče.
