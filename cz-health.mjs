@@ -8,7 +8,7 @@ const MESSAGE_VERSION = 3;
 const MESSAGE_VERSION_V4 = 4;
 const MAX_MESSAGE_LENGTH = 162;
 const CLOCK_TOLERANCE_MS = 48 * 60 * 60 * 1000;
-const UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
+const UTF8_DECODER = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 const RESET_REASONS = [
   "unknown",
   "power_on",
@@ -594,6 +594,7 @@ function readEnvelope(message) {
   }
   if (message[0] === MESSAGE_VERSION_V4) {
     if (message.length < 29 || message.length > MAX_MESSAGE_LENGTH) return null;
+    if ((message[20] || 0) & 0x80) return null;
     return {
       body: message.subarray(21, message.length - 8),
       flagsOffset: 20,

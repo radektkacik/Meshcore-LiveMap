@@ -340,6 +340,7 @@ test("CzHealth decoder rejects invalid v4 six-bit padding and reserved flags", (
   assert.equal(decodeCzHealth(buildV4HealthPacket(badVoltagePadding), OBSERVED_AT), null);
   const reservedFlags = Buffer.from("01008100a00f01000080", "hex");
   assert.equal(decodeCzHealth(buildV4HealthPacket(reservedFlags), OBSERVED_AT), null);
+  assert.equal(decodeCzHealth(buildV4HealthPacket(Buffer.from("01000100a00f01000080", "hex"), { flags: 0x81 }), OBSERVED_AT), null);
 });
 
 test("CzHealth store keeps v3 and v4 messages side by side", () => {
