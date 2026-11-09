@@ -3,6 +3,17 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-09 — CzHealth v4 (RC9) vedle v3 (RC8) (beta)
+- Prostředí: beta
+- Build: 20261109-1900-eaa009d
+- Dekodér rozlišuje v3 (`43 48 03`) a v4 (`04`) ještě před čtením offsetů.
+- v4 DAY: 6bitové řady napětí, proudu a vlhkosti, společné dvouhodinové sloty, zdroje napětí včetně smíšeného režimu, baterie a počet sériových článků.
+- v4 SUMMARY a CONFIG: nový regionový tag 4 včetně rolí, `*`, UTF-8 názvů, neúplného seznamu a zachování regionů při CONFIG bez regionového bloku.
+- v3 DAY, SUMMARY i CONFIG zůstávají beze změny funkční; historická data se nemažou.
+- Společné úložiště vede obě verze vedle sebe a historii doplňuje bez duplicit od více observerů.
+- Ověřeno na živých RC9 datech: `OVA-Test` (3,09 V, -475 mA), `Portable_26ED` (3,79 V, 24,5 °C), `Lp00` (LTO vlastik, BMS, bez hodnocení stavu baterie) a v4 CONFIG regionů.
+- Testy: 162 prošlo, 3 přeskočeny.
+
 ## 2026-11-09 — Prefix nodu v tooltipu
 - Prostředí: produkce i beta
 - Build: 20261109-1655-d816b26
