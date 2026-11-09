@@ -883,8 +883,10 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 .photo-gallery-node-link:hover { color: var(--green); text-decoration: underline; }
 .photo-gallery-meta small { margin-top: 1px; color: var(--muted); font: 9px "DM Mono", monospace; }
 .photo-gallery-meta .photo-gallery-date { margin-top: 2px; color: #7b8d84; }
-.photo-gallery-votes { display: flex; gap: 4px; margin-top: 4px; }
+.photo-gallery-media { position: relative; }
+.photo-gallery-votes { position: absolute; right: 6px; bottom: 6px; z-index: 2; display: flex; gap: 4px; }
 .photo-vote-button { padding: 2px 5px; border: 1px solid var(--line); border-radius: 5px; color: #52685d; background: #f7faf8; font: 9px "DM Mono", monospace; cursor: pointer; }
+.photo-gallery-votes .photo-vote-button { border-color: rgba(255, 255, 255, 0.3); color: #fff; background: rgba(10, 16, 20, 0.7); backdrop-filter: blur(2px); }
 .photo-vote-button:hover { border-color: rgba(7, 142, 98, 0.45); }
 .photo-vote-button.active { color: #fff; border-color: var(--green); background: var(--green); }
 .photo-vote-button[data-value="-1"].active { border-color: #c0392b; background: #c0392b; }
@@ -919,7 +921,7 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 .photo-lightbox p { margin: 8px 12px 0; text-align: center; font-size: 12px; }
 #photo-lightbox-node { margin-top: 6px; color: #d7e3e8; font: 11px "DM Mono", monospace; }
 #photo-lightbox-author { margin-top: 2px; color: #9fb0b8; font: 11px "DM Mono", monospace; }
-.photo-lightbox-votes { display: flex; justify-content: center; gap: 8px; margin: 8px auto 0; }
+.photo-lightbox-votes { position: absolute; right: 12px; bottom: 12px; z-index: 4; display: flex; gap: 8px; margin: 0; }
 .photo-lightbox-votes button { min-width: 72px; padding: 5px 12px; border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 6px; color: #d7e3e8; background: rgba(10, 16, 20, 0.72); font: 700 10px "DM Mono", monospace; cursor: pointer; }
 .photo-lightbox-votes button:hover { border-color: var(--green); }
 .photo-lightbox-votes button.active { color: #fff; border-color: var(--green); background: rgba(7, 142, 98, 0.8); }

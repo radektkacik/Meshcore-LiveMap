@@ -506,6 +506,9 @@ export function createPhotoLightboxController({
       index = 0;
       node = null;
     });
+    for (const eventName of ["pointerdown", "pointerup", "pointercancel", "click", "dblclick", "wheel"]) {
+      elements.photoLightboxVotes.addEventListener(eventName, (event) => event.stopPropagation());
+    }
     elements.photoLike.addEventListener("click", () => { void vote(1); });
     elements.photoDislike.addEventListener("click", () => { void vote(-1); });
     elements.photoNodeOpen.addEventListener("click", () => {

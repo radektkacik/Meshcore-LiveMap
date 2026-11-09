@@ -64,7 +64,32 @@ export function createPhotoGalleryController({
     image.loading = "lazy";
     image.decoding = "async";
     photoButton.appendChild(image);
-    item.appendChild(photoButton);
+    const media = document.createElement("div");
+    media.className = "photo-gallery-media";
+    media.appendChild(photoButton);
+
+    if (votingEnabled) {
+      const votes = document.createElement("div");
+      votes.className = "photo-gallery-votes";
+      for (const [value, label, count] of [
+        [1, t("photos.like"), photo.likes],
+        [-1, t("photos.dislike"), photo.dislikes],
+      ]) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "photo-vote-button";
+        button.dataset.index = String(index);
+        button.dataset.value = String(value);
+        button.classList.toggle("active", Number(photo.myVote) === value);
+        button.title = label;
+        button.setAttribute("aria-label", label);
+        button.setAttribute("aria-pressed", String(Number(photo.myVote) === value));
+        button.textContent = `${value === 1 ? "👍" : "👎"} ${Number(count) || 0}`;
+        votes.appendChild(button);
+      }
+      media.appendChild(votes);
+    }
+    item.appendChild(media);
 
     const meta = document.createElement("div");
     meta.className = "photo-gallery-meta";
@@ -86,27 +111,6 @@ export function createPhotoGalleryController({
       date.className = "photo-gallery-date";
       date.textContent = formatDateTimeShort(photo.createdAt);
       meta.appendChild(date);
-    }
-    if (votingEnabled) {
-      const votes = document.createElement("div");
-      votes.className = "photo-gallery-votes";
-      for (const [value, label, count] of [
-        [1, t("photos.like"), photo.likes],
-        [-1, t("photos.dislike"), photo.dislikes],
-      ]) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "photo-vote-button";
-        button.dataset.index = String(index);
-        button.dataset.value = String(value);
-        button.classList.toggle("active", Number(photo.myVote) === value);
-        button.title = label;
-        button.setAttribute("aria-label", label);
-        button.setAttribute("aria-pressed", String(Number(photo.myVote) === value));
-        button.textContent = `${value === 1 ? "👍" : "👎"} ${Number(count) || 0}`;
-        votes.appendChild(button);
-      }
-      meta.appendChild(votes);
     }
     item.appendChild(meta);
     return item;

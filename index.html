@@ -457,6 +457,10 @@
         <button id="photo-lightbox-next" class="photo-lightbox-nav next" type="button">›</button>
         <div id="photo-lightbox-stage" class="photo-lightbox-stage">
           <img id="photo-lightbox-img" alt="" />
+          <div id="photo-lightbox-votes" class="photo-lightbox-votes" role="group" aria-label="Hodnocení fotky" hidden>
+            <button id="photo-like" type="button" aria-pressed="false">👍 <span id="photo-like-count">0</span></button>
+            <button id="photo-dislike" type="button" aria-pressed="false">👎 <span id="photo-dislike-count">0</span></button>
+          </div>
         </div>
         <p id="photo-lightbox-node"></p>
         <p id="photo-lightbox-caption"></p>
@@ -467,10 +471,6 @@
           <span id="photo-lightbox-zoom-label">100 %</span>
           <button id="photo-lightbox-zoom-in" type="button" aria-label="Přiblížit">+</button>
           <button id="photo-lightbox-zoom-reset" type="button" aria-label="Zobrazit v plném rozlišení">1:1</button>
-        </div>
-        <div id="photo-lightbox-votes" class="photo-lightbox-votes" role="group" aria-label="Hodnocení fotky" hidden>
-          <button id="photo-like" type="button" aria-pressed="false">👍 <span id="photo-like-count">0</span></button>
-          <button id="photo-dislike" type="button" aria-pressed="false">👎 <span id="photo-dislike-count">0</span></button>
         </div>
         <button id="photo-node-open" class="photo-node-open" type="button" hidden></button>
         <button id="photo-manage-open" class="photo-manage-open" type="button"></button>
