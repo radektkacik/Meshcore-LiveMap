@@ -75,6 +75,7 @@ export function createHttpRequestHandler(runtime) {
   photoNodeNames,
   photoStore,
   photoToken,
+  photoVotingEnabled,
   publicBasePath,
   queueElevation,
   queueNewPhotoNotification,
@@ -128,22 +129,27 @@ function requestVoterHash(request) {
 }
 
 function publicPhoto(photo, summary = {}) {
-  return {
+  const result = {
     author: photo.author,
     bytes: photo.bytes,
     caption: photo.caption,
     createdAt: photo.createdAt,
-    dislikes: summary.dislikes || 0,
     height: photo.height,
     id: photo.id,
-    likes: summary.likes || 0,
-    myVote: summary.myVote || 0,
     width: photo.width,
   };
+  if (photoVotingEnabled) {
+    result.dislikes = summary.dislikes || 0;
+    result.likes = summary.likes || 0;
+    result.myVote = summary.myVote || 0;
+  }
+  return result;
 }
 
 function photosWithVotes(photos, request) {
-  const summaries = photoStore.voteSummary(photos.map((photo) => photo.id), requestVoterHash(request));
+  const summaries = photoVotingEnabled
+    ? photoStore.voteSummary(photos.map((photo) => photo.id), requestVoterHash(request))
+    : new Map();
   return photos.map((photo) => publicPhoto(photo, summaries.get(photo.id)));
 }
 
@@ -807,7 +813,9 @@ async function handleRequest(request, response) {
     }
     const names = photoNodeNames();
     const entries = photoStore.listApprovedAll(2000);
-    const summaries = photoStore.voteSummary(entries.map((photo) => photo.id), requestVoterHash(request));
+    const summaries = photoVotingEnabled
+      ? photoStore.voteSummary(entries.map((photo) => photo.id), requestVoterHash(request))
+      : new Map();
     const photos = entries.map((photo) => ({
       ...publicPhoto(photo, summaries.get(photo.id)),
       nodeKey: photo.nodeKey,
@@ -859,7 +867,9 @@ async function handleRequest(request, response) {
     return;
   }
 
-  const photoVoteMatch = /^\/api\/photos\/([0-9a-f-]{36})\/vote$/.exec(url.pathname);
+  const photoVoteMatch = photoVotingEnabled
+    ? /^\/api\/photos\/([0-9a-f-]{36})\/vote$/.exec(url.pathname)
+    : null;
   if (photoVoteMatch) {
     if (request.method !== "POST") {
       methodNotAllowed(response, "POST");

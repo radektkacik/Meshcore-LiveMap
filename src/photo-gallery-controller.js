@@ -15,6 +15,7 @@ export function createPhotoGalleryController({
   state,
   t,
   tCount,
+  votingEnabled = false,
 }) {
   let error = false;
   let loadedAt = 0;
@@ -86,25 +87,27 @@ export function createPhotoGalleryController({
       date.textContent = formatDateTimeShort(photo.createdAt);
       meta.appendChild(date);
     }
-    const votes = document.createElement("div");
-    votes.className = "photo-gallery-votes";
-    for (const [value, label, count] of [
-      [1, t("photos.like"), photo.likes],
-      [-1, t("photos.dislike"), photo.dislikes],
-    ]) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "photo-vote-button";
-      button.dataset.index = String(index);
-      button.dataset.value = String(value);
-      button.classList.toggle("active", Number(photo.myVote) === value);
-      button.title = label;
-      button.setAttribute("aria-label", label);
-      button.setAttribute("aria-pressed", String(Number(photo.myVote) === value));
-      button.textContent = `${value === 1 ? "👍" : "👎"} ${Number(count) || 0}`;
-      votes.appendChild(button);
+    if (votingEnabled) {
+      const votes = document.createElement("div");
+      votes.className = "photo-gallery-votes";
+      for (const [value, label, count] of [
+        [1, t("photos.like"), photo.likes],
+        [-1, t("photos.dislike"), photo.dislikes],
+      ]) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "photo-vote-button";
+        button.dataset.index = String(index);
+        button.dataset.value = String(value);
+        button.classList.toggle("active", Number(photo.myVote) === value);
+        button.title = label;
+        button.setAttribute("aria-label", label);
+        button.setAttribute("aria-pressed", String(Number(photo.myVote) === value));
+        button.textContent = `${value === 1 ? "👍" : "👎"} ${Number(count) || 0}`;
+        votes.appendChild(button);
+      }
+      meta.appendChild(votes);
     }
-    meta.appendChild(votes);
     item.appendChild(meta);
     return item;
   }

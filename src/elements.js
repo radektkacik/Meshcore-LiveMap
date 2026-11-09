@@ -132,6 +132,7 @@ export const elements = {
   photoDislikeCount: document.querySelector("#photo-dislike-count"),
   photoLike: document.querySelector("#photo-like"),
   photoLikeCount: document.querySelector("#photo-like-count"),
+  photoLightboxVotes: document.querySelector("#photo-lightbox-votes"),
   photoManageOpen: document.querySelector("#photo-manage-open"),
   photoNodeOpen: document.querySelector("#photo-node-open"),
   photoManagePassword: document.querySelector("#photo-manage-password"),

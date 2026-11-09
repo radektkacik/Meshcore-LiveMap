@@ -10,6 +10,7 @@ export function createPhotoLightboxController({
   postJson,
   resolveNode = () => null,
   t,
+  votingEnabled = false,
 }) {
   let current = null;
   let drag = null;
@@ -207,7 +208,8 @@ export function createPhotoLightboxController({
     elements.photoLightboxCaption.hidden = !active.caption;
     elements.photoLightboxAuthor.textContent = active.author || "";
     elements.photoLightboxAuthor.hidden = !active.author;
-    renderVoteState(active);
+    elements.photoLightboxVotes.hidden = !votingEnabled;
+    if (votingEnabled) renderVoteState(active);
     elements.photoLike.title = t("photos.like");
     elements.photoLike.setAttribute("aria-label", t("photos.like"));
     elements.photoDislike.title = t("photos.dislike");

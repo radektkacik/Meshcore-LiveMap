@@ -2699,6 +2699,7 @@ const photoGallery = createPhotoGalleryController({
   state,
   t,
   tCount,
+  votingEnabled: IS_BETA,
 });
 photoGallery.bind();
 
@@ -2711,6 +2712,7 @@ const photoLightbox = createPhotoLightboxController({
   postJson,
   resolveNode: (key) => state.nodeByKey.get(key.toUpperCase()) || null,
   t,
+  votingEnabled: IS_BETA,
 });
 photoLightbox.bind();
 

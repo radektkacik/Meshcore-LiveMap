@@ -96,6 +96,7 @@ const publicBasePath = (() => {
   }
 })();
 const adminBasePath = `${publicBasePath}/admin` || "/admin";
+const photoVotingEnabled = publicBasePath === "/beta" || process.env.PHOTO_VOTING === "1";
 const adminAuth = createAdminAuth({
   adminBasePath,
   fallbackPassword: feedbackToken || process.env.PHOTO_TOKEN || "",
@@ -1384,6 +1385,7 @@ const handleRequest = createHttpRequestHandler({
   photoMaxBytes,
   photoNodeNames,
   photoStore,
+  photoVotingEnabled,
   photoToken,
   publicBasePath,
   queueElevation: elevationTerrain.queueElevation,

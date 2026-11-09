@@ -120,6 +120,7 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       PHOTO_AUTO_APPROVE: "0",
       PHOTO_COOLDOWN_MS: "0",
       PHOTO_TOKEN: "photo-token",
+      PHOTO_VOTING: "1",
       STATS_CACHE_PATH: join(directory, "stats-cache.json"),
       STATS_COLLECT_MS: "0",
       FEEDBACK_DB_PATH: join(directory, "feedback.sqlite"),
