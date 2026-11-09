@@ -2697,7 +2697,6 @@ const photoGallery = createPhotoGalleryController({
   onOpenNode: (photo) => revealPhotoNode(photo, null),
   onOpenPhoto: (photo, photos, index) => photoLightbox.open(photo, null, photos, index),
   onShareNode: shareNodeGallery,
-  onVote: votePhoto,
   state,
   t,
   tCount,
