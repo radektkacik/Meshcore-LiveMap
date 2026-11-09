@@ -3,9 +3,9 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-09 — Lajky v náhledech fotek u nodu (beta)
-- Prostředí: beta
-- Build: 20261109-1125-f0e1b05
+## 2026-11-09 — Lajky v náhledech fotek u nodu
+- Prostředí: produkce i beta
+- Build: 20261109-1131-cf6a2d6
 - Náhledy fotek v popupu i detailu nodu zobrazují **👍 a počet**, pokud má fotka alespoň jeden like.
 - Fotky bez lajků zůstávají bez odznaku.
 - Po hlasování v lightboxu se odznak v náhledu okamžitě aktualizuje.
