@@ -246,7 +246,8 @@ export function createPhotoGalleryController({
       const voteButton = event.target.closest(".photo-vote-button");
       if (voteButton) {
         const photo = view[Number(voteButton.dataset.index)];
-        if (photo) void onVote(photo, Number(voteButton.dataset.value));
+        const value = Number(voteButton.dataset.value);
+        if (photo) void onVote(photo, Number(photo.myVote) === value ? 0 : value);
         return;
       }
       const nodeButton = event.target.closest(".photo-gallery-node-link");
