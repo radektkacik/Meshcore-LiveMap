@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-09 — Prefix nodu v health badge (beta)
+- Prostředí: beta
+- Build: 20261109-1629-b828e05
+- Malý health badge v hlavičce nodu zobrazuje kromě baterie, teploty a vlhkosti i prefix nodu.
+- Prefix se bere podle hash režimu nodu; title badge obsahuje prefix celý.
+- Nody bez telemetrie health badge nemají, takže se u nich prefix v badge nezobrazuje.
+
 ## 2026-11-09 — Lajky v náhledech fotek u nodu
 - Prostředí: produkce i beta
 - Build: 20261109-1131-cf6a2d6
