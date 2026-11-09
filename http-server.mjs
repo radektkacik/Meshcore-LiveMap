@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { join, normalize } from "node:path";
 import { hashIp, methodNotAllowed } from "./http-utils.mjs";
@@ -32,6 +32,7 @@ export function createHttpRequestHandler(runtime) {
   checkPhotoManage,
   checkPhotoReport,
   checkPhotoUpload,
+  checkPhotoVote,
   checkTerrainRate,
   cleanPhotoText,
   clientIp,
@@ -119,6 +120,32 @@ export function createHttpRequestHandler(runtime) {
   upstreamTimeoutMs,
   visitStore,
   } = runtime;
+
+function requestVoterHash(request) {
+  const voter = String(request.headers["x-photo-voter"] || "").trim();
+  if (!/^[A-Za-z0-9_-]{16,128}$/.test(voter)) return "";
+  return createHash("sha256").update(voter).digest("hex");
+}
+
+function publicPhoto(photo, summary = {}) {
+  return {
+    author: photo.author,
+    bytes: photo.bytes,
+    caption: photo.caption,
+    createdAt: photo.createdAt,
+    dislikes: summary.dislikes || 0,
+    height: photo.height,
+    id: photo.id,
+    likes: summary.likes || 0,
+    myVote: summary.myVote || 0,
+    width: photo.width,
+  };
+}
+
+function photosWithVotes(photos, request) {
+  const summaries = photoStore.voteSummary(photos.map((photo) => photo.id), requestVoterHash(request));
+  return photos.map((photo) => publicPhoto(photo, summaries.get(photo.id)));
+}
 
 async function handleAdminRequest(request, response, url) {
   response.setHeader("Cache-Control", "no-store");
@@ -624,15 +651,7 @@ async function handleRequest(request, response) {
         sendJson(response, 400, { error: "Neplatný klíč nodu." });
         return;
       }
-      const photos = photoStore.listApproved(key, 12).map((photo) => ({
-        author: photo.author,
-        bytes: photo.bytes,
-        caption: photo.caption,
-        createdAt: photo.createdAt,
-        height: photo.height,
-        id: photo.id,
-        width: photo.width,
-      }));
+      const photos = photosWithVotes(photoStore.listApproved(key, 12), request);
       sendJson(response, 200, { photos });
       return;
     }
@@ -787,15 +806,12 @@ async function handleRequest(request, response) {
       return;
     }
     const names = photoNodeNames();
-    const photos = photoStore.listApprovedAll(2000).map((photo) => ({
-      author: photo.author,
-      caption: photo.caption,
-      createdAt: photo.createdAt,
-      height: photo.height,
-      id: photo.id,
+    const entries = photoStore.listApprovedAll(2000);
+    const summaries = photoStore.voteSummary(entries.map((photo) => photo.id), requestVoterHash(request));
+    const photos = entries.map((photo) => ({
+      ...publicPhoto(photo, summaries.get(photo.id)),
       nodeKey: photo.nodeKey,
       nodeName: names.get(photo.nodeKey) || photo.nodeKey.slice(0, 8),
-      width: photo.width,
     }));
     response.writeHead(200, {
       "Content-Type": "application/json; charset=utf-8",
@@ -840,6 +856,45 @@ async function handleRequest(request, response) {
       Location: `view?token=${encodeURIComponent(photoToken)}&status=${encodeURIComponent(status)}`,
     });
     response.end();
+    return;
+  }
+
+  const photoVoteMatch = /^\/api\/photos\/([0-9a-f-]{36})\/vote$/.exec(url.pathname);
+  if (photoVoteMatch) {
+    if (request.method !== "POST") {
+      methodNotAllowed(response, "POST");
+      return;
+    }
+    const id = photoVoteMatch[1].toLowerCase();
+    const ip = clientIp(request);
+    const rate = checkPhotoVote(ip);
+    if (!rate.ok) {
+      sendJson(response, 429, { error: "Příliš mnoho hlasů. Zkuste to později." }, { "Retry-After": String(rate.retryAfter) });
+      return;
+    }
+    const voterHash = requestVoterHash(request);
+    if (!voterHash) {
+      sendJson(response, 400, { error: "Chybí anonymní identita pro hlasování." });
+      return;
+    }
+    let payload;
+    try {
+      payload = JSON.parse(await readBody(request, 1024));
+    } catch {
+      sendJson(response, 400, { error: "Neplatný požadavek." });
+      return;
+    }
+    const value = Number(payload?.value);
+    if (![0, 1, -1].includes(value)) {
+      sendJson(response, 400, { error: "Neplatný hlas." });
+      return;
+    }
+    const summary = photoStore.vote(id, voterHash, value);
+    if (!summary) {
+      sendJson(response, 404, { error: "Fotka nebyla nalezena." });
+      return;
+    }
+    sendJson(response, 200, { ok: true, ...summary });
     return;
   }
 

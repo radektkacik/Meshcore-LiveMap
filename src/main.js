@@ -34,6 +34,7 @@ import { createPhotoLightboxController } from "./photo-lightbox-controller.js";
 import { createPhotoManageController } from "./photo-manage-controller.js";
 import { createPhotoTokenStore } from "./photo-token-store.js";
 import { createPhotoUploadController } from "./photo-upload-controller.js";
+import { getPhotoJson, voteForPhoto } from "./photo-vote-client.js";
 import { createSearchController } from "./search-controller.js";
 import { createStatsController } from "./stats-controller.js";
 import {
@@ -2635,8 +2636,12 @@ async function loadNodePhotos(root, node) {
     return;
   }
   try {
-    const data = await getJson(`/api/photos?key=${encodeURIComponent(key)}`);
-    const photos = Array.isArray(data.photos) ? data.photos : [];
+    const data = await getPhotoJson(appPath, `/api/photos?key=${encodeURIComponent(key)}`);
+    const photos = (Array.isArray(data.photos) ? data.photos : []).map((photo) => ({
+      ...photo,
+      nodeKey: key,
+      nodeName: node.name || t("common.unknownNode"),
+    }));
     state.photoCache.set(key, { at: Date.now(), photos });
     if (list.isConnected) renderNodePhotos(list, photos, node);
   } catch (error) {
@@ -2685,11 +2690,12 @@ const photoGallery = createPhotoGalleryController({
   appPath,
   elements,
   formatDateTimeShort,
-  getJson,
+  getJson: (path) => getPhotoJson(appPath, path),
   getLocale,
   nowMs,
   onOpenNode: (photo) => revealPhotoNode(photo, null),
   onOpenPhoto: (photo, photos, index) => photoLightbox.open(photo, null, photos, index),
+  onVote: votePhoto,
   state,
   t,
   tCount,
@@ -2701,6 +2707,7 @@ const photoLightbox = createPhotoLightboxController({
   elements,
   onManage: (photo, node) => photoManage.open(photo, node),
   onOpenNode: (photo, node) => revealPhotoNode(photo, node),
+  onVote: votePhoto,
   postJson,
   resolveNode: (key) => state.nodeByKey.get(key.toUpperCase()) || null,
   t,
@@ -2746,6 +2753,21 @@ const photoUpload = createPhotoUploadController({
   tCount,
 });
 photoUpload.bind();
+
+async function votePhoto(photo, value) {
+  if (!photo?.id || ![0, 1, -1].includes(Number(value))) return null;
+  try {
+    const summary = await voteForPhoto(appPath, photo.id, Number(value));
+    photoGallery.updatePhoto({ id: photo.id, ...summary });
+    const cached = state.photoCache.get(String(photo.nodeKey || "").toLowerCase());
+    const cachedPhoto = cached?.photos?.find((entry) => entry.id === photo.id);
+    if (cachedPhoto) Object.assign(cachedPhoto, summary);
+    return summary;
+  } catch (error) {
+    console.error(t("photos.voteFailed"), error);
+    return null;
+  }
+}
 
 function revealPhotoNode(photo, nodeValue) {
   const key = String(photo?.nodeKey || nodeValue?.public_key || "").toLowerCase();

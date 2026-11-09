@@ -11,6 +11,7 @@ export function createPhotoGalleryController({
   nowMs = () => Date.now(),
   onOpenNode = () => {},
   onOpenPhoto = () => {},
+  onVote = () => {},
   state,
   t,
   tCount,
@@ -85,6 +86,25 @@ export function createPhotoGalleryController({
       date.textContent = formatDateTimeShort(photo.createdAt);
       meta.appendChild(date);
     }
+    const votes = document.createElement("div");
+    votes.className = "photo-gallery-votes";
+    for (const [value, label, count] of [
+      [1, t("photos.like"), photo.likes],
+      [-1, t("photos.dislike"), photo.dislikes],
+    ]) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "photo-vote-button";
+      button.dataset.index = String(index);
+      button.dataset.value = String(value);
+      button.classList.toggle("active", Number(photo.myVote) === value);
+      button.title = label;
+      button.setAttribute("aria-label", label);
+      button.setAttribute("aria-pressed", String(Number(photo.myVote) === value));
+      button.textContent = `${value === 1 ? "👍" : "👎"} ${Number(count) || 0}`;
+      votes.appendChild(button);
+    }
+    meta.appendChild(votes);
     item.appendChild(meta);
     return item;
   }
@@ -195,7 +215,11 @@ export function createPhotoGalleryController({
     const index = photos.findIndex((entry) => entry.id === photo?.id);
     if (index < 0) return;
     photos[index] = { ...photos[index], ...photo };
-    if (elements.photoGalleryDialog.open) render();
+    if (elements.photoGalleryDialog.open) {
+      const scrollTop = elements.photoGalleryGrid.scrollTop;
+      render();
+      elements.photoGalleryGrid.scrollTop = scrollTop;
+    }
   }
 
   function removePhoto(photoId) {
@@ -219,6 +243,12 @@ export function createPhotoGalleryController({
       render();
     });
     elements.photoGalleryGrid.addEventListener("click", (event) => {
+      const voteButton = event.target.closest(".photo-vote-button");
+      if (voteButton) {
+        const photo = view[Number(voteButton.dataset.index)];
+        if (photo) void onVote(photo, Number(voteButton.dataset.value));
+        return;
+      }
       const nodeButton = event.target.closest(".photo-gallery-node-link");
       if (nodeButton) {
         const photo = view[Number(nodeButton.dataset.index)];

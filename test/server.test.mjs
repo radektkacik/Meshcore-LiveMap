@@ -431,8 +431,24 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(allPhotos.photos[0].nodeKey, photoKey);
     assert.equal(typeof allPhotos.photos[0].nodeName, "string");
     assert.ok(allPhotos.photos[0].nodeName.length > 0);
+    assert.equal(allPhotos.photos[0].likes, 0);
+    assert.equal(allPhotos.photos[0].dislikes, 0);
     assert.equal(Object.hasOwn(allPhotos.photos[0], "file"), false);
     assert.equal(Object.hasOwn(allPhotos.photos[0], "owner_token_hash"), false);
+    const voteUrl = `http://127.0.0.1:${appPort}/api/photos/${uploaded.id}/vote`;
+    const voterHeaders = { "Content-Type": "application/json", "X-Photo-Voter": "test-voter-1234567890" };
+    const like = await fetch(voteUrl, { method: "POST", headers: voterHeaders, body: JSON.stringify({ value: 1 }) });
+    assert.equal(like.status, 200);
+    assert.deepEqual(await like.json(), { ok: true, likes: 1, dislikes: 0, myVote: 1 });
+    const dislike = await fetch(voteUrl, { method: "POST", headers: voterHeaders, body: JSON.stringify({ value: -1 }) });
+    assert.deepEqual(await dislike.json(), { ok: true, likes: 0, dislikes: 1, myVote: -1 });
+    const votedPhotos = await (await fetch(`http://127.0.0.1:${appPort}/api/photos/all`, { headers: { "X-Photo-Voter": "test-voter-1234567890" } })).json();
+    assert.equal(votedPhotos.photos[0].likes, 0);
+    assert.equal(votedPhotos.photos[0].dislikes, 1);
+    assert.equal(votedPhotos.photos[0].myVote, -1);
+    const clearVote = await fetch(voteUrl, { method: "POST", headers: voterHeaders, body: JSON.stringify({ value: 0 }) });
+    assert.deepEqual(await clearVote.json(), { ok: true, likes: 0, dislikes: 0, myVote: 0 });
+    assert.equal((await fetch(voteUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ value: 1 }) })).status, 400);
     const setCover = await fetch(`http://127.0.0.1:${appPort}/admin/photos/moderate`, {
       method: "POST",
       headers: {

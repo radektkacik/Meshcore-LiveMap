@@ -220,6 +220,28 @@ test("photo store lists approved node counts", () => {
   }
 });
 
+test("photo store keeps one vote per voter and updates counts", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
+  const store = createPhotoStore(directory);
+  const nodeKey = "5".repeat(64);
+  try {
+    const photo = store.create({ buffer: pngBuffer(), nodeKey, status: "approved" });
+    const voter = "a".repeat(64);
+    const other = "b".repeat(64);
+    assert.deepEqual(store.vote(photo.id, voter, 1), { dislikes: 0, likes: 1, myVote: 1 });
+    assert.deepEqual(store.vote(photo.id, voter, 1), { dislikes: 0, likes: 1, myVote: 1 });
+    assert.deepEqual(store.vote(photo.id, voter, -1), { dislikes: 1, likes: 0, myVote: -1 });
+    assert.deepEqual(store.vote(photo.id, other, 1), { dislikes: 1, likes: 1, myVote: 1 });
+    assert.deepEqual(store.voteSummary([photo.id], voter).get(photo.id), { dislikes: 1, likes: 1, myVote: -1 });
+    assert.deepEqual(store.vote(photo.id, voter, 0), { dislikes: 0, likes: 1, myVote: 0 });
+    store.remove(photo.id);
+    assert.deepEqual(store.voteSummary([photo.id], voter).get(photo.id), { dislikes: 0, likes: 0, myVote: 0 });
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("photo store lists all approved photos across nodes newest first", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-photos-"));
   const store = createPhotoStore(directory);

@@ -883,6 +883,11 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 .photo-gallery-node-link:hover { color: var(--green); text-decoration: underline; }
 .photo-gallery-meta small { margin-top: 1px; color: var(--muted); font: 9px "DM Mono", monospace; }
 .photo-gallery-meta .photo-gallery-date { margin-top: 2px; color: #7b8d84; }
+.photo-gallery-votes { display: flex; gap: 4px; margin-top: 4px; }
+.photo-vote-button { padding: 2px 5px; border: 1px solid var(--line); border-radius: 5px; color: #52685d; background: #f7faf8; font: 9px "DM Mono", monospace; cursor: pointer; }
+.photo-vote-button:hover { border-color: rgba(7, 142, 98, 0.45); }
+.photo-vote-button.active { color: #fff; border-color: var(--green); background: var(--green); }
+.photo-vote-button[data-value="-1"].active { border-color: #c0392b; background: #c0392b; }
 .photo-gallery-empty { margin: 24px 0; color: var(--muted); font-size: 12px; text-align: center; }
 .photo-gallery-dialog .photo-note { margin-top: 6px; }
 .photo-lightbox { position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 16px 12px 18px; overflow: hidden; border: 0; border-radius: 0; color: #fff; background: #0b0f12; }
@@ -914,6 +919,12 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 .photo-lightbox p { margin: 8px 12px 0; text-align: center; font-size: 12px; }
 #photo-lightbox-node { margin-top: 6px; color: #d7e3e8; font: 11px "DM Mono", monospace; }
 #photo-lightbox-author { margin-top: 2px; color: #9fb0b8; font: 11px "DM Mono", monospace; }
+.photo-lightbox-votes { display: flex; justify-content: center; gap: 8px; margin: 8px auto 0; }
+.photo-lightbox-votes button { min-width: 72px; padding: 5px 12px; border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 6px; color: #d7e3e8; background: rgba(10, 16, 20, 0.72); font: 700 10px "DM Mono", monospace; cursor: pointer; }
+.photo-lightbox-votes button:hover { border-color: var(--green); }
+.photo-lightbox-votes button.active { color: #fff; border-color: var(--green); background: rgba(7, 142, 98, 0.8); }
+.photo-lightbox-votes #photo-dislike.active { border-color: #c0392b; background: rgba(192, 57, 43, 0.85); }
+.photo-lightbox-votes button:disabled { opacity: 0.55; cursor: wait; }
 .photo-node-open { display: block; margin: 8px auto 4px; padding: 5px 12px; border: 1px solid rgba(36, 111, 196, 0.5); border-radius: 6px; color: #cfe6ff; background: rgba(36, 111, 196, 0.2); font: 700 10px "DM Mono", monospace; cursor: pointer; }
 .photo-node-open:hover { border-color: #246fc4; background: rgba(36, 111, 196, 0.34); }
 .photo-node-open[hidden] { display: none; }
@@ -1040,6 +1051,9 @@ html[data-theme="dark"] .photo-gallery-search { color: #e6ecef; background: #1b2
 html[data-theme="dark"] .photo-gallery-item { background: #1b232b; border-color: var(--line); }
 html[data-theme="dark"] .photo-gallery-item:hover { border-color: rgba(7, 142, 98, 0.55); }
 html[data-theme="dark"] .photo-gallery-item img { background: #16222c; }
+html[data-theme="dark"] .photo-vote-button { color: #b9c7cd; background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .photo-vote-button.active { color: #fff; border-color: var(--green); background: var(--green); }
+html[data-theme="dark"] .photo-vote-button[data-value="-1"].active { border-color: #c0392b; background: #c0392b; }
 html[data-theme="dark"] .photo-gallery-section-head { border-color: var(--line); }
 html[data-theme="dark"] .photo-gallery-section-head h3 { color: #cdd9de; }
 html[data-theme="dark"] .photo-gallery-node-link { color: #e6ecef; }

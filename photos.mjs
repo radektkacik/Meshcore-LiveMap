@@ -192,6 +192,15 @@ export function createPhotoStore(rootDir, {
     );
     CREATE INDEX IF NOT EXISTS photo_reports_photo ON photo_reports (photo_id, status);
     CREATE INDEX IF NOT EXISTS photo_reports_status ON photo_reports (status, created_at);
+    CREATE TABLE IF NOT EXISTS photo_votes (
+      photo_id TEXT NOT NULL,
+      voter_hash TEXT NOT NULL,
+      value INTEGER NOT NULL CHECK (value IN (-1, 1)),
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (photo_id, voter_hash)
+    );
+    CREATE INDEX IF NOT EXISTS photo_votes_photo ON photo_votes (photo_id, value);
   `);
   const photoColumns = db.prepare("PRAGMA table_info(photos)").all();
   if (!photoColumns.some((column) => column.name === "owner_token_hash")) {
@@ -259,6 +268,15 @@ export function createPhotoStore(rootDir, {
   const updateStatus = db.prepare("UPDATE photos SET status = ?, reviewed_at = ? WHERE id = ?");
   const deleteRow = db.prepare("DELETE FROM photos WHERE id = ?");
   const updatePhotoMetadata = db.prepare("UPDATE photos SET caption = ?, author = ? WHERE id = ?");
+  const upsertVote = db.prepare(`
+    INSERT INTO photo_votes (photo_id, voter_hash, value, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(photo_id, voter_hash) DO UPDATE SET
+      value = excluded.value,
+      updated_at = excluded.updated_at
+  `);
+  const deleteVote = db.prepare("DELETE FROM photo_votes WHERE photo_id = ? AND voter_hash = ?");
+  const deleteVotesByPhoto = db.prepare("DELETE FROM photo_votes WHERE photo_id = ?");
   const upsertCover = db.prepare(`
     INSERT INTO photo_covers (node_key, photo_id, updated_at)
     VALUES (?, ?, ?)
@@ -312,6 +330,34 @@ export function createPhotoStore(rootDir, {
   function applyCover(nodeKey, photoId, now = Date.now()) {
     upsertCover.run(nodeKey, photoId, now);
     deleteCoverRequestByNode.run(nodeKey);
+  }
+
+  function voteSummary(photoIds, voterHash = "") {
+    const ids = [...new Set((Array.isArray(photoIds) ? photoIds : [])
+      .map((id) => String(id || "").toLowerCase())
+      .filter((id) => /^[0-9a-f-]{36}$/.test(id)))]
+      .slice(0, 5000);
+    const summary = new Map();
+    for (const id of ids) summary.set(id, { dislikes: 0, likes: 0, myVote: 0 });
+    if (!ids.length) return summary;
+    const placeholders = ids.map(() => "?").join(",");
+    const rows = db.prepare(`
+      SELECT photo_id,
+        SUM(CASE WHEN value = 1 THEN 1 ELSE 0 END) AS likes,
+        SUM(CASE WHEN value = -1 THEN 1 ELSE 0 END) AS dislikes,
+        MAX(CASE WHEN voter_hash = ? THEN value END) AS my_vote
+      FROM photo_votes
+      WHERE photo_id IN (${placeholders})
+      GROUP BY photo_id
+    `).all(String(voterHash || ""), ...ids);
+    for (const row of rows) {
+      summary.set(row.photo_id, {
+        dislikes: Number(row.dislikes) || 0,
+        likes: Number(row.likes) || 0,
+        myVote: Number(row.my_vote) || 0,
+      });
+    }
+    return summary;
   }
 
   return {
@@ -392,6 +438,21 @@ export function createPhotoStore(rootDir, {
     },
     filePath: (id) => absolutePath(selectById.get(String(id || ""))),
     get,
+    vote(id, voterHash, value, now = Date.now()) {
+      const photoId = String(id || "").toLowerCase();
+      const hash = String(voterHash || "");
+      const voteValue = Number(value);
+      if (!/^[0-9a-f-]{36}$/.test(photoId) || !/^[0-9a-f]{64}$/.test(hash)
+        || ![0, 1, -1].includes(voteValue)) {
+        throw new PhotoError("invalid_vote", "Neplatný hlas.");
+      }
+      const row = selectById.get(photoId);
+      if (!row || row.status !== "approved") return null;
+      if (voteValue === 0) deleteVote.run(photoId, hash);
+      else upsertVote.run(photoId, hash, voteValue, now, now);
+      return voteSummary([photoId], hash).get(photoId);
+    },
+    voteSummary,
     authorizeOwner(id, { token = "", password = "" } = {}) {
       const row = selectById.get(String(id || ""));
       if (!row) return false;
@@ -456,6 +517,7 @@ export function createPhotoStore(rootDir, {
       if (!row) return false;
       deleteCoverByPhoto.run(String(id));
       deleteCoverRequestByPhoto.run(String(id));
+      deleteVotesByPhoto.run(String(id));
       deleteRow.run(String(id));
       resolvePhotoReports.run(Date.now(), String(id));
       const absolute = absolutePath(row);

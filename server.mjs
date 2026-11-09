@@ -584,6 +584,15 @@ const checkPhotoManage = createRateLimiter({
   windowMs: 15 * 60 * 1000,
   limit: 30,
 });
+const checkPhotoVote = createRateLimiter({
+  cooldownMs: Math.max(0, Number(process.env.PHOTO_VOTE_COOLDOWN_MS || 0)),
+  limit: Math.max(1, Number(process.env.PHOTO_VOTE_RATE_LIMIT || 40)),
+  windowMs: 60 * 1000,
+  messages: {
+    cooldown: "Mezi hlasy je krátká pauza, zkuste to prosím za chvíli.",
+    limit: "Příliš mnoho hlasů za minutu, zkuste to později.",
+  },
+});
 
 const nodeInfoRateLimit = Math.max(1, Number(process.env.NODE_INFO_RATE_LIMIT || 10));
 const nodeInfoDailyLimit = Math.max(1, Number(process.env.NODE_INFO_DAILY_LIMIT || 50));
@@ -1335,6 +1344,7 @@ const handleRequest = createHttpRequestHandler({
   checkPhotoManage,
   checkPhotoReport,
   checkPhotoUpload,
+  checkPhotoVote,
   checkTerrainRate: elevationTerrain.checkTerrainRate,
   cleanPhotoText,
   clientIp,

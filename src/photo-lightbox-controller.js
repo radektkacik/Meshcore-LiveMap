@@ -6,6 +6,7 @@ export function createPhotoLightboxController({
   elements,
   onManage = () => {},
   onOpenNode = () => {},
+  onVote = () => {},
   postJson,
   resolveNode = () => null,
   t,
@@ -22,6 +23,7 @@ export function createPhotoLightboxController({
   let reportPhoto = null;
   let suppressTapUntil = 0;
   let swipe = null;
+  let voteBusy = false;
   let zoom = 1;
   let zoomFit = 1;
 
@@ -32,6 +34,41 @@ export function createPhotoLightboxController({
         || { name: photoValue.nodeName || key.slice(0, 8), public_key: key };
     }
     return node || {};
+  }
+
+  function renderVoteState(photoValue = current?.photo) {
+    const myVote = Number(photoValue?.myVote) || 0;
+    elements.photoLikeCount.textContent = String(Number(photoValue?.likes) || 0);
+    elements.photoDislikeCount.textContent = String(Number(photoValue?.dislikes) || 0);
+    elements.photoLike.classList.toggle("active", myVote === 1);
+    elements.photoDislike.classList.toggle("active", myVote === -1);
+    elements.photoLike.setAttribute("aria-pressed", String(myVote === 1));
+    elements.photoDislike.setAttribute("aria-pressed", String(myVote === -1));
+  }
+
+  async function vote(value) {
+    if (!current || voteBusy) return;
+    const active = current.photo;
+    const next = Number(active.myVote) === value ? 0 : value;
+    voteBusy = true;
+    elements.photoLike.disabled = true;
+    elements.photoDislike.disabled = true;
+    try {
+      const summary = await onVote(active, next);
+      if (!summary) return;
+      const photoIndex = photos.findIndex((entry) => entry.id === active.id);
+      if (photoIndex >= 0) photos[photoIndex] = { ...photos[photoIndex], ...summary };
+      if (current?.photo?.id === active.id) {
+        current = { ...current, photo: { ...current.photo, ...summary } };
+        renderVoteState(current.photo);
+      }
+    } catch (error) {
+      console.error("Hlasování u fotky selhalo", error);
+    } finally {
+      voteBusy = false;
+      elements.photoLike.disabled = false;
+      elements.photoDislike.disabled = false;
+    }
   }
 
   function setPhotoReportStatus(text, isError = false) {
@@ -170,6 +207,11 @@ export function createPhotoLightboxController({
     elements.photoLightboxCaption.hidden = !active.caption;
     elements.photoLightboxAuthor.textContent = active.author || "";
     elements.photoLightboxAuthor.hidden = !active.author;
+    renderVoteState(active);
+    elements.photoLike.title = t("photos.like");
+    elements.photoLike.setAttribute("aria-label", t("photos.like"));
+    elements.photoDislike.title = t("photos.dislike");
+    elements.photoDislike.setAttribute("aria-label", t("photos.dislike"));
     elements.photoLightboxClose.setAttribute("aria-label", t("photos.close"));
     elements.photoNodeOpen.hidden = !/^[0-9a-f]{64}$/.test(String(active.nodeKey || activeNode.public_key || "").toLowerCase());
     elements.photoNodeOpen.textContent = t("photos.openNode");
@@ -462,6 +504,8 @@ export function createPhotoLightboxController({
       index = 0;
       node = null;
     });
+    elements.photoLike.addEventListener("click", () => { void vote(1); });
+    elements.photoDislike.addEventListener("click", () => { void vote(-1); });
     elements.photoNodeOpen.addEventListener("click", () => {
       if (!current) return;
       const active = current;
