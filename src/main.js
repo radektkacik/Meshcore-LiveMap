@@ -1932,6 +1932,7 @@ const BATTERY_VERTICAL_BODY = "M7 18v-11a2 2 0 0 1 2 -2h.5a.5 .5 0 0 0 .5 -.5a.5
 const BATTERY_VERTICAL_BARS = ["M10 17h4", "M10 14h4", "M10 11h4", "M10 8h4"];
 const BATTERY_VERTICAL_OFF = '<path d="M3 3l18 18" /><path d="M17 13v-6a2 2 0 0 0 -2 -2h-.5a.5 .5 0 0 1 -.5 -.5a.5 .5 0 0 0 -.5 -.5h-3a.5 .5 0 0 0 -.5 .5a.5 .5 0 0 1 -.5 .5h-.5m-2 2v11a2 2 0 0 0 2 2h6a2 2 0 0 0 2 -2v-1" />';
 const THERMOMETER_ICON = '<svg class="node-health-thermometer" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13.5a4 4 0 1 0 4 0v-8.5a2 2 0 0 0 -4 0v8.5" /><path d="M10 9l4 0" /></svg>';
+const HUMIDITY_ICON = '<svg class="node-health-humidity-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2.7c3.2 4.1 6 7.6 6 11.1a6 6 0 0 1 -12 0c0 -3.5 2.8 -7 6 -11.1z" /></svg>';
 
 function batteryStatusIcon(status) {
   const paths = status === "stale"
@@ -1968,22 +1969,28 @@ function nodeHealthBadge(node) {
   const temperature = health?.temperatureC != null && Number.isFinite(Number(health.temperatureC))
     ? Number(health.temperatureC)
     : null;
-  if (battery == null && temperature == null) return "";
+  const humidity = health?.humidityPct != null && Number.isFinite(Number(health.humidityPct))
+    ? Number(health.humidityPct)
+    : null;
+  if (battery == null && temperature == null && humidity == null) return "";
   const status = health?.batteryStatus && ALL_HEALTH_STATUSES.includes(health.batteryStatus)
     ? health.batteryStatus
     : "unknown";
   const statusText = status !== "unknown" ? t(`node.healthBattery.${status}`) : null;
   const voltageText = battery == null ? null : `${formatDecimal(battery / 1000, 2)} V`;
   const temperatureText = temperature == null ? null : `${formatDecimal(temperature, 1)} °C`;
+  const humidityText = humidity == null ? null : `${formatNumber(humidity)} %`;
   const title = [
     voltageText ? `${t("node.battery")}: ${voltageText}` : null,
     statusText,
     temperatureText ? `${t("node.temperature")}: ${temperatureText}` : null,
+    humidityText ? `${t("node.humidity")}: ${humidityText}` : null,
   ].filter(Boolean).join(" · ");
   return `<button type="button" class="node-health-badge ${status}" data-health-node-key="${escapeHtml(node.public_key.toUpperCase())}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
     ${battery == null ? "" : batteryStatusIcon(status)}
     ${voltageText ? `<span class="node-health-voltage">${escapeHtml(voltageText)}</span>` : ""}
     ${temperatureText ? `${THERMOMETER_ICON}<span class="node-health-temperature">${escapeHtml(temperatureText)}</span>` : ""}
+    ${humidityText ? `${HUMIDITY_ICON}<span class="node-health-humidity">${escapeHtml(humidityText)}</span>` : ""}
   </button>`;
 }
 
@@ -3163,7 +3170,10 @@ function nodeHealthTooltip(node) {
   const temperature = health?.temperatureC != null && Number.isFinite(Number(health.temperatureC))
     ? Number(health.temperatureC)
     : null;
-  if (battery == null && temperature == null) return "";
+  const humidity = health?.humidityPct != null && Number.isFinite(Number(health.humidityPct))
+    ? Number(health.humidityPct)
+    : null;
+  if (battery == null && temperature == null && humidity == null) return "";
   const status = health?.batteryStatus && ALL_HEALTH_STATUSES.includes(health.batteryStatus)
     ? health.batteryStatus
     : "unknown";
@@ -3171,6 +3181,7 @@ function nodeHealthTooltip(node) {
     ${battery == null ? "" : batteryStatusIcon(status)}
     ${battery == null ? "" : `<span>${escapeHtml(formatDecimal(battery / 1000, 2))} V</span>`}
     ${temperature == null ? "" : `${THERMOMETER_ICON}<span>${escapeHtml(formatDecimal(temperature, 1))} °C</span>`}
+    ${humidity == null ? "" : `${HUMIDITY_ICON}<span>${escapeHtml(formatNumber(humidity))} %</span>`}
   </span>`;
 }
 
