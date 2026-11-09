@@ -5,10 +5,11 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-09 — Hodnocení fotek (beta)
 - Prostředí: beta
-- Build: 20261109-0848-f13ed65
+- Build: 20261109-0908-a6ed83a
 - Produkce zůstává bez hlasování na buildu `20261109-0844-ac924c0`.
 - Hlasování je nově beta-only: na produkci se nezobrazí a `/api/photos/:id/vote` vrací 404.
 - U fotek lze anonymně kliknout na **👍 like** nebo **👎 dislike**.
+- Hlasovací tlačítka jsou overlay přímo na fotce, ne pod ní; v lightboxu jsou v pravém dolním rohu fotky.
 - Jeden prohlížeč má jeden hlas na fotku; opakovaným kliknutím se hlas zruší.
 - Počty jsou vidět v galerii i v lightboxu a aktualizují se okamžitě.
 - Hlasy se ukládají lokálně do `photos.sqlite`; server uchovává jen hash anonymního voliče.
