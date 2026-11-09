@@ -41,6 +41,9 @@ function latestConfig(row, now = Date.now()) {
     observedAt: observedAt ? new Date(observedAt).toISOString() : null,
     ageSec: observedAt ? Math.max(0, Math.floor((now - observedAt) / 1000)) : null,
     stale: Boolean(observedAt) && now - observedAt > CONFIG_STALE_MS,
+    formatVersion: Number(row.format_version) || null,
+    regionsPresent: row.regions_present == null ? true : Boolean(row.regions_present),
+    regions_present: row.regions_present == null ? true : Boolean(row.regions_present),
     regions: {
       home: row.home_region || null,
       default: row.default_region || null,
@@ -57,6 +60,7 @@ function latestHealth(row, now = Date.now()) {
   return {
     prefix: row.prefix,
     kind: row.kind,
+    formatVersion: Number(row.format_version) || null,
     batteryMv: row.battery_mv == null ? null : Number(row.battery_mv),
     batteryStatus: batteryStatus(Number(row.battery_mv), observedAt, now, {
       batteryType: row.battery_type,
@@ -171,6 +175,7 @@ export function createCzHealthStore(dbPath, {
       default_region TEXT,
       flood_regions_json TEXT,
       incomplete INTEGER NOT NULL DEFAULT 0,
+      regions_present INTEGER NOT NULL DEFAULT 1,
       message_key TEXT
     );
   `);
@@ -188,6 +193,7 @@ export function createCzHealthStore(dbPath, {
   ensureColumn(db, "health_latest", "voltage_source", "TEXT");
   ensureColumn(db, "health_latest", "humidity_pct", "REAL");
   ensureColumn(db, "health_latest", "summary_json", "TEXT");
+  ensureColumn(db, "health_config", "regions_present", "INTEGER NOT NULL DEFAULT 1");
 
   const insertMessage = db.prepare(`
     INSERT INTO health_messages (
@@ -249,39 +255,40 @@ export function createCzHealthStore(dbPath, {
       current_ma = COALESCE(excluded.current_ma, health_latest.current_ma),
       summary_json = COALESCE(excluded.summary_json, health_latest.summary_json),
       message_key = excluded.message_key
-    WHERE health_latest.format_version <> 3 OR excluded.base_at >= health_latest.base_at
+    WHERE excluded.base_at >= COALESCE(health_latest.base_at, 0)
   `);
   const upsertConfig = db.prepare(`
     INSERT INTO health_config (
       prefix, format_version, observed_at, base_at, device_time,
-      home_region, default_region, flood_regions_json, incomplete, message_key
+      home_region, default_region, flood_regions_json, incomplete, regions_present, message_key
     ) VALUES (
       @prefix, @format_version, @observed_at, @base_at, @device_time,
-      @home_region, @default_region, @flood_regions_json, @incomplete, @message_key
+      @home_region, @default_region, @flood_regions_json, @incomplete, @regions_present, @message_key
     )
     ON CONFLICT(prefix) DO UPDATE SET
       format_version = excluded.format_version,
       observed_at = MAX(COALESCE(health_config.observed_at, 0), excluded.observed_at),
       base_at = excluded.base_at,
       device_time = excluded.device_time,
-      home_region = excluded.home_region,
-      default_region = excluded.default_region,
-      flood_regions_json = excluded.flood_regions_json,
-      incomplete = excluded.incomplete,
+      home_region = CASE WHEN excluded.regions_present = 1 THEN excluded.home_region ELSE health_config.home_region END,
+      default_region = CASE WHEN excluded.regions_present = 1 THEN excluded.default_region ELSE health_config.default_region END,
+      flood_regions_json = CASE WHEN excluded.regions_present = 1 THEN excluded.flood_regions_json ELSE health_config.flood_regions_json END,
+      incomplete = CASE WHEN excluded.regions_present = 1 THEN excluded.incomplete ELSE health_config.incomplete END,
+      regions_present = excluded.regions_present,
       message_key = excluded.message_key
-    WHERE health_config.format_version <> 3 OR excluded.base_at >= health_config.base_at
+    WHERE excluded.base_at >= COALESCE(health_config.base_at, 0)
   `);
-  const selectLatest = db.prepare("SELECT * FROM health_latest WHERE prefix = ? AND format_version = 3");
-  const selectAllLatest = db.prepare("SELECT * FROM health_latest WHERE format_version = 3");
-  const selectConfig = db.prepare("SELECT * FROM health_config WHERE prefix = ? AND format_version = 3");
-  const selectAllConfig = db.prepare("SELECT * FROM health_config WHERE format_version = 3");
+  const selectLatest = db.prepare("SELECT * FROM health_latest WHERE prefix = ? AND format_version IN (3, 4)");
+  const selectAllLatest = db.prepare("SELECT * FROM health_latest WHERE format_version IN (3, 4)");
+  const selectConfig = db.prepare("SELECT * FROM health_config WHERE prefix = ? AND format_version IN (3, 4)");
+  const selectAllConfig = db.prepare("SELECT * FROM health_config WHERE format_version IN (3, 4)");
   const selectSamples = db.prepare(`
-    SELECT metric, sampled_at, value, source
+    SELECT metric, sampled_at, value, source, format_version
     FROM health_samples
-    WHERE prefix = ? AND sampled_at >= ? AND format_version = 3
+    WHERE prefix = ? AND sampled_at >= ? AND format_version IN (3, 4)
     ORDER BY sampled_at ASC
   `);
-  const countRows = db.prepare("SELECT COUNT(*) AS total FROM health_messages WHERE format_version = 3");
+  const countRows = db.prepare("SELECT COUNT(*) AS total FROM health_messages WHERE format_version IN (3, 4)");
   const purgeSamples = db.prepare("DELETE FROM health_samples WHERE sampled_at < ?");
   const purgeMessages = db.prepare("DELETE FROM health_messages WHERE observed_at < ?");
   const purgeLatest = db.prepare("DELETE FROM health_latest WHERE observed_at < ?");
@@ -291,12 +298,13 @@ export function createCzHealthStore(dbPath, {
     if (!health?.prefix || !health?.messageKey || !health?.kind) return null;
     const observedAt = Number(health.observedAt) || Date.now();
     const baseAt = Number(health.baseAt) || observedAt;
+    const formatVersion = health.formatVersion === 4 ? 4 : 3;
     const row = {
       message_key: health.messageKey,
       prefix: health.prefix,
       node_key: metadata.nodeKey || null,
       kind: health.kind,
-      format_version: 3,
+      format_version: formatVersion,
       observed_at: observedAt,
       base_at: baseAt,
       device_time: health.deviceTime || null,
@@ -323,7 +331,7 @@ export function createCzHealthStore(dbPath, {
     if (health.kind === "config") {
       upsertConfig.run({
         prefix: health.prefix,
-        format_version: 3,
+        format_version: formatVersion,
         observed_at: observedAt,
         base_at: baseAt,
         device_time: health.deviceTime || null,
@@ -331,6 +339,7 @@ export function createCzHealthStore(dbPath, {
         default_region: health.regions?.default || null,
         flood_regions_json: JSON.stringify(health.regions?.flood || []),
         incomplete: health.regions?.incomplete ? 1 : 0,
+        regions_present: health.regionsPresent === false ? 0 : 1,
         message_key: health.messageKey,
       });
       return messageId;
@@ -381,7 +390,7 @@ export function createCzHealthStore(dbPath, {
         value: sample.value,
         source: sample.source,
         message_id: messageId,
-        format_version: 3,
+        format_version: formatVersion,
       });
     }
     upsertLatest.run(row);
@@ -391,8 +400,8 @@ export function createCzHealthStore(dbPath, {
   return {
     close: () => db.close(),
     count: () => countRows.get().total,
-    latest: (prefix) => latestHealth(selectLatest.get(String(prefix || "").toLowerCase())),
-    config: (prefix) => latestConfig(selectConfig.get(String(prefix || "").toLowerCase())),
+    latest: (prefix) => latestHealth(selectLatest.get(String(prefix || "").toLowerCase().slice(0, 16))),
+    config: (prefix) => latestConfig(selectConfig.get(String(prefix || "").toLowerCase().slice(0, 16))),
     decorateNodes: (nodes, now = Date.now()) => {
       const byPrefix = new Map(selectAllLatest.all().map((row) => [row.prefix, row]));
       const configByPrefix = new Map(selectAllConfig.all().map((row) => [row.prefix, row]));
