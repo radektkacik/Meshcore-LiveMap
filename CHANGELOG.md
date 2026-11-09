@@ -3,6 +3,14 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-09 — Odkaz na galerii konkrétního nodu (beta)
+- Prostředí: beta
+- Build: 20261109-0914-8bfde1a
+- V záhlaví každé nodové sekce v galerii je tlačítko **Sdílet**.
+- Zkopíruje odkaz ve tvaru `?gallery=1&galleryNode=<public_key>`.
+- Odkaz otevře fotogalerii filtrovanou přesně na daný nod.
+- Produkce zůstává beze změny.
+
 ## 2026-11-09 — Hodnocení fotek (beta)
 - Prostředí: beta
 - Build: 20261109-0908-a6ed83a

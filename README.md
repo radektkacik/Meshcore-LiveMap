@@ -168,7 +168,9 @@ přihlašovací údaje zůstávají pouze na serveru.
   a malý náhled v tooltipu při najetí na nod. `GET /api/photos/all` vrací
   nejnovější schválené fotky všech nodů včetně `nodeKey` a `nodeName`; používá
   je fotogalerie otevíraná tlačítkem „Galerie“ vedle filtru nebo odkazem
-  `?gallery=1`. Fotky mají anonymní hodnocení `likes`/`dislikes`;
+  `?gallery=1`. Na beta cestě lze otevřít galerii konkrétního nodu přes
+  `?gallery=1&galleryNode=<public_key>`; galerie u každé nodové sekce nabízí
+  tlačítko „Sdílet“ pro zkopírování tohoto odkazu. Fotky mají anonymní hodnocení `likes`/`dislikes`;
   `POST /api/photos/:id/vote` s hlavičkou `X-Photo-Voter` a tělem
   `{ "value": 1 | -1 | 0 }` hlas uloží, změní nebo zruší. Jeden prohlížeč má
   jeden hlas na fotku, server ukládá jen jeho hash. Hlasování je standardně
