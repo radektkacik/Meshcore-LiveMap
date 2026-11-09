@@ -2693,7 +2693,7 @@ const photoGallery = createPhotoGalleryController({
   getJson: (path) => getPhotoJson(appPath, path),
   getLocale,
   nowMs,
-  nodeLinksEnabled: IS_BETA,
+  nodeLinksEnabled: true,
   onOpenNode: (photo) => revealPhotoNode(photo, null),
   onOpenPhoto: (photo, photos, index) => photoLightbox.open(photo, null, photos, index),
   onShareNode: shareNodeGallery,
@@ -2713,7 +2713,7 @@ const photoLightbox = createPhotoLightboxController({
   postJson,
   resolveNode: (key) => state.nodeByKey.get(key.toUpperCase()) || null,
   t,
-  votingEnabled: IS_BETA,
+  votingEnabled: true,
 });
 photoLightbox.bind();
 
@@ -6896,7 +6896,7 @@ async function start() {
   if (initialLosLink) initSharedLos(initialLosLink);
   if (INITIAL_PARAMS.get("gallery") === "1") {
     const galleryNode = String(INITIAL_PARAMS.get("galleryNode") || "").toLowerCase();
-    photoGallery.open(IS_BETA && /^[0-9a-f]{64}$/.test(galleryNode) ? { nodeKey: galleryNode } : {});
+    photoGallery.open(/^[0-9a-f]{64}$/.test(galleryNode) ? { nodeKey: galleryNode } : {});
   }
   if (INITIAL_PACKET_HASH) void openPacketByHash(INITIAL_PACKET_HASH);
 }

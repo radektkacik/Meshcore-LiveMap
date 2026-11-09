@@ -173,9 +173,8 @@ přihlašovací údaje zůstávají pouze na serveru.
   tlačítko „Sdílet“ pro zkopírování tohoto odkazu. Fotky mají anonymní hodnocení `likes`/`dislikes`;
   `POST /api/photos/:id/vote` s hlavičkou `X-Photo-Voter` a tělem
   `{ "value": 1 | -1 | 0 }` hlas uloží, změní nebo zruší. Jeden prohlížeč má
-  jeden hlas na fotku, server ukládá jen jeho hash. Hlasování je standardně
-  zapnuté jen na beta cestě `/beta`; na produkci ho lze zapnout přes
-  `PHOTO_VOTING=1`. Správce může v `/admin/photos`
+  jeden hlas na fotku, server ukládá jen jeho hash. Hlasování je ve výchozím
+  stavu zapnuté; vypnout ho lze přes `PHOTO_VOTING=0`. Správce může v `/admin/photos`
   u schválené fotky zvolit „Nastavit jako náhled“; bez volby se použije
   nejnovější schválená fotka. `POST /api/photos`
   přijímá binární JPEG/PNG/WebP (max 5 MB) s hlavičkami `X-Photo-Key`,
