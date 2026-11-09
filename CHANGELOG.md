@@ -3,9 +3,9 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-09 — Prefix nodu v tooltipu (beta)
-- Prostředí: beta
-- Build: 20261109-1650-afb8ae0
+## 2026-11-09 — Prefix nodu v tooltipu
+- Prostředí: produkce i beta
+- Build: 20261109-1655-d816b26
 - Po najetí myší na nod v mapě se v tooltipu zobrazí prefix nodu vedle role, např. `REPEATER · 9FF5`.
 - Prefix se bere podle hash režimu nodu.
 - V health badge v hlavičce nodu se prefix nezobrazuje; původní umístění bylo na přání odstraněno.
