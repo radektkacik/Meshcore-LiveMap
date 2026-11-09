@@ -5,7 +5,7 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-09 — CzHealth v4 (RC9) vedle v3 (RC8) (beta)
 - Prostředí: beta
-- Build: 20261109-1900-eaa009d
+- Build: 20261109-1906-1d623b1
 - Dekodér rozlišuje v3 (`43 48 03`) a v4 (`04`) ještě před čtením offsetů.
 - v4 DAY: 6bitové řady napětí, proudu a vlhkosti, společné dvouhodinové sloty, zdroje napětí včetně smíšeného režimu, baterie a počet sériových článků.
 - v4 SUMMARY a CONFIG: nový regionový tag 4 včetně rolí, `*`, UTF-8 názvů, neúplného seznamu a zachování regionů při CONFIG bez regionového bloku.
