@@ -454,7 +454,10 @@ test("CzHealth store applies chemistry and series cell thresholds", () => {
       { batteryType: "lifepo4", batteryCells: 2, mv: 5800, expected: "critical" },
       { batteryType: "lto", batteryCells: 1, mv: 2500, expected: "ok" },
       { batteryType: "lead", batteryCells: 1, mv: 2000, expected: "warn" },
-      { batteryType: "auto", batteryCells: 1, mv: 4100, expected: null },
+      { batteryType: "auto", batteryCells: 1, mv: 4100, expected: "full" },
+      { batteryType: "auto", batteryCells: 1, mv: 3700, expected: "ok" },
+      { batteryType: "auto", batteryCells: 1, mv: 3450, expected: "warn" },
+      { batteryType: "auto", batteryCells: 1, mv: 3300, expected: "critical" },
       { batteryType: "liion", batteryCells: null, mv: 4000, expected: null },
       { batteryType: "liion", batteryCells: 1, mv: 4000, source: "none", expected: null },
     ];

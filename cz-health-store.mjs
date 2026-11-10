@@ -24,7 +24,7 @@ function batteryStatus(mv, observedAt, now, { batteryType = null, batteryCells =
   if (!Number.isFinite(mv)) return null;
   if (now - observedAt > STALE_MS) return "stale";
   if (voltageSource === "none") return null;
-  const levels = BATTERY_LEVELS[batteryType];
+  const levels = BATTERY_LEVELS[batteryType === "auto" ? "liion" : batteryType];
   if (!levels) return null;
   if (!Number.isFinite(batteryCells) || batteryCells < 1) return null;
   const perCellMv = mv / batteryCells;
