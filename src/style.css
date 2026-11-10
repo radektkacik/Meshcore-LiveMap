@@ -1242,8 +1242,8 @@ html[data-theme="dark"] .los-note { color: #8fa0a8; }
 html[data-theme="dark"] .node-label { color: #eef4f6; text-shadow: 0 0 3px #0f1418, 0 0 3px #0f1418, 0 0 4px #0f1418; }
 
 .node-label { display: inline-block; padding: 1px 6px; border: 1px solid rgba(30, 65, 49, 0.22); border-radius: 6px; background: rgba(255, 255, 251, 0.88); color: #17271f; font: 600 11px Manrope, sans-serif; white-space: nowrap; pointer-events: none; box-shadow: 0 1px 3px rgba(20, 42, 32, 0.22); text-shadow: none; }
-.node-label-health { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
-.node-label-values { color: #49665b; font: 500 10px "DM Mono", monospace; white-space: nowrap; }
+.node-label-health { display: inline-block; padding: 1px 5px; }
+.node-label-values { color: #49665b; font: 500 9px "DM Mono", monospace; white-space: nowrap; }
 html[data-theme="dark"] .node-label { background: rgba(15, 20, 24, 0.85); color: #eef4f6; border-color: rgba(255, 255, 255, 0.22); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); text-shadow: none; }
 html[data-theme="dark"] .node-label-values { color: #9fc3b2; }
 

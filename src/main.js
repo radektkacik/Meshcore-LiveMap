@@ -3676,14 +3676,15 @@ function rebuildNodeLabels() {
     if (!validCoords(node.lat, node.lon)) continue;
     if (!bounds.contains([node.lat, node.lon])) continue;
     const values = showHealthValues ? nodeMapHealthValues(node) : "";
-    const html = values
-      ? `<span class="node-label-name">${escapeHtml(node.name)}</span><small class="node-label-values">${escapeHtml(values)}</small>`
+    if (showHealthValues && !values) continue;
+    const html = showHealthValues
+      ? `<small class="node-label-values">${escapeHtml(values)}</small>`
       : escapeHtml(node.name);
     L.marker([node.lat, node.lon], {
       interactive: false,
       keyboard: false,
       icon: L.divIcon({
-        className: values ? "node-label node-label-health" : "node-label",
+        className: showHealthValues ? "node-label node-label-health" : "node-label",
         html,
         iconSize: null,
         iconAnchor: [-9, 10],
