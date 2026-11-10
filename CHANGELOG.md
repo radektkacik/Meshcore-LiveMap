@@ -3,12 +3,12 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-10 — Teplota a napětí přímo na mapě (beta)
+## 2026-11-10 — Hodnota telemetrie přímo na mapě (beta)
 - Prostředí: beta
-- Build: 20261110-1847-a1cf641
-- V režimu **Jen nody s telemetrií** přibyla volba **Teplota a napětí na mapě**.
-- Po zapnutí zobrazí všechny telemetrické nody ve výřezu pouze s hodnotami napětí a teploty, bez názvu nodu.
-- Label je minimalistický, například `3,40 V · 5,5 °C`; funguje i při oddáleném zobrazení mapy.
+- Build: 20261110-1852-10217e2
+- V režimu **Jen nody s telemetrií** přibyla volba **Hodnota na mapě** s výběrem **Teplotu / Napětí**.
+- Zobrazuje se vždy jen jedna hodnota, větším písmem a bez bílého pozadí, hned vedle bodu nodu.
+- Pokud zvolená hodnota u nodu chybí, použije se druhá dostupná; název nodu se nezobrazuje.
 
 ## 2026-11-10 — Filtr Stará data bez neznámého stavu
 - Prostředí: produkce i beta
