@@ -51,6 +51,7 @@ export function createState({ elements, initialRetentionMs, allowedRoles }) {
     observersLoading: false,
     healthOnly: false,
     healthStatus: "all",
+    showHealthValues: localStorage.getItem("meshcoreShowHealthValues") === "true",
     hideRoutes: localStorage.getItem("meshcoreHideRoutes") === "true",
     inactiveOnly: false,
     photoCache: new Map(),

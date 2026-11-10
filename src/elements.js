@@ -220,6 +220,7 @@ export const elements = {
   healthOnlyToggle: document.querySelector("#health-only-toggle"),
   healthStatusBlock: document.querySelector("#health-status-block"),
   healthStatusSelect: document.querySelector("#health-status-select"),
+  healthValuesToggle: document.querySelector("#health-values-toggle"),
   inactiveOnlyToggle: document.querySelector("#inactive-only-toggle"),
   nodeLabelsToggle: document.querySelector("#node-labels-toggle"),
   nodeSearch: document.querySelector("#node-search"),

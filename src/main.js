@@ -314,6 +314,9 @@ function applyInitialFilters() {
     state.healthStatus = healthStatus;
     elements.healthStatusSelect.value = healthStatus;
   }
+  const healthValues = readFlag("healthValues");
+  if (healthValues !== null) state.showHealthValues = healthValues;
+  elements.healthValuesToggle.checked = state.showHealthValues;
   elements.healthStatusBlock.hidden = !state.healthOnly;
   updateHealthLegend();
   const inactive = readFlag("inactive");
@@ -3544,6 +3547,7 @@ function buildShareUrl(node = null) {
   url.searchParams.set("photos", state.photosOnly ? "1" : "0");
   url.searchParams.set("health", state.healthOnly ? "1" : "0");
   if (state.healthOnly && state.healthStatus !== "all") url.searchParams.set("healthStatus", state.healthStatus);
+  if (state.healthOnly && state.showHealthValues) url.searchParams.set("healthValues", "1");
   url.searchParams.set("inactive", state.inactiveOnly ? "1" : "0");
   url.searchParams.set("observers", state.showObservers ? "1" : "0");
   if (state.animationMode === "svg") url.searchParams.set("anim", "svg");
@@ -3643,9 +3647,25 @@ function scheduleNodeLabels() {
   labelRebuildTimer = setTimeout(rebuildNodeLabels, 120);
 }
 
+function nodeMapHealthValues(node) {
+  const health = node.health && typeof node.health === "object" ? node.health : null;
+  if (!health) return "";
+  const parts = [];
+  const battery = health.batteryMv != null && Number.isFinite(Number(health.batteryMv))
+    ? Number(health.batteryMv)
+    : null;
+  const temperature = health.temperatureC != null && Number.isFinite(Number(health.temperatureC))
+    ? Number(health.temperatureC)
+    : null;
+  if (battery != null) parts.push(`${formatDecimal(battery / 1000, 2)} V`);
+  if (temperature != null) parts.push(`${formatDecimal(temperature, 1)} °C`);
+  return parts.join(" · ");
+}
+
 function rebuildNodeLabels() {
   nodeLabelLayer.clearLayers();
-  if (!state.showNodeLabels || map.getZoom() < LABEL_MIN_ZOOM) return;
+  const showHealthValues = state.healthOnly && state.showHealthValues;
+  if ((!state.showNodeLabels && !showHealthValues) || (!showHealthValues && map.getZoom() < LABEL_MIN_ZOOM)) return;
   const bounds = map.getBounds().pad(0.15);
   let count = 0;
   for (const entry of state.nodeMarkers) {
@@ -3655,10 +3675,19 @@ function rebuildNodeLabels() {
     if (!nodePassesFilters(node)) continue;
     if (!validCoords(node.lat, node.lon)) continue;
     if (!bounds.contains([node.lat, node.lon])) continue;
+    const values = showHealthValues ? nodeMapHealthValues(node) : "";
+    const html = values
+      ? `<span class="node-label-name">${escapeHtml(node.name)}</span><small class="node-label-values">${escapeHtml(values)}</small>`
+      : escapeHtml(node.name);
     L.marker([node.lat, node.lon], {
       interactive: false,
       keyboard: false,
-      icon: L.divIcon({ className: "node-label", html: escapeHtml(node.name), iconSize: null, iconAnchor: [-9, 10] }),
+      icon: L.divIcon({
+        className: values ? "node-label node-label-health" : "node-label",
+        html,
+        iconSize: null,
+        iconAnchor: [-9, 10],
+      }),
     }).addTo(nodeLabelLayer);
     count += 1;
   }
@@ -6416,6 +6445,12 @@ elements.healthOnlyToggle.addEventListener("change", () => {
   elements.healthStatusBlock.hidden = !state.healthOnly;
   applyNodeFilterRouteVisibility();
   refreshNodeState();
+});
+elements.healthValuesToggle.checked = state.showHealthValues;
+elements.healthValuesToggle.addEventListener("change", () => {
+  state.showHealthValues = elements.healthValuesToggle.checked;
+  localStorage.setItem("meshcoreShowHealthValues", String(state.showHealthValues));
+  scheduleNodeLabels();
 });
 elements.healthStatusSelect.addEventListener("change", () => {
   const next = elements.healthStatusSelect.value;
