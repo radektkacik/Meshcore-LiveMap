@@ -5,9 +5,9 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-10 — Hodnota telemetrie přímo na mapě (beta)
 - Prostředí: beta
-- Build: 20261110-1857-21ff696
+- Build: 20261110-1900-f20e4d5
 - V režimu **Jen nody s telemetrií** přibyla volba **Hodnota na mapě** s výběrem **Teplotu / Napětí**.
-- Zobrazuje se vždy jen jedna hodnota, písmem 24 px, bez bílého pozadí a nad bodem nodu, aby ji nezakrývala ikona baterie.
+- Zobrazuje se vždy jen jedna hodnota, písmem 16 px, bez bílého pozadí a nad bodem nodu, aby ji nezakrývala ikona baterie.
 - Pokud zvolená hodnota u nodu chybí, použije se druhá dostupná; název nodu se nezobrazuje.
 
 ## 2026-11-10 — Filtr Stará data bez neznámého stavu
