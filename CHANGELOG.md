@@ -5,10 +5,10 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-10 — Teplota a napětí přímo na mapě (beta)
 - Prostředí: beta
-- Build: 20261110-1843-7efb8fc
+- Build: 20261110-1847-a1cf641
 - V režimu **Jen nody s telemetrií** přibyla volba **Teplota a napětí na mapě**.
-- Po zapnutí zobrazí všechny telemetrické nody ve výřezu rovnou s napětím a teplotou, bez nutnosti najíždět myší.
-- Hodnoty se zobrazují i bez zapnutých názvů nodů; funguje i při oddáleném zobrazení mapy.
+- Po zapnutí zobrazí všechny telemetrické nody ve výřezu pouze s hodnotami napětí a teploty, bez názvu nodu.
+- Label je minimalistický, například `3,40 V · 5,5 °C`; funguje i při oddáleném zobrazení mapy.
 
 ## 2026-11-10 — Filtr Stará data bez neznámého stavu
 - Prostředí: produkce i beta
