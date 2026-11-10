@@ -3360,7 +3360,7 @@ function nodePassesFilters(node) {
     if (state.healthStatus !== "all") {
       const status = nodeHealthStatusCode(node);
       if (state.healthStatus === "stale") {
-        if (status !== "stale" && status !== "unknown") return false;
+        if (status !== "stale") return false;
       } else if (status !== state.healthStatus) return false;
     }
   }
