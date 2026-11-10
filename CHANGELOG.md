@@ -3,6 +3,15 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-10 — Velikost písma pro všechny texty (beta)
+- Prostředí: beta
+- Build: 20261110-1919-ad47022
+- Volba velikosti písma nyní škáluje **všechny texty** v UI, panelech, popupech, dialozích, tooltipech i mapových labelech.
+- Místo pevných výjimek používá společný koeficient; změna se aplikuje i na nově přidané prvky.
+- Přidány dva stavy: **Nejmenší** a **Největší**. Stupnice je nyní: Nejmenší, Menší, Normální, Větší, Největší.
+- Rozdíly mezi stavy jsou výraznější; prostřední Normální odpovídá původnímu základu.
+- Ověřeno na HUD, filtrech, popupu nodu, mapových hodnotách a ovládacích prvcích.
+
 ## 2026-11-10 — Hodnota telemetrie přímo na mapě
 - Prostředí: produkce i beta
 - Build: 20261110-1904-7bb74b8
