@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-10 — Filtr Stará data bez neznámého stavu (beta)
+- Prostředí: beta
+- Build: 20261110-1824-d31eb01
+- Filtr **Stará data** nyní zobrazuje pouze skutečně zastaralá health data.
+- Nody s čerstvými daty a nevyhodnoceným stavem baterie (např. Vlastik BMS, kde se stav záměrně nehodnotí) se už pod tímto filtrem nezobrazují.
+- Diagnostika: `e22p Kostelec - TK` zůstává skutečně stale — poslední health je z 8. 11. 2026 16:29, poslední advert z 8. 11. 2026 19:23.
+
 ## 2026-11-10 — Auto baterie jako Li-ion
 - Prostředí: produkce i beta
 - Build: 20261110-1819-682de8a
