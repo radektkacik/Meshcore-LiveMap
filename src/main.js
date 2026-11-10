@@ -166,7 +166,7 @@ const INITIAL_ZOOM = Number(INITIAL_PARAMS.get("z"));
 
 const THEME_KEY = "meshcoreTheme";
 const FONT_SIZE_KEY = "meshcoreFontSize";
-const FONT_SIZE_VALUES = ["small", "normal", "large"];
+const FONT_SIZE_VALUES = ["xsmall", "small", "normal", "large", "xlarge"];
 const storedFontSize = localStorage.getItem(FONT_SIZE_KEY);
 const initialFontSize = FONT_SIZE_VALUES.includes(storedFontSize) ? storedFontSize : "small";
 document.documentElement.dataset.theme = localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
