@@ -3693,7 +3693,7 @@ function rebuildNodeLabels() {
         className: showHealthValues ? "node-label node-label-health" : "node-label",
         html,
         iconSize: null,
-        iconAnchor: showHealthValues ? [-6, 22] : [-9, 10],
+        iconAnchor: showHealthValues ? [-6, 28] : [-9, 10],
       }),
     }).addTo(nodeLabelLayer);
     count += 1;
