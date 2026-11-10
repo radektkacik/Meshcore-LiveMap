@@ -1247,11 +1247,11 @@ html[data-theme="dark"] .node-label { color: #eef4f6; text-shadow: 0 0 3px #0f14
 
 .node-label { display: inline-block; padding: 1px 6px; border: 1px solid rgba(30, 65, 49, 0.22); border-radius: 6px; background: rgba(255, 255, 251, 0.88); color: #17271f; font: 600 11px Manrope, sans-serif; white-space: nowrap; pointer-events: none; box-shadow: 0 1px 3px rgba(20, 42, 32, 0.22); text-shadow: none; }
 .node-label.node-label-health { display: inline-block; padding: 0; border: 0; background: transparent; box-shadow: none; }
-.node-label-health .node-label-values { color: #17271f; font: 700 12px "DM Mono", monospace; white-space: nowrap; text-shadow: 0 0 2px #fff, 0 0 3px #fff, 0 0 4px #fff; }
+.node-label-health .node-label-values { color: #17271f; font: 700 24px/1 "DM Mono", monospace; white-space: nowrap; text-shadow: 0 0 3px #fff, 0 0 4px #fff, 0 0 5px #fff; }
 html[data-theme="dark"] .node-label { background: rgba(15, 20, 24, 0.85); color: #eef4f6; border-color: rgba(255, 255, 255, 0.22); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); text-shadow: none; }
 html[data-theme="dark"] .node-label.node-label-health { background: transparent; border: 0; box-shadow: none; }
 html[data-theme="dark"] .node-label-values { color: #9fc3b2; }
-html[data-theme="dark"] .node-label-health .node-label-values { color: #eef4f6; text-shadow: 0 0 2px #0f1418, 0 0 3px #0f1418, 0 0 4px #0f1418; }
+html[data-theme="dark"] .node-label-health .node-label-values { color: #eef4f6; text-shadow: 0 0 3px #0f1418, 0 0 4px #0f1418, 0 0 5px #0f1418; }
 
 .map-status { position: absolute; z-index: 550; top: 16px; left: 50%; transform: translateX(-50%); padding: 10px 16px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: rgba(255, 255, 251, 0.92); box-shadow: var(--shadow); backdrop-filter: blur(8px); font: 12px "DM Mono", monospace; text-align: center; pointer-events: none; }
 .packet-focus-bar { position: absolute; z-index: 610; top: 16px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px); padding: 8px 10px 8px 14px; border: 1px solid rgba(40, 127, 201, 0.45); border-radius: 10px; color: #245f94; background: rgba(240, 248, 255, 0.96); box-shadow: var(--shadow); backdrop-filter: blur(8px); font: 11px "DM Mono", monospace; }
