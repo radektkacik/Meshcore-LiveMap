@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-10 — Limit skoku 2B tras 300 km (beta)
+- Prostředí: beta
+- Build: 20261110-1423-09823ae
+- Maximální povolený skok mezi body trasy je pro 2B+ hash nyní **300 km** místo 200 km.
+- Limit pro 1B trasy zůstává **170 km**.
+- Delší skok se i nadále přeskočí; celková trasa je omezená 32 prefixy.
+
 ## 2026-11-09 — CzHealth v4 (RC9) vedle v3 (RC8)
 - Prostředí: produkce i beta
 - Build: 20261109-1916-fb102a8
