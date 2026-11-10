@@ -187,7 +187,14 @@
               </select>
               <label class="health-values-toggle" for="health-values-toggle">
                 <input id="health-values-toggle" type="checkbox" />
-                <span><strong>Teplota a napětí na mapě</strong></span>
+                <span><strong>Hodnota na mapě</strong></span>
+              </label>
+              <label class="health-value-mode" id="health-value-mode-wrap" for="health-value-mode" hidden>
+                <span>Zobrazit</span>
+                <select id="health-value-mode" class="route-retention-select">
+                  <option value="temperature">Teplotu</option>
+                  <option value="voltage">Napětí</option>
+                </select>
               </label>
             </div>
 

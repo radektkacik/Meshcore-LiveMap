@@ -52,6 +52,7 @@ export function createState({ elements, initialRetentionMs, allowedRoles }) {
     healthOnly: false,
     healthStatus: "all",
     showHealthValues: localStorage.getItem("meshcoreShowHealthValues") === "true",
+    healthValueMode: localStorage.getItem("meshcoreHealthValueMode") === "voltage" ? "voltage" : "temperature",
     hideRoutes: localStorage.getItem("meshcoreHideRoutes") === "true",
     inactiveOnly: false,
     photoCache: new Map(),

@@ -316,7 +316,11 @@ function applyInitialFilters() {
   }
   const healthValues = readFlag("healthValues");
   if (healthValues !== null) state.showHealthValues = healthValues;
+  const healthValueMode = INITIAL_PARAMS.get("healthValue");
+  if (healthValueMode === "temperature" || healthValueMode === "voltage") state.healthValueMode = healthValueMode;
   elements.healthValuesToggle.checked = state.showHealthValues;
+  elements.healthValueMode.value = state.healthValueMode;
+  elements.healthValueModeWrap.hidden = !state.showHealthValues;
   elements.healthStatusBlock.hidden = !state.healthOnly;
   updateHealthLegend();
   const inactive = readFlag("inactive");
@@ -3547,7 +3551,10 @@ function buildShareUrl(node = null) {
   url.searchParams.set("photos", state.photosOnly ? "1" : "0");
   url.searchParams.set("health", state.healthOnly ? "1" : "0");
   if (state.healthOnly && state.healthStatus !== "all") url.searchParams.set("healthStatus", state.healthStatus);
-  if (state.healthOnly && state.showHealthValues) url.searchParams.set("healthValues", "1");
+  if (state.healthOnly && state.showHealthValues) {
+    url.searchParams.set("healthValues", "1");
+    url.searchParams.set("healthValue", state.healthValueMode);
+  }
   url.searchParams.set("inactive", state.inactiveOnly ? "1" : "0");
   url.searchParams.set("observers", state.showObservers ? "1" : "0");
   if (state.animationMode === "svg") url.searchParams.set("anim", "svg");
@@ -3647,19 +3654,18 @@ function scheduleNodeLabels() {
   labelRebuildTimer = setTimeout(rebuildNodeLabels, 120);
 }
 
-function nodeMapHealthValues(node) {
+function nodeMapHealthValue(node) {
   const health = node.health && typeof node.health === "object" ? node.health : null;
   if (!health) return "";
-  const parts = [];
   const battery = health.batteryMv != null && Number.isFinite(Number(health.batteryMv))
-    ? Number(health.batteryMv)
-    : null;
+    ? `${formatDecimal(Number(health.batteryMv) / 1000, 2)} V`
+    : "";
   const temperature = health.temperatureC != null && Number.isFinite(Number(health.temperatureC))
-    ? Number(health.temperatureC)
-    : null;
-  if (battery != null) parts.push(`${formatDecimal(battery / 1000, 2)} V`);
-  if (temperature != null) parts.push(`${formatDecimal(temperature, 1)} °C`);
-  return parts.join(" · ");
+    ? `${formatDecimal(Number(health.temperatureC), 1)} °C`
+    : "";
+  return state.healthValueMode === "voltage"
+    ? (battery || temperature)
+    : (temperature || battery);
 }
 
 function rebuildNodeLabels() {
@@ -3675,10 +3681,10 @@ function rebuildNodeLabels() {
     if (!nodePassesFilters(node)) continue;
     if (!validCoords(node.lat, node.lon)) continue;
     if (!bounds.contains([node.lat, node.lon])) continue;
-    const values = showHealthValues ? nodeMapHealthValues(node) : "";
-    if (showHealthValues && !values) continue;
+    const value = showHealthValues ? nodeMapHealthValue(node) : "";
+    if (showHealthValues && !value) continue;
     const html = showHealthValues
-      ? `<small class="node-label-values">${escapeHtml(values)}</small>`
+      ? `<span class="node-label-values">${escapeHtml(value)}</span>`
       : escapeHtml(node.name);
     L.marker([node.lat, node.lon], {
       interactive: false,
@@ -3687,7 +3693,7 @@ function rebuildNodeLabels() {
         className: showHealthValues ? "node-label node-label-health" : "node-label",
         html,
         iconSize: null,
-        iconAnchor: [-9, 10],
+        iconAnchor: showHealthValues ? [-5, 4] : [-9, 10],
       }),
     }).addTo(nodeLabelLayer);
     count += 1;
@@ -6448,9 +6454,17 @@ elements.healthOnlyToggle.addEventListener("change", () => {
   refreshNodeState();
 });
 elements.healthValuesToggle.checked = state.showHealthValues;
+elements.healthValueMode.value = state.healthValueMode;
+elements.healthValueModeWrap.hidden = !state.showHealthValues;
 elements.healthValuesToggle.addEventListener("change", () => {
   state.showHealthValues = elements.healthValuesToggle.checked;
+  elements.healthValueModeWrap.hidden = !state.showHealthValues;
   localStorage.setItem("meshcoreShowHealthValues", String(state.showHealthValues));
+  scheduleNodeLabels();
+});
+elements.healthValueMode.addEventListener("change", () => {
+  state.healthValueMode = elements.healthValueMode.value === "voltage" ? "voltage" : "temperature";
+  localStorage.setItem("meshcoreHealthValueMode", state.healthValueMode);
   scheduleNodeLabels();
 });
 elements.healthStatusSelect.addEventListener("change", () => {

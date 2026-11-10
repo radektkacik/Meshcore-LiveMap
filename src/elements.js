@@ -221,6 +221,8 @@ export const elements = {
   healthStatusBlock: document.querySelector("#health-status-block"),
   healthStatusSelect: document.querySelector("#health-status-select"),
   healthValuesToggle: document.querySelector("#health-values-toggle"),
+  healthValueMode: document.querySelector("#health-value-mode"),
+  healthValueModeWrap: document.querySelector("#health-value-mode-wrap"),
   inactiveOnlyToggle: document.querySelector("#inactive-only-toggle"),
   nodeLabelsToggle: document.querySelector("#node-labels-toggle"),
   nodeSearch: document.querySelector("#node-search"),
