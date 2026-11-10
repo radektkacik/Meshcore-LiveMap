@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-10 — Auto baterie jako Li-ion
+- Prostředí: produkce i beta
+- Build: 20261110-1819-682de8a
+- Pokud zdravotní zpráva uvádí typ baterie `auto`, úrovně nabití a symbol baterie se počítají jako pro **Li-ion**.
+- V datech zůstává původní typ `auto`; mění se pouze vyhodnocení stavu baterie.
+- Ověřeno na produkci i betě: `Hermanice` 3,983 V → `ok`, `rip4.meshcore.cz` 4,096 V → `full`, `sonne.meshcore.cz` 3,884 V → `ok`.
+
 ## 2026-11-10 — Limit skoku 2B tras 300 km
 - Prostředí: produkce i beta
 - Build: 20261110-1426-dcb4441
