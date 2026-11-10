@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-10 — Tučné hodnoty telemetrie na mapě (beta)
+- Prostředí: beta
+- Build: 20261110-1928-c4661ff
+- Hodnoty teploty a napětí na mapě používají skutečně tučné písmo **Manrope 700**.
+- Původní DM Mono nemá načtenou váhu 700 a se zapnutým `font-synthesis: none` se tučně nezobrazovalo.
+- Číslice zůstávají zarovnané tabulkovými šířkami.
+
 ## 2026-11-10 — Velikost písma pro všechny texty
 - Prostředí: produkce i beta
 - Build: 20261110-1922-212880b
