@@ -273,7 +273,7 @@ Trasy se vykreslují pro všechny délky hop prefixů (včetně 1B). U hopu, kte
 Analyzer neoznačí jako jednoznačný (`unique_prefix`) a má více kandidátů, se
 vybere prostorově nejbližší nod k předchozímu bodu trasy. Bez předchozího bodu
 se kolidující prefix nepoužije. Cesty delší než 32 prefixů se ignorují.
-Hop, pro který by vznikl skok delší než 170 km u 1B tras nebo 200 km u 2B+
+Hop, pro který by vznikl skok delší než 170 km u 1B tras nebo 300 km u 2B+
 tras, se přeskočí; vzdálenostní limit blokuje zjevně chybné dálkové skoky.
 Od 140 km se hop navíc označí jako dlouhý skok.
 Nastavení zobrazení 1B tras se ukládá do `localStorage`. Filtry velikosti hashe

@@ -105,6 +105,6 @@ test("candidate chain respects a start anchor and the hop limit", () => {
 test("allows a longer hop only for routes with at least two hash bytes", () => {
   assert.equal(maxRouteHopKm(0), 170);
   assert.equal(maxRouteHopKm(1), 170);
-  assert.equal(maxRouteHopKm(2), 200);
-  assert.equal(maxRouteHopKm(3), 200);
+  assert.equal(maxRouteHopKm(2), 300);
+  assert.equal(maxRouteHopKm(3), 300);
 });
