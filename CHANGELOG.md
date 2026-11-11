@@ -3,6 +3,12 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-11 — LOS: výchozí výška antény 2 m
+- Prostředí: produkce i beta
+- Build: 20261111-1228-03a70dd
+- V nástroji **Přímá viditelnost (LOS)** mají oba body výchozí výšku antény **2 m**.
+- Platí pro otevření nástroje i pro sdílené odkazy bez explicitně zadané výšky.
+
 ## 2026-11-10 — Tučné hodnoty telemetrie na mapě
 - Prostředí: produkce i beta
 - Build: 20261110-1931-c63fc8e

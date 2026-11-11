@@ -539,6 +539,8 @@
 | 2026-11-10 19:24 | `20261110T192441Z.tar.gz` (stage APP_DIR) | `20261110-1924-212880b` | Beta: stejná verze jako produkce po nasazení 15px telemetrických hodnot | `src/style.css` |
 | 2026-11-10 19:28 | `20261110T192852Z.tar.gz` (stage APP_DIR) | `20261110-1928-c4661ff` | Beta: tučné hodnoty telemetrie na mapě přes Manrope 700 | `src/style.css` |
 | 2026-11-10 19:31 | `20261110T193114Z.tar.gz` | `20261110-1931-c63fc8e` | Prod: tučné hodnoty telemetrie na mapě přes Manrope 700 | `src/style.css` |
+| 2026-11-11 12:26 | `20261111T122647Z.tar.gz` (stage APP_DIR) | `20261111-1226-03a70dd` | Beta: výchozí výška antény v LOS nástroji 2 m | `index.html`, `src/main.js`, `src/los.js` |
+| 2026-11-11 12:28 | `20261111T122812Z.tar.gz` | `20261111-1228-03a70dd` | Prod: výchozí výška antény v LOS nástroji 2 m | `index.html`, `src/main.js`, `src/los.js` |
 | 2026-11-06 19:20 | `20261106T192046Z.tar.gz` | `20261106-1920-e6ee871` | Prod: CzHealth v3, regiony, kompaktní faceplate, SUMMARY karta a neutrální ikona baterie | `cz-health.mjs`, `cz-health-store.mjs`, `src/main.js`, `src/style.css`, `src/i18n.js`, `index.html`, `deploy/*`, `test/cz-health.test.mjs` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
