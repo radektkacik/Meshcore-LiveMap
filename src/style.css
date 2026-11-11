@@ -369,10 +369,12 @@ html[data-theme="dark"] .node-new-badge { color: #fbbf24; background: rgba(245, 
 .node-health-map-icon { background: transparent; border: 0; pointer-events: none; }
 .node-health-map-badge { display: grid; place-items: center; width: 20px; height: 20px; border: 2px solid currentColor; border-radius: 50%; color: #899990; background: #fffef9; box-shadow: 0 1px 5px rgba(20, 42, 32, 0.34); }
 .node-health-map-badge .node-health-battery { width: 14px; height: 14px; }
+.node-health-map-badge.full { color: #078e62; }
 .node-health-map-badge.ok { color: #1f9d63; }
 .node-health-map-badge.warn { color: #d18a1f; }
 .node-health-map-badge.critical { color: #c63e32; }
 .node-health-map-badge.stale, .node-health-map-badge.unknown { color: #899990; border-style: dashed; }
+.node-health-map-badge.full .node-health-battery { color: #078e62; }
 .node-health-map-badge.ok .node-health-battery { color: #1f9d63; }
 .node-health-map-badge.warn .node-health-battery { color: #d18a1f; }
 .node-health-map-badge.critical .node-health-battery { color: #c63e32; }
@@ -1387,6 +1389,7 @@ html[data-theme="dark"] .node-compact-key code { color: #c3d0d6; }
 .node-tooltip-health .node-health-battery { width: 14px; height: 14px; color: #899990; }
 .node-tooltip-health .node-health-thermometer,
 .node-tooltip-health .node-health-humidity-icon { width: 12px; height: 12px; color: #667b70; }
+.node-tooltip-health.full .node-health-battery { color: #078e62; }
 .node-tooltip-health.ok .node-health-battery { color: #1f9d63; }
 .node-tooltip-health.warn .node-health-battery { color: #d18a1f; }
 .node-tooltip-health.critical .node-health-battery { color: #c63e32; }
