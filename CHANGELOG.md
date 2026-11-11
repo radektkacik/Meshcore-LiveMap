@@ -3,9 +3,9 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-11 — Popisek telemetrie v3/v4 (beta)
-- Prostředí: beta
-- Build: 20261111-1437-4884bb5
+## 2026-11-11 — Popisek telemetrie v3/v4
+- Prostředí: produkce i beta
+- Build: 20261111-1439-cdefdcf
 - Popisek filtru už neuvádí jen `CzHealth v3`, ale **`CzHealth v3/v4`**.
 - Odpovídá současnému stavu po nasazení RC9.
 
