@@ -548,6 +548,7 @@
 | 2026-11-11 14:37 | `20261111T143730Z.tar.gz` (stage APP_DIR) | `20261111-1437-4884bb5` | Beta: popisek filtru telemetrie uvádí CzHealth v3/v4 | `index.html` |
 | 2026-11-11 14:39 | `20261111T143903Z.tar.gz` | `20261111-1439-cdefdcf` | Prod: popisek filtru telemetrie uvádí CzHealth v3/v4 | `index.html` |
 | 2026-11-11 19:22 | `20261111T192213Z.tar.gz` (stage APP_DIR) | `20261111-1922-fbbcdc0` | Beta: galerie fotek se načítá při otevření a obnovuje každých 30 s | `src/photo-gallery-controller.js`, `src/main.js` |
+| 2026-11-11 19:31 | `20261111T193122Z.tar.gz` | `20261111-1931-d2edf1c` | Prod: galerie fotek se načítá při otevření a obnovuje každých 30 s | `src/photo-gallery-controller.js`, `src/main.js` |
 | 2026-11-06 19:20 | `20261106T192046Z.tar.gz` | `20261106-1920-e6ee871` | Prod: CzHealth v3, regiony, kompaktní faceplate, SUMMARY karta a neutrální ikona baterie | `cz-health.mjs`, `cz-health-store.mjs`, `src/main.js`, `src/style.css`, `src/i18n.js`, `index.html`, `deploy/*`, `test/cz-health.test.mjs` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |

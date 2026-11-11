@@ -3,9 +3,9 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-11 — Galerie fotek se obnovuje automaticky (beta)
-- Prostředí: beta
-- Build: 20261111-1922-fbbcdc0
+## 2026-11-11 — Galerie fotek se obnovuje automaticky
+- Prostředí: produkce i beta
+- Build: 20261111-1931-d2edf1c
 - Otevření galerie vždy načte aktuální seznam fotek, ne pouze 60s cache.
 - Pokud je galerie otevřená, obnovuje se každých 30 sekund; nová fotka se objeví bez F5.
 - Po vlastním uploadu se otevřená galerie obnoví okamžitě.
