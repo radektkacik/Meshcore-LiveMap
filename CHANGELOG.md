@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-11 — Plná baterie zeleně v tooltipu a na mapě (beta)
+- Prostředí: beta
+- Build: 20261111-1426-afbebc7
+- Doplněna barva pro stav `full` u ikony baterie v tooltipu a v malém health badge na mapě.
+- Ikona už u plné baterie nezůstává šedá; používá stejnou zelenou jako hlavička nodu.
+- Ověřeno na `Hladke Zivotice`: 4,28 V, stav `full`, zelená `rgb(7, 142, 98)`.
+
 ## 2026-11-11 — LTO Vlastik: stav z BMS
 - Prostředí: produkce i beta
 - Build: 20261111-1424-d80e22a
