@@ -5571,8 +5571,8 @@ const LOS_NODE_RESULTS = [elements.losResultsA, elements.losResultsB];
 function losOptions() {
   const frequencyMhz = Number(elements.losFrequency.value) || 869.525;
   return {
-    antennaAM: Math.max(1, Number(elements.losAntennaA.value) || 10),
-    antennaBM: Math.max(1, Number(elements.losAntennaB.value) || 10),
+    antennaAM: Math.max(1, Number(elements.losAntennaA.value) || 2),
+    antennaBM: Math.max(1, Number(elements.losAntennaB.value) || 2),
     frequencyGhz: Math.max(0.1, frequencyMhz / 1000),
   };
 }
@@ -5786,8 +5786,8 @@ function losShareUrl() {
   url.searchParams.delete("sheet");
   url.searchParams.set("los", [a.lat, a.lng, b.lat, b.lng].map((value) => value.toFixed(6)).join(","));
   url.searchParams.set("losF", elements.losFrequency.value || "869.525");
-  url.searchParams.set("losA", elements.losAntennaA.value || "10");
-  url.searchParams.set("losB", elements.losAntennaB.value || "10");
+  url.searchParams.set("losA", elements.losAntennaA.value || "2");
+  url.searchParams.set("losB", elements.losAntennaB.value || "2");
   url.searchParams.set("losTx", elements.losTxPower.value || "22");
   url.searchParams.set("losGA", elements.losGainA.value || "3");
   url.searchParams.set("losGB", elements.losGainB.value || "3");

@@ -94,8 +94,8 @@ export function nearestOnPath(profile, lat, lon) {
 
 export function analyzePath(samples, {
   frequencyGhz = 0.869525,
-  antennaAM = 10,
-  antennaBM = 10,
+  antennaAM = 2,
+  antennaBM = 2,
   fresnelFraction = 0.6,
 } = {}) {
   const total = samples.length ? samples[samples.length - 1].distanceKm : 0;
