@@ -2774,7 +2774,7 @@ const photoUpload = createPhotoUploadController({
       if (state.photosOnly) refreshNodeState();
     }).catch(() => {});
   },
-  onUploaded: () => photoGallery.invalidate(),
+  onUploaded: () => photoGallery.refresh(),
   t,
   tCount,
 });

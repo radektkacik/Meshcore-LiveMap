@@ -1,6 +1,7 @@
 import { buildPhotoGallerySections, isNewPhoto } from "./photo-gallery-model.js";
 
 const CACHE_TTL_MS = 60_000;
+const REFRESH_MS = 30_000;
 
 export function createPhotoGalleryController({
   appPath,
@@ -24,6 +25,7 @@ export function createPhotoGalleryController({
   let nodeFilter = "";
   let photos = [];
   let query = "";
+  let refreshTimer = null;
   let view = [];
 
   function renderLabels() {
@@ -229,8 +231,24 @@ export function createPhotoGalleryController({
       error = true;
     } finally {
       loading = false;
-      if (elements.photoGalleryDialog.open) render();
+      if (elements.photoGalleryDialog.open) {
+        const scrollTop = elements.photoGalleryGrid.scrollTop;
+        render();
+        elements.photoGalleryGrid.scrollTop = scrollTop;
+      }
     }
+  }
+
+  function scheduleRefresh() {
+    if (refreshTimer != null) clearTimeout(refreshTimer);
+    refreshTimer = null;
+    if (!elements.photoGalleryDialog.open) return;
+    refreshTimer = setTimeout(async () => {
+      refreshTimer = null;
+      if (!elements.photoGalleryDialog.open) return;
+      await load(true);
+      scheduleRefresh();
+    }, REFRESH_MS);
   }
 
   function open(options = {}) {
@@ -240,7 +258,8 @@ export function createPhotoGalleryController({
     elements.photoGallerySearch.value = "";
     elements.photoGalleryGrid.scrollTop = 0;
     render();
-    void load();
+    void load(true);
+    scheduleRefresh();
   }
 
   function updatePhoto(photo) {
@@ -264,9 +283,18 @@ export function createPhotoGalleryController({
     loadedAt = 0;
   }
 
+  function refresh() {
+    if (elements.photoGalleryDialog.open) void load(true);
+    else loadedAt = 0;
+  }
+
   function bind() {
     elements.photoGalleryOpen.addEventListener("click", open);
     elements.photoGalleryClose.addEventListener("click", () => elements.photoGalleryDialog.close());
+    elements.photoGalleryDialog.addEventListener("close", () => {
+      if (refreshTimer != null) clearTimeout(refreshTimer);
+      refreshTimer = null;
+    });
     elements.photoGalleryDialog.addEventListener("click", (event) => {
       if (event.target === elements.photoGalleryDialog) elements.photoGalleryDialog.close();
     });
@@ -293,6 +321,7 @@ export function createPhotoGalleryController({
     bind,
     invalidate,
     open,
+    refresh,
     removePhoto,
     updatePhoto,
   };
