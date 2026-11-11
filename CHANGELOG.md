@@ -3,9 +3,9 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-11 — LTO Vlastik: stav z BMS (beta)
-- Prostředí: beta
-- Build: 20261111-1420-9735549
+## 2026-11-11 — LTO Vlastik: stav z BMS
+- Prostředí: produkce i beta
+- Build: 20261111-1424-d80e22a
 - U typu `lto-vlastik` se při zdroji **BMS** vyhodnocují úrovně LTO baterie.
 - Při záložním zdroji **ADC/INA** se stav baterie nadále nehodnotí, protože napětí může být výstup měniče.
 - `naion-vlastik` zůstává bez hodnocení stavu, protože pro Na-ion nejsou definované úrovně.
