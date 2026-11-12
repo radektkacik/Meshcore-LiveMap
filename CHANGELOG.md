@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-12 — Tučnější hodnoty teplot a napětí na mapě (beta)
+- Prostředí: beta
+- Build: 20261112-1054-2df5f6f
+- Hodnoty teploty a napětí přímo na mapě používají váhu **Manrope 800** místo 700.
+- Písmo 800 je nyní skutečně načtené, ne syntetizované.
+- Ostatní texty zůstávají beze změny.
+
 ## 2026-11-12 — Filtr `< Baterie OK`
 - Prostředí: produkce i beta
 - Build: 20261112-0844-41b3a46
