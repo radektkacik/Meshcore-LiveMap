@@ -1157,6 +1157,7 @@ export const STATIC_EN = {
   "Stav telemetrie": "Telemetry status",
   "Všechny stavy": "All statuses",
   "Baterie OK": "Battery OK",
+  "< Baterie OK": "< Battery OK",
   "Plná": "Full",
   "Nízká": "Low",
   "Kritická": "Critical",

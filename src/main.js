@@ -156,6 +156,7 @@ const INITIAL_PARAMS = new URLSearchParams(location.search);
 const ALL_NODE_ROLES = ["repeater", "companion", "room", "sensor", "unknown"];
 const ALL_HASH_SIZES = [1, 2, 3];
 const ALL_HEALTH_STATUSES = ["full", "ok", "warn", "critical", "stale"];
+const HEALTH_STATUS_FILTERS = [...ALL_HEALTH_STATUSES, "below-ok"];
 const mobileSheetQuery = window.matchMedia("(max-width: 700px)");
 const FORCE_MOBILE_SHEET = INITIAL_PARAMS.get("sheet") === "1";
 const INITIAL_NODE_KEY = INITIAL_PARAMS.get("node")?.trim().toUpperCase() || null;
@@ -311,7 +312,7 @@ function applyInitialFilters() {
     elements.healthOnlyToggle.checked = health;
   }
   const healthStatus = INITIAL_PARAMS.get("healthStatus");
-  if (ALL_HEALTH_STATUSES.includes(healthStatus)) {
+  if (HEALTH_STATUS_FILTERS.includes(healthStatus)) {
     state.healthStatus = healthStatus;
     elements.healthStatusSelect.value = healthStatus;
   }
@@ -467,6 +468,13 @@ const SECOND_TIER_COLOR = "#efa438";
 function nodeHealthStatusCode(node) {
   const status = String(node?.health?.batteryStatus || "").toLowerCase();
   return ALL_HEALTH_STATUSES.includes(status) ? status : (node?.health ? "unknown" : "none");
+}
+
+function nodeHealthMatchesFilter(node, filter) {
+  if (filter === "all") return true;
+  const status = nodeHealthStatusCode(node);
+  if (filter === "below-ok") return status === "warn" || status === "critical";
+  return status === filter;
 }
 
 function nodeHealthMapTitle(node) {
@@ -3365,12 +3373,7 @@ function nodePassesFilters(node) {
   if (state.photosOnly && !state.photoNodeKeys.has(key)) return false;
   if (state.healthOnly) {
     if (!node.health) return false;
-    if (state.healthStatus !== "all") {
-      const status = nodeHealthStatusCode(node);
-      if (state.healthStatus === "stale") {
-        if (status !== "stale") return false;
-      } else if (status !== state.healthStatus) return false;
-    }
+    if (!nodeHealthMatchesFilter(node, state.healthStatus)) return false;
   }
   if (state.inactiveOnly && nodeIsActive(node)) return false;
   return true;
@@ -6534,7 +6537,7 @@ elements.healthValueMode.addEventListener("change", () => {
 });
 elements.healthStatusSelect.addEventListener("change", () => {
   const next = elements.healthStatusSelect.value;
-  state.healthStatus = ALL_HEALTH_STATUSES.includes(next) ? next : "all";
+  state.healthStatus = HEALTH_STATUS_FILTERS.includes(next) ? next : "all";
   refreshNodeState();
 });
 elements.inactiveOnlyToggle.addEventListener("change", () => {
