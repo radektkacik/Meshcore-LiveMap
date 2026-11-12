@@ -3647,7 +3647,9 @@ function scheduleNodeRefresh() {
 
 const LABEL_MIN_ZOOM = 9;
 const LABEL_MAX = 400;
+const HEALTH_LABEL_MAX_STACK = 8;
 let labelRebuildTimer = null;
+let labelRenderGeneration = 0;
 
 function scheduleNodeLabels() {
   clearTimeout(labelRebuildTimer);
@@ -3668,11 +3670,43 @@ function nodeMapHealthValue(node) {
     : (temperature || battery);
 }
 
+function healthLabelsOverlap(a, b) {
+  const padding = 2;
+  return a.left < b.right + padding
+    && a.right + padding > b.left
+    && a.top < b.bottom + padding
+    && a.bottom + padding > b.top;
+}
+
+function resolveHealthLabelCollisions(markers, generation) {
+  if (generation !== labelRenderGeneration) return;
+  const placed = [];
+  for (const marker of markers) {
+    const element = marker.getElement();
+    if (!element) continue;
+    const rect = element.getBoundingClientRect();
+    if (!rect.width || !rect.height) continue;
+    const step = rect.height + 2;
+    const baseMarginTop = Number.parseFloat(element.style.marginTop) || 0;
+    let shift = 0;
+    let box = { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
+    while (placed.some((other) => healthLabelsOverlap(box, other)) && shift < HEALTH_LABEL_MAX_STACK * step) {
+      shift += step;
+      box = { ...box, top: rect.top - shift, bottom: rect.bottom - shift };
+    }
+    if (shift) element.style.marginTop = `${baseMarginTop - shift}px`;
+    placed.push(box);
+  }
+}
+
 function rebuildNodeLabels() {
   nodeLabelLayer.clearLayers();
+  labelRenderGeneration += 1;
+  const generation = labelRenderGeneration;
   const showHealthValues = state.healthOnly && state.showHealthValues;
   if ((!state.showNodeLabels && !showHealthValues) || (!showHealthValues && map.getZoom() < LABEL_MIN_ZOOM)) return;
   const bounds = map.getBounds().pad(0.15);
+  const healthMarkers = [];
   let count = 0;
   for (const entry of state.nodeMarkers) {
     if (count >= LABEL_MAX) break;
@@ -3686,7 +3720,7 @@ function rebuildNodeLabels() {
     const html = showHealthValues
       ? `<span class="node-label-values">${escapeHtml(value)}</span>`
       : escapeHtml(node.name);
-    L.marker([node.lat, node.lon], {
+    const marker = L.marker([node.lat, node.lon], {
       interactive: false,
       keyboard: false,
       icon: L.divIcon({
@@ -3696,7 +3730,11 @@ function rebuildNodeLabels() {
         iconAnchor: showHealthValues ? [-6, 28] : [-9, 10],
       }),
     }).addTo(nodeLabelLayer);
+    if (showHealthValues) healthMarkers.push(marker);
     count += 1;
+  }
+  if (healthMarkers.length > 1) {
+    requestAnimationFrame(() => resolveHealthLabelCollisions(healthMarkers, generation));
   }
 }
 
