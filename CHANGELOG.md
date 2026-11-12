@@ -3,6 +3,14 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-12 — Kompaktnější hodnoty telemetrie na mapě (beta)
+- Prostředí: beta
+- Build: 20261112-0837-fc07f11
+- Překrývající se hodnoty teploty a napětí se už neskládají do vysokého sloupce.
+- Popisky se rozmisťují do kompaktní mřížky maximálně **4 řad**; podle potřeby se posunou i vlevo nebo vpravo.
+- Mezera mezi popisky je 2 px, takže řady na sebe těsně navazují.
+- Při extrémním počtu nodů na jednom místě se přebytečné popisky skryjí, aby mapa zůstala čitelná.
+
 ## 2026-11-12 — Výchozí metrika statistik: Užitečnost
 - Prostředí: produkce i beta
 - Build: 20261112-0830-6b56860
