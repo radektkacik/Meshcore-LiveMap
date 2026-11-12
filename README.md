@@ -239,6 +239,9 @@ přihlašovací údaje zůstávají pouze na serveru.
   Ukládá se do `data/visits.sqlite`; raw IP se neukládá.
 - `/api/node-history?key=<public_key>&days=7` vrací hodinové vzorky metrik
   vybraného nodu z `data/node-metrics.sqlite` pro mini graf v detailu nodu.
+- `/api/node-health?key=<public_key>&days=7` vrací CzHealth telemetrii nodu
+  (napětí, teplota, vlhkost, proud a konfiguraci baterie). Podrobnosti viz
+  [Telemetrie (CzHealth)](#telemetrie-czhealth).
 - `/api/history?since=<ms>&limit=<n>` vrací uložené trasy z vlastní databáze.
   Na něm stojí archivní okna 5 min / 1 h / 24 h a sousedská analýza, takže
   fungují i pro starší data a po restartu.
@@ -309,6 +312,10 @@ panel posledních tras. Panel Aktivity lze zvětšit tažením za levý horní r
 relay statistikami, dostupnou telemetrií a veřejným klíčem. HUD lze kliknutím na
 symbol sbalit.
 
+Velikost písma v celé aplikaci se mění pětistupňovým přepínačem (výchozí
+„Malé“); volba se ukládá do `localStorage` a veškeré texty řídí CSS proměnná
+`--font-scale`. V síťových statistikách je výchozí metrikou „Užitečnost“.
+
 Popup při otevření ukazuje také poslední trasu zachycenou přes daný nod od
 načtení stránky: typ a čas paketu, délku hop hashe, celý seznam nodů a pozici
   daného nodu v trase. Tlačítko trasu vykreslí jako samostatnou očíslovanou vrstvu
@@ -335,6 +342,29 @@ Kliknutí na metriku „Paketů/h“ otevře graf 24 h / 7 dní ze skutečných 
 Analyzeru. Server je ukládá každých 5 minut do `node-metrics.sqlite` (retence
 30 dní); mezery znamenají výpadek nebo dobu před začátkem sběru. Aktuální hodina
 je neúplná.
+
+## Telemetrie (CzHealth)
+
+Repeatery s firmwarem mesh-cz v1.18.0.02rc8+ vysílají do MQTT telemetrii
+CzHealth. Server přijímá formát **v3** i novější **v4** (DAY, SUMMARY, CONFIG)
+současně a obojí ukládá do `data/cz-health.sqlite`; formáty 3 a 4 žijí vedle
+sebe a historická data zůstávají zachovaná.
+
+- `GET /api/node-health?key=<public_key>&days=7` vrací vzorky (napětí, teplota,
+  vlhkost, proud, zdroj napětí) a konfiguraci baterie (typ, počet článků,
+  verze firmware).
+- Stav baterie se vyhodnocuje podle chemie a napětí: Li-ion 4050/3600/3400 mV,
+  LiFePO4 3350/3200/3000 mV, LTO 2600/2400/2200 mV a Pb 2100/2050/1950 mV
+  (úrovně full/ok/warn/critical). Typ `auto` se počítá jako Li-ion; `other`,
+  Na-ion a neznámé typy stav nemají. Typ `lto-vlastik` se hodnotí jen při
+  zdroji BMS (u ADC/INA jde o výstup měniče).
+- Filtr „Jen nody s telemetrií“ a „Stav telemetrie“ nabízejí stavy Plná,
+  Baterie OK, `< Baterie OK`, Nízká, Kritická a Stará data. Volba
+  `< Baterie OK` zobrazí pouze nody s nízkou nebo kritickou baterií.
+- Volba „Hodnota na mapě“ zobrazí u každého nodu teplotu nebo napětí (tučně,
+  bez jména a pozadí); překrývající se popisky se skládají do kompaktní mřížky.
+- Zdravotní data se považují za čerstvá 48 hodin, konfigurace 8 dní; po
+  překročení se stav zobrazí jako „Stará data“.
 
 ## Telegram notifikace
 
@@ -384,6 +414,15 @@ Webhook může být pro jednoho bota jen jeden. Proto zapínejte
 `TELEGRAM_INTERACTIVE` pouze v produkci; beta a produkce obvykle sdílejí stejný
 bot token. Pokud používáte skupinový chat, nastavte `TELEGRAM_ADMIN_USER_IDS`,
 jinak jsou tlačítka povolena jen pro chat ID z `TELEGRAM_CHAT_ID`.
+
+## Přímá viditelnost (LOS)
+
+Tlačítko **LOS** zapne nástroj přímé viditelnosti mezi dvěma body. Oba konce se
+vyberou kliknutím do mapy nebo na nod; výchozí výška antény je 2 m. Nástroj
+spočítá terénní profil a Fresnelovu zónu (poměr zásahu je nastavitelný) a zobrazí
+profil s překážkami, světlost vůči terénu a Fresnelově zóně a odhad linkového
+rozpočtu (frekvence, výkon, zisky, ztráty, citlivost, požadovaná rezerva).
+Výškový profil bere z `/api/elevation`; odkaz na konkrétní výpočet lze sdílet.
 
 ## Pokrytí terénu
 
