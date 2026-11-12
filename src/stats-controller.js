@@ -14,7 +14,7 @@ export function createStatsController({
   state,
 }) {
   let count = 10;
-  let metric = "relay";
+  let metric = "usefulness";
   let networkStats = null;
   let windowValue = "24h";
 
