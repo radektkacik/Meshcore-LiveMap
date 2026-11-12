@@ -232,6 +232,7 @@ if (elements.fontSizeSelect) {
       : "small";
     document.documentElement.dataset.fontSize = next;
     localStorage.setItem(FONT_SIZE_KEY, next);
+    scheduleNodeLabels();
   });
 }
 elements.animationToggle.checked = localStorage.getItem("meshcoreAnimateRoutes") !== "false";
@@ -6517,7 +6518,7 @@ elements.inactiveOnlyToggle.addEventListener("change", () => {
 elements.hideRoutesToggle.addEventListener("change", () => {
   setRoutesHidden(elements.hideRoutesToggle.checked);
 });
-map.on("moveend zoomend", scheduleNodeLabels);
+map.on("moveend zoomend resize", scheduleNodeLabels);
 map.on("moveend zoomend resize", scheduleViewportRender);
 map.on("moveend zoomend", () => scheduleSnrLabels(150));
 
