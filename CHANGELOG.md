@@ -3,9 +3,9 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-12 — Nepřekrývající se hodnoty telemetrie (beta)
-- Prostředí: beta
-- Build: 20261112-0759-5bee78b
+## 2026-11-12 — Nepřekrývající se hodnoty telemetrie
+- Prostředí: produkce i beta
+- Build: 20261112-0801-28c4a93
 - Pokud se na mapě překrývají hodnoty teploty nebo napětí u blízkých nodů, další popisky se posunou svisle nad sebe.
 - Rozložení se přepočítá po pohybu a zoomu mapy, změně velikosti písma i změně rozměru okna.
 - Ošetřeno je až 8 úrovní; při velkém počtu nodů na stejném místě zůstává omezení.
