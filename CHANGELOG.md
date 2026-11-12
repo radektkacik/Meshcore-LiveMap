@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-12 — Výchozí metrika statistik: Užitečnost (beta)
+- Prostředí: beta
+- Build: 20261112-0803-a042c6e
+- V rozbalovacím seznamu metrik statistik je **Užitečnost** nyní první a výchozí volbou.
+- Po otevření statistik se rovnou zobrazí žebříček podle užitečnosti za zvolené období.
+- Ostatní metriky zůstávají dostupné ve stejném pořadí za ní.
+
 ## 2026-11-12 — Nepřekrývající se hodnoty telemetrie
 - Prostředí: produkce i beta
 - Build: 20261112-0801-28c4a93
