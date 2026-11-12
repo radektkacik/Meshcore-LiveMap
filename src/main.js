@@ -3734,7 +3734,7 @@ function rebuildNodeLabels() {
     count += 1;
   }
   if (healthMarkers.length > 1) {
-    requestAnimationFrame(() => resolveHealthLabelCollisions(healthMarkers, generation));
+    setTimeout(() => resolveHealthLabelCollisions(healthMarkers, generation), 0);
   }
 }
 
