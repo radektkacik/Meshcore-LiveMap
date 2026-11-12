@@ -3657,6 +3657,7 @@ const HEALTH_LABEL_WIDE_COLUMNS = [2, -2];
 const HEALTH_LABEL_MAX_ROWS = 4;
 let labelRebuildTimer = null;
 let labelRenderGeneration = 0;
+let lastLabelSignature = null;
 
 function scheduleNodeLabels() {
   clearTimeout(labelRebuildTimer);
@@ -3730,16 +3731,17 @@ function resolveHealthLabelCollisions(markers, generation) {
 }
 
 function rebuildNodeLabels() {
-  nodeLabelLayer.clearLayers();
-  labelRenderGeneration += 1;
-  const generation = labelRenderGeneration;
   const showHealthValues = state.healthOnly && state.showHealthValues;
-  if ((!state.showNodeLabels && !showHealthValues) || (!showHealthValues && map.getZoom() < LABEL_MIN_ZOOM)) return;
+  if ((!state.showNodeLabels && !showHealthValues) || (!showHealthValues && map.getZoom() < LABEL_MIN_ZOOM)) {
+    if (nodeLabelLayer.getLayers().length) nodeLabelLayer.clearLayers();
+    labelRenderGeneration += 1;
+    lastLabelSignature = null;
+    return;
+  }
   const bounds = map.getBounds().pad(0.15);
-  const healthMarkers = [];
-  let count = 0;
+  const labels = [];
   for (const entry of state.nodeMarkers) {
-    if (count >= LABEL_MAX) break;
+    if (labels.length >= LABEL_MAX) break;
     const { node } = entry;
     if (!node.name) continue;
     if (!nodePassesFilters(node)) continue;
@@ -3747,6 +3749,24 @@ function rebuildNodeLabels() {
     if (!bounds.contains([node.lat, node.lon])) continue;
     const value = showHealthValues ? nodeMapHealthValue(node) : "";
     if (showHealthValues && !value) continue;
+    labels.push({ node, value });
+  }
+  const size = map.getSize();
+  const signature = JSON.stringify([
+    showHealthValues,
+    map.getZoom(),
+    size.x,
+    size.y,
+    document.documentElement.dataset.fontSize || "",
+    labels.map(({ node, value }) => [node.public_key, node.lat, node.lon, value, node.name]),
+  ]);
+  if (signature === lastLabelSignature && nodeLabelLayer.getLayers().length === labels.length) return;
+  lastLabelSignature = signature;
+  nodeLabelLayer.clearLayers();
+  labelRenderGeneration += 1;
+  const generation = labelRenderGeneration;
+  const healthMarkers = [];
+  for (const { node, value } of labels) {
     const html = showHealthValues
       ? `<span class="node-label-values">${escapeHtml(value)}</span>`
       : escapeHtml(node.name);
@@ -3761,7 +3781,6 @@ function rebuildNodeLabels() {
       }),
     }).addTo(nodeLabelLayer);
     if (showHealthValues) healthMarkers.push(marker);
-    count += 1;
   }
   if (healthMarkers.length > 1) {
     setTimeout(() => resolveHealthLabelCollisions(healthMarkers, generation), 0);
