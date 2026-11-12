@@ -3648,6 +3648,7 @@ function scheduleNodeRefresh() {
 
 const LABEL_MIN_ZOOM = 9;
 const LABEL_MAX = 400;
+const HEALTH_LABEL_GAP = 2;
 const HEALTH_LABEL_MAX_STACK = 8;
 let labelRebuildTimer = null;
 let labelRenderGeneration = 0;
@@ -3672,11 +3673,10 @@ function nodeMapHealthValue(node) {
 }
 
 function healthLabelsOverlap(a, b) {
-  const padding = 2;
-  return a.left < b.right + padding
-    && a.right + padding > b.left
-    && a.top < b.bottom + padding
-    && a.bottom + padding > b.top;
+  return a.left < b.right + HEALTH_LABEL_GAP
+    && a.right + HEALTH_LABEL_GAP > b.left
+    && a.top < b.bottom + HEALTH_LABEL_GAP
+    && a.bottom + HEALTH_LABEL_GAP > b.top;
 }
 
 function resolveHealthLabelCollisions(markers, generation) {
@@ -3687,12 +3687,19 @@ function resolveHealthLabelCollisions(markers, generation) {
     if (!element) continue;
     const rect = element.getBoundingClientRect();
     if (!rect.width || !rect.height) continue;
-    const step = rect.height + 2;
+    const maxShift = HEALTH_LABEL_MAX_STACK * (rect.height + HEALTH_LABEL_GAP);
     const baseMarginTop = Number.parseFloat(element.style.marginTop) || 0;
     let shift = 0;
     let box = { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
-    while (placed.some((other) => healthLabelsOverlap(box, other)) && shift < HEALTH_LABEL_MAX_STACK * step) {
-      shift += step;
+    while (shift < maxShift) {
+      let nextShift = 0;
+      for (const other of placed) {
+        if (!healthLabelsOverlap(box, other)) continue;
+        const needed = box.bottom - other.top + HEALTH_LABEL_GAP;
+        if (needed > 0 && (!nextShift || needed < nextShift)) nextShift = needed;
+      }
+      if (!nextShift) break;
+      shift = Math.min(maxShift, shift + nextShift);
       box = { ...box, top: rect.top - shift, bottom: rect.bottom - shift };
     }
     if (shift) element.style.marginTop = `${baseMarginTop - shift}px`;
