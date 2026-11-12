@@ -3,16 +3,16 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-12 — Filtr `< Baterie OK` (beta)
-- Prostředí: beta
-- Build: 20261112-0842-c858520
+## 2026-11-12 — Filtr `< Baterie OK`
+- Prostředí: produkce i beta
+- Build: 20261112-0844-41b3a46
 - Ve filtru stavu telemetrie přibyla volba **`< Baterie OK`**.
 - Zobrazí pouze nody s **nízkou** nebo **kritickou** baterií.
 - Nezahrnuje plnou, OK, stará data ani neznámý stav baterie.
 
-## 2026-11-12 — Kompaktnější hodnoty telemetrie na mapě (beta)
-- Prostředí: beta
-- Build: 20261112-0837-fc07f11
+## 2026-11-12 — Kompaktnější hodnoty telemetrie na mapě
+- Prostředí: produkce i beta
+- Build: 20261112-0844-41b3a46
 - Překrývající se hodnoty teploty a napětí se už neskládají do vysokého sloupce.
 - Popisky se rozmisťují do kompaktní mřížky maximálně **4 řad**; podle potřeby se posunou i vlevo nebo vpravo.
 - Mezera mezi popisky je 2 px, takže řady na sebe těsně navazují.
