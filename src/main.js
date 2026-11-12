@@ -3649,7 +3649,9 @@ function scheduleNodeRefresh() {
 const LABEL_MIN_ZOOM = 9;
 const LABEL_MAX = 400;
 const HEALTH_LABEL_GAP = 2;
-const HEALTH_LABEL_MAX_STACK = 8;
+const HEALTH_LABEL_COLUMNS = [0, -1, 1];
+const HEALTH_LABEL_WIDE_COLUMNS = [2, -2];
+const HEALTH_LABEL_MAX_ROWS = 4;
 let labelRebuildTimer = null;
 let labelRenderGeneration = 0;
 
@@ -3679,6 +3681,25 @@ function healthLabelsOverlap(a, b) {
     && a.bottom + HEALTH_LABEL_GAP > b.top;
 }
 
+function findHealthLabelSlot(placed, rect, columns) {
+  const stepX = rect.width + HEALTH_LABEL_GAP;
+  const stepY = rect.height + HEALTH_LABEL_GAP;
+  for (let row = 0; row < HEALTH_LABEL_MAX_ROWS; row += 1) {
+    for (const column of columns) {
+      const dx = column * stepX;
+      const dy = -row * stepY;
+      const box = {
+        left: rect.left + dx,
+        right: rect.right + dx,
+        top: rect.top + dy,
+        bottom: rect.bottom + dy,
+      };
+      if (!placed.some((other) => healthLabelsOverlap(box, other))) return { box, dx, dy };
+    }
+  }
+  return null;
+}
+
 function resolveHealthLabelCollisions(markers, generation) {
   if (generation !== labelRenderGeneration) return;
   const placed = [];
@@ -3687,23 +3708,21 @@ function resolveHealthLabelCollisions(markers, generation) {
     if (!element) continue;
     const rect = element.getBoundingClientRect();
     if (!rect.width || !rect.height) continue;
-    const maxShift = HEALTH_LABEL_MAX_STACK * (rect.height + HEALTH_LABEL_GAP);
-    const baseMarginTop = Number.parseFloat(element.style.marginTop) || 0;
-    let shift = 0;
-    let box = { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom };
-    while (shift < maxShift) {
-      let nextShift = 0;
-      for (const other of placed) {
-        if (!healthLabelsOverlap(box, other)) continue;
-        const needed = box.bottom - other.top + HEALTH_LABEL_GAP;
-        if (needed > 0 && (!nextShift || needed < nextShift)) nextShift = needed;
-      }
-      if (!nextShift) break;
-      shift = Math.min(maxShift, shift + nextShift);
-      box = { ...box, top: rect.top - shift, bottom: rect.bottom - shift };
+    const slot = findHealthLabelSlot(placed, rect, HEALTH_LABEL_COLUMNS)
+      || findHealthLabelSlot(placed, rect, HEALTH_LABEL_WIDE_COLUMNS);
+    if (!slot) {
+      element.style.display = "none";
+      continue;
     }
-    if (shift) element.style.marginTop = `${baseMarginTop - shift}px`;
-    placed.push(box);
+    if (slot.dx) {
+      const baseMarginLeft = Number.parseFloat(element.style.marginLeft) || 0;
+      element.style.marginLeft = `${baseMarginLeft + slot.dx}px`;
+    }
+    if (slot.dy) {
+      const baseMarginTop = Number.parseFloat(element.style.marginTop) || 0;
+      element.style.marginTop = `${baseMarginTop + slot.dy}px`;
+    }
+    placed.push(slot.box);
   }
 }
 
