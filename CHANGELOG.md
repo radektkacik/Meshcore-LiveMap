@@ -3,6 +3,14 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-12 — Bez problikávání hodnot na mapě (beta)
+- Prostředí: beta
+- Build: 20261112-1155-780ecba
+- Mapové popisky se už zbytečně nemažou a nevytvářejí při každé obnově stavu nodů.
+- Obnova popisků proběhne jen při změně hodnot, filtrů, zoomu, velikosti mapy nebo písma.
+- Ověřeno 65 sekund bez zásahu: **0 zbytečných překreslení popisků**.
+- Změna filtru i velikosti písma popisky správně obnoví.
+
 ## 2026-11-12 — Tučnější hodnoty teplot a napětí na mapě (beta)
 - Prostředí: beta
 - Build: 20261112-1054-2df5f6f
