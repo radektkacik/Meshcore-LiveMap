@@ -44,7 +44,6 @@ import {
   nodeMatchesQuery,
   nodeMetric,
   parseNodeQuery,
-  rankNodeMetric,
   rankNodesByMetric,
   rankNodeTiers,
   resolveStatsField,
@@ -67,6 +66,17 @@ import {
   t,
   tCount,
 } from "./i18n.js";
+import {
+  batteryTypeName,
+  countWithRank,
+  formatHops,
+  formatObservers,
+  formatScore,
+  rankSuffix,
+  scoredWithRank,
+  usefulnessGrade,
+  voltageSourceName,
+} from "./format-utils.js";
 
 applyStaticTranslations();
 
@@ -470,6 +480,28 @@ function nodeHealthStatusCode(node) {
   return ALL_HEALTH_STATUSES.includes(status) ? status : (node?.health ? "unknown" : "none");
 }
 
+function nodeHealthStatusText(node) {
+  const status = nodeHealthStatusCode(node);
+  return status === "unknown" || status === "none" ? null : t(`node.healthBattery.${status}`);
+}
+
+function nodeHealthSnapshot(node) {
+  const health = node?.health && typeof node.health === "object" ? node.health : null;
+  const battery = health?.batteryMv != null && Number.isFinite(Number(health.batteryMv))
+    ? Number(health.batteryMv)
+    : null;
+  const temperature = health?.temperatureC != null && Number.isFinite(Number(health.temperatureC))
+    ? Number(health.temperatureC)
+    : null;
+  const humidity = health?.humidityPct != null && Number.isFinite(Number(health.humidityPct))
+    ? Number(health.humidityPct)
+    : null;
+  const current = health?.currentMa != null && Number.isFinite(Number(health.currentMa))
+    ? Number(health.currentMa)
+    : null;
+  return { battery, current, health, humidity, temperature };
+}
+
 function nodeHealthMatchesFilter(node, filter) {
   if (filter === "all") return true;
   const status = nodeHealthStatusCode(node);
@@ -478,15 +510,9 @@ function nodeHealthMatchesFilter(node, filter) {
 }
 
 function nodeHealthMapTitle(node) {
-  const health = node?.health && typeof node.health === "object" ? node.health : null;
+  const { health, battery, temperature } = nodeHealthSnapshot(node);
   if (!health) return "";
   const status = nodeHealthStatusCode(node);
-  const battery = health.batteryMv != null && Number.isFinite(Number(health.batteryMv))
-    ? Number(health.batteryMv)
-    : null;
-  const temperature = health.temperatureC != null && Number.isFinite(Number(health.temperatureC))
-    ? Number(health.temperatureC)
-    : null;
   return [
     battery == null ? null : `${t("node.battery")}: ${formatDecimal(battery / 1000, 2)} V`,
     status === "unknown" ? t("common.unknown") : t(`node.healthBattery.${status}`),
@@ -512,14 +538,6 @@ function nodeMarkerStyle(node, tier) {
     return { ...base, fillColor: SECOND_TIER_COLOR };
   }
   return base;
-}
-
-function formatHops(count) {
-  return tCount("units.hops", count);
-}
-
-function formatObservers(count) {
-  return tCount("units.observers", count);
 }
 
 async function copyText(text) {
@@ -560,37 +578,6 @@ function formatNodeDate(value) {
     && date.getMonth() === now.getMonth()
     && date.getDate() === now.getDate();
   return isToday ? time : `${formatDate(date)} ${time}`;
-}
-
-function formatScore(value) {
-  if (value == null || !Number.isFinite(Number(value))) return null;
-  return formatPercent(value);
-}
-
-function usefulnessGrade(value) {
-  if (value == null || !Number.isFinite(Number(value))) return null;
-  const score = Number(value);
-  if (score >= 0.65) return "A";
-  if (score >= 0.45) return "B";
-  if (score >= 0.3) return "C";
-  if (score >= 0.15) return "D";
-  return "F";
-}
-
-function rankSuffix(nodes, node, field) {
-  const result = rankNodeMetric(nodes, node, field);
-  return result ? ` · ${result.rank}.` : "";
-}
-
-function scoredWithRank(value, nodes, node, field) {
-  const formatted = formatScore(value);
-  if (formatted == null) return null;
-  return `${formatted}${rankSuffix(nodes, node, field)}`;
-}
-
-function countWithRank(value, nodes, node, field) {
-  if (value == null || !Number.isFinite(Number(value))) return value ?? null;
-  return `${formatNumber(value)}${rankSuffix(nodes, node, field)}`;
 }
 
 function renderNodeDetails(title, rows, help = "", className = "") {
@@ -1891,10 +1878,7 @@ function nodeTrafficDetails(node, { compact = false } = {}) {
   const health = node.health && typeof node.health === "object" ? node.health : null;
   const battery = health?.batteryMv ?? node.battery_mv;
   const temperature = health?.temperatureC ?? node.temperature_c;
-  const batteryStatusCode = health?.batteryStatus && ALL_HEALTH_STATUSES.includes(health.batteryStatus)
-    ? health.batteryStatus
-    : "unknown";
-  const batteryStatus = batteryStatusCode !== "unknown" ? t(`node.healthBattery.${batteryStatusCode}`) : null;
+  const batteryStatus = nodeHealthStatusText(node);
   const trend = nodeTrendButton(node);
   const advert24h = node.advert_count_24h;
   const advert24hText = advert24h == null
@@ -1918,29 +1902,6 @@ function nodeTrafficDetails(node, { compact = false } = {}) {
     [t("node.externalPower"), health ? (health.externalPower ? t("common.yes") : t("common.no")) : null],
     [t("node.healthObserved"), health?.observedAt ? formatNodeDate(health.observedAt) : null],
   ], "", "node-traffic-details");
-}
-
-function batteryTypeName(value) {
-  return {
-    auto: "auto",
-    liion: "Li-ion",
-    lifepo4: "LiFePO4",
-    lto: "LTO",
-    naion: "Na-ion",
-    lead: "Pb",
-    other: "other",
-    "lto-vlastik": "LTO (vlastik)",
-    "naion-vlastik": "Na-ion (vlastik)",
-  }[value] || value;
-}
-
-function voltageSourceName(value) {
-  return {
-    none: "—",
-    adc: "ADC",
-    ina: "INA",
-    bms: "BMS",
-  }[value] || value;
 }
 
 // Icons: Tabler Icons (MIT), battery-vertical-1/2/4/off + temperature.
@@ -1978,21 +1939,10 @@ function nodeNewBadge(node) {
 }
 
 function nodeHealthBadge(node) {
-  const health = node.health && typeof node.health === "object" ? node.health : null;
-  const battery = health?.batteryMv != null && Number.isFinite(Number(health.batteryMv))
-    ? Number(health.batteryMv)
-    : null;
-  const temperature = health?.temperatureC != null && Number.isFinite(Number(health.temperatureC))
-    ? Number(health.temperatureC)
-    : null;
-  const humidity = health?.humidityPct != null && Number.isFinite(Number(health.humidityPct))
-    ? Number(health.humidityPct)
-    : null;
+  const { battery, temperature, humidity } = nodeHealthSnapshot(node);
   if (battery == null && temperature == null && humidity == null) return "";
-  const status = health?.batteryStatus && ALL_HEALTH_STATUSES.includes(health.batteryStatus)
-    ? health.batteryStatus
-    : "unknown";
-  const statusText = status !== "unknown" ? t(`node.healthBattery.${status}`) : null;
+  const status = nodeHealthStatusCode(node);
+  const statusText = nodeHealthStatusText(node);
   const voltageText = battery == null ? null : `${formatDecimal(battery / 1000, 2)} V`;
   const temperatureText = temperature == null ? null : `${formatDecimal(temperature, 1)} °C`;
   const humidityText = humidity == null ? null : `${formatNumber(humidity)} %`;
@@ -3189,20 +3139,9 @@ async function checkServerBuild() {
 }
 
 function nodeHealthTooltip(node) {
-  const health = node.health && typeof node.health === "object" ? node.health : null;
-  const battery = health?.batteryMv != null && Number.isFinite(Number(health.batteryMv))
-    ? Number(health.batteryMv)
-    : null;
-  const temperature = health?.temperatureC != null && Number.isFinite(Number(health.temperatureC))
-    ? Number(health.temperatureC)
-    : null;
-  const humidity = health?.humidityPct != null && Number.isFinite(Number(health.humidityPct))
-    ? Number(health.humidityPct)
-    : null;
+  const { battery, temperature, humidity } = nodeHealthSnapshot(node);
   if (battery == null && temperature == null && humidity == null) return "";
-  const status = health?.batteryStatus && ALL_HEALTH_STATUSES.includes(health.batteryStatus)
-    ? health.batteryStatus
-    : "unknown";
+  const status = nodeHealthStatusCode(node);
   return `<span class="node-tooltip-health ${status}">
     ${battery == null ? "" : batteryStatusIcon(status)}
     ${battery == null ? "" : `<span>${escapeHtml(formatDecimal(battery / 1000, 2))} V</span>`}
@@ -3665,17 +3604,13 @@ function scheduleNodeLabels() {
 }
 
 function nodeMapHealthValue(node) {
-  const health = node.health && typeof node.health === "object" ? node.health : null;
+  const { health, battery, temperature } = nodeHealthSnapshot(node);
   if (!health) return "";
-  const battery = health.batteryMv != null && Number.isFinite(Number(health.batteryMv))
-    ? `${formatDecimal(Number(health.batteryMv) / 1000, 2)} V`
-    : "";
-  const temperature = health.temperatureC != null && Number.isFinite(Number(health.temperatureC))
-    ? `${formatDecimal(Number(health.temperatureC), 1)} °C`
-    : "";
+  const batteryText = battery == null ? "" : `${formatDecimal(battery / 1000, 2)} V`;
+  const temperatureText = temperature == null ? "" : `${formatDecimal(temperature, 1)} °C`;
   return state.healthValueMode === "voltage"
-    ? (battery || temperature)
-    : (temperature || battery);
+    ? (batteryText || temperatureText)
+    : (temperatureText || batteryText);
 }
 
 function healthLabelsOverlap(a, b) {
