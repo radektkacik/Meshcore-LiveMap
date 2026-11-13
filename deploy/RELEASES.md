@@ -578,6 +578,7 @@
 | 2026-11-13 15:59 | `20261113T155906Z.tar.gz` | `20261113-1559-d6dc216` | Prod: animace tras opět řízena přepínačem i při omezení pohybu | `src/main.js`, `src/style.css` |
 | 2026-11-13 16:01 | `20261113T160121Z.tar.gz` (stage APP_DIR) | `20261113-1601-7ee444a` | Beta: Menší písmo přesně 15 px | `src/style.css` |
 | 2026-11-13 16:03 | `20261113T160312Z.tar.gz` | `20261113-1603-472b2a8` | Prod: Menší písmo přesně 15 px | `src/style.css` |
+| 2026-11-13 17:01 | `20261113T170152Z.tar.gz` (stage APP_DIR) | `20261113-1701-69dc5bd` | Beta: čas posledního health vzorku u telemetrie | `src/main.js`, `src/i18n.js`, `src/style.css` |
 | 2026-11-06 19:20 | `20261106T192046Z.tar.gz` | `20261106-1920-e6ee871` | Prod: CzHealth v3, regiony, kompaktní faceplate, SUMMARY karta a neutrální ikona baterie | `cz-health.mjs`, `cz-health-store.mjs`, `src/main.js`, `src/style.css`, `src/i18n.js`, `index.html`, `deploy/*`, `test/cz-health.test.mjs` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
