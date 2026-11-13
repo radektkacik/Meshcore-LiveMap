@@ -166,7 +166,9 @@ const INITIAL_PARAMS = new URLSearchParams(location.search);
 const ALL_NODE_ROLES = ["repeater", "companion", "room", "sensor", "unknown"];
 const ALL_HASH_SIZES = [1, 2, 3];
 const ALL_HEALTH_STATUSES = ["full", "ok", "warn", "critical", "stale"];
-const HEALTH_STATUS_FILTERS = [...ALL_HEALTH_STATUSES, "below-ok"];
+const HEALTH_STATUS_FILTERS = [...ALL_HEALTH_STATUSES, "below-ok", "problem"];
+const REDUCED_MOTION = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+const DEFAULT_MAP_VIEW = { center: [49.82, 15.45], zoom: 7 };
 const mobileSheetQuery = window.matchMedia("(max-width: 700px)");
 const FORCE_MOBILE_SHEET = INITIAL_PARAMS.get("sheet") === "1";
 const INITIAL_NODE_KEY = INITIAL_PARAMS.get("node")?.trim().toUpperCase() || null;
@@ -333,6 +335,8 @@ function applyInitialFilters() {
   elements.healthValuesToggle.checked = state.showHealthValues;
   elements.healthValueMode.value = state.healthValueMode;
   elements.healthValueModeWrap.hidden = !state.showHealthValues;
+  elements.healthValueColors.checked = state.showHealthValueColors;
+  elements.healthValueColorsWrap.hidden = !state.showHealthValues;
   elements.healthStatusBlock.hidden = !state.healthOnly;
   updateHealthLegend();
   const inactive = readFlag("inactive");
@@ -354,15 +358,19 @@ const routeVersions = new RouteVersionState();
 const perf = createPerfMonitor(new URLSearchParams(location.search).has("perf"));
 
 const map = L.map("map", {
-  center: [49.82, 15.45],
-  zoom: 7,
+  center: DEFAULT_MAP_VIEW.center,
+  zoom: DEFAULT_MAP_VIEW.zoom,
   minZoom: 6,
   maxZoom: MAX_MAP_ZOOM,
   zoomControl: false,
   preferCanvas: true,
+  zoomAnimation: !REDUCED_MOTION,
+  fadeAnimation: !REDUCED_MOTION,
+  markerZoomAnimation: !REDUCED_MOTION,
 });
 
 L.control.zoom({ position: "bottomleft" }).addTo(map);
+L.control.scale({ imperial: false, metric: true, maxWidth: 140, position: "bottomleft" }).addTo(map);
 
 const initialLatValue = INITIAL_PARAMS.get("lat");
 const initialLonValue = INITIAL_PARAMS.get("lon");
@@ -456,6 +464,8 @@ const losLayer = L.layerGroup().addTo(map);
 const losMarkerLayer = L.layerGroup().addTo(map);
 const nodeLabelLayer = L.layerGroup().addTo(map);
 const healthLayer = L.layerGroup().addTo(map);
+const measureLayer = L.layerGroup().addTo(map);
+const locationLayer = L.layerGroup().addTo(map);
 const routeRenderer = L.canvas({ padding: 0.3, tolerance: 8 });
 const routeSvgRenderer = L.svg({ padding: 0.3 });
 routeRenderer._dashOffset = 0;
@@ -506,6 +516,7 @@ function nodeHealthMatchesFilter(node, filter) {
   if (filter === "all") return true;
   const status = nodeHealthStatusCode(node);
   if (filter === "below-ok") return status === "warn" || status === "critical";
+  if (filter === "problem") return status === "warn" || status === "critical" || status === "stale";
   return status === filter;
 }
 
@@ -1269,11 +1280,135 @@ map.on("click", () => {
   if (state.archiveNodeFilterKey) clearArchiveNodeFilter();
 });
 map.on("click", (event) => {
-  if (state.coverageMode) void handleCoverageClick(event.latlng);
+  if (measureMode) handleMeasureClick(event.latlng);
+  else if (state.coverageMode) void handleCoverageClick(event.latlng);
   else if (state.losMode) void handleLosClick(event.latlng);
 });
 map.on("mousemove", handleLosHover);
 map.on("mouseout", clearLosCursor);
+
+let measureMode = false;
+let measurePoints = [];
+
+function formatMeasurementDistance(km) {
+  return km < 1
+    ? `${formatNumber(Math.round(km * 1000))} m`
+    : `${formatDecimal(km, km < 10 ? 2 : 1)} km`;
+}
+
+function setMeasureHint(text = "") {
+  elements.measureHint.textContent = text;
+  elements.measureHint.hidden = !text;
+}
+
+function setMeasureMode(on) {
+  const next = Boolean(on);
+  if (next) {
+    if (state.losMode) setLosMode(false);
+    if (state.coverageMode) setCoverageMode(false);
+    setMeasureHint(t("map.measureHintStart"));
+  } else {
+    setMeasureHint("");
+  }
+  measureLayer.clearLayers();
+  measurePoints = [];
+  measureMode = next;
+  elements.measureToggle.classList.toggle("active", next);
+  elements.measureToggle.setAttribute("aria-pressed", String(next));
+  map.getContainer().style.cursor = next ? "crosshair" : "";
+}
+
+function handleMeasureClick(latlng) {
+  if (measurePoints.length >= 2) {
+    measureLayer.clearLayers();
+    measurePoints = [];
+  }
+  const point = L.latLng(latlng);
+  measurePoints.push(point);
+  L.circleMarker(point, {
+    color: "#246fc4",
+    fillColor: "#fff",
+    fillOpacity: 1,
+    radius: 5,
+    weight: 2,
+  }).addTo(measureLayer);
+  if (measurePoints.length === 1) {
+    setMeasureHint(t("map.measureHintNext"));
+    return;
+  }
+  const [start, end] = measurePoints;
+  const distance = formatMeasurementDistance(haversineKm(start.lat, start.lng, end.lat, end.lng));
+  L.polyline([start, end], {
+    color: "#246fc4",
+    dashArray: "7 6",
+    opacity: 0.9,
+    weight: 3,
+  }).addTo(measureLayer);
+  L.tooltip({
+    className: "measure-label",
+    direction: "center",
+    opacity: 1,
+    permanent: true,
+  }).setLatLng(L.latLng((start.lat + end.lat) / 2, (start.lng + end.lng) / 2))
+    .setContent(escapeHtml(distance))
+    .addTo(measureLayer);
+  setMeasureHint(t("map.measureResult", { distance }));
+}
+
+elements.measureToggle.addEventListener("click", () => setMeasureMode(!measureMode));
+
+let locationHintTimer = null;
+
+function setLocationHint(text = "") {
+  clearTimeout(locationHintTimer);
+  elements.locationHint.textContent = text;
+  elements.locationHint.hidden = !text;
+  if (text) {
+    locationHintTimer = setTimeout(() => {
+      elements.locationHint.hidden = true;
+    }, 8_000);
+  }
+}
+
+elements.locationToggle.addEventListener("click", () => {
+  if (!navigator.geolocation) {
+    setLocationHint(t("map.locationFailed"));
+    return;
+  }
+  elements.locationToggle.classList.add("active");
+  setLocationHint(t("map.locationSearching"));
+  map.locate({ enableHighAccuracy: true, maxZoom: 15, setView: true, timeout: 10_000 });
+});
+
+map.on("locationfound", (event) => {
+  elements.locationToggle.classList.remove("active");
+  locationLayer.clearLayers();
+  L.circle(event.latlng, {
+    color: "#246fc4",
+    fillColor: "#246fc4",
+    fillOpacity: 0.08,
+    opacity: 0.35,
+    radius: Math.max(5, Number(event.accuracy) || 0),
+    weight: 1,
+  }).addTo(locationLayer);
+  L.marker(event.latlng, {
+    icon: L.divIcon({
+      className: "user-location-marker",
+      html: '<span class="user-location-dot"></span>',
+      iconAnchor: [7, 7],
+      iconSize: [14, 14],
+    }),
+    interactive: false,
+    keyboard: false,
+  }).addTo(locationLayer);
+  setLocationHint(t("map.locationAccuracy", { accuracy: Math.round(Number(event.accuracy) || 0) }));
+});
+
+map.on("locationerror", (event) => {
+  elements.locationToggle.classList.remove("active");
+  const denied = event.code === 1;
+  setLocationHint(denied ? t("map.locationDenied") : t("map.locationFailed"));
+});
 
 function bindNodeRouteButton(button, node) {
   button?.addEventListener("click", (event) => {
@@ -2178,6 +2313,28 @@ function renderNodeDetail(node, active, initialTab = "overview") {
     button.addEventListener("click", () => selectTab(button.dataset.nodeDetailTab));
   }
   selectTab(initialTab);
+  const detailTabs = [...shell.querySelectorAll("[data-node-detail-tab]")].map((button) => button.dataset.nodeDetailTab);
+  let tabSwipeStart = null;
+  shell.addEventListener("touchstart", (event) => {
+    if (event.touches.length !== 1) return;
+    if (event.target instanceof Element && event.target.closest("input, textarea, select, button, a, img, .node-photos, .node-health-history, .node-history")) {
+      tabSwipeStart = null;
+      return;
+    }
+    const touch = event.touches[0];
+    tabSwipeStart = { x: touch.clientX, y: touch.clientY };
+  }, { passive: true });
+  shell.addEventListener("touchend", (event) => {
+    if (!tabSwipeStart || !event.changedTouches.length) return;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - tabSwipeStart.x;
+    const dy = touch.clientY - tabSwipeStart.y;
+    tabSwipeStart = null;
+    if (Math.abs(dx) < 50 || Math.abs(dx) <= Math.abs(dy) * 1.5) return;
+    const active = detailTabs.findIndex((tab) => shell.querySelector(`[data-node-detail-tab="${tab}"]`)?.classList.contains("active"));
+    const next = detailTabs[Math.max(0, Math.min(detailTabs.length - 1, active + (dx < 0 ? 1 : -1)))];
+    if (next) selectTab(next);
+  }, { passive: true });
   shell.querySelector(".node-detail-close")?.addEventListener("click", (event) => {
     event.preventDefault();
     closeNodeDetail();
@@ -3560,6 +3717,59 @@ function applyNodeTiers() {
   for (const entry of state.nodeMarkers) applyNodeStyle(entry, tiers.get(entry.node));
 }
 
+function healthSummaryCounts() {
+  const counts = { critical: 0, full: 0, ok: 0, problem: 0, stale: 0, warn: 0 };
+  for (const node of state.nodeByKey.values()) {
+    if (!node.health || !isNodeRoleAllowed(node, state.allowedRoles)) continue;
+    const status = nodeHealthStatusCode(node);
+    if (Object.hasOwn(counts, status)) counts[status] += 1;
+    if (status === "warn" || status === "critical" || status === "stale") counts.problem += 1;
+  }
+  return counts;
+}
+
+function renderHealthSummary() {
+  const counts = healthSummaryCounts();
+  const items = [
+    ["full", t("health.summary.full")],
+    ["ok", t("health.summary.ok")],
+    ["warn", t("health.summary.warn")],
+    ["critical", t("health.summary.critical")],
+    ["stale", t("health.summary.stale")],
+    ["problem", t("health.summary.problem")],
+  ];
+  const render = (container) => {
+    if (!container) return;
+    const buttons = items.map(([value, label]) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.healthSummary = value;
+      button.classList.toggle("active", state.healthOnly && state.healthStatus === value);
+      button.title = t("health.summary.aria", { status: label });
+      button.setAttribute("aria-pressed", String(button.classList.contains("active")));
+      button.append(label, " ");
+      const count = document.createElement("b");
+      count.textContent = String(counts[value] || 0);
+      button.appendChild(count);
+      button.addEventListener("click", () => {
+        if (!state.healthOnly) {
+          state.healthOnly = true;
+          elements.healthOnlyToggle.checked = true;
+          elements.healthStatusBlock.hidden = false;
+          applyNodeFilterRouteVisibility();
+        }
+        elements.healthStatusSelect.value = value;
+        state.healthStatus = value;
+        refreshNodeState();
+      });
+      return button;
+    });
+    container.replaceChildren(...buttons);
+  };
+  render(elements.healthSummary);
+  render(elements.statsHealthSummary);
+}
+
 function refreshNodeState() {
   const now = nowMs();
   for (const entry of state.nodeMarkers) {
@@ -3571,9 +3781,15 @@ function refreshNodeState() {
   }
   applyNodeTiers();
   updateHealthLegend();
+  if (elements.problemNodesToggle) {
+    const active = state.healthOnly && state.healthStatus === "problem";
+    elements.problemNodesToggle.classList.toggle("active", active);
+    elements.problemNodesToggle.setAttribute("aria-pressed", String(active));
+  }
   refreshOpenNodeDetailStatus();
   applyNodeMembership();
   syncHealthBadges();
+  renderHealthSummary();
   statsPanel.renderStats();
   scheduleNodeLabels();
 }
@@ -3611,6 +3827,30 @@ function nodeMapHealthValue(node) {
   return state.healthValueMode === "voltage"
     ? (batteryText || temperatureText)
     : (temperatureText || batteryText);
+}
+
+function temperatureTone(temperature) {
+  if (temperature == null) return "";
+  if (temperature < 0) return "tone-cold";
+  if (temperature < 10) return "tone-cool";
+  if (temperature <= 25) return "tone-normal";
+  if (temperature <= 30) return "tone-warm";
+  return "tone-hot";
+}
+
+function nodeMapHealthTone(node) {
+  if (!state.showHealthValueColors) return "";
+  const { battery, temperature } = nodeHealthSnapshot(node);
+  if (state.healthValueMode === "voltage") {
+    if (battery == null) return temperatureTone(temperature);
+    const status = nodeHealthStatusCode(node);
+    return ["full", "ok", "warn", "critical"].includes(status) ? `tone-${status}` : "tone-unknown";
+  }
+  if (temperature == null) {
+    const status = nodeHealthStatusCode(node);
+    return ["full", "ok", "warn", "critical"].includes(status) ? `tone-${status}` : "tone-unknown";
+  }
+  return temperatureTone(temperature);
 }
 
 function healthLabelsOverlap(a, b) {
@@ -3684,7 +3924,7 @@ function rebuildNodeLabels() {
     if (!bounds.contains([node.lat, node.lon])) continue;
     const value = showHealthValues ? nodeMapHealthValue(node) : "";
     if (showHealthValues && !value) continue;
-    labels.push({ node, value });
+    labels.push({ node, tone: showHealthValues ? nodeMapHealthTone(node) : "", value });
   }
   const size = map.getSize();
   const signature = JSON.stringify([
@@ -3693,7 +3933,7 @@ function rebuildNodeLabels() {
     size.x,
     size.y,
     document.documentElement.dataset.fontSize || "",
-    labels.map(({ node, value }) => [node.public_key, node.lat, node.lon, value, node.name]),
+    labels.map(({ node, tone, value }) => [node.public_key, node.lat, node.lon, value, tone, node.name]),
   ]);
   if (signature === lastLabelSignature && nodeLabelLayer.getLayers().length === labels.length) return;
   lastLabelSignature = signature;
@@ -3701,9 +3941,9 @@ function rebuildNodeLabels() {
   labelRenderGeneration += 1;
   const generation = labelRenderGeneration;
   const healthMarkers = [];
-  for (const { node, value } of labels) {
+  for (const { node, tone, value } of labels) {
     const html = showHealthValues
-      ? `<span class="node-label-values">${escapeHtml(value)}</span>`
+      ? `<span class="node-label-values${tone ? ` ${tone}` : ""}">${escapeHtml(value)}</span>`
       : escapeHtml(node.name);
     const marker = L.marker([node.lat, node.lon], {
       interactive: false,
@@ -5370,7 +5610,11 @@ let lastRouteAnimationAt = 0;
 const CANVAS_ANIMATION_FPS = 10;
 
 function routeAnimationEnabled() {
-  return state.animationEnabled && !routesSuppressed() && state.activeRoutes.size > 0 && !document.hidden;
+  return state.animationEnabled
+    && !REDUCED_MOTION
+    && !routesSuppressed()
+    && state.activeRoutes.size > 0
+    && !document.hidden;
 }
 
 function animateRoutes(timestamp) {
@@ -6156,6 +6400,7 @@ function setCoverageStatus(text) {
 
 function setCoverageMode(on) {
   const next = Boolean(on);
+  if (next && measureMode) setMeasureMode(false);
   if (next && state.losMode) setLosMode(false);
   state.coverageMode = next;
   elements.coverageToggle.classList.toggle("active", next);
@@ -6338,6 +6583,7 @@ const scheduleCoverage = () => {
 };
 
 function setLosMode(on) {
+  if (on && measureMode) setMeasureMode(false);
   if (on && state.coverageMode) setCoverageMode(false);
   state.losMode = Boolean(on);
   elements.losToggle.classList.toggle("active", state.losMode);
@@ -6438,7 +6684,8 @@ document.querySelector("#packet-history-dialog .los-note").textContent = t("pack
 
 document.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") return;
-  if (elements.coverageDialog.open) elements.coverageDialog.close();
+  if (measureMode) setMeasureMode(false);
+  else if (elements.coverageDialog.open) elements.coverageDialog.close();
   else if (state.coverageMode) setCoverageMode(false);
   else if (elements.losDialog.open) elements.losDialog.close();
   else if (state.losMode) setLosMode(false);
@@ -6446,6 +6693,49 @@ document.addEventListener("keydown", (event) => {
   else if (state.packetFocus) exitPacketFocus();
   else if (state.neighborFocusKey) clearNeighborFocus();
   else if (state.archiveNodeFilterKey) clearArchiveNodeFilter();
+});
+
+function resetMapView() {
+  closeMobileSheet();
+  if (measureMode) setMeasureMode(false);
+  if (state.losMode) setLosMode(false);
+  if (state.coverageMode) setCoverageMode(false);
+  clearSelectedRoute();
+  if (state.packetFocus) exitPacketFocus();
+  if (state.neighborFocusKey) clearNeighborFocus();
+  if (state.archiveNodeFilterKey) clearArchiveNodeFilter();
+  map.closePopup();
+  map.setView(DEFAULT_MAP_VIEW.center, DEFAULT_MAP_VIEW.zoom);
+}
+
+function shortcutTyping(event) {
+  const target = event.target;
+  return target instanceof Element
+    && Boolean(target.closest("input, textarea, select, [contenteditable='true']"));
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.defaultPrevented || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return;
+  if (event.key === "Escape" || shortcutTyping(event) || document.querySelector("dialog[open]")) return;
+  if (event.key === "/") {
+    event.preventDefault();
+    elements.nodeSearch.focus();
+    elements.nodeSearch.select();
+    return;
+  }
+  const key = event.key.toLowerCase();
+  if (key === "l") {
+    event.preventDefault();
+    elements.nodeLabelsToggle.checked = !elements.nodeLabelsToggle.checked;
+    elements.nodeLabelsToggle.dispatchEvent(new Event("change", { bubbles: true }));
+  } else if (key === "h") {
+    event.preventDefault();
+    elements.healthOnlyToggle.checked = !elements.healthOnlyToggle.checked;
+    elements.healthOnlyToggle.dispatchEvent(new Event("change", { bubbles: true }));
+  } else if (key === "r") {
+    event.preventDefault();
+    resetMapView();
+  }
 });
 
 elements.otherTypesToggle.addEventListener("change", () => {
@@ -6478,9 +6768,12 @@ elements.healthOnlyToggle.addEventListener("change", () => {
 elements.healthValuesToggle.checked = state.showHealthValues;
 elements.healthValueMode.value = state.healthValueMode;
 elements.healthValueModeWrap.hidden = !state.showHealthValues;
+elements.healthValueColors.checked = state.showHealthValueColors;
+elements.healthValueColorsWrap.hidden = !state.showHealthValues;
 elements.healthValuesToggle.addEventListener("change", () => {
   state.showHealthValues = elements.healthValuesToggle.checked;
   elements.healthValueModeWrap.hidden = !state.showHealthValues;
+  elements.healthValueColorsWrap.hidden = !state.showHealthValues;
   localStorage.setItem("meshcoreShowHealthValues", String(state.showHealthValues));
   scheduleNodeLabels();
 });
@@ -6488,6 +6781,26 @@ elements.healthValueMode.addEventListener("change", () => {
   state.healthValueMode = elements.healthValueMode.value === "voltage" ? "voltage" : "temperature";
   localStorage.setItem("meshcoreHealthValueMode", state.healthValueMode);
   scheduleNodeLabels();
+});
+elements.healthValueColors.addEventListener("change", () => {
+  state.showHealthValueColors = elements.healthValueColors.checked;
+  localStorage.setItem("meshcoreHealthValueColors", String(state.showHealthValueColors));
+  scheduleNodeLabels();
+});
+elements.problemNodesToggle.addEventListener("click", () => {
+  const active = state.healthOnly && state.healthStatus === "problem";
+  if (!active) {
+    state.healthOnly = true;
+    elements.healthOnlyToggle.checked = true;
+    elements.healthStatusBlock.hidden = false;
+    state.healthStatus = "problem";
+    elements.healthStatusSelect.value = "problem";
+    applyNodeFilterRouteVisibility();
+  } else {
+    state.healthStatus = "all";
+    elements.healthStatusSelect.value = "all";
+  }
+  refreshNodeState();
 });
 elements.healthStatusSelect.addEventListener("change", () => {
   const next = elements.healthStatusSelect.value;

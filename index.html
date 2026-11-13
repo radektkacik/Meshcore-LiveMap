@@ -77,7 +77,7 @@
             </div>
 
             <div class="node-search">
-              <input id="node-search" type="search" autocomplete="off" placeholder="Hledat nod, observer, paket nebo kanál…" aria-controls="search-results" aria-expanded="false" />
+              <input id="node-search" type="search" autocomplete="off" placeholder="Hledat nod, observer, paket nebo kanál…" aria-controls="search-results" aria-expanded="false" aria-keyshortcuts="/" />
               <ol id="search-results" class="search-results" hidden></ol>
             </div>
 
@@ -86,6 +86,9 @@
               <button id="stats-toggle" type="button" aria-pressed="false">Statistiky</button>
               <button id="los-toggle" type="button" aria-pressed="false" title="Změřit přímou viditelnost mezi dvěma body">LOS</button>
               <button id="coverage-toggle" type="button" aria-pressed="false" title="Simulovat pokrytí terénu z jednoho bodu">Pokrytí</button>
+              <button id="measure-toggle" type="button" aria-pressed="false" title="Změřit vzdálenost mezi dvěma body">Měřit</button>
+              <button id="location-toggle" type="button" title="Zobrazit moji polohu na mapě">Moje poloha</button>
+              <button id="problem-nodes-toggle" type="button" class="wide" aria-pressed="false" title="Zobrazit jen nody s nízkou, kritickou nebo starou telemetrií">Problémové nody</button>
               <button id="export-toggle" type="button" class="wide" title="Stáhnout nody, observery nebo trasy jako CSV či GeoJSON">Export</button>
               <button id="share-view" type="button" class="wide" hidden title="Zkopírovat odkaz na aktuální pohled mapy">Sdílet pohled</button>
               <button id="feedback-toggle" type="button" class="wide">Kniha návštěv</button>
@@ -153,7 +156,7 @@
             </label>
 
             <label class="packet-filter">
-              <input id="node-labels-toggle" type="checkbox" />
+              <input id="node-labels-toggle" type="checkbox" aria-keyshortcuts="L" />
               <span><strong>Zobrazit názvy nodů</strong></span>
             </label>
 
@@ -171,7 +174,7 @@
             </div>
 
             <label class="packet-filter" title="Telemetrii vysílá pouze repeater s firmwarem mesh-cz v1.18.0.02rc8 nebo novějším. Standardní MeshCore firmware CzHealth data neposílá.">
-              <input id="health-only-toggle" type="checkbox" />
+              <input id="health-only-toggle" type="checkbox" aria-keyshortcuts="H" />
               <span><strong>Jen nody s telemetrií</strong><small>CzHealth v3/v4 · mesh-cz fw v1.18.0.02rc8+</small></span>
             </label>
 
@@ -182,10 +185,12 @@
                 <option value="full">Plná</option>
                 <option value="ok">Baterie OK</option>
                 <option value="below-ok">&lt; Baterie OK</option>
+                <option value="problem">Problémové</option>
                 <option value="warn">Nízká</option>
                 <option value="critical">Kritická</option>
                 <option value="stale">Stará data</option>
               </select>
+              <div class="health-summary" id="health-summary" role="group" aria-label="Počty podle stavu baterie"></div>
               <label class="health-values-toggle" for="health-values-toggle">
                 <input id="health-values-toggle" type="checkbox" />
                 <span><strong>Hodnota na mapě</strong></span>
@@ -196,6 +201,10 @@
                   <option value="temperature">Teplotu</option>
                   <option value="voltage">Napětí</option>
                 </select>
+              </label>
+              <label class="health-values-toggle" id="health-value-colors-wrap" for="health-value-colors" hidden>
+                <input id="health-value-colors" type="checkbox" />
+                <span><strong>Barvy hodnot</strong></span>
               </label>
             </div>
 
@@ -238,6 +247,8 @@
 
             <div class="los-hint" id="los-hint" hidden></div>
             <div class="los-hint" id="coverage-hint" hidden></div>
+            <div class="los-hint" id="measure-hint" role="status" hidden></div>
+            <div class="los-hint" id="location-hint" role="status" hidden></div>
 
             <p class="source-note">Data: CoreScope / MeshCore CZ (živý MQTT feed), archiv z vlastní databáze. Soukromý obsah zpráv zůstává šifrovaný. Podklady: OpenStreetMap, OpenTopoMap, Esri. Výšky: Open-Meteo, Mapzen Terrarium (AWS). Ikona: selfh.st (CC BY 4.0).</p>
             <p class="source-note license-note"><span>Kód: licence MIT</span> · © 2026 MeshCore.cz · <a href="LICENSE.txt" target="_blank" rel="noreferrer">LICENSE</a> · <a href="https://github.com/radektkacik/Meshcore-LiveMap" target="_blank" rel="noreferrer" title="Zdrojový kód na GitHubu">GitHub</a> · <a href="changelog" title="Historie změn a nasazených verzí">Změny verzí</a> · <a id="beta-footer-link" href="https://mapa.meshcore.cz/beta/" target="_blank" rel="noreferrer" title="Vyzkoušet beta verzi mapy">Beta</a></p>
@@ -289,6 +300,7 @@
             <button id="stats-close" type="button" aria-label="Zavřít statistiky">×</button>
           </header>
           <div id="network-summary" class="network-summary"></div>
+          <div class="stats-health-summary" id="stats-health-summary" aria-label="Souhrn stavu baterií"></div>
           <details class="stats-help">
             <summary><span class="stats-help-icon" aria-hidden="true">i</span> Vysvětlení metrik</summary>
             <div class="stats-help-panel">
@@ -362,7 +374,7 @@
       </dialog>
 
       <dialog id="photo-dialog" class="photo-dialog" aria-labelledby="photo-title">
-        <button id="photo-close" class="feedback-close" type="button">×</button>
+        <button id="photo-close" class="feedback-close" type="button" aria-label="Zavřít">×</button>
         <header>
           <h2 id="photo-title"></h2>
           <p id="photo-node"></p>
@@ -397,7 +409,7 @@
       </dialog>
 
       <dialog id="node-info-dialog" class="photo-dialog" aria-labelledby="node-info-title">
-        <button id="node-info-close" class="feedback-close" type="button">×</button>
+        <button id="node-info-close" class="feedback-close" type="button" aria-label="Zavřít">×</button>
         <header>
           <h2 id="node-info-title"></h2>
           <p id="node-info-node"></p>
@@ -425,7 +437,7 @@
       </dialog>
 
       <dialog id="comments-dialog" class="photo-dialog comments-dialog" aria-labelledby="comments-title">
-        <button id="comments-close" class="feedback-close" type="button">×</button>
+        <button id="comments-close" class="feedback-close" type="button" aria-label="Zavřít">×</button>
         <header>
           <h2 id="comments-title"></h2>
           <p id="comments-node"></p>
@@ -452,7 +464,7 @@
       </dialog>
 
       <dialog id="photo-gallery-dialog" class="photo-dialog photo-gallery-dialog" aria-labelledby="photo-gallery-title">
-        <button id="photo-gallery-close" class="feedback-close" type="button">×</button>
+        <button id="photo-gallery-close" class="feedback-close" type="button" aria-label="Zavřít">×</button>
         <header class="photo-gallery-header">
           <div>
             <h2 id="photo-gallery-title">Fotogalerie</h2>
@@ -466,14 +478,14 @@
       </dialog>
 
       <dialog id="photo-lightbox" class="photo-lightbox" aria-label="Fotka nodu">
-        <button id="photo-lightbox-close" class="qr-dialog-close" type="button">×</button>
-        <button id="photo-lightbox-prev" class="photo-lightbox-nav prev" type="button">‹</button>
-        <button id="photo-lightbox-next" class="photo-lightbox-nav next" type="button">›</button>
+        <button id="photo-lightbox-close" class="qr-dialog-close" type="button" aria-label="Zavřít">×</button>
+        <button id="photo-lightbox-prev" class="photo-lightbox-nav prev" type="button" aria-label="Předchozí fotka">‹</button>
+        <button id="photo-lightbox-next" class="photo-lightbox-nav next" type="button" aria-label="Další fotka">›</button>
         <div id="photo-lightbox-stage" class="photo-lightbox-stage">
           <img id="photo-lightbox-img" alt="" />
           <div id="photo-lightbox-votes" class="photo-lightbox-votes" role="group" aria-label="Hodnocení fotky" hidden>
-            <button id="photo-like" type="button" aria-pressed="false">👍 <span id="photo-like-count">0</span></button>
-            <button id="photo-dislike" type="button" aria-pressed="false">👎 <span id="photo-dislike-count">0</span></button>
+            <button id="photo-like" type="button" aria-pressed="false" aria-label="Líbí se">👍 <span id="photo-like-count">0</span></button>
+            <button id="photo-dislike" type="button" aria-pressed="false" aria-label="Nelíbí se">👎 <span id="photo-dislike-count">0</span></button>
           </div>
         </div>
         <p id="photo-lightbox-node"></p>
@@ -492,7 +504,7 @@
       </dialog>
 
       <dialog id="photo-manage-dialog" class="photo-dialog" aria-labelledby="photo-manage-title">
-        <button id="photo-manage-close" class="feedback-close" type="button">×</button>
+        <button id="photo-manage-close" class="feedback-close" type="button" aria-label="Zavřít">×</button>
         <header>
           <h2 id="photo-manage-title"></h2>
           <p id="photo-manage-photo"></p>
@@ -521,7 +533,7 @@
       </dialog>
 
       <dialog id="photo-report-dialog" class="photo-dialog" aria-labelledby="photo-report-title">
-        <button id="photo-report-close" class="feedback-close" type="button">×</button>
+        <button id="photo-report-close" class="feedback-close" type="button" aria-label="Zavřít">×</button>
         <header>
           <h2 id="photo-report-title"></h2>
           <p id="photo-report-photo"></p>
@@ -698,7 +710,7 @@
       </dialog>
 
       <dialog id="export-dialog" class="export-dialog" aria-labelledby="export-title">
-        <button id="export-close" class="qr-dialog-close" type="button">×</button>
+        <button id="export-close" class="qr-dialog-close" type="button" aria-label="Zavřít">×</button>
         <header>
           <h2 id="export-title"></h2>
           <p id="export-note"></p>
