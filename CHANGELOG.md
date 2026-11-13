@@ -3,6 +3,17 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-13 — Mapové nástroje, zkratky a zdravotní přehled (beta)
+- Prostředí: beta
+- Build: 20261113-1456-5785a59
+- Přidáno měřítko mapy, měření vzdálenosti mezi dvěma body a tlačítko **Moje poloha**.
+- Klávesové zkratky: `/` hledání, `L` popisky, `H` telemetrie, `R` reset pohledu, `Esc` zavření.
+- Rychlý přepínač **Problémové nody** (nízká + kritická + stará data) a klikací počty stavů baterií v HUD i statistikách.
+- Volitelné **Barvy hodnot** pro teplotu a napětí na mapě.
+- Statistiky nově obsahují trend počtu nodů a observerů za 7 dní.
+- Větší touch targety na mobilu, swipe mezi taby detailu nodu, focus stavy a respektování `prefers-reduced-motion`.
+- Doplňky accessibility: `aria-label` u ikonových tlačítek a klávesové zkratky.
+
 ## 2026-11-13 — Odkaz na GitHub v patičce mapy
 - Prostředí: produkce i beta
 - Build: 20261113-1018-d65f45e
