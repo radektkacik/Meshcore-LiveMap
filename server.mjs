@@ -1376,6 +1376,7 @@ const handleRequest = createHttpRequestHandler({
   importRepeaterPhoto,
   maxPacketStreams,
   metricsStore,
+  nodeInfoAutoApprove,
   nodeInfoStore,
   nodesCacheFresh,
   nodesSoftTtlMs,

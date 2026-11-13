@@ -1644,6 +1644,28 @@ function setNodeInfoStatus(text, isError = false) {
   elements.nodeInfoStatus.classList.toggle("error", Boolean(isError));
 }
 
+let nodeInfoAutoApprove = null;
+let nodeInfoConfigPromise = null;
+
+async function loadNodeInfoConfig() {
+  if (nodeInfoAutoApprove != null) return nodeInfoAutoApprove;
+  if (!nodeInfoConfigPromise) {
+    nodeInfoConfigPromise = getJson("/api/node-info/config")
+      .then((data) => {
+        nodeInfoAutoApprove = data?.autoApprove === true;
+        return nodeInfoAutoApprove;
+      })
+      .catch(() => {
+        nodeInfoAutoApprove = false;
+        return false;
+      })
+      .finally(() => {
+        nodeInfoConfigPromise = null;
+      });
+  }
+  return nodeInfoConfigPromise;
+}
+
 function renderNodeInfoDialog() {
   elements.nodeInfoTitle.textContent = t("nodeInfo.dialogTitle");
   elements.nodeInfoClose.setAttribute("aria-label", t("nodeInfo.cancel"));
@@ -1662,9 +1684,13 @@ function renderNodeInfoDialog() {
   elements.nodeInfoPassword.autocomplete = protectedInfo ? "current-password" : "new-password";
   elements.nodeInfoAuthorLabel.textContent = t("nodeInfo.authorLabel");
   elements.nodeInfoAuthor.placeholder = t("nodeInfo.authorPlaceholder");
-  elements.nodeInfoNote.textContent = protectedInfo
-    ? t("nodeInfo.noteEdit")
-    : (hasCurrent ? t("nodeInfo.noteUnprotected") : t("nodeInfo.noteNew"));
+  elements.nodeInfoNote.textContent = nodeInfoAutoApprove
+    ? (protectedInfo
+      ? t("nodeInfo.noteAutoEdit")
+      : (hasCurrent ? t("nodeInfo.noteAutoUnprotected") : t("nodeInfo.noteAutoNew")))
+    : (protectedInfo
+      ? t("nodeInfo.noteEdit")
+      : (hasCurrent ? t("nodeInfo.noteUnprotected") : t("nodeInfo.noteNew")));
   elements.nodeInfoSubmit.textContent = t("nodeInfo.submit");
   elements.nodeInfoCancel.textContent = t("nodeInfo.cancel");
   const target = state.nodeInfoTarget;
@@ -1685,6 +1711,9 @@ async function openNodeInfoDialog(node) {
   elements.nodeInfoPassword.value = "";
   renderNodeInfoDialog();
   if (!elements.nodeInfoDialog.open) elements.nodeInfoDialog.showModal();
+  void loadNodeInfoConfig().then(() => {
+    if (state.nodeInfoTarget?.key === key && elements.nodeInfoDialog.open) renderNodeInfoDialog();
+  });
   if (!cached) {
     try {
       const data = await getJson(`/api/node-info?key=${encodeURIComponent(key)}`);
