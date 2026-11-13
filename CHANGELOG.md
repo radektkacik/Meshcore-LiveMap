@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-13 — Teplota pod 0 °C modře (beta)
+- Prostředí: beta
+- Build: 20261113-1538-276dca3
+- Hodnoty teploty pod **0 °C** jsou na mapě modré.
+- Hodnoty nad **40 °C** a nízká/kritická baterie zůstávají červené.
+- Běžné/OK hodnoty zůstávají ve výchozí barvě.
+
 ## 2026-11-13 — Trend sítě, barvy hodnot a přístupnost
 - Prostředí: produkce i beta
 - Build: 20261113-1535-b538da9
