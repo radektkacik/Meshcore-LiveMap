@@ -1174,6 +1174,7 @@ export const STATIC_EN = {
   "právě prohlíží mapu": "viewing the map now",
   "Data: CoreScope / MeshCore CZ (živý MQTT feed), archiv z vlastní databáze. Soukromý obsah zpráv zůstává šifrovaný. Podklady: OpenStreetMap, OpenTopoMap, Esri. Výšky: Open-Meteo, Mapzen Terrarium (AWS). Ikona: selfh.st (CC BY 4.0).": "Data: CoreScope / MeshCore CZ (live MQTT feed), archive from our own database. Private message content remains encrypted. Basemaps: OpenStreetMap, OpenTopoMap, Esri. Elevations: Open-Meteo, Mapzen Terrarium (AWS). Icon: selfh.st (CC BY 4.0).",
   "Kód: licence MIT": "Code: MIT license",
+  "Zdrojový kód na GitHubu": "Source code on GitHub",
   "Poslední trasy": "Latest routes",
   "Živá aktivita": "Live activity",
   "Historie": "History",
