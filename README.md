@@ -42,6 +42,94 @@ funkční změny, ne každý build; technický seznam všech nasazení zůstáv�
 v [`deploy/RELEASES.md`](deploy/RELEASES.md). Odkaz „Změny verzí“ je v patičce
 mapy; společná změna se zobrazí na produkci i betě.
 
+## Instalace na nový VPS
+
+Pro nový Debian/Ubuntu VPS slouží `deploy/install-vps.sh`. Předpokládá, že je
+repozitář naklonovaný na serveru a skript se spouští jako root:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y git
+sudo git clone https://github.com/radektkacik/Meshcore-LiveMap.git /opt/meshcore-live-map
+cd /opt/meshcore-live-map
+sudo DOMAIN=mapa.example.cz INSTALL_NGINX=1 bash deploy/install-vps.sh
+```
+
+Skript zajistí:
+
+- instalaci systémových závislostí (Node.js 20.19+/22, build nástroje, git,
+  rsync, případně nginx),
+- vytvoření uživatele/skupiny `meshcore-map` a adresářů `data/`, `uploads/`,
+  `backups/`,
+- vytvoření `.env` z `.env.example` (existující `.env` nikdy nepřepíše),
+- instalaci závislostí, build frontendu a odstranění vývojových závislostí,
+- instalaci systemd služby, storage drop-inu a rollback skriptu,
+- volitelnou instalaci nginx konfigurace pro zadaný `DOMAIN`,
+- spuštění služby a ověření `/api/health`.
+
+### Proměnné instalace
+
+| Proměnná | Výchozí | Význam |
+|---|---|---|
+| `INSTANCE` | `prod` | `prod` nebo `stage` |
+| `APP_DIR` | `/opt/meshcore-live-map` | Adresář aplikace |
+| `APP_USER` / `APP_GROUP` | `meshcore-map` | Systémový uživatel a skupina |
+| `SERVICE` | `meshcore-live-map.service` | Název systemd služby |
+| `PORT` | `4173` | Interní port aplikace |
+| `DOMAIN` | – | Doména pro nginx |
+| `INSTALL_NGINX` | `0` | `1` nainstaluje nginx konfiguraci |
+| `FORCE_NGINX` | `0` | `1` přepíše existující nginx konfiguraci |
+| `SKIP_APT` | `0` | `1` přeskočí instalaci systémových balíčků |
+| `NODE_MAJOR` | `22` | Major verze Node.js při instalaci |
+
+Po instalaci doplňte `.env` a restartujte službu:
+
+```bash
+sudo nano /opt/meshcore-live-map/.env
+sudo systemctl restart meshcore-live-map
+systemctl status meshcore-live-map
+curl -s http://127.0.0.1:4173/api/health
+```
+
+Do `.env` patří zejména MQTT přihlášení, `FEEDBACK_TOKEN` nebo
+`ADMIN_PASSWORD`, volitelně `PHOTO_TOKEN` a Telegram údaje. Hodnoty zůstávají
+pouze na serveru a nejsou součástí repozitáře.
+
+### Nginx a TLS
+
+Instalační skript vytvoří pouze HTTP konfiguraci. Pro HTTPS použijte například
+Certbot:
+
+```bash
+sudo apt-get install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d mapa.example.cz
+```
+
+Konfigurace pro Cloudflare a produkční/beta cestu jsou v `deploy/nginx-*.conf`.
+Pokud na VPS běží výchozí nginx stránka, můžete vypnout
+`/etc/nginx/sites-enabled/default`.
+
+### Beta instance
+
+Beta se instaluje stejným skriptem s `INSTANCE=stage`:
+
+```bash
+cd /opt/meshcore-live-map
+sudo INSTANCE=stage bash deploy/install-vps.sh
+```
+
+Používá `/opt/meshcore-live-map-stage`, port `4174` a službu
+`meshcore-live-map-stage.service`. Nginx location
+`deploy/nginx-mapa-beta-location.conf` je potřeba vložit do existujícího
+produkčního server bloku; instalátor beta nginx sám nenastavuje.
+
+### Převod existujících dat
+
+Při přesunu z jiného VPS zkopírujte před instalací nebo po ní `.env`, `data/`
+a `uploads/`. Instalační skript existující data ani `.env` nepřepisuje.
+Pro běžné aktualizace již běžící instance používejte `deploy/update-vps.sh`,
+ne instalační skript.
+
 ## Aktualizace VPS
 
 Aktualizace se provádí pouze skriptem, který před výměnou ověří build ve
