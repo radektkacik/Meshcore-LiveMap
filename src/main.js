@@ -3640,8 +3640,11 @@ function nodeMapHealthValue(node) {
     : (temperatureText || batteryText);
 }
 
-function temperatureAlert(temperature) {
-  return temperature != null && (temperature < 0 || temperature > 40);
+function temperatureTone(temperature) {
+  if (temperature == null) return "";
+  if (temperature < 0) return "tone-cold";
+  if (temperature > 40) return "tone-alert";
+  return "";
 }
 
 function nodeMapHealthTone(node) {
@@ -3649,9 +3652,9 @@ function nodeMapHealthTone(node) {
   const status = nodeHealthStatusCode(node);
   const statusAlert = status === "warn" || status === "critical";
   if (state.healthValueMode === "voltage") {
-    return (battery == null ? temperatureAlert(temperature) : statusAlert) ? "tone-alert" : "";
+    return battery == null ? temperatureTone(temperature) : (statusAlert ? "tone-alert" : "");
   }
-  return (temperature == null ? statusAlert : temperatureAlert(temperature)) ? "tone-alert" : "";
+  return temperature == null ? (statusAlert ? "tone-alert" : "") : temperatureTone(temperature);
 }
 
 function healthLabelsOverlap(a, b) {

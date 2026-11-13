@@ -1272,6 +1272,7 @@ html[data-theme="dark"] .node-label { color: #eef4f6; text-shadow: 0 0 3px #0f14
 .node-label.node-label-health { display: inline-block; padding: 0; border: 0; background: transparent; box-shadow: none; }
 .node-label-health .node-label-values { color: #17271f; font: 800 calc(15px * var(--font-scale))/1 "Manrope", sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; text-shadow: 0 0 2px #fff, 0 0 3px #fff, 0 0 4px #fff; }
 .node-label-health .node-label-values.tone-alert { color: #c63e32; }
+.node-label-health .node-label-values.tone-cold { color: #1b6fb8; }
 html[data-theme="dark"] .node-label { background: rgba(15, 20, 24, 0.85); color: #eef4f6; border-color: rgba(255, 255, 255, 0.22); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); text-shadow: none; }
 html[data-theme="dark"] .node-label.node-label-health { background: transparent; border: 0; box-shadow: none; }
 html[data-theme="dark"] .node-label-values { color: #9fc3b2; }
@@ -1443,6 +1444,7 @@ textarea:focus-visible,
 [tabindex]:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
 
 html[data-theme="dark"] .node-label-health .node-label-values.tone-alert { color: #ff8e82; }
+html[data-theme="dark"] .node-label-health .node-label-values.tone-cold { color: #7fc3ff; }
 
 @media (max-width: 700px) {
   .map-actions > button { min-height: 44px; }
