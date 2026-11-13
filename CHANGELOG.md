@@ -3,6 +3,14 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-13 — Mazání uživatelského info majitelem (beta)
+- Prostředí: beta
+- Build: 20261113-1855-5e6e407
+- V dialogu uživatelského info je tlačítko **Smazat info**.
+- Info může smazat majitel pomocí tokenu nebo správného hesla.
+- Správce může info smazat i nadále v administraci.
+- Cizí uživatel bez tokenu a hesla dostane odmítnutí; delete se neukládá jako čekající návrh.
+
 ## 2026-11-13 — Vlastnictví uživatelského info
 - Prostředí: produkce i beta
 - Build: 20261113-1850-f311deb
