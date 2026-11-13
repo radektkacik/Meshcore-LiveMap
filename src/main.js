@@ -168,7 +168,6 @@ const ALL_HASH_SIZES = [1, 2, 3];
 const ALL_HEALTH_STATUSES = ["full", "ok", "warn", "critical", "stale"];
 const HEALTH_STATUS_FILTERS = [...ALL_HEALTH_STATUSES, "below-ok", "problem"];
 const REDUCED_MOTION = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
-const DEFAULT_MAP_VIEW = { center: [49.82, 15.45], zoom: 7 };
 const mobileSheetQuery = window.matchMedia("(max-width: 700px)");
 const FORCE_MOBILE_SHEET = INITIAL_PARAMS.get("sheet") === "1";
 const INITIAL_NODE_KEY = INITIAL_PARAMS.get("node")?.trim().toUpperCase() || null;
@@ -356,8 +355,8 @@ const routeVersions = new RouteVersionState();
 const perf = createPerfMonitor(new URLSearchParams(location.search).has("perf"));
 
 const map = L.map("map", {
-  center: DEFAULT_MAP_VIEW.center,
-  zoom: DEFAULT_MAP_VIEW.zoom,
+  center: [49.82, 15.45],
+  zoom: 7,
   minZoom: 6,
   maxZoom: MAX_MAP_ZOOM,
   zoomControl: false,
@@ -368,7 +367,6 @@ const map = L.map("map", {
 });
 
 L.control.zoom({ position: "bottomleft" }).addTo(map);
-L.control.scale({ imperial: false, metric: true, maxWidth: 140, position: "bottomleft" }).addTo(map);
 
 const initialLatValue = INITIAL_PARAMS.get("lat");
 const initialLonValue = INITIAL_PARAMS.get("lon");
