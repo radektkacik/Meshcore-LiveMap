@@ -570,6 +570,7 @@
 | 2026-11-13 15:33 | `20261113T153351Z.tar.gz` (stage APP_DIR) | `20261113-1533-1a53248` | Beta fix: odstraněno měřítko mapy | `src/main.js` |
 | 2026-11-13 15:35 | `20261113T153517Z.tar.gz` | `20261113-1535-b538da9` | Prod: trend sítě, trvalé barvy hodnot (OK černě, problém červeně), mobil a přístupnost | `src/main.js`, `http-server.mjs`, `src/elements.js`, `src/i18n.js`, `src/style.css`, `index.html` |
 | 2026-11-13 15:38 | `20261113T153819Z.tar.gz` (stage APP_DIR) | `20261113-1538-276dca3` | Beta: teplota pod 0 °C modře | `src/main.js`, `src/style.css` |
+| 2026-11-13 15:40 | `20261113T154023Z.tar.gz` (stage APP_DIR) | `20261113-1540-f472f92` | Beta: Hodnota na mapě je ve výchozím stavu zapnutá | `src/app-state.js` |
 | 2026-11-06 19:20 | `20261106T192046Z.tar.gz` | `20261106-1920-e6ee871` | Prod: CzHealth v3, regiony, kompaktní faceplate, SUMMARY karta a neutrální ikona baterie | `cz-health.mjs`, `cz-health-store.mjs`, `src/main.js`, `src/style.css`, `src/i18n.js`, `index.html`, `deploy/*`, `test/cz-health.test.mjs` |
 | 2026-11-01 08:24 | – | – | Beta: import 6 použitelných textů z wiki (Chmelova 2×, Klucanina, Kudlov, Nedvězí, Želešice) a 18 skutečných fotek z wiki s autorem `meshcore.cz`; konfigurační screenshoty, prázdné stránky a YouTube náhledy přeskočeny | `data/node-info.sqlite`, `uploads/photos.sqlite`, `uploads/files` (beta) |
 | 2026-10-26 11:15 | `20261026T111535Z.tar.gz` (stage APP_DIR) | `20261026-1115-8861f31` | Beta: stejné štítky SNR (finální build bez ladicích údajů) | `src/main.js`, `src/style.css`, `CONTEXT.md` |
