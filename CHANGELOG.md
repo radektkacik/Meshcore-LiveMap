@@ -3,6 +3,14 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-13 — Uživatelské info nodu bez schvalování (beta)
+- Prostředí: beta
+- Build: 20261113-1818-32968e9
+- Změny uživatelského info nodu se mohou zveřejňovat ihned, stejně jako fotky.
+- Řídí to `NODE_INFO_AUTO_APPROVE=1`; prázdná hodnota zdědí `PHOTO_AUTO_APPROVE`.
+- Heslo u chráněného info zůstává povinné, auto-approve řeší jen schvalování.
+- Text v dialogu se přizpůsobí tomu, zda je auto-approve zapnutý.
+
 ## 2026-11-13 — Čas vzorku health
 - Prostředí: produkce i beta
 - Build: 20261113-1705-1f2c751
