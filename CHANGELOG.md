@@ -3,9 +3,9 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-13 — Menší písmo na 15 px (beta)
-- Prostředí: beta
-- Build: 20261113-1601-7ee444a
+## 2026-11-13 — Menší písmo na 15 px
+- Prostředí: produkce i beta
+- Build: 20261113-1603-472b2a8
 - Volba **Menší** má základní velikost přesně **15 px** (měřítko 0,9375).
 
 ## 2026-11-13 — Oprava animace tras
