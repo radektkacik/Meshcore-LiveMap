@@ -20,27 +20,19 @@ npm start
 
 Aktuální VPS instance běží jako systemd služba `meshcore-live-map` v adresáři
 `/opt/meshcore-live-map` a Nginx ji zpřístupňuje na
-`https://mapa.meshcore.cz/` (root). Beta instance běží jako
-`meshcore-live-map-stage` na `https://mapa.meshcore.cz/beta/`; stará adresa
-`https://2b.meshcore.cz/betamap/` i `https://2b.meshcore.cz/map/` přesměrovávají na novou betu, resp. produkci. Reprodukovatelné
-konfigurace jsou v adresáři [`deploy`](deploy/). Produkční frontend pro root se
-sestaví příkazem:
+`https://mapa.meshcore.cz/` (root). Reprodukovatelné konfigurace jsou
+v adresáři [`deploy`](deploy/). Produkční frontend se sestaví příkazem:
 
 ```bash
 npm run build
 ```
 
-Beta build pro `/beta/`:
-
-```bash
-VITE_BASE_PATH=/beta/ npm run build
-```
-
-Build zároveň vygeneruje stránku `/changelog` (na betě `/beta/changelog`)
-z ručně udržovaného [`CHANGELOG.md`](CHANGELOG.md). Ten obsahuje jen významné
-funkční změny, ne každý build; technický seznam všech nasazení zůstává
+Build zároveň vygeneruje stránku `/changelog` z ručně udržovaného
+[`CHANGELOG.md`](CHANGELOG.md). Ten obsahuje jen významné funkční změny, ne
+každý build; technický seznam všech nasazení zůstává
 v [`deploy/RELEASES.md`](deploy/RELEASES.md). Odkaz „Změny verzí“ je v patičce
-mapy; společná změna se zobrazí na produkci i betě.
+mapy. Pro oddělené testovací prostředí lze použít samostatný `APP_DIR` a
+systemd službu.
 
 ## Instalace na nový VPS
 
@@ -71,7 +63,6 @@ Skript zajistí:
 
 | Proměnná | Výchozí | Význam |
 |---|---|---|
-| `INSTANCE` | `prod` | `prod` nebo `stage` |
 | `APP_DIR` | `/opt/meshcore-live-map` | Adresář aplikace |
 | `APP_USER` / `APP_GROUP` | `meshcore-map` | Systémový uživatel a skupina |
 | `SERVICE` | `meshcore-live-map.service` | Název systemd služby |
@@ -105,23 +96,9 @@ sudo apt-get install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d mapa.example.cz
 ```
 
-Konfigurace pro Cloudflare a produkční/beta cestu jsou v `deploy/nginx-*.conf`.
+Konfigurace pro Cloudflare a reverse proxy jsou v `deploy/nginx-*.conf`.
 Pokud na VPS běží výchozí nginx stránka, můžete vypnout
 `/etc/nginx/sites-enabled/default`.
-
-### Beta instance
-
-Beta se instaluje stejným skriptem s `INSTANCE=stage`:
-
-```bash
-cd /opt/meshcore-live-map
-sudo INSTANCE=stage bash deploy/install-vps.sh
-```
-
-Používá `/opt/meshcore-live-map-stage`, port `4174` a službu
-`meshcore-live-map-stage.service`. Nginx location
-`deploy/nginx-mapa-beta-location.conf` je potřeba vložit do existujícího
-produkčního server bloku; instalátor beta nginx sám nenastavuje.
 
 ### Převod existujících dat
 
@@ -132,9 +109,9 @@ ne instalační skript.
 
 ## Aktualizace VPS
 
-Aktualizace se provádí pouze skriptem, který před výměnou ověří build ve
-staging adresáři, připraví přesnou sadu produkčních závislostí, vytvoří backup
-a po restartu služby provede health check. Build zapisuje `dist/build.json`;
+Aktualizace se provádí pouze skriptem, který před výměnou ověří build
+v dočasném adresáři, připraví přesnou sadu produkčních závislostí, vytvoří
+backup a po restartu služby provede health check. Build zapisuje `dist/build.json`;
 `/api/version` podle něj vrací aktuální build a otevřená stránka se po zjištění
 nové verze jednou automaticky obnoví. Pokud se lockfile nezměnil, použije
 již ověřené serverové závislosti a nestahuje je znovu:
@@ -143,11 +120,9 @@ již ověřené serverové závislosti a nestahuje je znovu:
 DEPLOY_HOST=root@your-server ./deploy/update-vps.sh
 ```
 
-Hostitel se v repozitáři záměrně neuvádí. Pro beta instanci použijte
-`./deploy/update-vps-staging.sh` se stejným `DEPLOY_HOST`.
-
-Oba deploy skripty načtou `DEPLOY_HOST` také z gitignorovaného souboru
-`.deploy.env` v kořeni repa, pokud proměnná není v prostředí:
+Hostitel se v repozitáři záměrně neuvádí. Deploy skript načte `DEPLOY_HOST`
+také z gitignorovaného souboru `.deploy.env` v kořeni repa, pokud proměnná není
+v prostředí:
 
 ```bash
 printf 'DEPLOY_HOST=root@your-server\n' > .deploy.env
@@ -198,7 +173,7 @@ přihlašovací údaje zůstávají pouze na serveru.
   ne fotky; zdroj a licence se zobrazují u nodu. Adresa je omezená na
   `meshcore.cz` a namespace `repeatery`.
 - `GET /admin/repeater-sync` je ruční porovnání uloženého info s aktuální
-  wiki stránkou (beta). Zobrazí rozdíly textu a nové obrázky; správce potvrdí,
+  wiki stránkou. Zobrazí rozdíly textu a nové obrázky; správce potvrdí,
   co se má převzít. `GET /admin/repeater-sync-all` udělá stejné porovnání pro
   všechny importované nody a umožní hromadný sync. Nic se nespouští automaticky
   ani pravidelně.
@@ -256,7 +231,7 @@ přihlašovací údaje zůstávají pouze na serveru.
   a malý náhled v tooltipu při najetí na nod. `GET /api/photos/all` vrací
   nejnovější schválené fotky všech nodů včetně `nodeKey` a `nodeName`; používá
   je fotogalerie otevíraná tlačítkem „Galerie“ vedle filtru nebo odkazem
-  `?gallery=1`. Na beta cestě lze otevřít galerii konkrétního nodu přes
+  `?gallery=1`. Galerii konkrétního nodu lze otevřít přes
   `?gallery=1&galleryNode=<public_key>`; galerie u každé nodové sekce nabízí
   tlačítko „Sdílet“ pro zkopírování tohoto odkazu. Fotky mají anonymní hodnocení `likes`/`dislikes`;
   `POST /api/photos/:id/vote` s hlavičkou `X-Photo-Voter` a tělem
@@ -282,10 +257,10 @@ přihlašovací údaje zůstávají pouze na serveru.
    upravit nebo smazat i z jiného zařízení či po ztrátě tokenu. Akce „Upravit /
    smazat vlastní fotku“ je v lightboxu; starší fotky nahrané před touto funkcí
    může spravovat pouze administrátor.
-- Detail nodu je dostupný na `/nod/<public_key>` (beta `/beta/nod/<public_key>`).
+- Detail nodu je dostupný na `/nod/<public_key>`.
   Popup na mapě je zkrácený; plné info, fotky, komentáře a síťové údaje jsou
   v podstránce s taby.
-- Administrace je na `GET /admin` (beta `/beta/admin`). Přihlašuje se heslem
+- Administrace je na `GET /admin`. Přihlašuje se heslem
   `ADMIN_PASSWORD`; když není nastavené, použije se `FEEDBACK_TOKEN`, případně
   `PHOTO_TOKEN`. Po přihlášení drží server HttpOnly session cookie 12 hodin
   (`ADMIN_SESSION_SECRET`, `ADMIN_SESSION_TTL_MS`). Sekce: přehled, fotky
@@ -317,7 +292,7 @@ přihlašovací údaje zůstávají pouze na serveru.
   token, vede na `/admin`). Volitelně lze fotky, žádosti a změny info nodu
   schvalovat tlačítky přímo v Telegramu (`TELEGRAM_INTERACTIVE=1`). U automaticky zveřejněných fotek notifikace vede
   na schválené fotky a obsahuje upozornění, že je možné je smazat.
-  `PUBLIC_BASE_URL` určuje základ odkazu (u bety `https://mapa.meshcore.cz/beta`).
+  `PUBLIC_BASE_URL` určuje základ odkazu.
 - Animace tras je ve výchozím stavu řešená canvas rendererem (jedna kresba,
   posun `lineDashOffset` bez CSS animací). Méně výkonnou SVG variantu s CSS
   animací `stroke-dashoffset` lze zapnout parametrem `?anim=svg`. Animaci lze
@@ -499,8 +474,7 @@ přidají k:
 - čekající změně uživatelského info nodu: **Schválit změnu** / **Zamítnout**.
 
 Webhook může být pro jednoho bota jen jeden. Proto zapínejte
-`TELEGRAM_INTERACTIVE` pouze v produkci; beta a produkce obvykle sdílejí stejný
-bot token. Pokud používáte skupinový chat, nastavte `TELEGRAM_ADMIN_USER_IDS`,
+`TELEGRAM_INTERACTIVE` pouze na jedné instanci. Pokud používáte skupinový chat, nastavte `TELEGRAM_ADMIN_USER_IDS`,
 jinak jsou tlačítka povolena jen pro chat ID z `TELEGRAM_CHAT_ID`.
 
 ## Přímá viditelnost (LOS)
