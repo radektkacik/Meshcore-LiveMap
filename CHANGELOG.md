@@ -3,9 +3,9 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-13 — Hodnota na mapě ve výchozím stavu zapnutá (beta)
-- Prostředí: beta
-- Build: 20261113-1540-f472f92
+## 2026-11-13 — Hodnota na mapě ve výchozím stavu zapnutá
+- Prostředí: produkce i beta
+- Build: 20261113-1542-727bd05
 - Volba **Hodnota na mapě** je ve výchozím stavu zapnutá.
 - Pokud ji uživatel ručně vypne, volba se uloží a zůstane vypnutá.
 
