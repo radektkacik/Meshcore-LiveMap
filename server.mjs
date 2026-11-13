@@ -69,11 +69,7 @@ const visitStore = createVisitStatsStore(visitsDbPath);
 const feedbackDbPath = process.env.FEEDBACK_DB_PATH || join(process.cwd(), "data", "feedback.sqlite");
 const feedbackStore = createFeedbackStore(feedbackDbPath);
 const nodeInfoDbPath = process.env.NODE_INFO_DB_PATH || join(process.cwd(), "data", "node-info.sqlite");
-const nodeInfoAutoApproveSetting = String(process.env.NODE_INFO_AUTO_APPROVE ?? "").trim();
-const nodeInfoAutoApprove = nodeInfoAutoApproveSetting
-  ? nodeInfoAutoApproveSetting === "1"
-  : process.env.PHOTO_AUTO_APPROVE === "1";
-const nodeInfoStore = createNodeInfoStore(nodeInfoDbPath, { autoApprove: nodeInfoAutoApprove });
+const nodeInfoStore = createNodeInfoStore(nodeInfoDbPath);
 const commentsDbPath = process.env.COMMENTS_DB_PATH || join(process.cwd(), "data", "comments.sqlite");
 const commentStore = createCommentStore(commentsDbPath);
 const feedbackToken = process.env.FEEDBACK_TOKEN || "";
@@ -1376,7 +1372,6 @@ const handleRequest = createHttpRequestHandler({
   importRepeaterPhoto,
   maxPacketStreams,
   metricsStore,
-  nodeInfoAutoApprove,
   nodeInfoStore,
   nodesCacheFresh,
   nodesSoftTtlMs,

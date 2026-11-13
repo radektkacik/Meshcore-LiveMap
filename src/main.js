@@ -33,6 +33,7 @@ import { createPhotoGalleryController } from "./photo-gallery-controller.js";
 import { createPhotoLightboxController } from "./photo-lightbox-controller.js";
 import { createPhotoManageController } from "./photo-manage-controller.js";
 import { createPhotoTokenStore } from "./photo-token-store.js";
+import { createNodeInfoTokenStore } from "./node-info-token-store.js";
 import { createPhotoUploadController } from "./photo-upload-controller.js";
 import { getPhotoJson, voteForPhoto } from "./photo-vote-client.js";
 import { createSearchController } from "./search-controller.js";
@@ -1644,28 +1645,6 @@ function setNodeInfoStatus(text, isError = false) {
   elements.nodeInfoStatus.classList.toggle("error", Boolean(isError));
 }
 
-let nodeInfoAutoApprove = null;
-let nodeInfoConfigPromise = null;
-
-async function loadNodeInfoConfig() {
-  if (nodeInfoAutoApprove != null) return nodeInfoAutoApprove;
-  if (!nodeInfoConfigPromise) {
-    nodeInfoConfigPromise = getJson("/api/node-info/config")
-      .then((data) => {
-        nodeInfoAutoApprove = data?.autoApprove === true;
-        return nodeInfoAutoApprove;
-      })
-      .catch(() => {
-        nodeInfoAutoApprove = false;
-        return false;
-      })
-      .finally(() => {
-        nodeInfoConfigPromise = null;
-      });
-  }
-  return nodeInfoConfigPromise;
-}
-
 function renderNodeInfoDialog() {
   elements.nodeInfoTitle.textContent = t("nodeInfo.dialogTitle");
   elements.nodeInfoClose.setAttribute("aria-label", t("nodeInfo.cancel"));
@@ -1674,7 +1653,7 @@ function renderNodeInfoDialog() {
   const currentInfo = state.nodeInfoTarget ? state.nodeInfoCache.get(state.nodeInfoTarget.key)?.info : null;
   const hasCurrent = Boolean(currentInfo?.text);
   const protectedInfo = Boolean(currentInfo?.protected);
-  elements.nodeInfoPassword.required = protectedInfo;
+  elements.nodeInfoPassword.required = false;
   elements.nodeInfoPasswordLabel.textContent = protectedInfo
     ? t("nodeInfo.passwordLabelEdit")
     : t("nodeInfo.passwordLabelOptional");
@@ -1684,13 +1663,9 @@ function renderNodeInfoDialog() {
   elements.nodeInfoPassword.autocomplete = protectedInfo ? "current-password" : "new-password";
   elements.nodeInfoAuthorLabel.textContent = t("nodeInfo.authorLabel");
   elements.nodeInfoAuthor.placeholder = t("nodeInfo.authorPlaceholder");
-  elements.nodeInfoNote.textContent = nodeInfoAutoApprove
-    ? (protectedInfo
-      ? t("nodeInfo.noteAutoEdit")
-      : (hasCurrent ? t("nodeInfo.noteAutoUnprotected") : t("nodeInfo.noteAutoNew")))
-    : (protectedInfo
-      ? t("nodeInfo.noteEdit")
-      : (hasCurrent ? t("nodeInfo.noteUnprotected") : t("nodeInfo.noteNew")));
+  elements.nodeInfoNote.textContent = protectedInfo
+    ? t("nodeInfo.noteEdit")
+    : (hasCurrent ? t("nodeInfo.noteUnprotected") : t("nodeInfo.noteNew"));
   elements.nodeInfoSubmit.textContent = t("nodeInfo.submit");
   elements.nodeInfoCancel.textContent = t("nodeInfo.cancel");
   const target = state.nodeInfoTarget;
@@ -2764,6 +2739,7 @@ const photoLightbox = createPhotoLightboxController({
 photoLightbox.bind();
 
 const photoTokenStore = createPhotoTokenStore();
+const nodeInfoTokens = createNodeInfoTokenStore();
 const photoManage = createPhotoManageController({
   appPath,
   elements,
@@ -7050,11 +7026,6 @@ elements.nodeInfoForm.addEventListener("submit", async (event) => {
     return;
   }
   const password = elements.nodeInfoPassword.value;
-  const protectedInfo = Boolean(state.nodeInfoCache.get(target.key)?.info?.protected);
-  if (protectedInfo && !password) {
-    setNodeInfoStatus(t("nodeInfo.passwordRequired"), true);
-    return;
-  }
   if (password && (password.length < 6 || password.length > 128)) {
     setNodeInfoStatus(t("nodeInfo.passwordTooShort"), true);
     return;
@@ -7068,7 +7039,9 @@ elements.nodeInfoForm.addEventListener("submit", async (event) => {
       key: target.key,
       password,
       text,
+      token: nodeInfoTokens.get(target.key),
     });
+    if (data.manageToken) nodeInfoTokens.remember(target.key, data.manageToken);
     if (data.status === "pending") {
       setNodeInfoStatus(t("nodeInfo.pending"));
     } else {

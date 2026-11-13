@@ -61,7 +61,6 @@ export function createHttpRequestHandler(runtime) {
   importRepeaterPhoto,
   maxPacketStreams,
   metricsStore,
-  nodeInfoAutoApprove,
   nodeInfoStore,
   nodesCacheFresh,
   nodesSoftTtlMs,
@@ -572,15 +571,6 @@ async function handleRequest(request, response) {
     const prefix = hashBytes && node?.public_key ? String(node.public_key).slice(0, hashBytes * 2).toUpperCase() : "";
     const stats = prefix ? packetStore.relayStats(prefix, hashBytes) : null;
     sendJson(response, 200, { key, ...(stats || { hashBytes, prefix, lastRelayed: null, relayActive: false, relayCount1h: 0, relayCount24h: 0, unscopedRelay24h: 0 }) });
-    return;
-  }
-
-  if (url.pathname === "/api/node-info/config") {
-    if (request.method !== "GET" && request.method !== "HEAD") {
-      methodNotAllowed(response, "GET, HEAD");
-      return;
-    }
-    sendJson(response, 200, { autoApprove: nodeInfoAutoApprove });
     return;
   }
 

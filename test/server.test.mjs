@@ -335,20 +335,29 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       body: JSON.stringify({ author: "Jana", key: infoKey, password: "spatne", text: "Anténa: 5 dBi" }),
     });
     assert.equal(badPassword.status, 403);
-    const changeInfo = await fetch(`http://127.0.0.1:${appPort}/api/node-info`, {
+    const ownerChange = await fetch(`http://127.0.0.1:${appPort}/api/node-info`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ author: "Jana", key: infoKey, password: "tajne123", text: "Anténa: 5 dBi" }),
     });
+    assert.equal(ownerChange.status, 200);
+    assert.equal((await ownerChange.json()).status, "published");
+    const ownerRead = await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json();
+    assert.equal(ownerRead.info.text, "Anténa: 5 dBi");
+    const changeInfo = await fetch(`http://127.0.0.1:${appPort}/api/node-info`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ author: "Jana", key: infoKey, text: "Anténa: 7 dBi" }),
+    });
     assert.equal(changeInfo.status, 200);
     assert.equal((await changeInfo.json()).status, "pending");
     const pendingRead = await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json();
-    assert.equal(pendingRead.info.text, "Hardware: RAK v2\nBaterie: 10 Ah\nPanel: 20 W");
+    assert.equal(pendingRead.info.text, "Anténa: 5 dBi");
     const adminNodeInfo = await fetch(`http://127.0.0.1:${appPort}/admin/node-info`, { headers: { cookie: adminCookie } });
     assert.equal(adminNodeInfo.status, 200);
     const adminNodeInfoHtml = await adminNodeInfo.text();
     assert.match(adminNodeInfoHtml, /Změny ke schválení/);
-    assert.match(adminNodeInfoHtml, /Anténa: 5 dBi/);
+    assert.match(adminNodeInfoHtml, /Anténa: 7 dBi/);
     const approveInfo = await fetch(`http://127.0.0.1:${appPort}/admin/node-info/moderate`, {
       method: "POST",
       headers: {
@@ -359,7 +368,7 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       redirect: "manual",
     });
     assert.equal(approveInfo.status, 303);
-    assert.equal((await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json()).info.text, "Anténa: 5 dBi");
+    assert.equal((await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json()).info.text, "Anténa: 7 dBi");
     const adminEdit = await fetch(`http://127.0.0.1:${appPort}/admin/node-info/edit`, {
       method: "POST",
       headers: {

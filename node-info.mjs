@@ -1,4 +1,4 @@
-import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { openSqliteStore } from "./sqlite-store.mjs";
 
 function hashPassword(password) {
@@ -17,6 +17,17 @@ function passwordMatches(password, stored) {
 
 function validPassword(password) {
   return typeof password === "string" && password.length >= 6 && password.length <= 128;
+}
+
+function hashOwnerToken(token) {
+  return createHash("sha256").update(String(token || "")).digest("hex");
+}
+
+function ownerTokenMatches(token, stored) {
+  if (!token || !stored) return false;
+  const expected = Buffer.from(stored, "hex");
+  const actual = Buffer.from(hashOwnerToken(token), "hex");
+  return expected.length === actual.length && timingSafeEqual(actual, expected);
 }
 
 function mapRow(row) {
@@ -45,7 +56,7 @@ function mapPendingRow(row) {
   };
 }
 
-export function createNodeInfoStore(dbPath, { autoApprove = false } = {}) {
+export function createNodeInfoStore(dbPath) {
   const db = openSqliteStore(dbPath);
   db.exec(`
     CREATE TABLE IF NOT EXISTS node_info (
@@ -55,6 +66,7 @@ export function createNodeInfoStore(dbPath, { autoApprove = false } = {}) {
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       edit_password_hash TEXT,
+      owner_token_hash TEXT,
       source_url TEXT,
       source_title TEXT
     );
@@ -72,6 +84,11 @@ export function createNodeInfoStore(dbPath, { autoApprove = false } = {}) {
 
   try {
     db.exec("ALTER TABLE node_info ADD COLUMN edit_password_hash TEXT");
+  } catch {
+    // Column already exists.
+  }
+  try {
+    db.exec("ALTER TABLE node_info ADD COLUMN owner_token_hash TEXT");
   } catch {
     // Column already exists.
   }
@@ -96,13 +113,14 @@ export function createNodeInfoStore(dbPath, { autoApprove = false } = {}) {
   const selectAll = db.prepare("SELECT * FROM node_info ORDER BY updated_at DESC LIMIT ?");
   const countRows = db.prepare("SELECT COUNT(*) AS total FROM node_info");
   const upsertRow = db.prepare(`
-    INSERT INTO node_info (node_key, text, author, created_at, updated_at, edit_password_hash, source_url, source_title)
-    VALUES (@node_key, @text, @author, @created_at, @updated_at, @edit_password_hash, @source_url, @source_title)
+    INSERT INTO node_info (node_key, text, author, created_at, updated_at, edit_password_hash, owner_token_hash, source_url, source_title)
+    VALUES (@node_key, @text, @author, @created_at, @updated_at, @edit_password_hash, @owner_token_hash, @source_url, @source_title)
     ON CONFLICT(node_key) DO UPDATE SET
       text = excluded.text,
       author = excluded.author,
       updated_at = excluded.updated_at,
       edit_password_hash = excluded.edit_password_hash,
+      owner_token_hash = excluded.owner_token_hash,
       source_url = excluded.source_url,
       source_title = excluded.source_title
   `);
@@ -148,7 +166,7 @@ export function createNodeInfoStore(dbPath, { autoApprove = false } = {}) {
     return { author, nodeKey, sourceTitle, sourceUrl, text };
   }
 
-  function publish(entry, now = Date.now(), passwordHash = null) {
+  function publish(entry, now = Date.now(), passwordHash = null, ownerTokenHash = null) {
     const value = validEntry(entry);
     if (!value) return null;
     upsertRow.run({
@@ -156,6 +174,7 @@ export function createNodeInfoStore(dbPath, { autoApprove = false } = {}) {
       created_at: now,
       edit_password_hash: passwordHash,
       node_key: value.nodeKey,
+      owner_token_hash: ownerTokenHash,
       source_title: value.sourceTitle,
       source_url: value.sourceUrl,
       text: value.text,
@@ -192,6 +211,7 @@ export function createNodeInfoStore(dbPath, { autoApprove = false } = {}) {
           created_at: current?.created_at || now,
           edit_password_hash: current?.edit_password_hash || null,
           node_key: value.nodeKey,
+          owner_token_hash: current?.owner_token_hash || null,
           source_title: value.sourceTitle,
           source_url: value.sourceUrl,
           text: value.text,
@@ -212,7 +232,7 @@ export function createNodeInfoStore(dbPath, { autoApprove = false } = {}) {
           author: pending.author,
           nodeKey: key,
           text: pending.text,
-        }, now, pending.edit_password_hash || current?.edit_password_hash || null);
+        }, now, current?.edit_password_hash || null, current?.owner_token_hash || null);
         deletePending.run(key);
         return published;
       })();
@@ -239,42 +259,36 @@ export function createNodeInfoStore(dbPath, { autoApprove = false } = {}) {
       if (!value) return null;
       const password = String(entry?.password || "");
       if (password && !validPassword(password)) return { error: "invalid_password" };
+      const token = String(entry?.token || "");
       const current = selectOne.get(value.nodeKey);
       if (!current) {
+        const manageToken = randomBytes(32).toString("base64url");
         return {
-          info: publish(value, now, password ? hashPassword(password) : null),
+          info: publish(value, now, password ? hashPassword(password) : null, hashOwnerToken(manageToken)),
+          manageToken,
           status: "published",
         };
       }
-      if (!current.edit_password_hash) {
-        if (autoApprove) {
-          const info = db.transaction(() => {
-            const published = publish(value, now, password ? hashPassword(password) : null);
-            deletePending.run(value.nodeKey);
-            return published;
-          })();
-          return { info, status: "published" };
+      const tokenValid = ownerTokenMatches(token, current.owner_token_hash);
+      let passwordValid = false;
+      if (password && current.edit_password_hash) {
+        if (passwordMatches(password, current.edit_password_hash)) passwordValid = true;
+        else if (!tokenValid) return { error: "bad_password" };
+      }
+      if (tokenValid || passwordValid) {
+        let manageToken = null;
+        let ownerTokenHash = current.owner_token_hash || null;
+        if (!ownerTokenHash) {
+          manageToken = randomBytes(32).toString("base64url");
+          ownerTokenHash = hashOwnerToken(manageToken);
         }
-        upsertPending.run({
-          author: value.author,
-          created_at: now,
-          edit_password_hash: password ? hashPassword(password) : null,
-          ip_hash: String(entry?.ipHash || "").slice(0, 32),
-          node_key: value.nodeKey,
-          text: value.text,
-        });
-        return { info: mapPendingRow(selectPendingOne.get(value.nodeKey)), status: "pending" };
-      }
-      if (!passwordMatches(password, current.edit_password_hash)) {
-        return { error: "bad_password" };
-      }
-      if (autoApprove) {
+        const passwordHash = current.edit_password_hash || (password ? hashPassword(password) : null);
         const info = db.transaction(() => {
-          const published = publish(value, now, current.edit_password_hash);
+          const published = publish(value, now, passwordHash, ownerTokenHash);
           deletePending.run(value.nodeKey);
           return published;
         })();
-        return { info, status: "published" };
+        return { info, manageToken, status: "published" };
       }
       upsertPending.run({
         author: value.author,

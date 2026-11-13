@@ -156,19 +156,18 @@ přihlašovací údaje zůstávají pouze na serveru.
   `X-Data-Stale: 1`.
 - `GET /api/node-info?key=<public_key>` vrací zveřejněný uživatelský text k nodu
   (hardware, baterie, panel, anténa…). `POST /api/node-info` s JSON
-  `{key, text, author}` jej uloží; první text u nodu se zveřejní ihned.
-  Další změna čeká na schválení správcem (`status: "pending"`), pokud není
-  zapnuté `NODE_INFO_AUTO_APPROVE=1`; prázdná hodnota zdědí
-  `PHOTO_AUTO_APPROVE`. Při auto-approve se změny zveřejní ihned a správce je
-  může dodatečně upravit nebo smazat. Heslo je nepovinné: když ho
-  uživatel při prvním vložení zadá (6–128 znaků), server uloží jen scrypt hash
-  a další úpravu povolí jen se správným heslem. Bez hesla může změny navrhovat
-  kdokoli; bez auto-approve je stále schvaluje správce. Text má 5–1000 znaků, autor je
-  nepovinný. Ukládá se do `data/node-info.sqlite`; správce v `/admin/node-info`
-  schvaluje, zamítá, maže a může text i přímo upravit (uložení se zveřejní
-  ihned a zruší případný čekající návrh). Platí limit 10 úprav/h, 50/den
-  a 5s pauza na IP. Zapomenuté heslo se neobnovuje; správce může info smazat
-  a uživatel jej založí znovu.
+  `{key, text, author, password?, token?}` jej uloží; první text u nodu se
+  zveřejní ihned a prohlížeč dostane **token vlastníka**, který si uloží.
+  Majitel (platný token nebo správné heslo) zveřejní další změnu ihned;
+  změna bez platného tokenu a bez správného hesla se uloží jako návrh
+  (`status: "pending"`) a zveřejní se až po schválení správcem. Heslo je
+  nepovinné (6–128 znaků); server ukládá jen scrypt hash a umožní jím správu
+  i z jiného zařízení. Text má 5–1000 znaků, autor je nepovinný. Ukládá se do
+  `data/node-info.sqlite`; správce v `/admin/node-info` schvaluje, zamítá,
+  maže a může text i přímo upravit (uložení se zveřejní ihned a zruší případný
+  čekající návrh). Platí limit 10 úprav/h, 50/den a 5s pauza na IP.
+  Zapomenutý token ani heslo se neobnovují; správce může info smazat a
+  uživatel jej založí znovu.
 - `GET /admin/repeater-import` je ruční import textu z veřejné DokuWiki
   stránky `meshcore.cz/repeatery:<slug>`. Server zkusí odvodit slug z názvu
   nodu, zobrazí náhled a správce potvrdí uložení. Importuje se jen text,

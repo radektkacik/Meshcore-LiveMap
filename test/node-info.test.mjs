@@ -20,6 +20,7 @@ test("node info publishes the first text and requires approval for changes", () 
     assert.equal(first.info.nodeKey, key);
     assert.match(first.info.text, /RAK v2/);
     assert.equal(first.info.author, "Petr");
+    assert.match(first.manageToken, /^[A-Za-z0-9_-]{32,}$/);
     assert.equal(store.count(), 1);
     assert.equal(store.pendingCount(), 0);
 
@@ -32,15 +33,14 @@ test("node info publishes the first text and requires approval for changes", () 
     assert.equal(wrong.error, "bad_password");
     assert.equal(store.pendingCount(), 0);
 
-    const second = store.submit({
+    const proposal = store.submit({
       author: "Jana",
       nodeKey: key,
-      password: "tajne123",
       text: "Anténa: 5 dBi",
     }, 2000);
-    assert.equal(second.status, "pending");
-    assert.equal(second.info.author, "Jana");
-    assert.match(second.info.currentText, /RAK v2/);
+    assert.equal(proposal.status, "pending");
+    assert.equal(proposal.info.author, "Jana");
+    assert.match(proposal.info.currentText, /RAK v2/);
     assert.equal(store.get(key).text, "Hardware: RAK v2\nBaterie: 10 Ah\nPanel: 20 W");
     assert.equal(store.pendingCount(), 1);
     assert.equal(store.listPending(10).length, 1);
@@ -51,6 +51,16 @@ test("node info publishes the first text and requires approval for changes", () 
     assert.equal(approved.updatedAt, 3000);
     assert.equal(store.pendingCount(), 0);
     assert.equal(store.get(key).text, "Anténa: 5 dBi");
+
+    const ownerEdit = store.submit({
+      author: "Petr",
+      nodeKey: key,
+      password: "tajne123",
+      text: "Anténa: 7 dBi",
+    }, 4000);
+    assert.equal(ownerEdit.status, "published");
+    assert.equal(store.get(key).text, "Anténa: 7 dBi");
+    assert.equal(store.pendingCount(), 0);
 
     assert.equal(store.remove(key), true);
     assert.equal(store.get(key), null);
@@ -68,7 +78,7 @@ test("node info can import text with an external source and preserve protection"
   const key = "f".repeat(64);
   try {
     store.submit({ nodeKey: key, password: "tajne123", text: "Původní text" }, 1000);
-    store.submit({ nodeKey: key, password: "tajne123", text: "Čekající návrh" }, 2000);
+    store.submit({ nodeKey: key, text: "Čekající návrh" }, 2000);
     const imported = store.importText(key, {
       author: "meshcore.cz",
       sourceTitle: "rip5.meshcore.cz",
@@ -94,7 +104,7 @@ test("node info can reject a pending change and keeps the published text", () =>
   const key = "b".repeat(64);
   try {
     store.submit({ nodeKey: key, password: "tajne123", text: "Původní text" }, 1000);
-    store.submit({ nodeKey: key, password: "tajne123", text: "Navrhovaná změna" }, 2000);
+    store.submit({ nodeKey: key, text: "Navrhovaná změna" }, 2000);
     assert.equal(store.reject(key), true);
     assert.equal(store.get(key).text, "Původní text");
     assert.equal(store.pendingCount(), 0);
@@ -111,7 +121,7 @@ test("admin can edit published node info and clears a pending change", () => {
   const key = "e".repeat(64);
   try {
     store.submit({ nodeKey: key, password: "tajne123", text: "Původní text" }, 1000);
-    store.submit({ nodeKey: key, password: "tajne123", text: "Čekající návrh" }, 2000);
+    store.submit({ nodeKey: key, text: "Čekající návrh" }, 2000);
     assert.equal(store.pendingCount(), 1);
     const updated = store.adminUpdate(key, { author: "Admin", text: "Text od admina" }, 3000);
     assert.equal(updated.text, "Text od admina");
@@ -145,23 +155,29 @@ test("node info can be left without a password and still requires approval for c
   }
 });
 
-test("node info auto-approves changes when enabled", () => {
+test("node info owner token publishes and non-owner proposals wait for approval", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-node-info-"));
-  const store = createNodeInfoStore(join(directory, "node-info.sqlite"), { autoApprove: true });
-  const protectedKey = "1".repeat(64);
-  const openKey = "2".repeat(64);
+  const store = createNodeInfoStore(join(directory, "node-info.sqlite"));
+  const key = "3".repeat(64);
   try {
-    store.submit({ nodeKey: protectedKey, password: "tajne123", text: "Původní text" }, 1000);
-    const changed = store.submit({ nodeKey: protectedKey, password: "tajne123", text: "Nová verze" }, 2000);
-    assert.equal(changed.status, "published");
-    assert.equal(store.get(protectedKey).text, "Nová verze");
-    assert.equal(store.pendingCount(), 0);
-    assert.equal(store.submit({ nodeKey: protectedKey, password: "spatne", text: "Špatná verze" }, 3000).error, "bad_password");
+    const first = store.submit({ nodeKey: key, text: "Původní text" }, 1000);
+    assert.equal(first.status, "published");
+    assert.match(first.manageToken, /^[A-Za-z0-9_-]{32,}$/);
 
-    store.submit({ nodeKey: openKey, text: "Bez hesla" }, 1000);
-    const openChange = store.submit({ nodeKey: openKey, text: "Změna bez hesla" }, 2000);
-    assert.equal(openChange.status, "published");
-    assert.equal(store.get(openKey).text, "Změna bez hesla");
+    const ownerEdit = store.submit({ nodeKey: key, text: "Text majitele", token: first.manageToken }, 2000);
+    assert.equal(ownerEdit.status, "published");
+    assert.equal(store.get(key).text, "Text majitele");
+    assert.equal(store.pendingCount(), 0);
+
+    const proposal = store.submit({ nodeKey: key, text: "Návrh cizího" }, 3000);
+    assert.equal(proposal.status, "pending");
+    assert.equal(store.get(key).text, "Text majitele");
+    const approved = store.approve(key, 4000);
+    assert.equal(approved.text, "Návrh cizího");
+
+    const afterApproval = store.submit({ nodeKey: key, text: "Další text majitele", token: first.manageToken }, 5000);
+    assert.equal(afterApproval.status, "published");
+    assert.equal(store.get(key).text, "Další text majitele");
     assert.equal(store.pendingCount(), 0);
   } finally {
     store.close();
