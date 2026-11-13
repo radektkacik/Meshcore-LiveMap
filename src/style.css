@@ -1131,6 +1131,7 @@ html[data-theme="dark"] .node-tooltip,
 html[data-theme="dark"] .route-tooltip { color: #e6ecef !important; background: #161d24 !important; border-color: var(--line) !important; }
 html[data-theme="dark"] .node-tooltip-photo { background: #26323a; }
 html[data-theme="dark"] .node-tooltip-hint { color: #9fb0b8; }
+html[data-theme="dark"] .node-tooltip-health .node-tooltip-sample { color: #9fb0b8; }
 html[data-theme="dark"] .node-tooltip::before,
 html[data-theme="dark"] .route-tooltip::before { border-top-color: #161d24 !important; }
 html[data-theme="dark"] .node-popup .leaflet-popup-content-wrapper,
@@ -1399,7 +1400,8 @@ html[data-theme="dark"] { --muted: #95a8a0; }
 html[data-theme="dark"] .node-compact-key { background: #1b232b; border-color: var(--line); }
 html[data-theme="dark"] .node-compact-key code { color: #c3d0d6; }
 
-.node-tooltip-health { display: flex; align-items: center; gap: 4px; margin-top: 3px; color: #3f584e; font: 500 calc(10px * var(--font-scale))/calc(14px * var(--font-scale)) "DM Mono", monospace; white-space: nowrap; }
+.node-tooltip-health { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 3px; color: #3f584e; font: 500 calc(10px * var(--font-scale))/calc(14px * var(--font-scale)) "DM Mono", monospace; white-space: nowrap; }
+.node-tooltip-health .node-tooltip-sample { flex-basis: 100%; color: #71867a; font-size: calc(9px * var(--font-scale)); white-space: normal; }
 .node-tooltip-health .node-health-battery { width: 14px; height: 14px; color: #899990; }
 .node-tooltip-health .node-health-thermometer,
 .node-tooltip-health .node-health-humidity-icon { width: 12px; height: 12px; color: #667b70; }

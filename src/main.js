@@ -506,6 +506,11 @@ function nodeHealthSnapshot(node) {
   return { battery, current, health, humidity, temperature };
 }
 
+function nodeHealthSampleText(node) {
+  const observedAt = node?.health?.observedAt;
+  return observedAt ? t("node.healthSampleTime", { time: formatDateTimeShort(observedAt) }) : "";
+}
+
 function nodeHealthMatchesFilter(node, filter) {
   if (filter === "all") return true;
   const status = nodeHealthStatusCode(node);
@@ -522,6 +527,7 @@ function nodeHealthMapTitle(node) {
     battery == null ? null : `${t("node.battery")}: ${formatDecimal(battery / 1000, 2)} V`,
     status === "unknown" ? t("common.unknown") : t(`node.healthBattery.${status}`),
     temperature == null ? null : `${t("node.temperature")}: ${formatDecimal(temperature, 1)} °C`,
+    nodeHealthSampleText(node),
   ].filter(Boolean).join(" · ");
 }
 
@@ -1906,6 +1912,7 @@ function nodeTrafficDetails(node, { compact = false } = {}) {
     [t("node.charging"), health ? (health.charging ? t("common.yes") : t("common.no")) : null],
     [t("node.externalPower"), health ? (health.externalPower ? t("common.yes") : t("common.no")) : null],
     [t("node.healthObserved"), health?.observedAt ? formatNodeDate(health.observedAt) : null],
+    [t("node.healthSample"), health?.observedAt ? formatDateTimeShort(health.observedAt) : null],
   ], "", "node-traffic-details");
 }
 
@@ -1956,6 +1963,7 @@ function nodeHealthBadge(node) {
     statusText,
     temperatureText ? `${t("node.temperature")}: ${temperatureText}` : null,
     humidityText ? `${t("node.humidity")}: ${humidityText}` : null,
+    nodeHealthSampleText(node),
   ].filter(Boolean).join(" · ");
   return `<button type="button" class="node-health-badge ${status}" data-health-node-key="${escapeHtml(node.public_key.toUpperCase())}" title="${escapeHtml(title)}" aria-label="${escapeHtml(title)}">
     ${battery == null ? "" : batteryStatusIcon(status)}
@@ -3169,11 +3177,13 @@ function nodeHealthTooltip(node) {
   const { battery, temperature, humidity } = nodeHealthSnapshot(node);
   if (battery == null && temperature == null && humidity == null) return "";
   const status = nodeHealthStatusCode(node);
+  const sample = nodeHealthSampleText(node);
   return `<span class="node-tooltip-health ${status}">
     ${battery == null ? "" : batteryStatusIcon(status)}
     ${battery == null ? "" : `<span>${escapeHtml(formatDecimal(battery / 1000, 2))} V</span>`}
     ${temperature == null ? "" : `${THERMOMETER_ICON}<span>${escapeHtml(formatDecimal(temperature, 1))} °C</span>`}
     ${humidity == null ? "" : `${HUMIDITY_ICON}<span>${escapeHtml(formatNumber(humidity))} %</span>`}
+    ${sample ? `<span class="node-tooltip-sample">${escapeHtml(sample)}</span>` : ""}
   </span>`;
 }
 
