@@ -15,7 +15,7 @@
 }
 
 html[data-font-size="xsmall"] { --font-scale: 0.82; }
-html[data-font-size="small"] { --font-scale: 0.97; }
+html[data-font-size="small"] { --font-scale: 0.9375; }
 html[data-font-size="normal"] { --font-scale: 1; }
 html[data-font-size="large"] { --font-scale: 1.14; }
 html[data-font-size="xlarge"] { --font-scale: 1.28; }
