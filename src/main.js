@@ -1337,7 +1337,7 @@ function handleMeasureClick(latlng) {
     return;
   }
   const [start, end] = measurePoints;
-  const distance = formatMeasurementDistance(haversineKm(start.lat, start.lng, end.lat, end.lng));
+  const distance = formatMeasurementDistance(start.distanceTo(end) / 1000);
   L.polyline([start, end], {
     color: "#246fc4",
     dashArray: "7 6",
