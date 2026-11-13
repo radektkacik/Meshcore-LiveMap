@@ -1463,4 +1463,5 @@ html[data-theme="dark"] .node-label-health .node-label-values.tone-cold { color:
     scroll-behavior: auto !important;
     transition-duration: 0.001ms !important;
   }
+  .route-svg-path { animation-duration: 1s !important; animation-iteration-count: infinite !important; }
 }

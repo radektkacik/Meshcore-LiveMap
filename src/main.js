@@ -5503,7 +5503,6 @@ const CANVAS_ANIMATION_FPS = 10;
 
 function routeAnimationEnabled() {
   return state.animationEnabled
-    && !REDUCED_MOTION
     && !routesSuppressed()
     && state.activeRoutes.size > 0
     && !document.hidden;
