@@ -623,6 +623,7 @@ async function handleRequest(request, response) {
       nodeKey: key,
       password,
       text,
+      token: String(payload?.token || ""),
     });
     if (!result) {
       sendJson(response, 400, { error: "Info se nepodařilo uložit." });

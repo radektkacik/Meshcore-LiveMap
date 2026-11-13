@@ -327,6 +327,7 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(savedInfo.status, "published");
     assert.equal(savedInfo.info.nodeKey, infoKey);
     assert.match(savedInfo.info.text, /Baterie/);
+    assert.match(savedInfo.manageToken, /^[A-Za-z0-9_-]{32,}$/);
     const readInfo = await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json();
     assert.equal(readInfo.info.author, "Tester");
     const badPassword = await fetch(`http://127.0.0.1:${appPort}/api/node-info`, {
@@ -338,7 +339,7 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     const ownerChange = await fetch(`http://127.0.0.1:${appPort}/api/node-info`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ author: "Jana", key: infoKey, password: "tajne123", text: "Anténa: 5 dBi" }),
+      body: JSON.stringify({ author: "Jana", key: infoKey, token: savedInfo.manageToken, text: "Anténa: 5 dBi" }),
     });
     assert.equal(ownerChange.status, 200);
     assert.equal((await ownerChange.json()).status, "published");
