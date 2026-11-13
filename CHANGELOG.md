@@ -3,9 +3,9 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-13 — Trend sítě, barvy hodnot a přístupnost (beta)
-- Prostředí: beta
-- Build: 20261113-1533-1a53248
+## 2026-11-13 — Trend sítě, barvy hodnot a přístupnost
+- Prostředí: produkce i beta
+- Build: 20261113-1535-b538da9
 - Statistiky nově obsahují trend počtu nodů a observerů za 7 dní.
 - Hodnoty teploty a napětí na mapě jsou trvale barevně odlišené: běžné/OK hodnoty zůstávají černé, problémové jsou červené (nízká/kritická baterie, teplota pod 0 °C nebo nad 40 °C).
 - Větší touch targety na mobilu a swipe mezi taby detailu nodu.
