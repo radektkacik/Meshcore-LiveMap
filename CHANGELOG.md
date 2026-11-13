@@ -3,9 +3,9 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-13 — Vlastnictví uživatelského info (beta)
-- Prostředí: beta
-- Build: 20261113-1832-a972441
+## 2026-11-13 — Vlastnictví uživatelského info
+- Prostředí: produkce i beta
+- Build: 20261113-1850-f311deb
 - První text se zveřejní ihned a prohlížeč dostane token vlastníka.
 - Heslo je nepovinné; token nebo správné heslo umožní zveřejnit další změnu ihned.
 - Bez platného tokenu a bez správného hesla se změna uloží jako návrh ke schválení správcem.
