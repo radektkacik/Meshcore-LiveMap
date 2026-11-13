@@ -3,9 +3,9 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-13 — Čas vzorku health (beta)
-- Prostředí: beta
-- Build: 20261113-1701-69dc5bd
+## 2026-11-13 — Čas vzorku health
+- Prostředí: produkce i beta
+- Build: 20261113-1705-1f2c751
 - U telemetrie je vidět čas posledního přijatého health vzorku.
 - Čas je v tooltipu nodu, v health badge na mapě a v detailu nodu.
 
