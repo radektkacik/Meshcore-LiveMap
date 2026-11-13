@@ -3,6 +3,12 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-13 — Odkaz na GitHub v patičce mapy (beta)
+- Prostředí: beta
+- Build: 20261113-0941-11b795d
+- V patičce mapy přibyl odkaz **GitHub** na veřejný repozitář projektu.
+- Odkaz se otevírá v nové kartě a má český i anglický tooltip.
+
 ## 2026-11-12 — Bez problikávání hodnot na mapě
 - Prostředí: produkce i beta
 - Build: 20261112-1159-61b2f68
