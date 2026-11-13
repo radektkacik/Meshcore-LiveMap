@@ -3,6 +3,12 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-13 — Oprava animace tras (beta)
+- Prostředí: beta
+- Build: 20261113-1556-eeee079
+- Respektování `prefers-reduced-motion` už automaticky nevypíná animaci tras.
+- O animaci rozhoduje přepínač **Animovat trasy**; ostatní animace a zoom mapy zůstávají při omezení pohybu vypnuté.
+
 ## 2026-11-13 — Menší písmo o 1 px větší
 - Prostředí: produkce i beta
 - Build: 20261113-1547-024d84e
