@@ -51,7 +51,7 @@ export function createState({ elements, initialRetentionMs, allowedRoles }) {
     observersLoading: false,
     healthOnly: false,
     healthStatus: "all",
-    showHealthValues: localStorage.getItem("meshcoreShowHealthValues") === "true",
+    showHealthValues: localStorage.getItem("meshcoreShowHealthValues") !== "false",
     healthValueMode: localStorage.getItem("meshcoreHealthValueMode") === "voltage" ? "voltage" : "temperature",
     hideRoutes: localStorage.getItem("meshcoreHideRoutes") === "true",
     inactiveOnly: false,
