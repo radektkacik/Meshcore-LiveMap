@@ -637,7 +637,12 @@ async function handleRequest(request, response) {
       return;
     }
     notifyNodeInfo(result.info, result.status);
-    sendJson(response, 200, { info: result.info, ok: true, status: result.status });
+    sendJson(response, 200, {
+      info: result.info,
+      ...(result.manageToken ? { manageToken: result.manageToken } : {}),
+      ok: true,
+      status: result.status,
+    });
     return;
   }
 
