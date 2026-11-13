@@ -45,7 +45,7 @@ function mapPendingRow(row) {
   };
 }
 
-export function createNodeInfoStore(dbPath) {
+export function createNodeInfoStore(dbPath, { autoApprove = false } = {}) {
   const db = openSqliteStore(dbPath);
   db.exec(`
     CREATE TABLE IF NOT EXISTS node_info (
@@ -247,6 +247,14 @@ export function createNodeInfoStore(dbPath) {
         };
       }
       if (!current.edit_password_hash) {
+        if (autoApprove) {
+          const info = db.transaction(() => {
+            const published = publish(value, now, password ? hashPassword(password) : null);
+            deletePending.run(value.nodeKey);
+            return published;
+          })();
+          return { info, status: "published" };
+        }
         upsertPending.run({
           author: value.author,
           created_at: now,
@@ -259,6 +267,14 @@ export function createNodeInfoStore(dbPath) {
       }
       if (!passwordMatches(password, current.edit_password_hash)) {
         return { error: "bad_password" };
+      }
+      if (autoApprove) {
+        const info = db.transaction(() => {
+          const published = publish(value, now, current.edit_password_hash);
+          deletePending.run(value.nodeKey);
+          return published;
+        })();
+        return { info, status: "published" };
       }
       upsertPending.run({
         author: value.author,

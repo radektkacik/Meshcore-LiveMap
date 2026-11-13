@@ -145,6 +145,30 @@ test("node info can be left without a password and still requires approval for c
   }
 });
 
+test("node info auto-approves changes when enabled", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-node-info-"));
+  const store = createNodeInfoStore(join(directory, "node-info.sqlite"), { autoApprove: true });
+  const protectedKey = "1".repeat(64);
+  const openKey = "2".repeat(64);
+  try {
+    store.submit({ nodeKey: protectedKey, password: "tajne123", text: "Původní text" }, 1000);
+    const changed = store.submit({ nodeKey: protectedKey, password: "tajne123", text: "Nová verze" }, 2000);
+    assert.equal(changed.status, "published");
+    assert.equal(store.get(protectedKey).text, "Nová verze");
+    assert.equal(store.pendingCount(), 0);
+    assert.equal(store.submit({ nodeKey: protectedKey, password: "spatne", text: "Špatná verze" }, 3000).error, "bad_password");
+
+    store.submit({ nodeKey: openKey, text: "Bez hesla" }, 1000);
+    const openChange = store.submit({ nodeKey: openKey, text: "Změna bez hesla" }, 2000);
+    assert.equal(openChange.status, "published");
+    assert.equal(store.get(openKey).text, "Změna bez hesla");
+    assert.equal(store.pendingCount(), 0);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("node info rejects invalid node keys and empty text", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-node-info-"));
   const store = createNodeInfoStore(join(directory, "node-info.sqlite"));

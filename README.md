@@ -156,12 +156,14 @@ přihlašovací údaje zůstávají pouze na serveru.
   `X-Data-Stale: 1`.
 - `GET /api/node-info?key=<public_key>` vrací zveřejněný uživatelský text k nodu
   (hardware, baterie, panel, anténa…). `POST /api/node-info` s JSON
-  `{key, text, author}` jej uloží; první text u nodu se zveřejní ihned,
-  každá další změna čeká na schválení správcem (`status: "pending"`) a veřejný
-  text se nemění, dokud ji správce neschválí. Heslo je nepovinné: když ho
+  `{key, text, author}` jej uloží; první text u nodu se zveřejní ihned.
+  Další změna čeká na schválení správcem (`status: "pending"`), pokud není
+  zapnuté `NODE_INFO_AUTO_APPROVE=1`; prázdná hodnota zdědí
+  `PHOTO_AUTO_APPROVE`. Při auto-approve se změny zveřejní ihned a správce je
+  může dodatečně upravit nebo smazat. Heslo je nepovinné: když ho
   uživatel při prvním vložení zadá (6–128 znaků), server uloží jen scrypt hash
   a další úpravu povolí jen se správným heslem. Bez hesla může změny navrhovat
-  kdokoli, ale stále je schvaluje správce. Text má 5–1000 znaků, autor je
+  kdokoli; bez auto-approve je stále schvaluje správce. Text má 5–1000 znaků, autor je
   nepovinný. Ukládá se do `data/node-info.sqlite`; správce v `/admin/node-info`
   schvaluje, zamítá, maže a může text i přímo upravit (uložení se zveřejní
   ihned a zruší případný čekající návrh). Platí limit 10 úprav/h, 50/den
