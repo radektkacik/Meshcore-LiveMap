@@ -4049,6 +4049,94 @@ async function loadStats() {
   }
 }
 
+let networkTrendLoadedAt = 0;
+let networkTrendLoading = false;
+
+function renderNetworkTrend(series) {
+  const points = Array.isArray(series) ? series : [];
+  const chart = elements.statsNetworkTrendChart;
+  chart.replaceChildren();
+  chart.setAttribute("aria-label", t("stats.networkTrendAria"));
+  const width = 300;
+  const height = 64;
+  const pad = 5;
+  const values = points.flatMap((point) => [
+    point.nodes == null ? null : Number(point.nodes),
+    point.observers == null ? null : Number(point.observers),
+  ]).filter((value) => Number.isFinite(value));
+  if (!values.length) {
+    const empty = svgNode("text", { class: "trend-empty", x: width / 2, y: height / 2, "text-anchor": "middle" });
+    empty.textContent = t("stats.networkTrendEmpty");
+    chart.appendChild(empty);
+    elements.statsNetworkTrendSummary.textContent = "";
+    elements.statsNetworkTrend.hidden = false;
+    return;
+  }
+  const maxValue = Math.max(1, ...values);
+  const x = (index) => pad + (points.length <= 1 ? 0 : (index / (points.length - 1)) * (width - pad * 2));
+  const y = (value) => height - pad - (value / maxValue) * (height - pad * 2);
+  for (const ratio of [0.5, 1]) {
+    const lineY = height - pad - ratio * (height - pad * 2);
+    chart.appendChild(svgNode("line", {
+      class: "trend-grid",
+      x1: pad,
+      x2: width - pad,
+      y1: lineY,
+      y2: lineY,
+    }));
+  }
+  const linePath = (key) => {
+    let path = "";
+    let drawing = false;
+    points.forEach((point, index) => {
+      const value = point[key] == null ? NaN : Number(point[key]);
+      if (!Number.isFinite(value)) {
+        drawing = false;
+        return;
+      }
+      path += `${drawing ? "L" : "M"}${x(index).toFixed(1)},${y(value).toFixed(1)}`;
+      drawing = true;
+    });
+    return path;
+  };
+  chart.appendChild(svgNode("path", {
+    class: "trend-line-observers",
+    d: linePath("observers"),
+    fill: "none",
+  }));
+  chart.appendChild(svgNode("path", {
+    class: "trend-line-nodes",
+    d: linePath("nodes"),
+    fill: "none",
+  }));
+  const latest = (key) => {
+    for (let index = points.length - 1; index >= 0; index -= 1) {
+      if (points[index][key] != null && Number.isFinite(Number(points[index][key]))) return Number(points[index][key]);
+    }
+    return null;
+  };
+  elements.statsNetworkTrendSummary.textContent = t("stats.networkTrendSummary", {
+    nodes: latest("nodes") == null ? "—" : formatNumber(latest("nodes")),
+    observers: latest("observers") == null ? "—" : formatNumber(latest("observers")),
+  });
+  elements.statsNetworkTrend.hidden = false;
+}
+
+async function loadNetworkTrend(force = false) {
+  if (networkTrendLoading) return;
+  if (!force && networkTrendLoadedAt && Date.now() - networkTrendLoadedAt < 5 * 60_000) return;
+  networkTrendLoading = true;
+  try {
+    const data = await getJson("/api/packet-history?hours=168");
+    renderNetworkTrend(data.series || []);
+    networkTrendLoadedAt = Date.now();
+  } catch (error) {
+    console.error("Trend sítě se nepodařilo načíst", error);
+  } finally {
+    networkTrendLoading = false;
+  }
+}
+
 function svgNode(name, attributes = {}) {
   const node = document.createElementNS("http://www.w3.org/2000/svg", name);
   for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, String(value));
@@ -7000,6 +7088,9 @@ const statsPanel = createStatsController({
   state,
 });
 statsPanel.bind();
+elements.statsToggle.addEventListener("click", () => {
+  if (!elements.statsPanel.hidden) void loadNetworkTrend();
+});
 
 function shortNodePrefix(node) {
   const size = Math.max(Number(node.multi_byte_max_hash_size) || 0, Number(node.hash_size) || 0) || 2;

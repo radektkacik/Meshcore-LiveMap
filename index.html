@@ -301,6 +301,13 @@
           </header>
           <div id="network-summary" class="network-summary"></div>
           <div class="stats-health-summary" id="stats-health-summary" aria-label="Souhrn stavu baterií"></div>
+          <div class="stats-network-trend" id="stats-network-trend" hidden>
+            <div class="stats-network-trend-head">
+              <span>Síť v čase</span>
+              <small id="stats-network-trend-summary"></small>
+            </div>
+            <svg id="stats-network-trend-chart" viewBox="0 0 300 64" role="img" aria-label="Vývoj počtu nodů a observerů za posledních 7 dní"></svg>
+          </div>
           <details class="stats-help">
             <summary><span class="stats-help-icon" aria-hidden="true">i</span> Vysvětlení metrik</summary>
             <div class="stats-help-panel">

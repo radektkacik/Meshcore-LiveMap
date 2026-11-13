@@ -1254,9 +1254,13 @@ async function handleRequest(request, response) {
         const hour = since + index * bucketMs;
         const sample = byHour.get(hour);
         const value = sample ? Number(sample.packetsLastHour) : NaN;
+        const nodes = sample ? Number(sample.totalNodes) : NaN;
+        const observers = sample ? Number(sample.totalObservers) : NaN;
         series.push({
           hour,
           packets: Number.isFinite(value) ? value : null,
+          nodes: Number.isFinite(nodes) ? nodes : null,
+          observers: Number.isFinite(observers) ? observers : null,
           sampledAt: sample?.sampledAt || null,
         });
       }
