@@ -416,7 +416,7 @@
           </label>
           <label>
             <span id="node-info-password-label"></span>
-            <input id="node-info-password" type="password" maxlength="128" autocomplete="off" required />
+            <input id="node-info-password" type="password" maxlength="128" autocomplete="off" />
           </label>
           <label>
             <span id="node-info-author-label"></span>
@@ -425,6 +425,7 @@
           <p id="node-info-status" class="feedback-status" role="status"></p>
           <p id="node-info-note" class="photo-note"></p>
           <div class="feedback-actions">
+            <button type="button" id="node-info-delete" class="delete" hidden></button>
             <button type="button" id="node-info-cancel"></button>
             <button type="submit" id="node-info-submit"></button>
           </div>

@@ -345,6 +345,27 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal((await ownerChange.json()).status, "published");
     const ownerRead = await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${infoKey}`)).json();
     assert.equal(ownerRead.info.text, "Anténa: 5 dBi");
+    const deleteInfoKey = "9".repeat(64);
+    const deleteCreate = await fetch(`http://127.0.0.1:${appPort}/api/node-info`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: deleteInfoKey, text: "Info ke smazání" }),
+    });
+    const deleteCreated = await deleteCreate.json();
+    assert.equal(deleteCreated.status, "published");
+    const deleteWrong = await fetch(`http://127.0.0.1:${appPort}/api/node-info/delete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: deleteInfoKey, token: "wrong" }),
+    });
+    assert.equal(deleteWrong.status, 403);
+    const deleteOk = await fetch(`http://127.0.0.1:${appPort}/api/node-info/delete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: deleteInfoKey, token: deleteCreated.manageToken }),
+    });
+    assert.equal(deleteOk.status, 200);
+    assert.equal((await (await fetch(`http://127.0.0.1:${appPort}/api/node-info?key=${deleteInfoKey}`)).json()).info, null);
     const changeInfo = await fetch(`http://127.0.0.1:${appPort}/api/node-info`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

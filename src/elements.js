@@ -192,6 +192,7 @@ export const elements = {
   nodeInfoAuthorLabel: document.querySelector("#node-info-author-label"),
   nodeInfoCancel: document.querySelector("#node-info-cancel"),
   nodeInfoClose: document.querySelector("#node-info-close"),
+  nodeInfoDelete: document.querySelector("#node-info-delete"),
   nodeInfoDialog: document.querySelector("#node-info-dialog"),
   nodeInfoForm: document.querySelector("#node-info-form"),
   nodeInfoNode: document.querySelector("#node-info-node"),

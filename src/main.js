@@ -1668,6 +1668,8 @@ function renderNodeInfoDialog() {
     : (hasCurrent ? t("nodeInfo.noteUnprotected") : t("nodeInfo.noteNew"));
   elements.nodeInfoSubmit.textContent = t("nodeInfo.submit");
   elements.nodeInfoCancel.textContent = t("nodeInfo.cancel");
+  elements.nodeInfoDelete.textContent = t("nodeInfo.delete");
+  elements.nodeInfoDelete.hidden = !hasCurrent;
   const target = state.nodeInfoTarget;
   elements.nodeInfoNode.textContent = target
     ? `${target.name || t("common.unknownNode")} · ${target.key.slice(0, 8).toUpperCase()}`
@@ -7010,6 +7012,39 @@ elements.nodeInfoDialog.addEventListener("click", (event) => {
 elements.nodeInfoDialog.addEventListener("close", () => {
   state.nodeInfoTarget = null;
   setNodeInfoStatus("");
+});
+elements.nodeInfoDelete.addEventListener("click", async () => {
+  if (state.nodeInfoSaving) return;
+  const target = state.nodeInfoTarget;
+  if (!target) return;
+  if (!window.confirm(t("nodeInfo.deleteConfirm"))) return;
+  state.nodeInfoSaving = true;
+  elements.nodeInfoDelete.disabled = true;
+  elements.nodeInfoSubmit.disabled = true;
+  setNodeInfoStatus(t("nodeInfo.deleting"));
+  try {
+    await postJson("/api/node-info/delete", {
+      key: target.key,
+      password: elements.nodeInfoPassword.value,
+      token: nodeInfoTokens.get(target.key),
+    });
+    nodeInfoTokens.forget(target.key);
+    state.nodeInfoCache.set(target.key, { at: Date.now(), info: null });
+    for (const section of document.querySelectorAll(`.node-user-info[data-node-key="${target.key}"]`)) {
+      renderNodeInfoPreview(section, null);
+      renderNodeInfoSection(section, null);
+    }
+    setNodeInfoStatus(t("nodeInfo.deleted"));
+    setTimeout(() => {
+      if (elements.nodeInfoDialog.open) elements.nodeInfoDialog.close();
+    }, 1_200);
+  } catch (error) {
+    setNodeInfoStatus(error.message || t("nodeInfo.failed"), true);
+  } finally {
+    state.nodeInfoSaving = false;
+    elements.nodeInfoDelete.disabled = false;
+    elements.nodeInfoSubmit.disabled = false;
+  }
 });
 elements.nodeInfoForm.addEventListener("submit", async (event) => {
   event.preventDefault();

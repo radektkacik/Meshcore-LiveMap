@@ -185,6 +185,27 @@ test("node info owner token publishes and non-owner proposals wait for approval"
   }
 });
 
+test("node info owner can delete with token or password", () => {
+  const directory = mkdtempSync(join(tmpdir(), "meshcore-node-info-"));
+  const store = createNodeInfoStore(join(directory, "node-info.sqlite"));
+  const tokenKey = "4".repeat(64);
+  const passwordKey = "5".repeat(64);
+  try {
+    const first = store.submit({ nodeKey: tokenKey, text: "Token info" }, 1000);
+    assert.equal(store.removeOwned(tokenKey, { token: "wrong" }).error, "forbidden");
+    assert.equal(store.removeOwned(tokenKey, { token: first.manageToken }).removed, true);
+    assert.equal(store.get(tokenKey), null);
+
+    store.submit({ nodeKey: passwordKey, password: "tajne123", text: "Password info" }, 1000);
+    assert.equal(store.removeOwned(passwordKey, { password: "spatne" }).error, "forbidden");
+    assert.equal(store.removeOwned(passwordKey, { password: "tajne123" }).removed, true);
+    assert.equal(store.get(passwordKey), null);
+  } finally {
+    store.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("node info rejects invalid node keys and empty text", () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-node-info-"));
   const store = createNodeInfoStore(join(directory, "node-info.sqlite"));

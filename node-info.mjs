@@ -254,6 +254,20 @@ export function createNodeInfoStore(dbPath) {
         return removed;
       })();
     },
+    removeOwned: (nodeKey, { token = "", password = "" } = {}) => {
+      const key = String(nodeKey || "").toLowerCase();
+      const current = selectOne.get(key);
+      if (!current) return { error: "not_found" };
+      const tokenValid = ownerTokenMatches(String(token || ""), current.owner_token_hash);
+      const passwordValid = Boolean(password && current.edit_password_hash && passwordMatches(password, current.edit_password_hash));
+      if (!tokenValid && !passwordValid) return { error: "forbidden" };
+      const removed = db.transaction(() => {
+        const changes = deleteRow.run(key).changes > 0;
+        deletePending.run(key);
+        return changes;
+      })();
+      return { removed };
+    },
     submit: (entry, now = Date.now()) => {
       const value = validEntry(entry);
       if (!value) return null;

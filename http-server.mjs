@@ -647,6 +647,45 @@ async function handleRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/node-info/delete") {
+    if (request.method !== "POST") {
+      methodNotAllowed(response, "POST");
+      return;
+    }
+    const ip = clientIp(request);
+    const rate = checkNodeInfo(ip);
+    if (!rate.ok) {
+      sendJson(response, 429, { error: rate.message }, { "Retry-After": String(rate.retryAfter) });
+      return;
+    }
+    let payload;
+    try {
+      payload = JSON.parse(await readBody(request, 8192));
+    } catch {
+      sendJson(response, 400, { error: "Neplatný požadavek." });
+      return;
+    }
+    const key = String(payload?.key || "").trim().toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(key)) {
+      sendJson(response, 400, { error: "Neplatný klíč nodu." });
+      return;
+    }
+    const result = nodeInfoStore.removeOwned(key, {
+      password: String(payload?.password || ""),
+      token: String(payload?.token || ""),
+    });
+    if (result.error === "not_found") {
+      sendJson(response, 404, { error: "Info nodu nebylo nalezeno." });
+      return;
+    }
+    if (result.error === "forbidden") {
+      sendJson(response, 403, { error: "Info může smazat jen majitel (token nebo heslo) nebo správce." });
+      return;
+    }
+    sendJson(response, 200, { deleted: true, ok: true });
+    return;
+  }
+
   if (url.pathname === "/api/photos/config") {
     if (request.method !== "GET" && request.method !== "HEAD") {
       methodNotAllowed(response, "GET, HEAD");

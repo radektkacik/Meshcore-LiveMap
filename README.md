@@ -158,9 +158,10 @@ přihlašovací údaje zůstávají pouze na serveru.
   (hardware, baterie, panel, anténa…). `POST /api/node-info` s JSON
   `{key, text, author, password?, token?}` jej uloží; první text u nodu se
   zveřejní ihned a prohlížeč dostane **token vlastníka**, který si uloží.
-  Majitel (platný token nebo správné heslo) zveřejní další změnu ihned;
-  změna bez platného tokenu a bez správného hesla se uloží jako návrh
-  (`status: "pending"`) a zveřejní se až po schválení správcem. Heslo je
+  Majitel (platný token nebo správné heslo) zveřejní další změnu ihned
+  a může info také smazat; změna bez platného tokenu a bez správného hesla se
+  uloží jako návrh (`status: "pending"`) a zveřejní se až po schválení
+  správcem. Smazat info může také správce. Heslo je
   nepovinné (6–128 znaků); server ukládá jen scrypt hash a umožní jím správu
   i z jiného zařízení. Text má 5–1000 znaků, autor je nepovinný. Ukládá se do
   `data/node-info.sqlite`; správce v `/admin/node-info` schvaluje, zamítá,
