@@ -452,6 +452,7 @@ function normalizeOrigin(value) {
 const LIVE_READ_PATHS = new Set([
   "/api/history",
   "/api/packet-routes",
+  "/api/packets",
   "/api/recent",
   "/api/resolve-hops",
   "/api/search",
