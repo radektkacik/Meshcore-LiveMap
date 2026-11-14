@@ -219,7 +219,8 @@ přihlašovací údaje zůstávají pouze na serveru.
   `PACKET_MAX_ROWS` a `PACKET_COLLECT_MS`).
 - `GET /api/feedback/public` vrací veřejnou knihu návštěv — jen zprávy označené
   `isPublic`, bez kontaktu, IP a user-agenta. Správce může zprávu skrýt přes
-  `GET /api/feedback/moderate?token=<FEEDBACK_TOKEN>&id=<id>&hidden=0|1`.
+  `POST /api/feedback/moderate` s tokenem, ID a hodnotou `hidden` v těle
+  požadavku; GET mutace jsou zakázané.
 - `POST /api/feedback` ukládá zpětnou vazbu (typ, zpráva, nepovinný kontakt) do
   `data/feedback.sqlite`; platí limity: 15 zpráv za hodinu na IP, pauza 30 s mezi
   zprávami, 300 za den celkem a strop 5 000 uložených zpráv. IP se bere z socketu a `X-Forwarded-For`
@@ -267,9 +268,12 @@ přihlašovací údaje zůstávají pouze na serveru.
   `PHOTO_TOKEN`. Po přihlášení drží server HttpOnly session cookie 12 hodin
   (`ADMIN_SESSION_SECRET`, `ADMIN_SESSION_TTL_MS`). Sekce: přehled, fotky
   (čekající/schválené/skryté/vše/žádosti) a zpětná vazba. Staré tokenové URL
-  `/api/photos/view?token=…` a `/api/feedback/view?token=…` zůstávají funkční.
+  `/api/photos/view?token=…` a `/api/feedback/view?token=…` zůstávají funkční pro čtení.
 - Moderace fotek je i nadále dostupná na `GET /api/photos/view?token=<PHOTO_TOKEN>`
-  (fallback `FEEDBACK_TOKEN`), odkud lze fotky schválit, skrýt nebo smazat; volba
+  (fallback `FEEDBACK_TOKEN`), odkud lze fotky schválit, skrýt nebo smazat; samotné
+  akce se odesílají přes `POST /api/photos/moderate` s tokenem v těle požadavku
+  (nebo přes admin session). Stejně tak změna viditelnosti zpětné vazby používá
+  `POST /api/feedback/moderate`; GET mutace nejsou povolené. Volba
   náhledu je v nové administraci `/admin/photos`. Soubory i
   `photos.sqlite` jsou v `uploads/` mimo `data/`, takže se nedostanou do záloh.
   Platí limity: 8 fotek/hodinu na IP, 30/den, 12 fotek na nod, 2 GB celkem
@@ -327,6 +331,11 @@ přihlašovací údaje zůstávají pouze na serveru.
   `/api/packets`, `/api/packet-routes`, `/api/search`, `/api/resolve-hops`)
   jsou stejnou kontrolou omezena na vlastní domény. Cizí server je nemůže dál
   šířit.
+- Drahá veřejná čtení mají per-IP limit na minutu: detail nodu, výšky, seznam
+  fotek, nody, health a historie nodu i paketů. Limity lze upravit přes
+  `NODE_DETAIL_RATE_LIMIT`, `ELEVATION_RATE_LIMIT`, `PHOTO_LIST_RATE_LIMIT`,
+  `NODES_RATE_LIMIT`, `NODE_HEALTH_RATE_LIMIT`, `NODE_HISTORY_RATE_LIMIT`
+  a `PACKET_HISTORY_RATE_LIMIT`.
 - Hledání v HUD prohledává nody, observery, hashe paketů (živé trasy i lokální
   archiv) a veřejné kanály; výsledek se otevře přímo na mapě. Tlačítko Export
   stáhne nody, observery nebo právě zobrazené trasy jako CSV (UTF-8, středník)

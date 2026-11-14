@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { join, normalize } from "node:path";
-import { hashIp, methodNotAllowed } from "./http-utils.mjs";
+import { hashIp, methodNotAllowed, safeEqualText } from "./http-utils.mjs";
 import { detectImage, PhotoError } from "./photos.mjs";
 import { fetchRepeaterPage, findRepeaterPage, validRepeaterSlug } from "./repeater-pages.mjs";
 
@@ -27,8 +27,15 @@ export function createHttpRequestHandler(runtime) {
   cachedNodeByKey,
   checkAdminLogin,
   checkComment,
+  checkElevation,
   checkFeedback,
+  checkNodeDetail,
+  checkNodeHealth,
+  checkNodeHistory,
   checkNodeInfo,
+  checkNodes,
+  checkPacketHistory,
+  checkPhotoList,
   checkPhotoManage,
   checkPhotoReport,
   checkPhotoUpload,
@@ -128,6 +135,15 @@ function requestVoterHash(request) {
   const voter = String(request.headers["x-photo-voter"] || "").trim();
   if (!/^[A-Za-z0-9_-]{16,128}$/.test(voter)) return "";
   return createHash("sha256").update(voter).digest("hex");
+}
+
+function enforceReadRate(request, response, limiter) {
+  const rate = limiter(clientIp(request));
+  if (rate.ok) return true;
+  sendJson(response, 429, {
+    error: rate.message || "Příliš mnoho požadavků, zkuste to později.",
+  }, { "Retry-After": String(rate.retryAfter) });
+  return false;
 }
 
 function publicPhoto(photo, summary = {}) {
@@ -917,6 +933,7 @@ async function handleRequest(request, response) {
       methodNotAllowed(response, "GET, HEAD");
       return;
     }
+    if (!enforceReadRate(request, response, checkPhotoList)) return;
     const names = photoNodeNames();
     const entries = photoStore.listApprovedAll(2000);
     const summaries = photoVotingEnabled
@@ -936,7 +953,7 @@ async function handleRequest(request, response) {
   }
 
   if (url.pathname === "/api/photos/view") {
-    if (!photoToken || url.searchParams.get("token") !== photoToken) {
+    if (!photoToken || !safeEqualText(url.searchParams.get("token") || "", photoToken)) {
       response.writeHead(404).end("Not Found");
       return;
     }
@@ -952,22 +969,51 @@ async function handleRequest(request, response) {
   }
 
   if (url.pathname === "/api/photos/moderate") {
-    if (!photoToken || url.searchParams.get("token") !== photoToken) {
+    if (request.method !== "POST") {
+      methodNotAllowed(response, "POST");
+      return;
+    }
+    const form = await readAdminForm(request);
+    if (!form) {
+      response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Bad Request");
+      return;
+    }
+    const admin = adminSessionValid(request);
+    const token = String(form.get("token") || "");
+    if (!admin && (!photoToken || !safeEqualText(token, photoToken))) {
       response.writeHead(404).end("Not Found");
       return;
     }
-    const id = String(url.searchParams.get("id") || "");
-    const reportId = String(url.searchParams.get("report") || "");
-    const action = String(url.searchParams.get("action") || "");
-    const status = ["pending", "approved", "hidden", "all", "reports"].includes(url.searchParams.get("status"))
-      ? url.searchParams.get("status")
+    const id = String(form.get("id") || "");
+    const reportId = String(form.get("report") || "");
+    const action = String(form.get("action") || "");
+    const requestedStatus = String(form.get("status") || "");
+    const status = ["pending", "approved", "hidden", "all", "reports"].includes(requestedStatus)
+      ? requestedStatus
       : "pending";
+    if (action === "delete" || action === "approve" || action === "hide") {
+      if (!/^[0-9a-f-]{36}$/.test(id)) {
+        response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Invalid photo");
+        return;
+      }
+    } else if (action === "dismiss") {
+      if (!/^\d+$/.test(reportId)) {
+        response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Invalid report");
+        return;
+      }
+    } else {
+      response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Invalid action");
+      return;
+    }
     if (action === "delete") photoStore.remove(id);
     else if (action === "approve") photoStore.setStatus(id, "approved");
     else if (action === "hide") photoStore.setStatus(id, "hidden");
     else if (action === "dismiss") photoStore.resolveReport(reportId);
     response.writeHead(303, {
-      Location: `view?token=${encodeURIComponent(photoToken)}&status=${encodeURIComponent(status)}`,
+      "Cache-Control": "no-store",
+      Location: admin
+        ? `${adminBasePath}/photos?status=${encodeURIComponent(status)}`
+        : `view?token=${encodeURIComponent(photoToken)}&status=${encodeURIComponent(status)}`,
     });
     response.end();
     return;
@@ -1085,7 +1131,7 @@ async function handleRequest(request, response) {
     const photo = photoStore.get(id);
     const token = url.searchParams.get("token") || "";
     const admin = adminSessionValid(request);
-    if (!photo || (photo.status !== "approved" && !admin && (!photoToken || token !== photoToken))) {
+    if (!photo || (photo.status !== "approved" && !admin && (!photoToken || !safeEqualText(token, photoToken)))) {
       response.writeHead(404).end("Not Found");
       return;
     }
@@ -1114,6 +1160,7 @@ async function handleRequest(request, response) {
       methodNotAllowed(response, "GET");
       return;
     }
+    if (!enforceReadRate(request, response, checkNodeDetail)) return;
     const key = String(url.searchParams.get("key") || "").trim().toLowerCase();
     if (!/^[0-9a-f]{64}$/.test(key)) {
       sendJson(response, 400, { error: "Neplatný klíč nodu." });
@@ -1272,16 +1319,42 @@ async function handleRequest(request, response) {
       response.end(JSON.stringify({ ok: true, id }));
       return;
     }
-    if (!feedbackToken || url.searchParams.get("token") !== feedbackToken) {
-      response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not found");
+    if (isModerate) {
+      if (request.method !== "POST") {
+        methodNotAllowed(response, "POST");
+        return;
+      }
+      const form = await readAdminForm(request);
+      if (!form) {
+        response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Bad Request");
+        return;
+      }
+      const admin = adminSessionValid(request);
+      const token = String(form.get("token") || "");
+      if (!admin && (!feedbackToken || !safeEqualText(token, feedbackToken))) {
+        response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not found");
+        return;
+      }
+      const id = Number(form.get("id"));
+      if (!Number.isSafeInteger(id) || id <= 0) {
+        response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Invalid entry");
+        return;
+      }
+      const hidden = form.get("hidden") !== "0";
+      feedbackStore.setHidden(id, hidden);
+      response.writeHead(303, {
+        "Cache-Control": "no-store",
+        Location: admin ? `${adminBasePath}/feedback` : `view?token=${encodeURIComponent(feedbackToken)}`,
+      });
+      response.end();
       return;
     }
-    if (isModerate) {
-      const id = Number(url.searchParams.get("id"));
-      const hidden = url.searchParams.get("hidden") !== "0";
-      if (Number.isFinite(id)) feedbackStore.setHidden(id, hidden);
-      response.writeHead(303, { Location: `/api/feedback/view?token=${encodeURIComponent(feedbackToken)}` });
-      response.end();
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      methodNotAllowed(response, isView ? "GET, HEAD" : "GET, HEAD, POST");
+      return;
+    }
+    if (!feedbackToken || !safeEqualText(url.searchParams.get("token") || "", feedbackToken)) {
+      response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" }).end("Not found");
       return;
     }
     const entries = feedbackStore.list(200);
@@ -1337,6 +1410,7 @@ async function handleRequest(request, response) {
       methodNotAllowed(response, "GET");
       return;
     }
+    if (!enforceReadRate(request, response, checkPacketHistory)) return;
     const hoursParam = url.searchParams.has("hours") ? Number(url.searchParams.get("hours")) : NaN;
     const hours = Number.isFinite(hoursParam) ? Math.min(Math.max(1, Math.round(hoursParam)), 8760) : 24;
     const granularity = hours <= 168 ? "hour" : "day";
@@ -1424,6 +1498,7 @@ async function handleRequest(request, response) {
       methodNotAllowed(response, "GET");
       return;
     }
+    if (!enforceReadRate(request, response, checkNodeHistory)) return;
     const key = String(url.searchParams.get("key") || "").toLowerCase();
     if (!/^[0-9a-f]{64}$/.test(key)) {
       sendJson(response, 400, { error: "Neplatný klíč uzlu." });
@@ -1440,6 +1515,7 @@ async function handleRequest(request, response) {
       methodNotAllowed(response, "GET");
       return;
     }
+    if (!enforceReadRate(request, response, checkNodeHealth)) return;
     const key = String(url.searchParams.get("key") || "").toLowerCase();
     if (!/^[0-9a-f]{64}$/.test(key)) {
       sendJson(response, 400, { error: "Neplatný klíč uzlu." });
@@ -1502,6 +1578,7 @@ async function handleRequest(request, response) {
       methodNotAllowed(response, "GET");
       return;
     }
+    if (!enforceReadRate(request, response, checkElevation)) return;
     const lats = (url.searchParams.get("latitude") || "").split(",").filter((value) => value.trim() !== "");
     const lons = (url.searchParams.get("longitude") || "").split(",").filter((value) => value.trim() !== "");
     if (!lats.length || lats.length !== lons.length || lats.length > elevationMaxPoints) {
@@ -1549,6 +1626,9 @@ async function handleRequest(request, response) {
       return;
     }
 
+    const isNodes = url.pathname === "/api/nodes";
+    if (isNodes && !enforceReadRate(request, response, checkNodes)) return;
+
     const controller = new AbortController();
     const isStatsPath = url.pathname === "/api/stats" && !url.search;
     let clientDisconnected = false;
@@ -1566,7 +1646,6 @@ async function handleRequest(request, response) {
     };
     response.once("close", disconnect);
 
-    const isNodes = url.pathname === "/api/nodes";
     const isResolve = url.pathname === "/api/resolve-hops";
     const isStats = isStatsPath;
     const cacheKey = `${url.pathname}${url.search}`;

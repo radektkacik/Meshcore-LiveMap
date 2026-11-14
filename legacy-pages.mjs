@@ -8,7 +8,12 @@ function renderFeedbackPage(entries, token) {
       entry.hidden ? "skryté" : null,
     ].filter(Boolean).join(" · ");
     const action = token
-      ? `<a class="mod" href="/api/feedback/moderate?token=${encodeURIComponent(token)}&id=${entry.id}&hidden=${entry.hidden ? 0 : 1}">${entry.hidden ? "Zobrazit" : "Skrýt"}</a>`
+      ? `<form method="post" action="moderate" class="mod-form">
+          <input type="hidden" name="token" value="${escapeHtml(token)}" />
+          <input type="hidden" name="id" value="${entry.id}" />
+          <input type="hidden" name="hidden" value="${entry.hidden ? 0 : 1}" />
+          <button type="submit" class="mod">${entry.hidden ? "Zobrazit" : "Skrýt"}</button>
+        </form>`
       : "";
     return `
     <li${entry.hidden ? ' class="is-hidden"' : ""}>
@@ -36,7 +41,9 @@ li { background:#fff; border:1px solid rgba(30,65,49,.16); border-radius:10px; p
 p { margin:0 0 6px; white-space:pre-wrap; }
 .contact { color:#49665b; font-size:12px; }
 .is-hidden { opacity:.55; }
+.mod-form { margin:0; }
 .mod { display:inline-block; margin-top:6px; font-size:12px; color:#078e62; }
+button.mod { padding:0; border:0; background:none; font:inherit; cursor:pointer; }
 .empty { color:#667b70; }
 </style>
 </head>
@@ -62,6 +69,11 @@ function renderPhotoPage(entries, reports, token, status, openReports) {
     const active = status === value ? ' class="active"' : "";
     return `<a${active} href="view?token=${encodeURIComponent(token)}&status=${value}">${labels[value]}</a>`;
   }).join("");
+  const actionForm = (fields, label, className) => `<form method="post" action="moderate" class="action-form">
+          <input type="hidden" name="token" value="${escapeHtml(token)}" />
+          ${Object.entries(fields).map(([name, value]) => `<input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(value)}" />`).join("")}
+          <button type="submit" class="${className}">${label}</button>
+        </form>`;
   const rows = entries.map((photo) => {
     const imageUrl = `../photos/${encodeURIComponent(photo.id)}?token=${encodeURIComponent(token)}`;
     const node = names.get(photo.nodeKey);
@@ -69,12 +81,12 @@ function renderPhotoPage(entries, reports, token, status, openReports) {
     const nodeLabel = node ? `${node} · ${photo.nodeKey.slice(0, 8)}` : photo.nodeKey.slice(0, 16);
     const actions = [
       photo.status !== "approved"
-        ? `<a class="approve" href="moderate?token=${encodeURIComponent(token)}&id=${encodeURIComponent(photo.id)}&action=approve&status=${encodeURIComponent(status)}">Schválit</a>`
+        ? actionForm({ action: "approve", id: photo.id, status }, "Schválit", "approve")
         : "",
       photo.status !== "hidden"
-        ? `<a class="hide" href="moderate?token=${encodeURIComponent(token)}&id=${encodeURIComponent(photo.id)}&action=hide&status=${encodeURIComponent(status)}">Skrýt</a>`
+        ? actionForm({ action: "hide", id: photo.id, status }, "Skrýt", "hide")
         : "",
-      `<a class="delete" href="moderate?token=${encodeURIComponent(token)}&id=${encodeURIComponent(photo.id)}&action=delete&status=${encodeURIComponent(status)}">Smazat</a>`,
+      actionForm({ action: "delete", id: photo.id, status }, "Smazat", "delete"),
     ].filter(Boolean).join("");
     return `
     <li class="photo ${escapeHtml(photo.status)}">
@@ -102,9 +114,9 @@ function renderPhotoPage(entries, reports, token, status, openReports) {
     const nodeLabel = node ? `${node} · ${report.photo.nodeKey.slice(0, 8)}` : (report.photo ? report.photo.nodeKey.slice(0, 16) : report.photoId.slice(0, 16));
     const actions = [
       report.photo
-        ? `<a class="delete" href="moderate?token=${encodeURIComponent(token)}&id=${encodeURIComponent(report.photoId)}&action=delete&status=reports">Smazat fotku</a>`
+        ? actionForm({ action: "delete", id: report.photoId, status: "reports" }, "Smazat fotku", "delete")
         : '<span class="missing">Fotka už není dostupná</span>',
-      `<a class="resolve" href="moderate?token=${encodeURIComponent(token)}&report=${encodeURIComponent(report.id)}&action=dismiss&status=reports">Zamítnout</a>`,
+      actionForm({ action: "dismiss", report: report.id, status: "reports" }, "Zamítnout", "resolve"),
     ].filter(Boolean).join("");
     return `
     <li class="photo report">
@@ -146,8 +158,10 @@ li.photo.hidden { opacity:.55; }
 .author { color:#49665b; font-size:12px; }
 .contact { color:#49665b; font-size:12px; }
 p { margin:4px 0; white-space:pre-wrap; }
-.actions { display:flex; gap:10px; margin-top:6px; }
-.actions a { font-size:12px; text-decoration:none; }
+.actions { display:flex; gap:10px; margin-top:6px; align-items:center; }
+.actions .action-form { margin:0; }
+.actions a, .actions button { font-size:12px; text-decoration:none; }
+.actions button { padding:0; border:0; background:none; font:inherit; cursor:pointer; }
 .approve { color:#078e62; }
 .resolve { color:#078e62; }
 .hide { color:#b27616; }

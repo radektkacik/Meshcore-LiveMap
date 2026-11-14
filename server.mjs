@@ -635,7 +635,23 @@ const checkNodeInfo = createRateLimiter({
   },
 });
 
+function createReadRateLimiter(envName, fallback) {
+  return createRateLimiter({
+    limit: Math.max(1, Number(process.env[envName] || fallback)),
+    windowMs: 60_000,
+    messages: {
+      limit: "Příliš mnoho požadavků za minutu, zkuste to později.",
+    },
+  });
+}
 
+const checkNodeDetail = createReadRateLimiter("NODE_DETAIL_RATE_LIMIT", 60);
+const checkElevation = createReadRateLimiter("ELEVATION_RATE_LIMIT", 60);
+const checkPhotoList = createReadRateLimiter("PHOTO_LIST_RATE_LIMIT", 120);
+const checkNodes = createReadRateLimiter("NODES_RATE_LIMIT", 120);
+const checkNodeHealth = createReadRateLimiter("NODE_HEALTH_RATE_LIMIT", 60);
+const checkNodeHistory = createReadRateLimiter("NODE_HISTORY_RATE_LIMIT", 60);
+const checkPacketHistory = createReadRateLimiter("PACKET_HISTORY_RATE_LIMIT", 60);
 
 function cachedNodeByKey(key) {
   if (!nodesCache?.body) return null;
@@ -1366,8 +1382,15 @@ const handleRequest = createHttpRequestHandler({
   cachedNodeByKey,
   checkAdminLogin,
   checkComment,
+  checkElevation,
   checkFeedback,
+  checkNodeDetail,
+  checkNodeHealth,
+  checkNodeHistory,
   checkNodeInfo,
+  checkNodes,
+  checkPacketHistory,
+  checkPhotoList,
   checkPhotoManage,
   checkPhotoReport,
   checkPhotoUpload,

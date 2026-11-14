@@ -109,6 +109,7 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       HOST: "127.0.0.1",
       MAX_PACKET_STREAMS: "1",
       NODES_CACHE_PATH: join(directory, "nodes-cache.json"),
+      NODE_DETAIL_RATE_LIMIT: "2",
       NODE_INFO_DB_PATH: join(directory, "node-info.sqlite"),
       NODE_INFO_COOLDOWN_MS: "0",
       COMMENTS_DB_PATH: join(directory, "comments.sqlite"),
@@ -200,6 +201,9 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal(nodeDetailBody.health.observers[0].observer_name, "Tester");
     assert.equal(nodeDetailBody.clockSkew.recentMedianSkewSec, 2);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/node-detail?key=short`)).status, 400);
+    const limitedNodeDetail = await fetch(`http://127.0.0.1:${appPort}/api/node-detail?key=${nodeDetailKey}`);
+    assert.equal(limitedNodeDetail.status, 429);
+    assert.match(limitedNodeDetail.headers.get("retry-after") || "", /^\d+$/);
     const photoConfig = await fetch(`http://127.0.0.1:${appPort}/api/photos/config`);
     assert.equal(photoConfig.status, 200);
     assert.deepEqual(await photoConfig.json(), { autoApprove: false });
@@ -472,7 +476,14 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos/${uploaded.id}`)).status, 404);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos/${uploaded.id}?token=photo-token`)).status, 200);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos/view?token=photo-token&status=pending`)).status, 200);
-    const approve = await fetch(`http://127.0.0.1:${appPort}/api/photos/moderate?token=photo-token&id=${uploaded.id}&action=approve&status=pending`, { redirect: "manual" });
+    const getModerate = await fetch(`http://127.0.0.1:${appPort}/api/photos/moderate?token=photo-token&id=${uploaded.id}&action=approve&status=pending`);
+    assert.equal(getModerate.status, 405);
+    const approve = await fetch(`http://127.0.0.1:${appPort}/api/photos/moderate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ action: "approve", id: uploaded.id, status: "pending", token: "photo-token" }),
+      redirect: "manual",
+    });
     assert.equal(approve.status, 303);
     const photoList = await (await fetch(`http://127.0.0.1:${appPort}/api/photos?key=${photoKey}`)).json();
     assert.equal(photoList.photos.length, 1);
@@ -573,10 +584,20 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       && call.payload?.callback_query_id === "callback-dismiss"));
     assert.ok(telegramCalls.some((call) => call.method === "editMessageText"
       && call.payload?.message_id === 77));
-    const hidden = await fetch(`http://127.0.0.1:${appPort}/api/photos/moderate?token=photo-token&id=${uploaded.id}&action=hide&status=approved`, { redirect: "manual" });
+    const hidden = await fetch(`http://127.0.0.1:${appPort}/api/photos/moderate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ action: "hide", id: uploaded.id, status: "approved", token: "photo-token" }),
+      redirect: "manual",
+    });
     assert.equal(hidden.status, 303);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/photos/${uploaded.id}`)).status, 404);
-    const deleted = await fetch(`http://127.0.0.1:${appPort}/api/photos/moderate?token=photo-token&id=${uploaded.id}&action=delete&status=reports`, { redirect: "manual" });
+    const deleted = await fetch(`http://127.0.0.1:${appPort}/api/photos/moderate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ action: "delete", id: uploaded.id, status: "reports", token: "photo-token" }),
+      redirect: "manual",
+    });
     assert.equal(deleted.status, 303);
     const reportsAfter = await fetch(`http://127.0.0.1:${appPort}/api/photos/view?token=photo-token&status=reports`);
     assert.doesNotMatch(await reportsAfter.text(), /Chci tuto fotku smazat/);
@@ -681,7 +702,8 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       body: JSON.stringify({ category: "bug", message: "Testovací zpráva" }),
     });
     assert.equal(feedbackPost.status, 200);
-    assert.equal((await feedbackPost.json()).ok, true);
+    const feedbackPostBody = await feedbackPost.json();
+    assert.equal(feedbackPostBody.ok, true);
     await new Promise((resolve) => setTimeout(resolve, 150));
     assert.ok(telegramMessages.some((text) => text.includes("Nová zpráva v knize návštěv")));
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/feedback`)).status, 404);
@@ -690,6 +712,17 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     const feedbackBody = await feedbackList.json();
     assert.equal(feedbackBody.count, 1);
     assert.equal(feedbackBody.entries[0].message, "Testovací zpráva");
+    const feedbackGetModerate = await fetch(`http://127.0.0.1:${appPort}/api/feedback/moderate?token=test-token&id=${feedbackPostBody.id}&hidden=1`);
+    assert.equal(feedbackGetModerate.status, 405);
+    const feedbackModerate = await fetch(`http://127.0.0.1:${appPort}/api/feedback/moderate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ hidden: "1", id: String(feedbackPostBody.id), token: "test-token" }),
+      redirect: "manual",
+    });
+    assert.equal(feedbackModerate.status, 303);
+    const hiddenFeedback = await (await fetch(`http://127.0.0.1:${appPort}/api/feedback?token=test-token`)).json();
+    assert.equal(hiddenFeedback.entries[0].hidden, 1);
 
     firstStream = request({ host: "127.0.0.1", port: appPort, path: "/events/packets" });
     let streamBody = "";
