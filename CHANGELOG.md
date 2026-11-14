@@ -3,6 +3,15 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-14 — Vektorové podklady OSM Vector a VersaTiles (beta)
+- Prostředí: beta
+- Build: 20261114-1650-2c141de
+- Přibyly podklady **OSM Vector** (OpenFreeMap) a **VersaTiles**.
+- MapLibre GL se načítá lazy až při prvním výběru vektorového podkladu.
+- Vektorové podklady se přepínají i podle světlého/tmavého tématu.
+- Stávající rastrové podklady OpenStreetMap, OpenTopoMap a satelit zůstávají.
+- Doplněna atribuce OpenFreeMap, OpenMapTiles, VersaTiles a úprava CSP.
+
 ## 2026-11-13 — Mazání uživatelského info majitelem
 - Prostředí: produkce i beta
 - Build: 20261113-1859-379233b
