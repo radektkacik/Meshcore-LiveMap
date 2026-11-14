@@ -360,7 +360,9 @@ jinak by typicky nebyly vidět žádné trace pakety.
 Viditelnost trasy je pevně nastavená na 60 sekund bez postupného slábnutí; po
 uplynutí této doby se trasa odstraní okamžitě. Současně se vykresluje vždy
 nejvýše 350 nejnovějších živých tras, aby špičkový provoz nezhoršil plynulost mapy. Trasy nad tento strop zůstávají dostupné v popupu nodu.
-Mapovým podkladem je standardní světlá mapa OpenStreetMap.
+Podklady lze přepínat: OpenStreetMap (raster), OpenFreeMap (vektor),
+VersaTiles (vektor), OpenTopoMap a satelitní snímky Esri. Vektorové podklady se
+načítají lazy přes MapLibre GL až při prvním přepnutí.
 
 Stejný paket může během floodu postupně získávat delší nebo odlišnou cestu.
 Aplikace proto novější cestou aktualizuje aktivní trasu danou kombinací hashe

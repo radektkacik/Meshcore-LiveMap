@@ -6,6 +6,7 @@ import { createExportController } from "./export-controller.js";
 import { createFeedbackController } from "./feedback-controller.js";
 import { escapeHtml } from "../html.mjs";
 import "leaflet/dist/leaflet.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 import "./style.css";
 import {
   archiveQuery,
@@ -404,8 +405,18 @@ const rasterBaseLayers = {
     maxZoom: 19,
   }),
 };
+const VECTOR_BASE_STYLES = {
+  vector: {
+    dark: "https://tiles.openfreemap.org/styles/dark",
+    light: "https://tiles.openfreemap.org/styles/liberty",
+  },
+  versatiles: {
+    dark: "https://tiles.versatiles.org/assets/styles/colorful-dark/style.json",
+    light: "https://tiles.versatiles.org/assets/styles/colorful/style.json",
+  },
+};
 const BASE_LAYER_KEY = "meshcoreBaseLayer";
-const BASE_KEYS = ["osm", "topo", "sat", "dark"];
+const BASE_KEYS = ["osm", "vector", "versatiles", "topo", "sat", "dark"];
 const storedBaseLayer = localStorage.getItem(BASE_LAYER_KEY);
 const requestedBaseLayer = INITIAL_PARAMS.get("base");
 const initialBaseLayer = BASE_KEYS.includes(requestedBaseLayer) ? requestedBaseLayer : storedBaseLayer;
@@ -414,30 +425,73 @@ let activeBaseLayerKey = BASE_KEYS.includes(initialBaseLayer)
   : (document.documentElement.dataset.theme === "dark" ? "dark" : "osm");
 let currentBaseLayer = null;
 let currentBaseLayerKey = null;
+let baseLayerRequestId = 0;
+let maplibreLayerFactory = null;
 
-function showBaseLayer(key) {
-  const resolvedKey = key === "osm" && document.documentElement.dataset.theme === "dark" ? "dark" : key;
-  if (currentBaseLayer && currentBaseLayerKey === resolvedKey) {
-    activeBaseLayerKey = key;
-    return;
+function isVectorBaseLayer(key) {
+  return Object.hasOwn(VECTOR_BASE_STYLES, key);
+}
+
+function loadMaplibreLayerFactory() {
+  if (!maplibreLayerFactory) {
+    maplibreLayerFactory = Promise.all([
+      import("maplibre-gl"),
+      import("@maplibre/maplibre-gl-leaflet"),
+      import("maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url"),
+    ]).then(([maplibre, leaflet, worker]) => {
+      maplibre.setWorkerUrl(worker.default);
+      return leaflet.maplibreGL;
+    }).catch((error) => {
+      maplibreLayerFactory = null;
+      throw error;
+    });
   }
+  return maplibreLayerFactory;
+}
+
+async function showBaseLayer(key) {
+  const theme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+  const resolvedKey = isVectorBaseLayer(key)
+    ? `${key}:${theme}`
+    : (key === "osm" && theme === "dark" ? "dark" : key);
+  if (currentBaseLayer && currentBaseLayerKey === resolvedKey) return;
+  const requestId = ++baseLayerRequestId;
+  let nextLayer = null;
+  if (isVectorBaseLayer(key)) {
+    const maplibreGL = await loadMaplibreLayerFactory();
+    if (requestId !== baseLayerRequestId) return;
+    nextLayer = maplibreGL({ style: VECTOR_BASE_STYLES[key][theme] });
+  } else {
+    nextLayer = rasterBaseLayers[resolvedKey];
+  }
+  if (!nextLayer) throw new Error(`Neznámý podklad mapy: ${key}`);
   if (currentBaseLayer) {
     map.removeLayer(currentBaseLayer);
     currentBaseLayer = null;
   }
-  currentBaseLayer = rasterBaseLayers[resolvedKey];
+  currentBaseLayer = nextLayer;
   currentBaseLayer.addTo(map);
   currentBaseLayerKey = resolvedKey;
-  activeBaseLayerKey = key;
 }
 
-function setBaseLayer(key) {
+async function setBaseLayer(key) {
   if (!BASE_KEYS.includes(key)) return;
-  showBaseLayer(key);
-  localStorage.setItem(BASE_LAYER_KEY, key);
+  const previousKey = activeBaseLayerKey;
+  activeBaseLayerKey = key;
   const buttonKey = key === "dark" ? "osm" : key;
   for (const button of elements.baseLayerButtons) {
     button.classList.toggle("active", button.dataset.layer === buttonKey);
+  }
+  try {
+    await showBaseLayer(key);
+    localStorage.setItem(BASE_LAYER_KEY, key);
+  } catch (error) {
+    activeBaseLayerKey = previousKey;
+    const previousButtonKey = previousKey === "dark" ? "osm" : previousKey;
+    for (const button of elements.baseLayerButtons) {
+      button.classList.toggle("active", button.dataset.layer === previousButtonKey);
+    }
+    throw error;
   }
 }
 
@@ -5713,21 +5767,26 @@ for (const button of elements.windowButtons) {
 for (const button of elements.baseLayerButtons) {
   button.classList.toggle("active", button.dataset.layer === activeBaseLayerKey);
   button.addEventListener("click", () => {
-    try {
-      setBaseLayer(button.dataset.layer);
-    } catch (error) {
+    void setBaseLayer(button.dataset.layer).catch((error) => {
       console.error("Podklad mapy se nepodařilo přepnout", error);
-    }
+    });
   });
 }
-setBaseLayer(activeBaseLayerKey);
+void setBaseLayer(activeBaseLayerKey).catch((error) => {
+  console.error("Výchozí podklad mapy se nepodařilo načíst", error);
+});
 
 function applyTheme(theme) {
   const next = theme === "dark" ? "dark" : "light";
   document.documentElement.dataset.theme = next;
   localStorage.setItem(THEME_KEY, next);
-  if (activeBaseLayerKey === "osm") setBaseLayer("osm");
-  else if (next === "light" && activeBaseLayerKey === "dark") setBaseLayer("osm");
+  if (activeBaseLayerKey === "osm") {
+    void setBaseLayer("osm").catch((error) => console.error("Podklad mapy se nepodařilo přepnout", error));
+  } else if (isVectorBaseLayer(activeBaseLayerKey)) {
+    void setBaseLayer(activeBaseLayerKey).catch((error) => console.error("Podklad mapy se nepodařilo přepnout", error));
+  } else if (next === "light" && activeBaseLayerKey === "dark") {
+    void setBaseLayer("osm").catch((error) => console.error("Podklad mapy se nepodařilo přepnout", error));
+  }
 }
 
 elements.themeToggle.addEventListener("click", () => {

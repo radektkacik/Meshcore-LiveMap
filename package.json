@@ -15,10 +15,12 @@
     "test:reference": "RUN_REFERENCE_TESTS=1 node --test test/reference-map.test.mjs"
   },
   "dependencies": {
+    "@maplibre/maplibre-gl-leaflet": "^0.1.4",
     "@michaelhart/meshcore-decoder": "^0.3.0",
     "better-sqlite3": "^11.10.0",
     "leaflet": "^1.9.4",
     "libheif-js": "^1.23.5",
+    "maplibre-gl": "^6.18.0",
     "mqtt": "^5.16.1",
     "qrcode": "^1.5.4"
   },

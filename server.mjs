@@ -207,7 +207,7 @@ const securityHeaders = {
   "Content-Security-Policy": [
     "default-src 'self'",
     "base-uri 'self'",
-    "connect-src 'self'",
+    "connect-src 'self' https://tiles.openfreemap.org https://tiles.versatiles.org",
     "font-src 'self' data: https://fonts.gstatic.com",
     "form-action 'self'",
     "frame-ancestors 'none'",
