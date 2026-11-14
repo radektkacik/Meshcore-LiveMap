@@ -472,6 +472,7 @@ async function showBaseLayer(key) {
   currentBaseLayer = nextLayer;
   currentBaseLayer.addTo(map);
   currentBaseLayerKey = resolvedKey;
+  if (IS_BETA && isVectorBaseLayer(key)) window.__vectorDebug = currentBaseLayer;
 }
 
 async function setBaseLayer(key) {
