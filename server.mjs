@@ -211,7 +211,7 @@ const securityHeaders = {
     "font-src 'self' data: https://fonts.gstatic.com",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.opentopomap.org https://server.arcgisonline.com",
+    "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.opentopomap.org https://server.arcgisonline.com https://tiles.openfreemap.org https://tiles.versatiles.org",
     "manifest-src 'self'",
     "object-src 'none'",
     "script-src 'self' 'wasm-unsafe-eval'",

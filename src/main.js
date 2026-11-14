@@ -491,10 +491,15 @@ async function setBaseLayer(key) {
     await showBaseLayer(key);
     localStorage.setItem(BASE_LAYER_KEY, key);
   } catch (error) {
-    activeBaseLayerKey = previousKey;
-    const previousButtonKey = previousKey === "dark" ? "osm" : previousKey;
+    const fallbackKey = currentBaseLayer ? previousKey : "osm";
+    activeBaseLayerKey = fallbackKey;
+    const fallbackButtonKey = fallbackKey === "dark" ? "osm" : fallbackKey;
     for (const button of elements.baseLayerButtons) {
-      button.classList.toggle("active", button.dataset.layer === previousButtonKey);
+      button.classList.toggle("active", button.dataset.layer === fallbackButtonKey);
+    }
+    if (!currentBaseLayer) {
+      await showBaseLayer("osm");
+      localStorage.setItem(BASE_LAYER_KEY, "osm");
     }
     throw error;
   }
