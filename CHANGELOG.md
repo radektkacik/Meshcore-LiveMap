@@ -3,6 +3,15 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-14 — Zápisová API jen z vlastních domén (beta)
+- Prostředí: beta
+- Build: 20261114-1701-32a69ad
+- `POST`, `PUT`, `PATCH` a `DELETE` ověřují `Origin`/`Referer` a `Host`.
+- Cizí server nebo reverse proxy dostane u zápisu **403**.
+- Týká se fotek, komentářů, node info, feedbacku, hlasování i správy fotek.
+- Telegram webhook zůstává výjimkou kvůli vlastnímu secret tokenu.
+- Povolené domény lze rozšířit přes `WRITE_ALLOWED_ORIGINS` a `WRITE_ALLOWED_HOSTS`.
+
 ## 2026-11-14 — Vektorové podklady OSM Vector a VersaTiles (beta)
 - Prostředí: beta
 - Build: 20261114-1650-2c141de
