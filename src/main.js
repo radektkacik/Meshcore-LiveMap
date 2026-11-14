@@ -1,11 +1,11 @@
-import L from "leaflet";
+import * as L from "./map-engine.js";
+import { BASE_MAPS, DEFAULT_BASE_MAP, LEGACY_BASE_MAPS } from "./base-maps.js";
 import QRCode from "qrcode";
 import { createState } from "./app-state.js";
 import { elements } from "./elements.js";
 import { createExportController } from "./export-controller.js";
 import { createFeedbackController } from "./feedback-controller.js";
 import { escapeHtml } from "../html.mjs";
-import "leaflet/dist/leaflet.css";
 import "./style.css";
 import {
   archiveQuery,
@@ -360,14 +360,11 @@ const map = L.map("map", {
   zoom: 7,
   minZoom: 6,
   maxZoom: MAX_MAP_ZOOM,
-  zoomControl: false,
-  preferCanvas: true,
   zoomAnimation: !REDUCED_MOTION,
   fadeAnimation: !REDUCED_MOTION,
-  markerZoomAnimation: !REDUCED_MOTION,
 });
 
-L.control.zoom({ position: "bottomleft" }).addTo(map);
+map.addZoomControl("bottom-left");
 
 const initialLatValue = INITIAL_PARAMS.get("lat");
 const initialLonValue = INITIAL_PARAMS.get("lon");
@@ -381,63 +378,35 @@ if (Number.isFinite(initialLat) && Number.isFinite(initialLon)
   map.setView([initialLat, initialLon], initialViewZoom);
 }
 
-const rasterBaseLayers = {
-  osm: L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "&copy; OpenStreetMap contributors",
-    maxZoom: 19,
-  }),
-  topo: L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-    attribution: "Map data &copy; OpenStreetMap contributors, SRTM | Map style &copy; OpenTopoMap (CC-BY-SA)",
-    maxZoom: MAX_MAP_ZOOM,
-    maxNativeZoom: 17,
-    subdomains: "abc",
-  }),
-  sat: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
-    attribution: "Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
-    className: "satellite-layer",
-    maxZoom: 19,
-    maxNativeZoom: 18,
-  }),
-  dark: L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "&copy; OpenStreetMap contributors",
-    className: "dark-basemap",
-    maxZoom: 19,
-  }),
-};
 const BASE_LAYER_KEY = "meshcoreBaseLayer";
-const BASE_KEYS = ["osm", "topo", "sat", "dark"];
-const storedBaseLayer = localStorage.getItem(BASE_LAYER_KEY);
-const requestedBaseLayer = INITIAL_PARAMS.get("base");
-const initialBaseLayer = BASE_KEYS.includes(requestedBaseLayer) ? requestedBaseLayer : storedBaseLayer;
-let activeBaseLayerKey = BASE_KEYS.includes(initialBaseLayer)
-  ? (initialBaseLayer === "dark" && document.documentElement.dataset.theme !== "dark" ? "osm" : initialBaseLayer)
-  : (document.documentElement.dataset.theme === "dark" ? "dark" : "osm");
-let currentBaseLayer = null;
-let currentBaseLayerKey = null;
+const BASE_KEYS = Object.keys(BASE_MAPS);
 
+function resolveBaseKey(value) {
+  const key = LEGACY_BASE_MAPS[value] ?? value;
+  return BASE_KEYS.includes(key) ? key : null;
+}
+
+let activeBaseLayerKey = resolveBaseKey(INITIAL_PARAMS.get("base"))
+  ?? resolveBaseKey(localStorage.getItem(BASE_LAYER_KEY))
+  ?? DEFAULT_BASE_MAP;
+let shownBaseStyle = null;
+
+// shows the base map in the current theme (the style is only reloaded when it changes)
 function showBaseLayer(key) {
-  const resolvedKey = key === "osm" && document.documentElement.dataset.theme === "dark" ? "dark" : key;
-  if (currentBaseLayer && currentBaseLayerKey === resolvedKey) {
-    activeBaseLayerKey = key;
-    return;
-  }
-  if (currentBaseLayer) {
-    map.removeLayer(currentBaseLayer);
-    currentBaseLayer = null;
-  }
-  currentBaseLayer = rasterBaseLayers[resolvedKey];
-  currentBaseLayer.addTo(map);
-  currentBaseLayerKey = resolvedKey;
+  const dark = document.documentElement.dataset.theme === "dark";
+  const styleKey = `${key}:${BASE_MAPS[key].themed && dark ? "dark" : "light"}`;
   activeBaseLayerKey = key;
+  if (shownBaseStyle === styleKey) return;
+  shownBaseStyle = styleKey;
+  map.setBaseStyle(BASE_MAPS[key].style(dark));
 }
 
 function setBaseLayer(key) {
   if (!BASE_KEYS.includes(key)) return;
   showBaseLayer(key);
   localStorage.setItem(BASE_LAYER_KEY, key);
-  const buttonKey = key === "dark" ? "osm" : key;
   for (const button of elements.baseLayerButtons) {
-    button.classList.toggle("active", button.dataset.layer === buttonKey);
+    button.classList.toggle("active", button.dataset.layer === key);
   }
 }
 
@@ -446,9 +415,6 @@ const routeLayer = L.layerGroup().addTo(map);
 const observerLayer = L.layerGroup();
 const selectedRouteLayer = L.layerGroup().addTo(map);
 const neighborLayer = L.layerGroup();
-map.createPane("snrLabelPane");
-map.getPane("snrLabelPane").style.zIndex = "450";
-map.getPane("snrLabelPane").style.pointerEvents = "none";
 const snrLabelLayer = L.layerGroup().addTo(map);
 let snrLabelTimer = null;
 let snrLabelSignature = "";
@@ -461,13 +427,6 @@ const losLayer = L.layerGroup().addTo(map);
 const losMarkerLayer = L.layerGroup().addTo(map);
 const nodeLabelLayer = L.layerGroup().addTo(map);
 const healthLayer = L.layerGroup().addTo(map);
-const routeRenderer = L.canvas({ padding: 0.3, tolerance: 8 });
-const routeSvgRenderer = L.svg({ padding: 0.3 });
-routeRenderer._dashOffset = 0;
-routeRenderer._fillStroke = function fillStroke(ctx, layer) {
-  ctx.lineDashOffset = layer.options.dashArray ? this._dashOffset : 0;
-  L.Canvas.prototype._fillStroke.call(this, ctx, layer);
-};
 
 function roleColor(role) {
   if (role === "repeater") return "#3b91d9";
@@ -662,7 +621,6 @@ function showRouteOnMap(route) {
   const segments = routeSegments(route.points);
   for (const segment of segments) {
     const line = L.polyline(segment, {
-      renderer: routeRenderer,
       color: route.color,
       interactive: true,
       lineCap: "round",
@@ -1087,8 +1045,7 @@ function showPacketOnMap(occurrences) {
     };
     for (const segment of routeSegments(route.points)) {
       const line = L.polyline(segment, {
-        renderer: routeRenderer,
-        color: route.color,
+          color: route.color,
         interactive: true,
         lineCap: "round",
         lineJoin: "round",
@@ -1733,7 +1690,6 @@ function showNodeNeighborsOnMap(node) {
     const count = Number(info.count) || 0;
     connections += count;
     const line = L.polyline([[node.lat, node.lon], [neighbor.lat, neighbor.lon]], {
-      className: "neighbor-link",
       color: "#078e62",
       opacity: 0.6,
       weight: 1.5 + 4 * Math.sqrt(count / maxCount),
@@ -3426,6 +3382,8 @@ function addNodeMarker(node) {
     })
     .bindPopup(() => nodePopup(entry.node, nodeIsActive(entry.node, nowMs(), NODE_ACTIVE_MS)), {
       className: "node-popup",
+      // clicks are handled below (stacked nodes, LOS and coverage modes)
+      openOnClick: false,
       maxWidth: 380,
       minWidth: 300,
     })
@@ -3453,7 +3411,6 @@ function addNodeMarker(node) {
       if (stack.length > 1) openNodeStack(stack, marker.getLatLng());
       else openNodeEntry(entry);
     });
-  marker.off("click", marker._openPopup, marker);
   const key = node.public_key?.toUpperCase();
   const allowed = nodePassesFilters(node);
   if (allowed) {
@@ -3525,7 +3482,7 @@ function buildShareUrl(node = null) {
   url.hash = "";
   url.searchParams.set("lat", map.getCenter().lat.toFixed(5));
   url.searchParams.set("lon", map.getCenter().lng.toFixed(5));
-  url.searchParams.set("z", String(map.getZoom()));
+  url.searchParams.set("z", String(Math.round(map.getZoom() * 100) / 100));
   url.searchParams.set("roles", [...state.allowedRoles].join(","));
   url.searchParams.set("sizes", [...state.allowedHashBytes].sort((a, b) => a - b).join(","));
   url.searchParams.set("lang", getLocale());
@@ -3544,7 +3501,6 @@ function buildShareUrl(node = null) {
   }
   url.searchParams.set("inactive", state.inactiveOnly ? "1" : "0");
   url.searchParams.set("observers", state.showObservers ? "1" : "0");
-  if (state.animationMode === "svg") url.searchParams.set("anim", "svg");
   const windowValue = routeWindowParam(state.routeWindowMs);
   if (windowValue) url.searchParams.set("window", windowValue);
   if (node) url.searchParams.set("node", String(node.public_key || "").toUpperCase());
@@ -4542,7 +4498,7 @@ function rebuildSnrLabels() {
           }),
           interactive: false,
           keyboard: false,
-          pane: "snrLabelPane",
+          zIndexOffset: 450,
         },
       ).addTo(snrLabelLayer);
       count += 1;
@@ -4554,9 +4510,6 @@ function renderRoute(route, { archive = false } = {}) {
   const segments = routeSegments(route.points);
   if (!segments.length) return null;
   const group = L.layerGroup().addTo(routeLayer);
-  const useSvg = state.animationMode === "svg";
-  const layerRenderer = useSvg ? routeSvgRenderer : routeRenderer;
-  const lineClass = useSvg && !archive ? "route-svg-path" : undefined;
   const weight = archive ? 2.5 : 4;
   const opacity = archive ? 0.42 : 1;
   const dashArray = archive ? "4 8" : "6 10";
@@ -4591,9 +4544,8 @@ function renderRoute(route, { archive = false } = {}) {
       }
       const snr = index - 1 < snrValues.length ? Number(snrValues[index - 1]) : null;
       lines.push(L.polyline([[previous.lat, previous.lon], [point.lat, point.lon]], {
-        renderer: layerRenderer,
+        animateDash: true,
         color: Number.isFinite(snr) ? snrColor(snr) : route.color,
-        className: lineClass,
         dashArray,
         lineCap: "round",
         lineJoin: "round",
@@ -4604,9 +4556,8 @@ function renderRoute(route, { archive = false } = {}) {
   } else {
     for (const segment of segments) {
       lines.push(L.polyline(segment, {
-        renderer: layerRenderer,
+        animateDash: true,
         color: route.color,
-        className: lineClass,
         dashArray,
         lineCap: "round",
         lineJoin: "round",
@@ -4638,18 +4589,8 @@ function renderRoute(route, { archive = false } = {}) {
     }
   }
 
-  if (useSvg && !archive) {
-    for (const line of lines) {
-      const element = typeof line.getElement === "function" ? line.getElement() : null;
-      if (!element) continue;
-      element.style.strokeDasharray = dashArray;
-      element.style.animation = state.animationEnabled ? "route-dash 1s linear infinite" : "none";
-    }
-  }
-
   const lastPoint = route.points.at(-1);
   const endpoint = L.circleMarker([lastPoint.lat, lastPoint.lon], {
-    renderer: layerRenderer,
     color: "#ffffff",
     fillColor: route.color,
     fillOpacity: 1,
@@ -5529,29 +5470,14 @@ function animateRoutes(timestamp) {
   routeAnimationFrame = null;
   if (!routeAnimationEnabled()) return;
   if (timestamp - lastRouteAnimationAt >= 1000 / CANVAS_ANIMATION_FPS) {
-    routeRenderer._dashOffset = -((timestamp / 75) % 16);
-    perf.measure("canvas", () => routeRenderer._redraw());
+    perf.measure("canvas", () => map.setDashOffset(-((timestamp / 75) % 16)));
     perf.hit("kresba");
     lastRouteAnimationAt = timestamp;
   }
   routeAnimationFrame = requestAnimationFrame(animateRoutes);
 }
 
-function applyLineAnimation(lines, animated) {
-  for (const line of lines || []) {
-    const element = typeof line.getElement === "function" ? line.getElement() : null;
-    if (element) element.style.animation = animated ? "route-dash 1s linear infinite" : "none";
-  }
-}
-
 function updateRouteAnimation() {
-  if (state.animationMode === "svg") {
-    if (routeAnimationFrame != null) cancelAnimationFrame(routeAnimationFrame);
-    routeAnimationFrame = null;
-    const animated = routeAnimationEnabled();
-    for (const rendered of state.activeRoutes.values()) applyLineAnimation(rendered.lines, animated);
-    return;
-  }
   if (!routeAnimationEnabled()) {
     if (routeAnimationFrame != null) cancelAnimationFrame(routeAnimationFrame);
     routeAnimationFrame = null;
@@ -5726,8 +5652,7 @@ function applyTheme(theme) {
   const next = theme === "dark" ? "dark" : "light";
   document.documentElement.dataset.theme = next;
   localStorage.setItem(THEME_KEY, next);
-  if (activeBaseLayerKey === "osm") setBaseLayer("osm");
-  else if (next === "light" && activeBaseLayerKey === "dark") setBaseLayer("osm");
+  showBaseLayer(activeBaseLayerKey);
 }
 
 elements.themeToggle.addEventListener("click", () => {
@@ -6115,7 +6040,6 @@ function clearLosCursor() {
 function showLosCursor(point) {
   if (!state.losCursorMarker) {
     state.losCursorMarker = L.circleMarker([point.lat, point.lon], {
-      renderer: routeSvgRenderer,
       radius: 6,
       color: "#ffffff",
       weight: 2,
@@ -6188,7 +6112,6 @@ function renderLosResult(a, b, result) {
     const from = result.profile[index];
     const to = result.profile[index + 1];
     L.polyline([[from.lat, from.lon], [to.lat, to.lon]], {
-      renderer: routeSvgRenderer,
       color: losSegmentColor(from, fraction),
       weight: 4,
       opacity: 0.95,
@@ -6314,7 +6237,7 @@ function setCoverageMode(on) {
   elements.coverageToggle.setAttribute("aria-pressed", String(next));
   elements.coverageHint.hidden = !next;
   elements.coverageHint.textContent = next ? t("coverage.hint") : "";
-  map.getContainer().style.cursor = next || state.losMode ? "crosshair" : "";
+  map.setCursor(next || state.losMode ? "crosshair" : "");
   if (!next) {
     clearTimeout(coverageTimer);
     cancelCoverageCompute();
@@ -6397,7 +6320,6 @@ function renderCoverage(result) {
   state.coverageOverlay = L.imageOverlay(canvas.toDataURL("image/png"), [[south, west], [north, east]], {
     opacity: 1,
     interactive: false,
-    className: "coverage-overlay",
   }).addTo(map);
   const area = result.visibleAreaKm2 + result.partialAreaKm2;
   elements.coverageSummary.textContent = t("coverage.summary", {
@@ -6495,7 +6417,7 @@ function setLosMode(on) {
   elements.losToggle.classList.toggle("active", state.losMode);
   elements.losToggle.setAttribute("aria-pressed", String(state.losMode));
   elements.losHint.hidden = !state.losMode;
-  map.getContainer().style.cursor = state.losMode ? "crosshair" : "";
+  map.setCursor(state.losMode ? "crosshair" : "");
   state.losPoints = [];
   state.losProfile = null;
   state.losSamples = null;
@@ -7144,7 +7066,6 @@ if (INITIAL_PARAMS.get("observers") === "1") {
 const initialLosLink = parseLosLink();
 
 async function start() {
-  console.info(`Route animation mode: ${state.animationMode}`);
   void checkServerBuild();
   restoreRouteCache();
   connectPacketStream();

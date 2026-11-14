@@ -17,8 +17,9 @@
   "dependencies": {
     "@michaelhart/meshcore-decoder": "^0.3.0",
     "better-sqlite3": "^11.10.0",
-    "leaflet": "^1.9.4",
     "libheif-js": "^1.23.5",
+    "maplibre-contour": "0.1.1",
+    "maplibre-gl": "6.16.0",
     "mqtt": "^5.16.1",
     "qrcode": "^1.5.4"
   },
