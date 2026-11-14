@@ -4,13 +4,12 @@ Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam 
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-14 — Bezpečnější moderace a limity čtení
-- Prostředí: beta
-- Build: 20261114-1956-46ac6d9
+- Prostředí: produkce i beta
+- Build: 20261114-2014-066ca65
 - `GET /api/photos/moderate` a `GET /api/feedback/moderate` už nemění data; vrací **405**.
 - Moderace fotek a viditelnost zpětné vazby jdou jen přes **POST** s tokenem v těle požadavku (nebo přes admin session).
 - Staré tokenové stránky používají formuláře, takže se token neposílá v URL akce.
 - Per-IP limity pro detail nodu, výšky, seznam fotek, nody, health a historii nodu i paketů.
-- Produkce čeká na výslovné schválení.
 
 ## 2026-11-14 — Živý stream jen z vlastních domén
 - Prostředí: produkce i beta
