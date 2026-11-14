@@ -449,9 +449,15 @@ function normalizeOrigin(value) {
   }
 }
 
-function writeRequestAllowed(request, url) {
-  if (!WRITE_METHODS.has(String(request.method || "").toUpperCase())) return true;
-  if (url.pathname === "/api/telegram/webhook") return true;
+const LIVE_READ_PATHS = new Set([
+  "/api/history",
+  "/api/packet-routes",
+  "/api/recent",
+  "/api/resolve-hops",
+  "/api/search",
+]);
+
+function requestSourceAllowed(request) {
   const host = String(request.headers.host || "").toLowerCase().replace(/:\d+$/, "").replace(/^\[|\]$/g, "");
   if (!writeAllowedHosts.has(host)) return false;
   const origin = normalizeOrigin(request.headers.origin);
@@ -461,6 +467,18 @@ function writeRequestAllowed(request, url) {
   const peer = request.socket?.remoteAddress || "";
   return ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(peer)
     && ["localhost", "127.0.0.1", "::1"].includes(host);
+}
+
+function writeRequestAllowed(request, url) {
+  if (!WRITE_METHODS.has(String(request.method || "").toUpperCase())) return true;
+  if (url.pathname === "/api/telegram/webhook") return true;
+  return requestSourceAllowed(request);
+}
+
+function liveReadRequestAllowed(request, url) {
+  if (request.method !== "GET" && request.method !== "HEAD") return true;
+  if (url.pathname !== "/events/packets" && !LIVE_READ_PATHS.has(url.pathname)) return true;
+  return requestSourceAllowed(request);
 }
 
 async function handleRequest(request, response) {
@@ -479,9 +497,15 @@ async function handleRequest(request, response) {
     return;
   }
 
-  if (!writeRequestAllowed(request, url)) {
+  const writeDenied = !writeRequestAllowed(request, url);
+  const liveDenied = !liveReadRequestAllowed(request, url);
+  if (writeDenied || liveDenied) {
     if (url.pathname.startsWith("/api/")) {
-      sendJson(response, 403, { error: "Zápis je povolen pouze z domény této mapy." });
+      sendJson(response, 403, {
+        error: liveDenied && !writeDenied
+          ? "Živá data jsou dostupná pouze z domény této mapy."
+          : "Zápis je povolen pouze z domény této mapy.",
+      });
     } else {
       response.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
       response.end("Forbidden");

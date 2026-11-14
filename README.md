@@ -323,6 +323,9 @@ přihlašovací údaje zůstávají pouze na serveru.
   a `Host`. Fotky, komentáře, node info ani feedback proto nelze nahrávat
   z cizí domény nebo cizího reverse proxy. Povolené domény lze rozšířit přes
   `WRITE_ALLOWED_ORIGINS` a `WRITE_ALLOWED_HOSTS`.
+- Živá streamová data (`/events/packets`, `/api/recent`, `/api/history`,
+  `/api/packet-routes`, `/api/search`, `/api/resolve-hops`) jsou stejnou
+  kontrolou omezena na vlastní domény. Cizí server je nemůže dál šířit.
 - Hledání v HUD prohledává nody, observery, hashe paketů (živé trasy i lokální
   archiv) a veřejné kanály; výsledek se otevře přímo na mapě. Tlačítko Export
   stáhne nody, observery nebo právě zobrazené trasy jako CSV (UTF-8, středník)

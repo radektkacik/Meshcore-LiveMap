@@ -179,6 +179,14 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       headers: { Origin: "http://127.0.0.1" },
     });
     assert.equal(ownWrite.status, 405);
+    const foreignStream = await fetch(`http://127.0.0.1:${appPort}/api/recent`, {
+      headers: { Origin: "https://map-cz.meshcore.dev" },
+    });
+    assert.equal(foreignStream.status, 403);
+    const ownStream = await fetch(`http://127.0.0.1:${appPort}/api/recent`, {
+      headers: { Origin: "http://127.0.0.1" },
+    });
+    assert.equal(ownStream.status, 200);
     const nodeDetailKey = "a".repeat(64);
     const nodeDetail = await fetch(`http://127.0.0.1:${appPort}/api/node-detail?key=${nodeDetailKey}`);
     assert.equal(nodeDetail.status, 200);
