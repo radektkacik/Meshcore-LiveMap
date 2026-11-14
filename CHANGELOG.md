@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-14 — Živý stream jen z vlastních domén (beta)
+- Prostředí: beta
+- Build: 20261114-1706-8a5ca1c
+- `/events/packets`, `/api/recent`, `/api/history`, `/api/packet-routes`, `/api/search` a `/api/resolve-hops` ověřují `Origin`/`Referer` a `Host`.
+- Cizí server nebo reverse proxy dostane u živých dat **403** a nemůže náš MQTT stream dál šířit.
+- Naše mapa dál funguje; ověřeno `MQTT online` a běžící příjem tras.
+
 ## 2026-11-14 — Zápisová API jen z vlastních domén (beta)
 - Prostředí: beta
 - Build: 20261114-1701-32a69ad
