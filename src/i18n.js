@@ -1194,7 +1194,7 @@ export const STATIC_EN = {
   "TRACE (barvy podle SNR)": "TRACE (colours by SNR)",
   "Kolik lidí má právě otevřenou mapu": "How many people have the map open right now",
   "právě prohlíží mapu": "viewing the map now",
-  "Data: CoreScope / MeshCore CZ (živý MQTT feed), archiv z vlastní databáze. Soukromý obsah zpráv zůstává šifrovaný. Podklady: OpenStreetMap, OpenTopoMap, Esri. Výšky: Open-Meteo, Mapzen Terrarium (AWS). Ikona: selfh.st (CC BY 4.0).": "Data: CoreScope / MeshCore CZ (live MQTT feed), archive from our own database. Private message content remains encrypted. Basemaps: OpenStreetMap, OpenTopoMap, Esri. Elevations: Open-Meteo, Mapzen Terrarium (AWS). Icon: selfh.st (CC BY 4.0).",
+  "Data: CoreScope / MeshCore CZ (živý MQTT feed), archiv z vlastní databáze. Soukromý obsah zpráv zůstává šifrovaný. Podklady: OpenStreetMap, OpenFreeMap, VersaTiles, OpenTopoMap, Mapterhorn, Esri. Výšky: Open-Meteo, Mapzen Terrarium (AWS). Ikona: selfh.st (CC BY 4.0).": "Data: CoreScope / MeshCore CZ (live MQTT feed), archive from our own database. Private message content remains encrypted. Basemaps: OpenStreetMap, OpenFreeMap, VersaTiles, OpenTopoMap, Mapterhorn, Esri. Elevations: Open-Meteo, Mapzen Terrarium (AWS). Icon: selfh.st (CC BY 4.0).",
   "Kód: licence MIT": "Code: MIT license",
   "Zdrojový kód na GitHubu": "Source code on GitHub",
   "Poslední trasy": "Latest routes",

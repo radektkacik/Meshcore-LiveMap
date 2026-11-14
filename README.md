@@ -295,10 +295,12 @@ přihlašovací údaje zůstávají pouze na serveru.
   schvalovat tlačítky přímo v Telegramu (`TELEGRAM_INTERACTIVE=1`). U automaticky zveřejněných fotek notifikace vede
   na schválené fotky a obsahuje upozornění, že je možné je smazat.
   `PUBLIC_BASE_URL` určuje základ odkazu.
-- Animace tras je ve výchozím stavu řešená canvas rendererem (jedna kresba,
-  posun `lineDashOffset` bez CSS animací). Méně výkonnou SVG variantu s CSS
-  animací `stroke-dashoffset` lze zapnout parametrem `?anim=svg`. Animaci lze
-  vypnout přepínačem v panelu.
+- Mapa běží na MapLibre GL (WebGL). Trasy, nody a observery se kreslí jako
+  GeoJSON vrstvy; animace tras posouvá vzor čárkování (`line-dasharray`),
+  bez CSS animací. Animaci lze vypnout přepínačem v panelu.
+- Podklady mapy: OSM (rastr, v tmavém tématu invertovaný), OSM Vector
+  (OpenFreeMap), VersaTiles, OpenTopoMap (vektorová, vrstevnice z terénu
+  Mapterhorn, jen Evropa) a satelitní Esri.
 - `/api/visit-stats?days=<n>` vrací interní statistiku návštěv mapy (návštěvy,
   unikátní návštěvníci přes denní hash IP a maximální souběžný počet diváků).
   Ukládá se do `data/visits.sqlite`; raw IP se neukládá.
@@ -520,7 +522,7 @@ HEIC/HEIF dekódování v prohlížeči používá [`libheif-js`](https://github
 Copyright (c) 2026 MeshCore.cz.
 
 Licence se vztahuje na zdrojový kód tohoto repozitáře. Závislosti
-(`leaflet`, `better-sqlite3`, `mqtt`, `qrcode`, `@michaelhart/meshcore-decoder`)
+(`maplibre-gl`, `maplibre-contour`, `better-sqlite3`, `mqtt`, `qrcode`, `@michaelhart/meshcore-decoder`)
 mají vlastní licence. Data z CoreScope, MQTT feed, dlaždice OpenStreetMap,
 OpenTopoMap, Esri a Mapzen Terrarium a služba Open-Meteo se řídí podmínkami
 svých poskytovatelů; MIT licence je nepřebírá. Ikona selfh.st je použita pod

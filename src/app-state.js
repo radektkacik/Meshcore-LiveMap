@@ -2,7 +2,6 @@ export function createState({ elements, initialRetentionMs, allowedRoles }) {
   return {
     activeRoutes: new Map(),
     animationEnabled: elements.animationToggle.checked,
-    animationMode: new URLSearchParams(location.search).get("anim") === "svg" ? "svg" : "canvas",
     allowedHashBytes: new Set([2, 3]),
     allowedRoles: new Set(allowedRoles),
     archiveNodeFilterKey: null,
