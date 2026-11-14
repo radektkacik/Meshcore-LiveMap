@@ -407,10 +407,12 @@ const rasterBaseLayers = {
 };
 const VECTOR_BASE_STYLES = {
   vector: {
+    attribution: '© <a href="https://openfreemap.org" target="_blank" rel="noreferrer">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noreferrer">OpenMapTiles</a> Data © OpenStreetMap contributors',
     dark: "https://tiles.openfreemap.org/styles/dark",
     light: "https://tiles.openfreemap.org/styles/liberty",
   },
   versatiles: {
+    attribution: '© <a href="https://versatiles.org/" target="_blank" rel="noreferrer">VersaTiles</a> © OpenStreetMap contributors',
     dark: "https://tiles.versatiles.org/assets/styles/colorful-dark/style.json",
     light: "https://tiles.versatiles.org/assets/styles/colorful/style.json",
   },
@@ -460,7 +462,10 @@ async function showBaseLayer(key) {
   if (isVectorBaseLayer(key)) {
     const maplibreGL = await loadMaplibreLayerFactory();
     if (requestId !== baseLayerRequestId) return;
-    nextLayer = maplibreGL({ style: VECTOR_BASE_STYLES[key][theme] });
+    nextLayer = maplibreGL({
+      attributionControl: { customAttribution: VECTOR_BASE_STYLES[key].attribution },
+      style: VECTOR_BASE_STYLES[key][theme],
+    });
   } else {
     nextLayer = rasterBaseLayers[resolvedKey];
   }
@@ -472,7 +477,6 @@ async function showBaseLayer(key) {
   currentBaseLayer = nextLayer;
   currentBaseLayer.addTo(map);
   currentBaseLayerKey = resolvedKey;
-  if (IS_BETA && isVectorBaseLayer(key)) window.__vectorDebug = currentBaseLayer;
 }
 
 async function setBaseLayer(key) {
