@@ -88,6 +88,32 @@ if (!photoToken) {
   console.warn("Photo uploads are disabled: set PHOTO_TOKEN or FEEDBACK_TOKEN");
 }
 const publicBaseUrl = (process.env.PUBLIC_BASE_URL || "https://mapa.meshcore.cz").replace(/\/+$/, "");
+const publicOrigin = new URL(publicBaseUrl).origin;
+const publicHostname = new URL(publicBaseUrl).hostname;
+const writeAllowedOrigins = new Set([
+  publicOrigin,
+  "http://localhost",
+  "http://127.0.0.1",
+  "http://[::1]",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:4173",
+  "http://127.0.0.1:4173",
+  ...String(process.env.WRITE_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean),
+]);
+const writeAllowedHosts = new Set([
+  publicHostname,
+  "localhost",
+  "127.0.0.1",
+  "::1",
+  ...String(process.env.WRITE_ALLOWED_HOSTS || "")
+    .split(",")
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean),
+]);
 const publicBasePath = (() => {
   try {
     return new URL(publicBaseUrl).pathname.replace(/\/+$/, "");
@@ -1410,6 +1436,8 @@ const handleRequest = createHttpRequestHandler({
   safeAdminNext,
   sameOriginRequest,
   securityHeaders,
+  writeAllowedHosts,
+  writeAllowedOrigins,
   sendFile,
   sendJson,
   sendStatsCache,

@@ -319,6 +319,10 @@ přihlašovací údaje zůstávají pouze na serveru.
 - `/api/health` vrací diagnostiku: uptime, stav MQTT, počet reconnectů a stáří
   posledního paketu, stáří cache nodů a statistik, počet SSE streamů a velikosti
   SQLite databází. Vrací vždy HTTP 200; `status` je `ok`, nebo `degraded`.
+- Zápisová API (`POST`, `PUT`, `PATCH`, `DELETE`) ověřují `Origin`/`Referer`
+  a `Host`. Fotky, komentáře, node info ani feedback proto nelze nahrávat
+  z cizí domény nebo cizího reverse proxy. Povolené domény lze rozšířit přes
+  `WRITE_ALLOWED_ORIGINS` a `WRITE_ALLOWED_HOSTS`.
 - Hledání v HUD prohledává nody, observery, hashe paketů (živé trasy i lokální
   archiv) a veřejné kanály; výsledek se otevře přímo na mapě. Tlačítko Export
   stáhne nody, observery nebo právě zobrazené trasy jako CSV (UTF-8, středník)

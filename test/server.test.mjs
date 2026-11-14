@@ -168,6 +168,17 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.ok(health.databases.packets.bytes >= 0);
     assert.ok(health.packets.stored >= 0);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/api/health`, { method: "POST" })).status, 405);
+    const foreignWrite = await fetch(`http://127.0.0.1:${appPort}/api/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "https://map-cz.meshcore.dev" },
+      body: "{}",
+    });
+    assert.equal(foreignWrite.status, 403);
+    const ownWrite = await fetch(`http://127.0.0.1:${appPort}/api/health`, {
+      method: "POST",
+      headers: { Origin: "http://127.0.0.1" },
+    });
+    assert.equal(ownWrite.status, 405);
     const nodeDetailKey = "a".repeat(64);
     const nodeDetail = await fetch(`http://127.0.0.1:${appPort}/api/node-detail?key=${nodeDetailKey}`);
     assert.equal(nodeDetail.status, 200);

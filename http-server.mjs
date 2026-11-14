@@ -99,6 +99,8 @@ export function createHttpRequestHandler(runtime) {
   safeAdminNext,
   sameOriginRequest,
   securityHeaders,
+  writeAllowedHosts,
+  writeAllowedOrigins,
   sendFile,
   sendJson,
   sendStatsCache,
@@ -437,6 +439,30 @@ async function handleAdminRequest(request, response, url) {
   methodNotAllowed(response, "GET, POST", { "Content-Type": "text/plain; charset=utf-8" });
 }
 
+const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+function normalizeOrigin(value) {
+  try {
+    return value ? new URL(String(value)).origin : "";
+  } catch {
+    return "";
+  }
+}
+
+function writeRequestAllowed(request, url) {
+  if (!WRITE_METHODS.has(String(request.method || "").toUpperCase())) return true;
+  if (url.pathname === "/api/telegram/webhook") return true;
+  const host = String(request.headers.host || "").toLowerCase().replace(/:\d+$/, "").replace(/^\[|\]$/g, "");
+  if (!writeAllowedHosts.has(host)) return false;
+  const origin = normalizeOrigin(request.headers.origin);
+  if (origin) return writeAllowedOrigins.has(origin);
+  const referer = normalizeOrigin(request.headers.referer);
+  if (referer) return writeAllowedOrigins.has(referer);
+  const peer = request.socket?.remoteAddress || "";
+  return ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(peer)
+    && ["localhost", "127.0.0.1", "::1"].includes(host);
+}
+
 async function handleRequest(request, response) {
   const nodesCache = getNodesCache();
   const statsCache = getStatsCache();
@@ -450,6 +476,16 @@ async function handleRequest(request, response) {
   } catch {
     response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
     response.end("Malformed request URL");
+    return;
+  }
+
+  if (!writeRequestAllowed(request, url)) {
+    if (url.pathname.startsWith("/api/")) {
+      sendJson(response, 403, { error: "Zápis je povolen pouze z domény této mapy." });
+    } else {
+      response.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+      response.end("Forbidden");
+    }
     return;
   }
 
