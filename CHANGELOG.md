@@ -5,6 +5,7 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-15 — Uzamčení originu na Cloudflare
 - Prostředí: produkce i beta
+- Build: 20261114-2014-066ca65
 - Origin je dostupný jen z Cloudflare edge IP; přímá IP vrací **403**.
 - Řeší obcházení Cloudflare WAF/rate limitů přes IP VPS a podvržený `Host`.
 - Uživatelé nic nepoznají; provoz přes Cloudflare funguje dál.
