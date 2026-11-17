@@ -7196,11 +7196,30 @@ createFeedbackController({ elements, getJson, postJson, formatNodeDate });
 
 document.addEventListener("visibilitychange", updateRouteAnimation);
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") void checkServerBuild();
+  if (document.visibilityState !== "visible") return;
+  void checkServerBuild();
+  restoreMapAfterResume();
 });
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted) restoreMapAfterResume();
+});
+window.addEventListener("focus", restoreMapAfterResume);
 window.addEventListener("online", () => {
   void checkServerBuild();
+  restoreMapAfterResume();
 });
+
+function restoreMapAfterResume() {
+  if (document.hidden) return;
+  map.invalidateSize(false);
+  refreshNodeState();
+  applyNodeFilterRouteVisibility();
+  requestAnimationFrame(() => {
+    if (document.hidden) return;
+    map.invalidateSize(false);
+    applyRouteVisibility();
+  });
+}
 
 const initialWindow = parseRouteWindowParam(INITIAL_PARAMS.get("window"));
 if (initialWindow != null && initialWindow !== 0) void setRouteWindow(initialWindow);
