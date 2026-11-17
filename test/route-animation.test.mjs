@@ -14,6 +14,7 @@ test("canvas route animation uses the normal frame rate below heavy load", () =>
 
 test("canvas route animation lowers the frame rate at heavy route counts", () => {
   assert.equal(HEAVY_ROUTE_COUNT, 120);
+  assert.equal(HEAVY_ROUTE_ANIMATION_FPS, 7);
   assert.equal(routeAnimationFps(120), HEAVY_ROUTE_ANIMATION_FPS);
   assert.equal(routeAnimationFps(350), HEAVY_ROUTE_ANIMATION_FPS);
 });
