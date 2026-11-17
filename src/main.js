@@ -1377,6 +1377,7 @@ function setupNodePopup(popup, node) {
   const root = popup.getElement();
   if (!root) return;
   const qrButton = root.querySelector(".node-qr-toggle");
+  const profileQrButton = root.querySelector(".node-profile-qr-toggle");
   const routeButton = root.querySelector(".node-route-show");
   const copyButton = root.querySelector(".node-key-copy");
   const linkButton = root.querySelector(".node-link-copy");
@@ -1426,6 +1427,36 @@ function setupNodePopup(popup, node) {
       elements.qrDialog.close();
     } finally {
       qrButton.disabled = false;
+    }
+  });
+
+  profileQrButton?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const key = String(node.public_key || "").toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(key)) return;
+    const profileUrl = new URL(nodeDetailPath(key), location.origin).toString();
+    elements.profileQrTitle.textContent = t("node.profileQrTitle");
+    elements.profileQrKey.textContent = node.name || key;
+    elements.profileQrNote.textContent = t("node.profileQrNote");
+    elements.profileQrUrl.href = profileUrl;
+    elements.profileQrUrl.textContent = profileUrl;
+    elements.profileQrDownload.textContent = t("node.profileQrDownload");
+    elements.profileQrDownload.dataset.key = key;
+    if (!elements.profileQrDialog.open) elements.profileQrDialog.showModal();
+    profileQrButton.disabled = true;
+    try {
+      await QRCode.toCanvas(elements.profileQrCanvas, profileUrl, {
+        errorCorrectionLevel: "H",
+        margin: 4,
+        width: 420,
+        color: { dark: "#000000", light: "#ffffff" },
+      });
+    } catch (error) {
+      console.error("QR profilu se nepodařilo vytvořit", error);
+      elements.profileQrDialog.close();
+    } finally {
+      profileQrButton.disabled = false;
     }
   });
 
@@ -1864,6 +1895,7 @@ function nodeActionButtons(node, { close = false } = {}) {
       <button class="node-link-copy" type="button">${t("node.copyLink")}</button>
       ${archiveFilterButtonHtml(node)}
       ${/^[0-9a-f]{64}$/i.test(node.public_key) ? `<button class="node-qr-toggle" type="button">${t("node.showQr")}</button>` : ""}
+      ${/^[0-9a-f]{64}$/i.test(node.public_key) ? `<button class="node-profile-qr-toggle" type="button">${t("node.showProfileQr")}</button>` : ""}
       ${/^[0-9a-f]{64}$/i.test(node.public_key) ? `<a class="node-analyzer-link" href="https://analyzer.meshcore.cz/#/nodes/${encodeURIComponent(node.public_key.toLowerCase())}" target="_blank" rel="noreferrer">${t("node.openAnalyzer")}</a>` : ""}
       ${close ? `<button class="node-popup-close popup-close-button" type="button">${t("common.close")}</button>` : ""}
     </div>
@@ -2209,6 +2241,7 @@ function nodeDetailShell(node, active) {
         <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
         ${nodeHealthBadge(node)}
       </div>
+      <button class="node-contact-admin" type="button" data-node-contact-key="${escapeHtml(String(node.public_key || "").toLowerCase())}">${t("node.contactAdmin")}</button>
       <button class="node-detail-close" type="button" aria-label="${t("nodeDetail.close")}">×</button>
     </header>
     <nav class="node-detail-tabs" aria-label="${t("nodeDetail.tabs")}">
@@ -7191,8 +7224,28 @@ elements.qrClose.addEventListener("click", () => elements.qrDialog.close());
 elements.qrDialog.addEventListener("click", (event) => {
   if (event.target === elements.qrDialog) elements.qrDialog.close();
 });
+elements.profileQrClose.addEventListener("click", () => elements.profileQrDialog.close());
+elements.profileQrDialog.addEventListener("click", (event) => {
+  if (event.target === elements.profileQrDialog) elements.profileQrDialog.close();
+});
+elements.profileQrDownload.addEventListener("click", () => {
+  const key = elements.profileQrDownload.dataset.key || "repeater";
+  const link = document.createElement("a");
+  link.download = `meshcore-profile-${key.slice(0, 8)}.png`;
+  link.href = elements.profileQrCanvas.toDataURL("image/png");
+  link.click();
+});
 
-createFeedbackController({ elements, getJson, postJson, formatNodeDate });
+const feedbackController = createFeedbackController({ elements, getJson, postJson, formatNodeDate });
+document.addEventListener("click", (event) => {
+  const button = event.target instanceof Element ? event.target.closest(".node-contact-admin") : null;
+  if (!button) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const key = String(button.dataset.nodeContactKey || "").toUpperCase();
+  const node = state.nodeByKey.get(key);
+  if (node) feedbackController.openForNode(node);
+});
 
 document.addEventListener("visibilitychange", updateRouteAnimation);
 document.addEventListener("visibilitychange", () => {

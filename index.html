@@ -370,6 +370,20 @@
         <p>Naskenujte v mobilní aplikaci MeshCore</p>
       </dialog>
 
+      <dialog id="profile-qr-dialog" class="qr-dialog" aria-labelledby="profile-qr-title">
+        <button id="profile-qr-close" class="qr-dialog-close" type="button" aria-label="Zavřít">×</button>
+        <header>
+          <h2 id="profile-qr-title"></h2>
+          <code id="profile-qr-key"></code>
+        </header>
+        <div class="qr-dialog-code">
+          <canvas id="profile-qr-canvas" aria-label="QR odkaz na profil repeateru"></canvas>
+        </div>
+        <p id="profile-qr-note"></p>
+        <a id="profile-qr-url" class="profile-qr-url" target="_blank" rel="noreferrer"></a>
+        <button id="profile-qr-download" type="button"></button>
+      </dialog>
+
       <dialog id="photo-dialog" class="photo-dialog" aria-labelledby="photo-title">
         <button id="photo-close" class="feedback-close" type="button" aria-label="Zavřít">×</button>
         <header>
@@ -673,6 +687,7 @@
         <header>
           <h2 id="feedback-title">Kniha návštěv</h2>
           <p>Zanechte vzkaz, nahlášení chyby nebo návrh. Můžete ho zveřejnit, nebo poslat jen správci.</p>
+          <p id="feedback-node-context" class="feedback-node-context" hidden></p>
         </header>
         <form id="feedback-form">
           <label>Jméno (nepovinné, zobrazí se u veřejného vzkazu)

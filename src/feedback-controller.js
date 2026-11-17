@@ -1,6 +1,8 @@
 import { getLocale, t } from "./i18n.js";
 
 export function createFeedbackController({ elements, getJson, postJson, formatNodeDate }) {
+let nodeContext = null;
+
 function setFeedbackStatus(text, isError) {
   elements.feedbackStatus.textContent = text;
   elements.feedbackStatus.classList.toggle("error", Boolean(isError));
@@ -40,7 +42,32 @@ async function loadFeedbackPublic() {
   }
 }
 
+function openForNode(node) {
+  const key = String(node?.public_key || "").toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(key)) return;
+  nodeContext = { key, name: node.name || t("common.unknownNode") };
+  elements.feedbackForm.reset();
+  elements.feedbackPublic.checked = false;
+  elements.feedbackPublic.disabled = true;
+  elements.feedbackCategory.value = "other";
+  elements.feedbackNodeContext.textContent = t("feedback.nodeContext", {
+    key: key.slice(0, 12),
+    name: nodeContext.name,
+  });
+  elements.feedbackNodeContext.hidden = false;
+  const prefix = t("feedback.nodePrefix", { key, name: nodeContext.name });
+  elements.feedbackMessage.maxLength = Math.max(5, 2000 - prefix.length - 2);
+  setFeedbackStatus("", false);
+  if (!elements.feedbackDialog.open) elements.feedbackDialog.showModal();
+  void loadFeedbackPublic();
+  elements.feedbackMessage.focus();
+}
+
 elements.feedbackToggle.addEventListener("click", () => {
+  nodeContext = null;
+  elements.feedbackNodeContext.hidden = true;
+  elements.feedbackMessage.maxLength = 2000;
+  elements.feedbackPublic.disabled = false;
   setFeedbackStatus("", false);
   if (!elements.feedbackDialog.open) elements.feedbackDialog.showModal();
   void loadFeedbackPublic();
@@ -51,10 +78,19 @@ elements.feedbackCancel.addEventListener("click", () => elements.feedbackDialog.
 elements.feedbackDialog.addEventListener("click", (event) => {
   if (event.target === elements.feedbackDialog) elements.feedbackDialog.close();
 });
+elements.feedbackDialog.addEventListener("close", () => {
+  nodeContext = null;
+  elements.feedbackNodeContext.hidden = true;
+  elements.feedbackMessage.maxLength = 2000;
+  elements.feedbackPublic.disabled = false;
+});
 
 elements.feedbackForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const message = elements.feedbackMessage.value.trim();
+  const userMessage = elements.feedbackMessage.value.trim();
+  const message = nodeContext
+    ? `${t("feedback.nodePrefix", { key: nodeContext.key, name: nodeContext.name })}\n\n${userMessage}`
+    : userMessage;
   if (message.length < 5) {
     setFeedbackStatus(t("feedback.tooShort"), true);
     return;
@@ -70,6 +106,10 @@ elements.feedbackForm.addEventListener("submit", async (event) => {
       name: elements.feedbackName.value.trim(),
     });
     elements.feedbackForm.reset();
+    nodeContext = null;
+    elements.feedbackNodeContext.hidden = true;
+    elements.feedbackMessage.maxLength = 2000;
+    elements.feedbackPublic.disabled = false;
     setFeedbackStatus(t("feedback.sent"), false);
     void loadFeedbackPublic();
     setTimeout(() => {
@@ -84,5 +124,5 @@ elements.feedbackForm.addEventListener("submit", async (event) => {
     elements.feedbackSend.disabled = false;
   }
 });
-  return { loadFeedbackPublic, renderFeedbackPublic, setFeedbackStatus };
+  return { loadFeedbackPublic, openForNode, renderFeedbackPublic, setFeedbackStatus };
 }
