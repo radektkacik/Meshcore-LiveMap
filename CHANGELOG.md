@@ -3,6 +3,12 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-17 — QR profil repeateru a soukromý vzkaz správci
+- Prostředí: beta
+- Build: 20261117-0820-71b30b3
+- U nodu lze zobrazit a stáhnout PNG s QR odkazem na profil.
+- Profil nabízí soukromý vzkaz správci s automatickým kontextem nodu; veřejné zveřejnění je pro tento formulář vypnuté.
+
 ## 2026-11-17 — Nižší práh pro úspornou animaci tras
 - Prostředí: produkce i beta
 - Build: 20261117-0807-7b04f78

@@ -260,9 +260,12 @@ přihlašovací údaje zůstávají pouze na serveru.
    upravit nebo smazat i z jiného zařízení či po ztrátě tokenu. Akce „Upravit /
    smazat vlastní fotku“ je v lightboxu; starší fotky nahrané před touto funkcí
    může spravovat pouze administrátor.
-- Detail nodu je dostupný na `/nod/<public_key>`.
+ - Detail nodu je dostupný na `/nod/<public_key>`.
   Popup na mapě je zkrácený; plné info, fotky, komentáře a síťové údaje jsou
   v podstránce s taby.
+  U nodu lze zobrazit a stáhnout PNG s QR odkazem na tento profil. Profil nabízí
+  tlačítko pro soukromý vzkaz správci; formulář automaticky připojí jméno a
+  identifikátor nodu a veřejné zveřejnění je v tomto režimu vypnuté.
 - Administrace je na `GET /admin`. Přihlašuje se heslem
   `ADMIN_PASSWORD`; když není nastavené, použije se `FEEDBACK_TOKEN`, případně
   `PHOTO_TOKEN`. Po přihlášení drží server HttpOnly session cookie 12 hodin
