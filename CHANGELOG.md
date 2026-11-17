@@ -3,29 +3,6 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
-## 2026-11-17 — Limit posledních paketů, validace fotek a příprava Turnstile
-- Prostředí: produkce i beta
-- Build: 20261117-1629-bbdf797
-- Beta build: 20261117-1620-2516e89
-- `/api/recent` nově podléhá společnému limitu živých API.
-- Fotky server plně dekóduje a znovu zakóduje, odstraňuje metadata a připojená data; poškozené soubory odmítne bez chyby 500.
-- Připravené ověření veřejných zápisů pomocí Cloudflare Turnstile; zatím vypnuté, zapnutí vyžaduje reálné serverové klíče.
-
-## 2026-11-17 — Oprava falešných poplachů rate limitu
-- Prostředí: produkce i beta
-- Build: 20261117-1105-14932ba
-- Beta build: 20261117-1101-65fd85a
-- `/api/resolve-hops` má vlastní limit 300/min (`RESOLVE_HOPS_RATE_LIMIT`); klient dávkuje prefixy po 80 a běžný provoz překračoval 120/min.
-- Jeho 429 se už nezapisují do bezpečnostního logu jako podezřelé události.
-
-## 2026-11-17 — Logování podezřelých událostí
-- Prostředí: produkce i beta
-- Build: 20261117-1034-84904bf
-- Beta build: 20261117-0954-04acd6e
-- Podezřelé události se zapisují do `data/security-events.log` jako JSON řádky (rotace po 2 MB).
-- Sledováno: cizí Origin u zápisů a živých dat, OPTIONS sondy, rate limity, chybná admin hesla, neplatný Telegram secret.
-- První výskyt kategorie a hustý útok (`SECURITY_ALERT_BURST` za `SECURITY_ALERT_WINDOW_MS`) odešlou okamžité upozornění na Telegram.
-
 ## 2026-11-17 — Plynulejší úsporná animace tras
 - Prostředí: produkce i beta
 - Build: 20261117-0827-7e31d9d
@@ -58,37 +35,6 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 - Beta build: 20261117-0723-fdbdddb
 - Po návratu z uspání mapy se znovu aplikuje stav filtrů a viditelnost vrstev.
 - Při aktivním „Jen nody s telemetrií“ se trasy po probuzení znovu skryjí.
-
-## 2026-11-15 — Uzamčení originu na Cloudflare
-- Prostředí: produkce i beta
-- Build: 20261114-2014-066ca65
-- Origin je dostupný jen z Cloudflare edge IP; přímá IP vrací **403**.
-- Řeší obcházení Cloudflare WAF/rate limitů přes IP VPS a podvržený `Host`.
-- Uživatelé nic nepoznají; provoz přes Cloudflare funguje dál.
-
-## 2026-11-14 — Bezpečnější moderace a limity čtení
-- Prostředí: produkce i beta
-- Build: 20261114-2014-066ca65
-- `GET /api/photos/moderate` a `GET /api/feedback/moderate` už nemění data; vrací **405**.
-- Moderace fotek a viditelnost zpětné vazby jdou jen přes **POST** s tokenem v těle požadavku (nebo přes admin session).
-- Staré tokenové stránky používají formuláře, takže se token neposílá v URL akce.
-- Per-IP limity pro detail nodu, výšky, seznam fotek, nody, health a historii nodu i paketů.
-
-## 2026-11-14 — Živý stream jen z vlastních domén
-- Prostředí: produkce i beta
-- Build: 20261114-1720-f77dbe6
-- `/events/packets`, `/api/recent`, `/api/history`, `/api/packets`, `/api/packet-routes`, `/api/search` a `/api/resolve-hops` ověřují `Origin`/`Referer` a `Host`.
-- Cizí server nebo reverse proxy dostane u živých dat **403** a nemůže náš MQTT stream dál šířit.
-- Naše mapa dál funguje; ověřeno `MQTT online` a běžící příjem tras.
-
-## 2026-11-14 — Zápisová API jen z vlastních domén
-- Prostředí: produkce i beta
-- Build: 20261114-1709-508b292
-- `POST`, `PUT`, `PATCH` a `DELETE` ověřují `Origin`/`Referer` a `Host`.
-- Cizí server nebo reverse proxy dostane u zápisu **403**.
-- Týká se fotek, komentářů, node info, feedbacku, hlasování i správy fotek.
-- Telegram webhook zůstává výjimkou kvůli vlastnímu secret tokenu.
-- Povolené domény lze rozšířit přes `WRITE_ALLOWED_ORIGINS` a `WRITE_ALLOWED_HOSTS`.
 
 ## 2026-11-14 — Vektorové podklady OSM Vector a VersaTiles
 - Prostředí: produkce i beta

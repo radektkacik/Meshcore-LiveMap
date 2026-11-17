@@ -29,7 +29,7 @@ npm run build
 
 Build zároveň vygeneruje stránku `/changelog` z ručně udržovaného
 [`CHANGELOG.md`](CHANGELOG.md). Ten obsahuje jen významné funkční změny, ne
-každý build; technický seznam všech nasazení zůstává
+každý build ani technické detaily bezpečnostních záplat; technický seznam všech nasazení zůstává
 v [`deploy/RELEASES.md`](deploy/RELEASES.md). Odkaz „Změny verzí“ je v patičce
 mapy. Pro oddělené testovací prostředí lze použít samostatný `APP_DIR` a
 systemd službu.
