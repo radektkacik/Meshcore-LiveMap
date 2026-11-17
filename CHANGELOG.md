@@ -4,8 +4,9 @@ Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam 
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-17 — Obnova filtrů po probuzení mapy
-- Prostředí: beta
-- Build: 20261117-0723-fdbdddb
+- Prostředí: produkce i beta
+- Build: 20261117-0725-6521df5
+- Beta build: 20261117-0723-fdbdddb
 - Po návratu z uspání mapy se znovu aplikuje stav filtrů a viditelnost vrstev.
 - Při aktivním „Jen nody s telemetrií“ se trasy po probuzení znovu skryjí.
 
