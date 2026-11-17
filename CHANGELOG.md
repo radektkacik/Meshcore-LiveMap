@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-17 — Logování podezřelých událostí
+- Prostředí: beta
+- Build: 20261117-0954-04acd6e
+- Podezřelé události se zapisují do `data/security-events.log` jako JSON řádky (rotace po 2 MB).
+- Sledováno: cizí Origin u zápisů a živých dat, OPTIONS sondy, rate limity, chybná admin hesla, neplatný Telegram secret.
+- První výskyt kategorie a hustý útok (`SECURITY_ALERT_BURST` za `SECURITY_ALERT_WINDOW_MS`) odešlou okamžité upozornění na Telegram.
+
 ## 2026-11-17 — Plynulejší úsporná animace tras
 - Prostředí: produkce i beta
 - Build: 20261117-0827-7e31d9d

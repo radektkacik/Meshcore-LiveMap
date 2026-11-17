@@ -339,6 +339,12 @@ přihlašovací údaje zůstávají pouze na serveru.
   `NODE_DETAIL_RATE_LIMIT`, `ELEVATION_RATE_LIMIT`, `PHOTO_LIST_RATE_LIMIT`,
   `NODES_RATE_LIMIT`, `NODE_HEALTH_RATE_LIMIT`, `NODE_HISTORY_RATE_LIMIT`
   a `PACKET_HISTORY_RATE_LIMIT`.
+- Podezřelé události se logují jako JSON řádky do `SECURITY_LOG_PATH`
+  (výchozí `data/security-events.log`, rotace po 2 MB): pokusy o zápis nebo čtení
+  živých dat z cizí domény, OPTIONS sondy na živých endpointech, překročení
+  rate limitů, chybná admin hesla a neplatný Telegram webhook secret. První
+  výskyt kategorie a překročení `SECURITY_ALERT_BURST` událostí v okně
+  `SECURITY_ALERT_WINDOW_MS` pošle okamžité upozornění na Telegram.
 - Hledání v HUD prohledává nody, observery, hashe paketů (živé trasy i lokální
   archiv) a veřejné kanály; výsledek se otevře přímo na mapě. Tlačítko Export
   stáhne nody, observery nebo právě zobrazené trasy jako CSV (UTF-8, středník)
