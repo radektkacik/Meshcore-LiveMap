@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-17 — Limit posledních paketů, validace fotek a příprava Turnstile
+- Prostředí: beta
+- Build: 20261117-1620-2516e89
+- `/api/recent` nově podléhá společnému limitu živých API.
+- Fotky server plně dekóduje a znovu zakóduje, odstraňuje metadata a připojená data; poškozené soubory odmítne bez chyby 500.
+- Připravené ověření veřejných zápisů pomocí Cloudflare Turnstile; zatím vypnuté, zapnutí vyžaduje reálné serverové klíče.
+
 ## 2026-11-17 — Oprava falešných poplachů rate limitu
 - Prostředí: produkce i beta
 - Build: 20261117-1105-14932ba
