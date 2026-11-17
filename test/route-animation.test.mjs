@@ -9,11 +9,12 @@ import {
 
 test("canvas route animation uses the normal frame rate below heavy load", () => {
   assert.equal(routeAnimationFps(0), NORMAL_ROUTE_ANIMATION_FPS);
-  assert.equal(routeAnimationFps(HEAVY_ROUTE_COUNT - 1), NORMAL_ROUTE_ANIMATION_FPS);
+  assert.equal(routeAnimationFps(119), NORMAL_ROUTE_ANIMATION_FPS);
 });
 
 test("canvas route animation lowers the frame rate at heavy route counts", () => {
-  assert.equal(routeAnimationFps(HEAVY_ROUTE_COUNT), HEAVY_ROUTE_ANIMATION_FPS);
+  assert.equal(HEAVY_ROUTE_COUNT, 120);
+  assert.equal(routeAnimationFps(120), HEAVY_ROUTE_ANIMATION_FPS);
   assert.equal(routeAnimationFps(350), HEAVY_ROUTE_ANIMATION_FPS);
 });
 

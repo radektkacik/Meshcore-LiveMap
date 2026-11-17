@@ -1,6 +1,6 @@
 export const NORMAL_ROUTE_ANIMATION_FPS = 10;
 export const HEAVY_ROUTE_ANIMATION_FPS = 5;
-export const HEAVY_ROUTE_COUNT = 175;
+export const HEAVY_ROUTE_COUNT = 120;
 
 export function routeAnimationFps(routeCount) {
   const count = Number(routeCount);
