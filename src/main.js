@@ -29,6 +29,7 @@ import {
   pointFeature,
 } from "./export-model.js";
 import { createPerfMonitor } from "./perf.js";
+import { routeAnimationFps } from "./route-animation.js";
 import { observerAnchor } from "./observer-locations.js";
 import { createPhotoGalleryController } from "./photo-gallery-controller.js";
 import { createPhotoLightboxController } from "./photo-lightbox-controller.js";
@@ -5580,8 +5581,6 @@ function syncRoutePresentationCore(now = nowMs()) {
 
 let routeAnimationFrame = null;
 let lastRouteAnimationAt = 0;
-const CANVAS_ANIMATION_FPS = 10;
-
 function routeAnimationEnabled() {
   return state.animationEnabled
     && !routesSuppressed()
@@ -5592,7 +5591,8 @@ function routeAnimationEnabled() {
 function animateRoutes(timestamp) {
   routeAnimationFrame = null;
   if (!routeAnimationEnabled()) return;
-  if (timestamp - lastRouteAnimationAt >= 1000 / CANVAS_ANIMATION_FPS) {
+  const targetInterval = 1000 / routeAnimationFps(state.activeRoutes.size);
+  if (timestamp - lastRouteAnimationAt >= targetInterval) {
     routeRenderer._dashOffset = -((timestamp / 75) % 16);
     perf.measure("canvas", () => routeRenderer._redraw());
     perf.hit("kresba");
