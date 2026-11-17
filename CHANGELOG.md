@@ -4,8 +4,9 @@ Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam 
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-17 — Oprava falešných poplachů rate limitu
-- Prostředí: beta
-- Build: 20261117-1101-65fd85a
+- Prostředí: produkce i beta
+- Build: 20261117-1105-14932ba
+- Beta build: 20261117-1101-65fd85a
 - `/api/resolve-hops` má vlastní limit 300/min (`RESOLVE_HOPS_RATE_LIMIT`); klient dávkuje prefixy po 80 a běžný provoz překračoval 120/min.
 - Jeho 429 se už nezapisují do bezpečnostního logu jako podezřelé události.
 
