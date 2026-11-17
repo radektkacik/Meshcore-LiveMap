@@ -3,6 +3,12 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-17 — Adaptivní FPS animace tras
+- Prostředí: beta
+- Build: 20261117-0751-8983503
+- Při méně než 175 vykreslených trasách zůstává animace na 10 FPS; při vyšším zatížení klesne na 5 FPS.
+- Trasy zůstávají viditelné, snižuje se jen frekvence jejich animovaného překreslování.
+
 ## 2026-11-17 — Obnova filtrů po probuzení mapy
 - Prostředí: produkce i beta
 - Build: 20261117-0725-6521df5
