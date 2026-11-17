@@ -107,6 +107,7 @@ export function createHttpRequestHandler(runtime) {
   resolveImportNode,
   safeAdminNext,
   sameOriginRequest,
+  securityEvents,
   securityHeaders,
   writeAllowedHosts,
   writeAllowedOrigins,
@@ -210,6 +211,13 @@ async function handleAdminRequest(request, response, url) {
     }
     const next = safeAdminNext(form.get("next"));
     if (!adminAuth.verifyPassword(form.get("password"))) {
+      securityEvents?.record({
+        category: "admin-login-failed",
+        ip: clientIp(request),
+        method: request.method,
+        path: url.pathname,
+        origin: String(request.headers.origin || ""),
+      });
       response.writeHead(401, { "Content-Type": "text/html; charset=utf-8" });
       response.end(renderAdminLogin({ error: "Nesprávné heslo.", next }));
       return;
@@ -519,6 +527,15 @@ async function handleRequest(request, response) {
   const writeDenied = !writeRequestAllowed(request, url);
   const liveDenied = !liveReadRequestAllowed(request, url);
   if (writeDenied || liveDenied) {
+    securityEvents?.record({
+      category: writeDenied ? "foreign-write" : "foreign-live-read",
+      ip: clientIp(request),
+      method: request.method,
+      path: url.pathname,
+      origin: String(request.headers.origin || ""),
+      referer: String(request.headers.referer || ""),
+      host: String(request.headers.host || ""),
+    });
     if (url.pathname.startsWith("/api/")) {
       sendJson(response, 403, {
         error: liveDenied && !writeDenied
@@ -543,19 +560,28 @@ async function handleRequest(request, response) {
   }
 
   if (url.pathname === "/events/packets") {
+    const streamIp = clientIp(request);
     if (request.method !== "GET" && request.method !== "HEAD") {
+      securityEvents?.record({
+        category: "method-probe",
+        ip: streamIp,
+        method: request.method,
+        path: url.pathname,
+        origin: String(request.headers.origin || ""),
+      });
       methodNotAllowed(response, "GET, HEAD");
       return;
     }
-    const streamIp = clientIp(request);
     const liveRate = checkLiveRead(streamIp);
     if (!liveRate.ok) {
+      securityEvents?.record({ category: "rate-limit", ip: streamIp, method: request.method, path: url.pathname });
       sendJson(response, 429, { error: liveRate.message || "Příliš mnoho požadavků, zkuste to později." }, { "Retry-After": String(liveRate.retryAfter) });
       return;
     }
     let openStreams = 0;
     for (const stream of packetStreams) if (stream.ip === streamIp) openStreams += 1;
     if (openStreams >= maxPacketStreamsPerIp) {
+      securityEvents?.record({ category: "sse-ip-limit", ip: streamIp, method: request.method, path: url.pathname });
       sendJson(response, 429, { error: "Příliš mnoho otevřených streamů z této IP adresy." }, { "Retry-After": "60" });
       return;
     }
@@ -1652,10 +1678,22 @@ async function handleRequest(request, response) {
     if (isNodes && !enforceReadRate(request, response, checkNodes)) return;
     if (LIVE_READ_PATHS.has(url.pathname)) {
       if (request.method !== "GET" && request.method !== "HEAD") {
+        securityEvents?.record({
+          category: "method-probe",
+          ip: clientIp(request),
+          method: request.method,
+          path: url.pathname,
+          origin: String(request.headers.origin || ""),
+        });
         methodNotAllowed(response, "GET");
         return;
       }
-      if (!enforceReadRate(request, response, checkLiveRead)) return;
+      const rate = checkLiveRead(clientIp(request));
+      if (!rate.ok) {
+        securityEvents?.record({ category: "rate-limit", ip: clientIp(request), method: request.method, path: url.pathname });
+        sendJson(response, 429, { error: rate.message || "Příliš mnoho požadavků, zkuste to později." }, { "Retry-After": String(rate.retryAfter) });
+        return;
+      }
     }
 
     const controller = new AbortController();

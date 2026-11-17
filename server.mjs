@@ -22,6 +22,7 @@ import { createCollectors } from "./collectors.mjs";
 import { createElevationTerrain } from "./elevation-terrain.mjs";
 import { createMonitor } from "./monitor.mjs";
 import { createHttpRequestHandler } from "./http-server.mjs";
+import { createSecurityEvents } from "./security-events.mjs";
 import { createMqttIngest } from "./mqtt-ingest.mjs";
 import { createLegacyPages } from "./legacy-pages.mjs";
 import { createRateLimiter, formatCsDate, hashIp, methodNotAllowed, safeEqualText } from "./http-utils.mjs";
@@ -217,6 +218,12 @@ const recentPackets = new TimeBoundRingBuffer({
 });
 const maxPacketStreams = Math.max(1, Number(process.env.MAX_PACKET_STREAMS || 100));
 const maxPacketStreamsPerIp = Math.max(1, Number(process.env.MAX_PACKET_STREAMS_PER_IP || 10));
+const securityEvents = createSecurityEvents({
+  logPath: process.env.SECURITY_LOG_PATH || "data/security-events.log",
+  notify: (message) => notifyTelegram(message),
+  windowMs: Math.max(60_000, Number(process.env.SECURITY_ALERT_WINDOW_MS || 10 * 60 * 1000)),
+  burstThreshold: Math.max(2, Number(process.env.SECURITY_ALERT_BURST || 8)),
+});
 const maxStreamBufferBytes = Math.max(1024, Number(process.env.MAX_STREAM_BUFFER_BYTES || 256 * 1024));
 const serverStartedAt = Date.now();
 const contentTypes = {
@@ -974,6 +981,13 @@ async function handleTelegramWebhook(request, response) {
   }
   const providedSecret = request.headers["x-telegram-bot-api-secret-token"];
   if (typeof providedSecret !== "string" || !safeEqualText(providedSecret, telegramWebhookSecret)) {
+    securityEvents.record({
+      category: "telegram-webhook-401",
+      ip: clientIp(request),
+      method: request.method,
+      path: "/api/telegram/webhook",
+      origin: String(request.headers.origin || ""),
+    });
     response.writeHead(401, { "Content-Type": "text/plain; charset=utf-8" }).end("Unauthorized");
     return;
   }
@@ -1461,6 +1475,7 @@ const handleRequest = createHttpRequestHandler({
   resolveElevations: elevationTerrain.resolveElevations,
   resolveImportNode,
   safeAdminNext,
+  securityEvents,
   sameOriginRequest,
   securityHeaders,
   writeAllowedHosts,
