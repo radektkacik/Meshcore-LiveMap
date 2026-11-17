@@ -3,6 +3,12 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-17 — Plynulejší úsporná animace tras
+- Prostředí: produkce i beta
+- Build: 20261117-0827-7e31d9d
+- Beta build: 20261117-0825-7e31d9d
+- Od 120 vykreslených tras se animace nově zpomalí na 7 FPS místo 5 FPS.
+
 ## 2026-11-17 — QR profil repeateru a soukromý vzkaz správci
 - Prostředí: beta
 - Build: 20261117-0820-71b30b3
