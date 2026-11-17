@@ -36,6 +36,7 @@ export function createHttpRequestHandler(runtime) {
   checkNodeInfo,
   checkNodes,
   checkPacketHistory,
+  checkResolveHops,
   checkPhotoList,
   checkPhotoManage,
   checkPhotoReport,
@@ -1688,9 +1689,15 @@ async function handleRequest(request, response) {
         methodNotAllowed(response, "GET");
         return;
       }
-      const rate = checkLiveRead(clientIp(request));
+      // resolve-hops je běžně vytížený klientem dávkami po 80 prefixech;
+      // má vlastní štědřejší limit a jeho 429 nejsou bezpečnostní událost.
+      const isResolve = url.pathname === "/api/resolve-hops";
+      const limiter = isResolve ? checkResolveHops : checkLiveRead;
+      const rate = limiter(clientIp(request));
       if (!rate.ok) {
-        securityEvents?.record({ category: "rate-limit", ip: clientIp(request), method: request.method, path: url.pathname });
+        if (!isResolve) {
+          securityEvents?.record({ category: "rate-limit", ip: clientIp(request), method: request.method, path: url.pathname });
+        }
         sendJson(response, 429, { error: rate.message || "Příliš mnoho požadavků, zkuste to později." }, { "Retry-After": String(rate.retryAfter) });
         return;
       }

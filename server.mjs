@@ -661,6 +661,7 @@ const checkNodeHealth = createReadRateLimiter("NODE_HEALTH_RATE_LIMIT", 60);
 const checkNodeHistory = createReadRateLimiter("NODE_HISTORY_RATE_LIMIT", 60);
 const checkPacketHistory = createReadRateLimiter("PACKET_HISTORY_RATE_LIMIT", 60);
 const checkLiveRead = createReadRateLimiter("LIVE_READ_RATE_LIMIT", 120);
+const checkResolveHops = createReadRateLimiter("RESOLVE_HOPS_RATE_LIMIT", 300);
 
 function cachedNodeByKey(key) {
   if (!nodesCache?.body) return null;
@@ -1407,6 +1408,7 @@ const handleRequest = createHttpRequestHandler({
   checkNodeInfo,
   checkNodes,
   checkPacketHistory,
+  checkResolveHops,
   checkPhotoList,
   checkPhotoManage,
   checkPhotoReport,
