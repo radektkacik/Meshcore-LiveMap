@@ -4,8 +4,9 @@ Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam 
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-17 — Logování podezřelých událostí
-- Prostředí: beta
-- Build: 20261117-0954-04acd6e
+- Prostředí: produkce i beta
+- Build: 20261117-1034-84904bf
+- Beta build: 20261117-0954-04acd6e
 - Podezřelé události se zapisují do `data/security-events.log` jako JSON řádky (rotace po 2 MB).
 - Sledováno: cizí Origin u zápisů a živých dat, OPTIONS sondy, rate limity, chybná admin hesla, neplatný Telegram secret.
 - První výskyt kategorie a hustý útok (`SECURITY_ALERT_BURST` za `SECURITY_ALERT_WINDOW_MS`) odešlou okamžité upozornění na Telegram.
@@ -17,8 +18,9 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 - Od 120 vykreslených tras se animace nově zpomalí na 7 FPS místo 5 FPS.
 
 ## 2026-11-17 — QR profil repeateru a soukromý vzkaz správci
-- Prostředí: beta
-- Build: 20261117-0820-71b30b3
+- Prostředí: produkce i beta
+- Build: 20261117-1034-84904bf
+- Beta build: 20261117-0820-71b30b3
 - U nodu lze zobrazit a stáhnout PNG s QR odkazem na profil.
 - Profil nabízí soukromý vzkaz správci s automatickým kontextem nodu; veřejné zveřejnění je pro tento formulář vypnuté.
 
