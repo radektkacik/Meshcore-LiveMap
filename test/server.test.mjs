@@ -108,6 +108,8 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       CORESCOPE_URL: `http://127.0.0.1:${upstreamPort}`,
       HOST: "127.0.0.1",
       MAX_PACKET_STREAMS: "1",
+      MAX_PACKET_STREAMS_PER_IP: "2",
+      LIVE_READ_RATE_LIMIT: "100",
       NODES_CACHE_PATH: join(directory, "nodes-cache.json"),
       NODE_DETAIL_RATE_LIMIT: "2",
       NODE_INFO_DB_PATH: join(directory, "node-info.sqlite"),
@@ -192,6 +194,16 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       headers: { Origin: "https://map-cz.meshcore.dev" },
     });
     assert.equal(foreignPackets.status, 403);
+    const foreignOptionsPackets = await fetch(`http://127.0.0.1:${appPort}/api/packets?limit=1`, {
+      method: "OPTIONS",
+      headers: { Origin: "https://map-cz.meshcore.dev" },
+    });
+    assert.equal(foreignOptionsPackets.status, 405);
+    const ownOptionsPackets = await fetch(`http://127.0.0.1:${appPort}/api/packets?limit=1`, {
+      method: "OPTIONS",
+      headers: { Origin: "http://127.0.0.1" },
+    });
+    assert.equal(ownOptionsPackets.status, 405);
     const nodeDetailKey = "a".repeat(64);
     const nodeDetail = await fetch(`http://127.0.0.1:${appPort}/api/node-detail?key=${nodeDetailKey}`);
     assert.equal(nodeDetail.status, 200);
@@ -740,6 +752,23 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     assert.match(streamBody, /"viewers":1/);
     assert.match(streamBody, /"time":\d+/);
     assert.equal((await fetch(`http://127.0.0.1:${appPort}/events/packets`)).status, 503);
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    assert.equal((await fetch(`http://127.0.0.1:${appPort}/events/packets`, { method: "OPTIONS" })).status, 405);
+    const thirdStream = await fetch(`http://127.0.0.1:${appPort}/events/packets`);
+    assert.ok([429, 503].includes(thirdStream.status), `expected 429 or 503, got ${thirdStream.status}`);
+    await thirdStream.body?.cancel().catch(() => {});
+    firstStream.destroy();
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const secondStream = await fetch(`http://127.0.0.1:${appPort}/events/packets`);
+    assert.equal(secondStream.status, 200);
+    await secondStream.body?.cancel().catch(() => {});
+    let streamHits = 0;
+    for (let index = 0; index < 110; index += 1) {
+      const hit = await fetch(`http://127.0.0.1:${appPort}/api/search?hash=ab${String(index % 10)}`);
+      if (hit.status === 429) streamHits += 1;
+      await hit.body?.cancel().catch(() => {});
+    }
+    assert.ok(streamHits >= 1, `live read rate limit should kick in, got ${streamHits} × 429`);
     assert.equal(child.exitCode, null);
   } finally {
     firstStream?.destroy();

@@ -29,6 +29,7 @@ export function createHttpRequestHandler(runtime) {
   checkComment,
   checkElevation,
   checkFeedback,
+  checkLiveRead,
   checkNodeDetail,
   checkNodeHealth,
   checkNodeHistory,
@@ -67,6 +68,7 @@ export function createHttpRequestHandler(runtime) {
   historyRowToPacket,
   importRepeaterPhoto,
   maxPacketStreams,
+  maxPacketStreamsPerIp,
   metricsStore,
   nodeInfoStore,
   nodesCacheFresh,
@@ -137,7 +139,7 @@ function requestVoterHash(request) {
   return createHash("sha256").update(voter).digest("hex");
 }
 
-function enforceReadRate(request, response, limiter) {
+function enforceReadRate(request, response, limiter = checkLiveRead) {
   const rate = limiter(clientIp(request));
   if (rate.ok) return true;
   sendJson(response, 429, {
@@ -493,8 +495,8 @@ function writeRequestAllowed(request, url) {
 }
 
 function liveReadRequestAllowed(request, url) {
-  if (request.method !== "GET" && request.method !== "HEAD") return true;
   if (url.pathname !== "/events/packets" && !LIVE_READ_PATHS.has(url.pathname)) return true;
+  if (request.method !== "GET" && request.method !== "HEAD") return true;
   return requestSourceAllowed(request);
 }
 
@@ -541,6 +543,22 @@ async function handleRequest(request, response) {
   }
 
   if (url.pathname === "/events/packets") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      methodNotAllowed(response, "GET, HEAD");
+      return;
+    }
+    const streamIp = clientIp(request);
+    const liveRate = checkLiveRead(streamIp);
+    if (!liveRate.ok) {
+      sendJson(response, 429, { error: liveRate.message || "Příliš mnoho požadavků, zkuste to později." }, { "Retry-After": String(liveRate.retryAfter) });
+      return;
+    }
+    let openStreams = 0;
+    for (const stream of packetStreams) if (stream.ip === streamIp) openStreams += 1;
+    if (openStreams >= maxPacketStreamsPerIp) {
+      sendJson(response, 429, { error: "Příliš mnoho otevřených streamů z této IP adresy." }, { "Retry-After": "60" });
+      return;
+    }
     if (packetStreams.size >= maxPacketStreams) {
       response.writeHead(503, {
         "Content-Type": "text/plain; charset=utf-8",
@@ -557,6 +575,7 @@ async function handleRequest(request, response) {
     });
     const client = {
       blocked: false,
+      ip: streamIp,
       onDrain: null,
       response,
     };
@@ -616,6 +635,7 @@ async function handleRequest(request, response) {
       methodNotAllowed(response, "GET");
       return;
     }
+    if (!enforceReadRate(request, response)) return;
     const prefix = String(url.searchParams.get("hash") || "").trim();
     if (!/^[0-9a-fA-F]{2,64}$/.test(prefix)) {
       response.writeHead(400, { "Content-Type": "application/json; charset=utf-8" });
@@ -1373,6 +1393,7 @@ async function handleRequest(request, response) {
       methodNotAllowed(response, "GET");
       return;
     }
+    if (!enforceReadRate(request, response)) return;
     const hash = String(url.searchParams.get("hash") || "").trim().toLowerCase();
     if (!/^[0-9a-f]{4,64}$/.test(hash)) {
       sendJson(response, 400, { error: "Neplatný hash paketu." });
@@ -1392,6 +1413,7 @@ async function handleRequest(request, response) {
       methodNotAllowed(response, "GET");
       return;
     }
+    if (!enforceReadRate(request, response)) return;
     const sinceParam = url.searchParams.has("since") ? Number(url.searchParams.get("since")) : NaN;
     const limitParam = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : NaN;
     const since = Number.isFinite(sinceParam) ? sinceParam : Date.now() - 24 * 60 * 60 * 1000;
@@ -1628,6 +1650,13 @@ async function handleRequest(request, response) {
 
     const isNodes = url.pathname === "/api/nodes";
     if (isNodes && !enforceReadRate(request, response, checkNodes)) return;
+    if (LIVE_READ_PATHS.has(url.pathname)) {
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        methodNotAllowed(response, "GET");
+        return;
+      }
+      if (!enforceReadRate(request, response, checkLiveRead)) return;
+    }
 
     const controller = new AbortController();
     const isStatsPath = url.pathname === "/api/stats" && !url.search;

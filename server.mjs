@@ -216,6 +216,7 @@ const recentPackets = new TimeBoundRingBuffer({
   maxAgeMs: packetBufferMs,
 });
 const maxPacketStreams = Math.max(1, Number(process.env.MAX_PACKET_STREAMS || 100));
+const maxPacketStreamsPerIp = Math.max(1, Number(process.env.MAX_PACKET_STREAMS_PER_IP || 10));
 const maxStreamBufferBytes = Math.max(1024, Number(process.env.MAX_STREAM_BUFFER_BYTES || 256 * 1024));
 const serverStartedAt = Date.now();
 const contentTypes = {
@@ -652,6 +653,7 @@ const checkNodes = createReadRateLimiter("NODES_RATE_LIMIT", 120);
 const checkNodeHealth = createReadRateLimiter("NODE_HEALTH_RATE_LIMIT", 60);
 const checkNodeHistory = createReadRateLimiter("NODE_HISTORY_RATE_LIMIT", 60);
 const checkPacketHistory = createReadRateLimiter("PACKET_HISTORY_RATE_LIMIT", 60);
+const checkLiveRead = createReadRateLimiter("LIVE_READ_RATE_LIMIT", 120);
 
 function cachedNodeByKey(key) {
   if (!nodesCache?.body) return null;
@@ -1384,6 +1386,7 @@ const handleRequest = createHttpRequestHandler({
   checkComment,
   checkElevation,
   checkFeedback,
+  checkLiveRead,
   checkNodeDetail,
   checkNodeHealth,
   checkNodeHistory,
@@ -1420,6 +1423,7 @@ const handleRequest = createHttpRequestHandler({
   historyRowToPacket,
   importRepeaterPhoto,
   maxPacketStreams,
+  maxPacketStreamsPerIp,
   metricsStore,
   nodeInfoStore,
   nodesCacheFresh,
