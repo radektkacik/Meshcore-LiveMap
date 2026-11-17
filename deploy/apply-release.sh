@@ -16,7 +16,7 @@ APP_USER=${APP_USER:-meshcore-map}
 APP_GROUP=${APP_GROUP:-meshcore-map}
 ROLLBACK_SCRIPT=${ROLLBACK_SCRIPT:-/root/rollback-meshcore.sh}
 
-for file in server.mjs http-server.mjs admin-auth.mjs monitor.mjs mqtt-ingest.mjs collectors.mjs elevation-terrain.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs cz-health.mjs cz-health-store.mjs visit-stats.mjs feedback.mjs photos.mjs node-info.mjs comments.mjs repeater-pages.mjs notify.mjs html.mjs sqlite-store.mjs admin-pages.mjs legacy-pages.mjs http-utils.mjs security-events.mjs package.json package-lock.json dist/index.html \
+for file in server.mjs http-server.mjs admin-auth.mjs monitor.mjs mqtt-ingest.mjs collectors.mjs elevation-terrain.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs cz-health.mjs cz-health-store.mjs visit-stats.mjs feedback.mjs photos.mjs node-info.mjs comments.mjs repeater-pages.mjs notify.mjs html.mjs sqlite-store.mjs admin-pages.mjs legacy-pages.mjs http-utils.mjs security-events.mjs turnstile.mjs package.json package-lock.json dist/index.html \
   rollback-vps.sh \
   "$STORAGE_CONF_NAME" \
   node_modules/@michaelhart/meshcore-decoder/package.json \
@@ -50,6 +50,8 @@ node --check admin-pages.mjs
 node --check legacy-pages.mjs
 node --check http-utils.mjs
 node --check security-events.mjs
+node --check turnstile.mjs
+node --input-type=module -e 'import("sharp")'
 node --input-type=module -e 'import("@michaelhart/meshcore-decoder")'
 node --input-type=module -e 'import("better-sqlite3")'
 
@@ -188,6 +190,9 @@ fi
 if [[ -f "$APP_DIR/security-events.mjs" ]]; then
   backup_paths+=(security-events.mjs)
 fi
+if [[ -f "$APP_DIR/turnstile.mjs" ]]; then
+  backup_paths+=(turnstile.mjs)
+fi
 existing_backup_paths=()
 for path in "${backup_paths[@]}"; do
   [[ -e "$APP_DIR/$path" ]] && existing_backup_paths+=("$path")
@@ -232,6 +237,7 @@ install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/admin-pages.mjs" "$APP_DIR
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/legacy-pages.mjs" "$APP_DIR/legacy-pages.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/http-utils.mjs" "$APP_DIR/http-utils.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/security-events.mjs" "$APP_DIR/security-events.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/turnstile.mjs" "$APP_DIR/turnstile.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/package.json" "$APP_DIR/package.json"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/package-lock.json" "$APP_DIR/package-lock.json"
 mv "$STAGE/dist" "$APP_DIR/dist"

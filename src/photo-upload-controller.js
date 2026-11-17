@@ -1,4 +1,5 @@
 import { preparePhotoBlob } from "./photo-file-utils.js";
+import { writeHeaders } from "./turnstile-client.js";
 
 const MAX_FILES = 5;
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -190,9 +191,10 @@ export function createPhotoUploadController({
           };
           if (batchId) headers["X-Photo-Batch-Id"] = batchId;
           if (index === coverIndex) headers["X-Photo-Cover"] = "1";
+          const verifiedHeaders = await writeHeaders(appPath, "/api/photos", headers);
           const response = await fetch(appPath("/api/photos"), {
             method: "POST",
-            headers,
+            headers: verifiedHeaders,
             body: blob,
             signal: AbortSignal.timeout(60_000),
           });

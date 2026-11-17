@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, normalize, sep } from "node:path";
+import sharp from "sharp";
 import { openSqliteStore } from "./sqlite-store.mjs";
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -102,6 +103,7 @@ function webpSize(buffer) {
 export function detectImage(buffer) {
   if (!Buffer.isBuffer(buffer) || buffer.length < 16) return null;
   if (buffer.subarray(0, 8).equals(PNG_SIGNATURE)) {
+    if (buffer.length < 33 || buffer.readUInt32BE(8) !== 13 || buffer.toString("ascii", 12, 16) !== "IHDR") return null;
     const width = buffer.readUInt32BE(16);
     const height = buffer.readUInt32BE(20);
     return validSize(width, height) ? { mime: "image/png", ext: "png", width, height } : null;
@@ -117,6 +119,42 @@ export function detectImage(buffer) {
     return size ? { mime: "image/webp", ext: "webp", ...size } : null;
   }
   return null;
+}
+
+let activeImageChecks = 0;
+
+// Fully decode untrusted uploads, then re-encode without metadata or trailing data.
+// Header sniffing alone cannot establish that an image is valid.
+export async function normalizeUploadedImage(buffer, { maxDimension = 2400, maxBytes = 5 * 1024 * 1024 } = {}) {
+  const image = detectImage(buffer);
+  if (!image) throw new PhotoError("invalid_image", "Neplatný obrázek. Použijte JPEG, PNG nebo WebP.");
+  if (image.width > maxDimension || image.height > maxDimension) {
+    throw new PhotoError("too_large_dimensions", "Fotka má příliš velké rozměry.");
+  }
+  if (activeImageChecks >= 2) throw new PhotoError("busy", "Server právě zpracovává fotky. Zkuste to za chvíli.");
+  activeImageChecks += 1;
+  try {
+    const pipeline = sharp(buffer, {
+      failOn: "warning",
+      limitInputPixels: maxDimension * maxDimension,
+      sequentialRead: true,
+    }).timeout({ seconds: 5 });
+    const metadata = await pipeline.metadata();
+    if (!["png", "jpeg", "webp"].includes(metadata.format) || (metadata.pages || 1) > 1) {
+      throw new PhotoError("invalid_image", "Animované nebo nepodporované obrázky nelze nahrát.");
+    }
+    const { data, info } = await pipeline.rotate().toFormat(metadata.format).toBuffer({ resolveWithObject: true });
+    if (info.width > maxDimension || info.height > maxDimension) {
+      throw new PhotoError("too_large_dimensions", "Fotka má příliš velké rozměry.");
+    }
+    if (data.length > maxBytes) throw new PhotoError("too_large", "Fotka je po zpracování příliš velká.");
+    return data;
+  } catch (error) {
+    if (error instanceof PhotoError) throw error;
+    throw new PhotoError("invalid_image", "Obrázek je poškozený nebo jej nelze bezpečně načíst.");
+  } finally {
+    activeImageChecks -= 1;
+  }
 }
 
 function mapRow(row) {

@@ -5,6 +5,7 @@ import { createServer, request } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import sharp from "sharp";
 
 function listen(server) {
   return new Promise((resolve, reject) => {
@@ -42,7 +43,7 @@ async function waitForServer(port, child) {
 
 test("HTTP server handles malformed URLs, upstream timeout and SSE limits", async () => {
   const directory = mkdtempSync(join(tmpdir(), "meshcore-server-"));
-  const tinyPng = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/lK3z1wAAAABJRU5ErkJggg==", "base64");
+  const tinyPng = await sharp({ create: { width: 1, height: 1, channels: 4, background: "#ffffff" } }).png().toBuffer();
   let nodesFail = false;
   const telegramMessages = [];
   const telegramCalls = [];
@@ -219,6 +220,8 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
     const photoConfig = await fetch(`http://127.0.0.1:${appPort}/api/photos/config`);
     assert.equal(photoConfig.status, 200);
     assert.deepEqual(await photoConfig.json(), { autoApprove: false });
+    const securityConfig = await fetch(`http://127.0.0.1:${appPort}/api/security/config`);
+    assert.deepEqual(await securityConfig.json(), { enabled: false, siteKey: "" });
     const photoKey = "a".repeat(64);
     const upload = await fetch(`http://127.0.0.1:${appPort}/api/photos`, {
       method: "POST",
@@ -769,6 +772,9 @@ test("HTTP server handles malformed URLs, upstream timeout and SSE limits", asyn
       await hit.body?.cancel().catch(() => {});
     }
     assert.ok(streamHits >= 1, `live read rate limit should kick in, got ${streamHits} × 429`);
+    const limitedRecent = await fetch(`http://127.0.0.1:${appPort}/api/recent`);
+    assert.equal(limitedRecent.status, 429, "recent must share the live API rate limit");
+    assert.match(limitedRecent.headers.get("retry-after") || "", /^\d+$/);
     assert.equal(child.exitCode, null);
   } finally {
     firstStream?.destroy();

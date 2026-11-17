@@ -7,7 +7,7 @@ import Database from "better-sqlite3";
 import { createPhotoStore, detectImage, PhotoError } from "../photos.mjs";
 
 function pngBuffer(width = 640, height = 480) {
-  const buffer = Buffer.alloc(24);
+  const buffer = Buffer.alloc(33);
   Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(buffer, 0);
   buffer.writeUInt32BE(13, 8);
   buffer.write("IHDR", 12, "ascii");

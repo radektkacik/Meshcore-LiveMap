@@ -22,7 +22,8 @@
     "libheif-js": "^1.23.5",
     "maplibre-gl": "^6.18.0",
     "mqtt": "^5.16.1",
-    "qrcode": "^1.5.4"
+    "qrcode": "^1.5.4",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
     "vite": "^8.3.4"

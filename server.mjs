@@ -23,6 +23,7 @@ import { createElevationTerrain } from "./elevation-terrain.mjs";
 import { createMonitor } from "./monitor.mjs";
 import { createHttpRequestHandler } from "./http-server.mjs";
 import { createSecurityEvents } from "./security-events.mjs";
+import { createTurnstile } from "./turnstile.mjs";
 import { createMqttIngest } from "./mqtt-ingest.mjs";
 import { createLegacyPages } from "./legacy-pages.mjs";
 import { createRateLimiter, formatCsDate, hashIp, methodNotAllowed, safeEqualText } from "./http-utils.mjs";
@@ -76,10 +77,11 @@ const commentStore = createCommentStore(commentsDbPath);
 const feedbackToken = process.env.FEEDBACK_TOKEN || "";
 const photoDir = process.env.PHOTO_DIR || join(process.cwd(), "uploads");
 const photoMaxBytes = Math.max(1024, Number(process.env.PHOTO_MAX_BYTES || 5 * 1024 * 1024));
+const photoMaxDimension = Math.max(100, Number(process.env.PHOTO_MAX_DIMENSION || 2400));
 const photoAutoApprove = process.env.PHOTO_AUTO_APPROVE === "1";
 const photoStore = createPhotoStore(photoDir, {
   maxBytes: photoMaxBytes,
-  maxDimension: Math.max(100, Number(process.env.PHOTO_MAX_DIMENSION || 2400)),
+  maxDimension: photoMaxDimension,
   maxPerNode: Math.max(1, Number(process.env.PHOTO_MAX_PER_NODE || 12)),
   maxRows: Math.max(10, Number(process.env.PHOTO_MAX_ROWS || 10_000)),
   maxTotalBytes: Math.max(1024 * 1024, Number(process.env.PHOTO_MAX_TOTAL_BYTES || 2 * 1024 * 1024 * 1024)),
@@ -123,6 +125,12 @@ const publicBasePath = (() => {
   }
 })();
 const adminBasePath = `${publicBasePath}/admin` || "/admin";
+const turnstile = createTurnstile({
+  enabled: process.env.TURNSTILE_ENABLED === "1",
+  siteKey: process.env.TURNSTILE_SITE_KEY || "",
+  secretKey: process.env.TURNSTILE_SECRET_KEY || "",
+  hostname: publicHostname,
+});
 const photoVotingEnabled = process.env.PHOTO_VOTING !== "0";
 const adminAuth = createAdminAuth({
   adminBasePath,
@@ -241,14 +249,15 @@ const securityHeaders = {
   "Content-Security-Policy": [
     "default-src 'self'",
     "base-uri 'self'",
-    "connect-src 'self' https://tiles.openfreemap.org https://tiles.versatiles.org",
+    "connect-src 'self' https://tiles.openfreemap.org https://tiles.versatiles.org https://challenges.cloudflare.com",
+    "frame-src https://challenges.cloudflare.com",
     "font-src 'self' data: https://fonts.gstatic.com",
     "form-action 'self'",
     "frame-ancestors 'none'",
     "img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.opentopomap.org https://server.arcgisonline.com https://tiles.openfreemap.org https://tiles.versatiles.org",
     "manifest-src 'self'",
     "object-src 'none'",
-    "script-src 'self' 'wasm-unsafe-eval'",
+    "script-src 'self' 'wasm-unsafe-eval' https://challenges.cloudflare.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "worker-src 'self' blob:",
     "upgrade-insecure-requests",
@@ -1452,6 +1461,7 @@ const handleRequest = createHttpRequestHandler({
   packetStreams,
   photoAutoApprove,
   photoMaxBytes,
+  photoMaxDimension,
   photoNodeNames,
   photoStore,
   photoVotingEnabled,
@@ -1500,6 +1510,7 @@ const handleRequest = createHttpRequestHandler({
   storeStatsCache,
   terrainCacheGet: elevationTerrain.terrainCacheGet,
   trustedRepeaterSourceUrl,
+  turnstile,
   upstream,
   upstreamTimeoutMs,
   visitStore,

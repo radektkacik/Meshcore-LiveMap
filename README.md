@@ -339,6 +339,23 @@ přihlašovací údaje zůstávají pouze na serveru.
   `NODE_DETAIL_RATE_LIMIT`, `ELEVATION_RATE_LIMIT`, `PHOTO_LIST_RATE_LIMIT`,
   `NODES_RATE_LIMIT`, `NODE_HEALTH_RATE_LIMIT`, `NODE_HISTORY_RATE_LIMIT`
   a `PACKET_HISTORY_RATE_LIMIT`.
+- `/api/recent` sdílí limit `LIVE_READ_RATE_LIMIT` (120/min/IP) s ostatními
+  živými API; `/api/resolve-hops` má samostatný `RESOLVE_HOPS_RATE_LIMIT` (300/min/IP).
+- Upload fotek server plně dekóduje a znovu zakóduje přes `sharp`, bez metadat
+  a připojených dat. Poškozené obrázky a animace odmítne; souběžně zpracovává
+  nejvýše dvě fotky, aby dekódování nevyčerpalo paměť.
+- Volitelná ochrana veřejných zápisů Cloudflare Turnstile se zapíná přes
+  `TURNSTILE_ENABLED=1` až po nastavení `TURNSTILE_SITE_KEY` a `TURNSTILE_SECRET_KEY`
+  v serverovém prostředí. Widget v režimu Managed vytvořte pro doménu
+  `mapa.meshcore.cz` (společná pro produkci i betu). Secret nikdy nepatří do gitu
+  ani do klientského buildu. Klient načítá ověření až při zápisu, s viditelným
+  widgetem pouze pokud Cloudflare požaduje interakci. Každý zápis a každá fotka
+  dávky dostanou nový jednorázový token; server ověří úspěch, hostname a akci
+  `map_write`. Bez tokenu zápis neprojde; při výpadku ověřování vrátí 503.
+  Chráněné jsou nové fotky, reporty, hlasy, komentáře, feedback a uložení node info.
+  Správa/mazání vlastníkem, admin a Telegram dál používají vlastní oprávnění.
+  Bez klíčů ponechte `TURNSTILE_ENABLED=0`; v tom případě nejde o aktivní ochranu.
+  Turnstile omezuje automatizované zápisy, nikoli kopírování veřejného streamu.
 - Podezřelé události se logují jako JSON řádky do `SECURITY_LOG_PATH`
   (výchozí `data/security-events.log`, rotace po 2 MB): pokusy o zápis nebo čtení
   živých dat z cizí domény, OPTIONS sondy na živých endpointech, překročení

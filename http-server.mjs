@@ -2,7 +2,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { join, normalize } from "node:path";
 import { hashIp, methodNotAllowed, safeEqualText } from "./http-utils.mjs";
-import { detectImage, PhotoError } from "./photos.mjs";
+import { normalizeUploadedImage, PhotoError } from "./photos.mjs";
+import { requiresTurnstile } from "./turnstile.mjs";
 import { fetchRepeaterPage, findRepeaterPage, validRepeaterSlug } from "./repeater-pages.mjs";
 
 export function createHttpRequestHandler(runtime) {
@@ -82,6 +83,7 @@ export function createHttpRequestHandler(runtime) {
   packetStreams,
   photoAutoApprove,
   photoMaxBytes,
+  photoMaxDimension,
   photoNodeNames,
   photoStore,
   photoToken,
@@ -130,6 +132,7 @@ export function createHttpRequestHandler(runtime) {
   storeStatsCache,
   terrainCacheGet,
   trustedRepeaterSourceUrl,
+  turnstile,
   upstream,
   upstreamTimeoutMs,
   visitStore,
@@ -550,6 +553,27 @@ async function handleRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/security/config") {
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      methodNotAllowed(response, "GET, HEAD");
+      return;
+    }
+    sendJson(response, 200, turnstile.publicConfig());
+    return;
+  }
+
+  if (turnstile.enabled && requiresTurnstile(request.method, url.pathname)) {
+    const result = await turnstile.verify(request, clientIp(request));
+    if (!result.ok) {
+      sendJson(response, result.status, {
+        error: result.status === 503
+          ? "Ověření proti robotům není dostupné. Zkuste to za chvíli."
+          : "Ověření proti robotům selhalo. Zkuste požadavek odeslat znovu.",
+      }, result.retryAfter ? { "Retry-After": String(result.retryAfter) } : {});
+      return;
+    }
+  }
+
   if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) {
     await handleAdminRequest(request, response, url);
     return;
@@ -876,11 +900,8 @@ async function handleRequest(request, response) {
       });
       return;
     }
-    if (!detectImage(buffer)) {
-      sendJson(response, 415, { error: "Nepodporovaný formát fotky. Použijte JPEG, PNG nebo WebP." });
-      return;
-    }
     try {
+      buffer = await normalizeUploadedImage(buffer, { maxBytes: photoMaxBytes, maxDimension: photoMaxDimension });
       const manageToken = randomBytes(32).toString("base64url");
       const photo = photoStore.create({
         author: cleanPhotoText(decodeHeaderValue(request.headers["x-photo-author"]), 60),
@@ -904,7 +925,8 @@ async function handleRequest(request, response) {
         const status = error.code === "too_large" || error.code === "too_large_dimensions" ? 413
           : error.code === "store_full" ? 507
             : error.code === "node_limit" ? 409
-              : error.code === "invalid_image" ? 415 : 400;
+              : error.code === "busy" ? 429
+                : error.code === "invalid_image" ? 415 : 400;
         sendJson(response, status, { error: error.message });
         return;
       }
@@ -1527,6 +1549,7 @@ async function handleRequest(request, response) {
       methodNotAllowed(response, "GET");
       return;
     }
+    if (!enforceReadRate(request, response)) return;
     const secondsParam = url.searchParams.has("seconds") ? Number(url.searchParams.get("seconds")) : NaN;
     const seconds = Number.isFinite(secondsParam) ? Math.min(Math.max(1, secondsParam), 120) : 30;
     const limitParam = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : NaN;

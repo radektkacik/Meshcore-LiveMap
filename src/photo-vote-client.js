@@ -1,3 +1,5 @@
+import { writeHeaders } from "./turnstile-client.js";
+
 const VOTER_KEY = "meshcorePhotoVoterId";
 const API_TIMEOUT_MS = 20_000;
 let fallbackVoterId = "";
@@ -18,7 +20,9 @@ export function getPhotoVoterId() {
 }
 
 async function request(appPath, path, options = {}) {
-  const headers = new Headers(options.headers || {});
+  const headers = options.method === "POST"
+    ? await writeHeaders(appPath, path, options.headers)
+    : new Headers(options.headers || {});
   headers.set("X-Photo-Voter", getPhotoVoterId());
   const response = await fetch(appPath(path), {
     ...options,

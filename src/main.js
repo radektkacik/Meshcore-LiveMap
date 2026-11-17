@@ -4,6 +4,7 @@ import { createState } from "./app-state.js";
 import { elements } from "./elements.js";
 import { createExportController } from "./export-controller.js";
 import { createFeedbackController } from "./feedback-controller.js";
+import { writeHeaders } from "./turnstile-client.js";
 import { escapeHtml } from "../html.mjs";
 import "leaflet/dist/leaflet.css";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -3215,9 +3216,10 @@ async function getJson(path) {
 }
 
 async function postJson(path, body) {
+  const headers = await writeHeaders(appPath, path, { "Content-Type": "application/json" });
   const response = await fetch(appPath(path), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(API_TIMEOUT_MS),
   });
@@ -7079,9 +7081,10 @@ elements.commentsForm.addEventListener("submit", async (event) => {
   elements.commentsSubmit.disabled = true;
   setCommentsStatus(t("comments.sending"));
   try {
+    const headers = await writeHeaders(appPath, "/api/comments", { "Content-Type": "application/json" });
     const response = await fetch(appPath("/api/comments"), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({
         key: target.key,
         text,
