@@ -211,11 +211,6 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
       setStatus(t("companionTrace.traceError"), true);
       return;
     }
-    const plan = path.map((key, index) => {
-      const node = allNodes().find((candidate) => String(candidate.public_key || "").toLowerCase() === key);
-      return `${index + 1}. ${node?.name || key.slice(0, 12)} (${key.slice(0, 4).toUpperCase()})`;
-    }).join("\n");
-    if (!window.confirm(`${t("companionTrace.confirm")}\n\n${plan}`)) return;
     selecting = false;
     sending = true;
     elements.companionTraceResult.textContent = "";
