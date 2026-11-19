@@ -30,6 +30,14 @@ test("suggestion avoids known colliding repeater prefixes", () => {
   assert.deepEqual(suggestTracePath(a, c, graph, [...nodes, collision], now).path, [a, d, c, d, a].map((key) => key.toLowerCase()));
 });
 
+test("suggestion only uses coordinates accepted by map rendering", () => {
+  const invalid = nodes.map((node) => node.public_key === b ? { ...node, lat: 0, lon: 0 } : node);
+  const result = suggestTracePath(a, c, graph, invalid, now);
+  assert.deepEqual(result.path, [a, d, c, d, a].map((item) => item.toLowerCase()));
+  const strings = nodes.map((node) => node.public_key === a ? { ...node, lat: "50" } : node);
+  assert.equal(suggestTracePath(a, c, graph, strings, now), null);
+});
+
 test("alternative skips previously suggested routes and keeps their return leg", () => {
   const first = suggestTracePath(a, c, graph, nodes, now);
   const seen = new Set([first.path.join(",")]);

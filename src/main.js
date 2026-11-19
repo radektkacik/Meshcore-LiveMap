@@ -3531,6 +3531,9 @@ function renderCompanionTrace(pathKeys, outcome = null) {
   if (points.length > 1) {
     L.polyline(points, { color, dashArray: "8 7", opacity: 0.95, weight: 5, interactive: false }).addTo(companionTraceLayer);
   }
+  if (outcome?.focus && points.length > 1) {
+    map.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 12 });
+  }
   for (const { point, positions } of labels.values()) {
     L.marker(point, {
       interactive: false,

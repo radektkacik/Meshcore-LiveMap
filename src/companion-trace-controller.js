@@ -164,7 +164,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
       });
       setStatus(t("companionTrace.suggestReady"));
       renderPath();
-      onPathChange([...path]);
+      onPathChange([...path], { focus: true });
       return true;
     }
     if (path.length >= MAX_TRACE_HOPS) {
@@ -435,7 +435,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
     });
     setStatus(t("companionTrace.suggestReady"));
     renderPath();
-    onPathChange([...path]);
+    onPathChange([...path], { focus: true });
   });
   elements.companionTraceReturn.addEventListener("click", () => {
     if (sending || path.length < 2 || hasReturnTracePath(path)) return;

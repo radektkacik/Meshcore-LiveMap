@@ -1,4 +1,5 @@
 import { appendReturnTracePath, buildTracePath, MAX_TRACE_HOPS } from "./trace-path.js";
+import { validCoords } from "./node-model.js";
 
 // The neighbor index is inferred from observed paths and is not directional proof.
 export function suggestTracePath(start, destination, neighborIndex, nodes, now = Date.now(), excluded = new Set()) {
@@ -12,8 +13,7 @@ export function suggestTracePath(start, destination, neighborIndex, nodes, now =
   const usable = (key) => {
     const node = byKey.get(key);
     return /^[0-9A-F]{64}$/.test(key) && prefixes.get(key.slice(0, 4)) === 1
-      && Number.isFinite(Number(node?.lat)) && Number.isFinite(Number(node?.lon))
-      && node?.lat != null && node?.lon != null;
+      && validCoords(node?.lat, node?.lon);
   };
   const from = String(start || "").toUpperCase();
   const to = String(destination || "").toUpperCase();
