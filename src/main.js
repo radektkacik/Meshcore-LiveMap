@@ -2831,7 +2831,7 @@ photoGallery.bind();
 const photoLightbox = createPhotoLightboxController({
   appPath,
   elements,
-  formatDateTimeShort,
+  formatDateTime,
   onManage: (photo, node) => photoManage.open(photo, node),
   onOpenNode: (photo, node) => revealPhotoNode(photo, node),
   onVote: votePhoto,

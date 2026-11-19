@@ -4,7 +4,7 @@ const PHOTO_SWIPE_DOMINANCE = 1.25;
 export function createPhotoLightboxController({
   appPath,
   elements,
-  formatDateTimeShort,
+  formatDateTime,
   onManage = () => {},
   onOpenNode = () => {},
   onVote = () => {},
@@ -213,7 +213,7 @@ export function createPhotoLightboxController({
     const hasDate = Number.isFinite(createdAt) && createdAt > 0 && Number.isFinite(new Date(createdAt).getTime());
     elements.photoLightboxDate.hidden = !hasDate;
     elements.photoLightboxDate.textContent = hasDate
-      ? t("photos.uploadedAt", { date: formatDateTimeShort(createdAt) })
+      ? t("photos.uploadedAt", { date: formatDateTime(createdAt) })
       : "";
     elements.photoLightboxVotes.hidden = !votingEnabled;
     if (votingEnabled) renderVoteState(active);
