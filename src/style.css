@@ -1053,7 +1053,7 @@ html[data-theme="dark"] .photo-manage-uploads button { color: #5fd0a5; backgroun
 #profile-qr-download { min-height: 36px; margin-top: 12px; padding: 7px 12px; border: 1px solid rgba(7, 142, 98, 0.35); border-radius: 7px; color: #087a57; background: #edf7f1; font: 600 calc(11px * var(--font-scale)) Manrope, sans-serif; cursor: pointer; }
 .route-step-marker { width: 20px !important; height: 20px !important; border: 2px solid #fff; border-radius: 50%; color: #fff; background: #287fc9; box-shadow: 0 2px 6px rgba(20, 42, 32, 0.35); font: 500 calc(10px * var(--font-scale))/calc(16px * var(--font-scale)) "DM Mono", monospace; text-align: center; }
 .route-break-marker { display: grid; place-items: center; width: 16px !important; height: 16px !important; border: 1px solid #b27616; border-radius: 50%; color: #8a5a00; background: #fff4e2; box-shadow: 0 1px 4px rgba(32, 54, 44, 0.25); font: 700 calc(10px * var(--font-scale))/1 "DM Mono", monospace; cursor: pointer; }
-.route-snr-label { display: grid; place-items: center; border: 1px solid; border-radius: 5px; background: rgba(255, 255, 251, 0.92); box-shadow: 0 1px 4px rgba(32, 54, 44, 0.22); font: 700 calc(9px * var(--font-scale))/1 "DM Mono", monospace; white-space: nowrap; }
+.route-snr-label { display: grid; place-items: center; border: 1px solid; border-radius: 5px; background: rgba(255, 255, 251, 0.92); box-shadow: 0 1px 4px rgba(32, 54, 44, 0.22); font: 700 calc(11px * var(--font-scale))/1 "DM Mono", monospace; white-space: nowrap; }
 .route-snr-label.good { color: #1d8a58; border-color: rgba(43, 191, 136, 0.7); }
 .route-snr-label.fair { color: #a36a1a; border-color: rgba(227, 145, 28, 0.75); }
 .route-snr-label.bad { color: #b03024; border-color: rgba(209, 55, 77, 0.75); }

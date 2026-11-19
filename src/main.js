@@ -4681,8 +4681,8 @@ function rebuildSnrLabels() {
           icon: L.divIcon({
             className: `route-snr-label ${tone}`,
             html: `${formatDecimal(snr, 1)} dB`,
-            iconAnchor: [28, 9],
-            iconSize: [56, 18],
+            iconAnchor: [32, 11],
+            iconSize: [64, 22],
           }),
           interactive: false,
           keyboard: false,
