@@ -1,5 +1,9 @@
 import Constants from "@liamcottle/meshcore.js/src/constants.js";
 
+export function traceSnrTone(snr) {
+  return snr >= 5 ? "good" : snr >= 0 ? "fair" : "bad";
+}
+
 export function measuredTraceSnrs(result, expectedPath) {
   const hashes = result?.pathHashes;
   const snrs = result?.pathSnrs;

@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import Constants from "@liamcottle/meshcore.js/src/constants.js";
-import { encodeTwoByteTraceCommand, installTwoByteTraceSupport, measuredTraceSnrs, parseTwoByteTracePush } from "../src/companion-trace-protocol.js";
+import { encodeTwoByteTraceCommand, installTwoByteTraceSupport, measuredTraceSnrs, parseTwoByteTracePush, traceSnrTone } from "../src/companion-trace-protocol.js";
+
+test("trace SNR colors match map thresholds", () => {
+  assert.equal(traceSnrTone(5), "good");
+  assert.equal(traceSnrTone(0), "fair");
+  assert.equal(traceSnrTone(-0.25), "bad");
+});
 
 test("measured hop SNRs require the exact expected path and decode signed values", () => {
   const path = Uint8Array.from([0x12, 0x34, 0x12, 0x34]);

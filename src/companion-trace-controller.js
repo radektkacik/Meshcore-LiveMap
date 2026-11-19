@@ -1,7 +1,7 @@
 import WebBleConnection from "@liamcottle/meshcore.js/src/connection/web_ble_connection.js";
 import WebSerialConnection from "@liamcottle/meshcore.js/src/connection/web_serial_connection.js";
 import { appendReturnTracePath, buildTracePath, hasReturnTracePath, MAX_TRACE_HOPS, moveTraceHop } from "./trace-path.js";
-import { installTwoByteTraceSupport, measuredTraceSnrs } from "./companion-trace-protocol.js";
+import { installTwoByteTraceSupport, measuredTraceSnrs, traceSnrTone } from "./companion-trace-protocol.js";
 import { suggestTracePath } from "./trace-suggestion.js";
 import { getPreferredRepeater, setPreferredRepeater } from "./trace-preferred.js";
 import { getLocale, t } from "./i18n.js";
@@ -74,9 +74,13 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
       label.textContent = `${index + 1}. ${node?.name || key.slice(0, 12)} · ${key.slice(0, 4).toUpperCase()}`;
       if (measuredSnrs?.[index] != null) {
         const snr = document.createElement("small");
-        snr.className = "companion-trace-hop-snr";
-        snr.textContent = t("companionTrace.hopSnr", { snr: measuredSnrs[index].toFixed(1) });
-        label.append(snr);
+        snr.className = `companion-trace-hop-snr ${traceSnrTone(measuredSnrs[index])}`;
+        const value = measuredSnrs[index].toFixed(1);
+        snr.textContent = `${value} dB`;
+        snr.setAttribute("aria-label", t("companionTrace.hopSnr", { snr: value }));
+        item.append(label, snr);
+      } else {
+        item.append(label);
       }
       const actions = document.createElement("span");
       actions.className = "companion-trace-hop-actions";
@@ -118,7 +122,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
         onPathChange([...path]);
       });
       actions.append(remove);
-      item.append(label, actions);
+      item.append(actions);
       return item;
     }));
     updateControls();
