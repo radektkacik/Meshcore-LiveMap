@@ -3,6 +3,7 @@ import WebSerialConnection from "@liamcottle/meshcore.js/src/connection/web_seri
 import { appendReturnTracePath, buildTracePath, hasReturnTracePath, MAX_TRACE_HOPS, moveTraceHop } from "./trace-path.js";
 import { installTwoByteTraceSupport, measuredTraceSnrs } from "./companion-trace-protocol.js";
 import { suggestTracePath } from "./trace-suggestion.js";
+import { getPreferredRepeater, setPreferredRepeater } from "./trace-preferred.js";
 import { getLocale, t } from "./i18n.js";
 
 export function createCompanionTraceController({ elements, allNodes, neighbors = () => new Map(), onPathChange = () => {} }) {
@@ -14,6 +15,26 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
   let path = [];
   let measuredSnrs = null;
   let suggestionContext = null;
+  let preferredKey = null;
+  const preferredEnabled = import.meta.env.VITE_BETA === "1";
+
+  function storage() {
+    try { return globalThis.localStorage; } catch { return null; }
+  }
+
+  function preferredNode() {
+    const node = allNodes().find((candidate) => String(candidate.public_key || "").toLowerCase() === preferredKey && candidate.role === "repeater");
+    if (!node) return null;
+    try { buildTracePath([preferredKey], allNodes()); } catch { return null; }
+    return node;
+  }
+
+  function seedPreferred() {
+    if (!preferredEnabled || !connected() || path.length || !preferredNode()) return;
+    path = [preferredKey];
+    renderPath();
+    onPathChange([...path]);
+  }
 
   function setStatus(message, isError = false) {
     elements.companionTraceStatus.textContent = message;
@@ -36,6 +57,13 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
     elements.companionTraceSend.disabled = !connected() || path.length === 0 || sending || suggesting;
     elements.companionTraceSelect.textContent = t(selecting ? "companionTrace.selectStop" : "companionTrace.selectStart");
     elements.companionTraceSuggest.textContent = t(suggesting ? "companionTrace.suggestCancel" : "companionTrace.suggest");
+    elements.companionTracePreferredSave.disabled = !connected() || !path.length || sending || suggesting;
+    elements.companionTracePreferredForget.disabled = !connected() || !preferredKey || sending;
+    const preferred = preferredKey ? preferredNode() : null;
+    elements.companionTracePreferredStatus.textContent = preferred
+      ? t("companionTrace.preferredCurrent", { name: preferred.name || preferredKey.slice(0, 12).toUpperCase() })
+      : preferredKey ? t("companionTrace.preferredUnavailable", { key: preferredKey.slice(0, 12).toUpperCase() })
+        : t("companionTrace.preferredNone");
   }
 
   function renderPath() {
@@ -208,6 +236,8 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
       await waitForConnected(candidate);
       selfInfo = await candidate.getSelfInfo(15_000);
       if (connection !== candidate) throw new Error(t("companionTrace.connectionLost"));
+      preferredKey = preferredEnabled ? getPreferredRepeater(storage(), bytesToHex(selfInfo.publicKey)) : null;
+      seedPreferred();
       setStatus(t("companionTrace.status.connected", {
         name: selfInfo.name || "Companion",
         key: bytesToHex(selfInfo.publicKey).slice(0, 12),
@@ -301,6 +331,9 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
   elements.companionTraceAlternative.textContent = t("companionTrace.alternative");
   elements.companionTraceSuggestHint.hidden = elements.companionTraceSuggest.hidden;
   elements.companionTraceSuggestHint.textContent = t("companionTrace.suggestHint");
+  elements.companionTracePreferred.hidden = !preferredEnabled;
+  elements.companionTracePreferredSave.textContent = t("companionTrace.preferredSave");
+  elements.companionTracePreferredForget.textContent = t("companionTrace.preferredForget");
   setStatus(t("companionTrace.status.disconnected"));
   updateControls();
 
@@ -326,6 +359,26 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
     elements.companionTraceResult.textContent = "";
     renderPath();
     onPathChange([]);
+    seedPreferred();
+  });
+  elements.companionTracePreferredSave.addEventListener("click", () => {
+    if (!connected() || !path.length || sending || suggesting) return;
+    const companionKey = bytesToHex(selfInfo.publicKey);
+    if (!setPreferredRepeater(storage(), companionKey, path[0])) {
+      setStatus(t("companionTrace.preferredStorageError"), true);
+      return;
+    }
+    preferredKey = path[0];
+    updateControls();
+  });
+  elements.companionTracePreferredForget.addEventListener("click", () => {
+    if (!connected() || sending || !preferredKey) return;
+    if (!setPreferredRepeater(storage(), bytesToHex(selfInfo.publicKey), null)) {
+      setStatus(t("companionTrace.preferredStorageError"), true);
+      return;
+    }
+    preferredKey = null;
+    updateControls();
   });
   elements.companionTraceSuggest.addEventListener("click", () => {
     if (!connected() || sending) return;
