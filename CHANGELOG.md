@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-19 — Skutečný trace přes připojený companion
+- Prostředí: beta
+- Build: 20261119-0837-c097eb9
+- Companion lze připojit přes Bluetooth nebo USB/Serial.
+- Uživatel nakliká repeaterové hopy v pořadí a až tlačítkem odešle skutečný TRACE paket.
+- Výsledek a SNR se zobrazí v panelu i trase na mapě; používají se dvoubajtové prefixy a ověřuje se jejich jednoznačnost.
+
 ## 2026-11-17 — Plynulejší úsporná animace tras
 - Prostředí: produkce i beta
 - Build: 20261117-0827-7e31d9d

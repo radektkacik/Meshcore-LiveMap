@@ -212,6 +212,13 @@ přihlašovací údaje zůstávají pouze na serveru.
   spojení používá keepalive 30 s; po výpadku se reconnectuje s backoffem
   3–60 s a jitterem, takže výpadek brokeru nezpůsobí smyčku stovek připojení.
 - `/api/resolve-hops` převádí path prefixy na repeatery a souřadnice.
+- Beta obsahuje panel **Companion · skutečný trace**. Po ručním připojení rádia
+  přes Web Bluetooth nebo Web Serial lze klikáním vybrat až 16 repeaterů v pořadí
+  a tlačítkem odeslat skutečný MeshCore TRACE paket. Výsledná cesta a SNR se
+  zobrazí v panelu i na mapě; pouhé klikání nic nevysílá. TRACE používá
+  dvoubajtové prefixy a odmítne prefix známý jako nejednoznačný v seznamu nodů.
+  Vyžaduje HTTPS a Chromium s odpovídající podporou; dostupnost řízení závisí
+  také na verzi Companion Radio firmwaru.
 - Backend každých 5 minut stahuje z CoreScope poslední rozřešené trasy a ukládá
   je do SQLite (`data/packets.sqlite`). Deduplikuje se podle dvojice hash paketu
   a observer, takže se data přes restart serveru i opakované stahování drží.
