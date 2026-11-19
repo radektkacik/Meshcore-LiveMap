@@ -99,6 +99,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
       if (index > 0 && index < path.length - 1) {
         const replace = document.createElement("button");
         replace.type = "button";
+        replace.className = "companion-trace-replace";
         replace.textContent = "⇄";
         replace.disabled = sending || suggesting;
         replace.title = t("companionTrace.replaceHop", { hop: index + 1 });
@@ -179,7 +180,10 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
     if (suggesting) {
       const suggestion = suggestTracePath(path[0], key, neighbors(), allNodes());
       if (!suggestion) {
+        suggesting = false;
+        selecting = false;
         setStatus(t("companionTrace.suggestNotFound"), true);
+        renderPath();
         return true;
       }
       path = suggestion.path;

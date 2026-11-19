@@ -156,6 +156,9 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .companion-trace-hop-snr.bad { color: #a5262c; background: #ffe2e3; }
 .companion-trace-path li button { min-width: 34px; min-height: 38px; border: 0; color: var(--muted); background: transparent; font-size: calc(16px * var(--font-scale)); cursor: pointer; }
 .companion-trace-path li button:disabled { opacity: .35; cursor: not-allowed; }
+.companion-trace-path li button.companion-trace-replace { min-width: 36px; min-height: 36px; margin-right: 3px; border: 1px solid #078e62; border-radius: 7px; color: #fff; background: #087a57; font-weight: 800; }
+.companion-trace-path li button.companion-trace-replace:not(:disabled):hover { background: #075c43; }
+.companion-trace-path li button.companion-trace-replace:focus-visible { outline: 2px solid #efaa34; outline-offset: 2px; }
 .companion-trace-result { white-space: pre-wrap; overflow-wrap: anywhere; }
 .companion-trace-preferred { margin: 8px 0; padding: 8px; border: 1px solid var(--line); border-radius: 7px; }
 .companion-trace-order-icon { pointer-events: none; white-space: nowrap; }
