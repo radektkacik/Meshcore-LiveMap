@@ -16,7 +16,6 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
   let measuredSnrs = null;
   let suggestionContext = null;
   let preferredKey = null;
-  const preferredEnabled = import.meta.env.VITE_BETA === "1";
 
   function storage() {
     try { return globalThis.localStorage; } catch { return null; }
@@ -30,7 +29,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
   }
 
   function seedPreferred() {
-    if (!preferredEnabled || !connected() || path.length || !preferredNode()) return;
+    if (!connected() || path.length || !preferredNode()) return;
     path = [preferredKey];
     renderPath();
     onPathChange([...path]);
@@ -240,7 +239,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
       await waitForConnected(candidate);
       selfInfo = await candidate.getSelfInfo(15_000);
       if (connection !== candidate) throw new Error(t("companionTrace.connectionLost"));
-      preferredKey = preferredEnabled ? getPreferredRepeater(storage(), bytesToHex(selfInfo.publicKey)) : null;
+      preferredKey = getPreferredRepeater(storage(), bytesToHex(selfInfo.publicKey));
       seedPreferred();
       setStatus(t("companionTrace.status.connected", {
         name: selfInfo.name || "Companion",
@@ -330,12 +329,12 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
   elements.companionTraceClear.textContent = t("companionTrace.clear");
   elements.companionTraceReturn.textContent = t("companionTrace.addReturn");
   elements.companionTraceSend.textContent = t("companionTrace.send");
-  elements.companionTraceSuggest.hidden = import.meta.env.VITE_BETA !== "1";
-  elements.companionTraceAlternative.hidden = elements.companionTraceSuggest.hidden;
+  elements.companionTraceSuggest.hidden = false;
+  elements.companionTraceAlternative.hidden = false;
   elements.companionTraceAlternative.textContent = t("companionTrace.alternative");
   elements.companionTraceSuggestHint.hidden = elements.companionTraceSuggest.hidden;
   elements.companionTraceSuggestHint.textContent = t("companionTrace.suggestHint");
-  elements.companionTracePreferred.hidden = !preferredEnabled;
+  elements.companionTracePreferred.hidden = false;
   elements.companionTracePreferredSave.textContent = t("companionTrace.preferredSave");
   elements.companionTracePreferredForget.textContent = t("companionTrace.preferredForget");
   setStatus(t("companionTrace.status.disconnected"));

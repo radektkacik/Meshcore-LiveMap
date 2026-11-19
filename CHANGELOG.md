@@ -12,6 +12,8 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 - Hopy lze přeuspořádat, automaticky doplnit zpáteční cestu a zobrazit jejich pořadí na mapě.
 - Výsledek a SNR se zobrazí v panelu i trase na mapě; používají se dvoubajtové prefixy a kontrolují se známé kolize.
 - Panel Companionu má větší písmo a přehlednější ovládací prvky.
+- Mapa umí navrhnout cestu podle pozorovaných tras a nabídnout další variantu; první repeater lze uložit pro další použití.
+- Naměřené SNR se zobrazuje barevně u jednotlivých hopů a písmo v ovládacím panelu je sjednocené.
 
 ## 2026-11-17 — Plynulejší úsporná animace tras
 - Prostředí: produkce i beta
