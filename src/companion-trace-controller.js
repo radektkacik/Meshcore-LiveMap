@@ -1,7 +1,8 @@
 import WebBleConnection from "@liamcottle/meshcore.js/src/connection/web_ble_connection.js";
 import WebSerialConnection from "@liamcottle/meshcore.js/src/connection/web_serial_connection.js";
+import Constants from "@liamcottle/meshcore.js/src/constants.js";
 import { appendReturnTracePath, buildTracePath, hasReturnTracePath, MAX_TRACE_HOPS, moveTraceHop } from "./trace-path.js";
-import { installTwoByteTraceSupport, measuredTraceSnrs, traceSnrTone } from "./companion-trace-protocol.js";
+import { installTwoByteTraceSupport, measuredTraceSnrs, partialTraceSnrs, traceSnrTone } from "./companion-trace-protocol.js";
 import { suggestTracePath } from "./trace-suggestion.js";
 import { getPreferredRepeater, setPreferredRepeater } from "./trace-preferred.js";
 import { getLocale, t } from "./i18n.js";
@@ -15,6 +16,18 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
   let path = [];
   let measuredSnrs = null;
   let suggestionContext = null;
+  let activeObservation = null;
+
+  function observeTrace(raw, source) {
+    if (!sending || !activeObservation || activeObservation.tag == null) return;
+    const values = partialTraceSnrs(raw, activeObservation.tag, activeObservation.path);
+    if (!values?.length || values.length <= (measuredSnrs?.length || 0)) return;
+    measuredSnrs = values;
+    elements.companionTraceResult.textContent = t("companionTrace.partialObserved", {
+      count: values.length, source: t(source === "radio" ? "companionTrace.sourceRadio" : "companionTrace.sourceObserver"),
+    });
+    renderPath();
+  }
   let preferredKey = null;
 
   function storage() {
@@ -225,7 +238,12 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
         return;
       }
       connection = candidate;
-      installTwoByteTraceSupport(candidate);
+      installTwoByteTraceSupport(candidate, (tag, sentPath) => {
+        if (activeObservation && sending) activeObservation = { tag, path: Uint8Array.from(sentPath) };
+      });
+      candidate.on(Constants.PushCodes.LogRxData, (event) => {
+        if (connection === candidate) observeTrace(event.raw, "radio");
+      });
       const disconnected = () => {
         if (connection !== candidate) return;
         connection = null;
@@ -288,6 +306,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
     }
     selecting = false;
     sending = true;
+    activeObservation = { tag: null, path: bytes };
     measuredSnrs = null;
     elements.companionTraceResult.textContent = "";
     renderPath();
@@ -316,6 +335,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
       setStatus(message === "timeout" ? t("companionTrace.traceFailed") : t("companionTrace.traceError"), true);
       onPathChange([...path], { success: false });
     } finally {
+      activeObservation = null;
       sending = false;
       renderPath();
     }
@@ -443,6 +463,12 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
     addHop,
     disconnect,
     isSelecting: () => selecting,
+    observePacket: (packet) => {
+      if (!sending || Number(packet?.payload_type) !== 9) return;
+      const hex = String(packet.raw_hex || "").replace(/\s/g, "");
+      if (!/^(?:[0-9a-f]{2})+$/i.test(hex) || hex.length > 1024) return;
+      observeTrace(Uint8Array.from(hex.match(/../g), (part) => parseInt(part, 16)), "observer");
+    },
     path: () => [...path],
   };
 }

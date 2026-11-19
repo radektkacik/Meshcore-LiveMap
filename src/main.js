@@ -5702,6 +5702,7 @@ function updateRouteAnimation() {
 
 async function handlePacket(packet) {
   try {
+    companionTraceController?.observePacket(packet);
     updateAdvertNode(packet);
     if (!packet.hash) return;
     const path = parsePath(packet);

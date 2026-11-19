@@ -15,6 +15,19 @@ export function measuredTraceSnrs(result, expectedPath) {
   return Array.from(snrs, (value) => (value > 127 ? value - 256 : value) / 4);
 }
 
+export function partialTraceSnrs(raw, tag, expectedPath) {
+  const bytes = Uint8Array.from(raw || []);
+  if (bytes.length < 11 || !Number.isInteger(tag) || (bytes[0] & 0x3f) !== 0x26) return null;
+  const count = bytes[1];
+  if (count > expectedPath.length / 2) return null;
+  const offset = 2 + count;
+  if (bytes.length !== offset + 9 + expectedPath.length) return null;
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (view.getUint32(offset, true) !== tag || view.getUint32(offset + 4, true) !== 0 || bytes[offset + 8] !== 1) return null;
+  if (!Array.from(expectedPath).every((byte, index) => bytes[offset + 9 + index] === byte)) return null;
+  return Array.from(bytes.slice(2, offset), (value) => (value > 127 ? value - 256 : value) / 4);
+}
+
 export function encodeTwoByteTraceCommand(tag, auth, path) {
   const frame = new Uint8Array(10 + path.length);
   frame[0] = Constants.CommandCodes.SendTracePath;
@@ -43,8 +56,9 @@ export function parseTwoByteTracePush(bufferReader) {
   };
 }
 
-export function installTwoByteTraceSupport(connection) {
+export function installTwoByteTraceSupport(connection, onSend = () => {}) {
   connection.sendCommandSendTracePath = async function sendTwoByteTrace(tag, auth, path) {
+    onSend(tag, path);
     await this.sendToRadioFrame(encodeTwoByteTraceCommand(tag, auth, path));
   };
   connection.onTraceDataPush = function onTwoByteTraceData(bufferReader) {

@@ -1,7 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import Constants from "@liamcottle/meshcore.js/src/constants.js";
-import { encodeTwoByteTraceCommand, installTwoByteTraceSupport, measuredTraceSnrs, parseTwoByteTracePush, traceSnrTone } from "../src/companion-trace-protocol.js";
+import { encodeTwoByteTraceCommand, installTwoByteTraceSupport, measuredTraceSnrs, parseTwoByteTracePush, partialTraceSnrs, traceSnrTone } from "../src/companion-trace-protocol.js";
+
+test("partial TRACE observations require matching tag, path, flags and auth", () => {
+  const expected = Uint8Array.from([0x12, 0x34, 0xab, 0xcd, 0x12, 0x34]);
+  const command = encodeTwoByteTraceCommand(0x12345678, 0, expected);
+  const raw = Uint8Array.from([0x26, 2, 20, 248, ...command.slice(1)]);
+  assert.deepEqual(partialTraceSnrs(raw, 0x12345678, expected), [5, -2]);
+  assert.equal(partialTraceSnrs(raw, 0x12345679, expected), null);
+  assert.equal(partialTraceSnrs(raw, 0x12345678, Uint8Array.from([1, 2, 3, 4, 5, 6])), null);
+  assert.equal(partialTraceSnrs(raw.slice(0, -1), 0x12345678, expected), null);
+  const changed = Uint8Array.from(raw); changed[12] = 0;
+  assert.equal(partialTraceSnrs(changed, 0x12345678, expected), null);
+});
 
 test("trace SNR colors match map thresholds", () => {
   assert.equal(traceSnrTone(5), "good");
