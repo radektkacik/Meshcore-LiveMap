@@ -10,6 +10,7 @@ export const elements = {
   companionTraceDisconnect: document.querySelector("#companion-trace-disconnect"),
   companionTraceSelect: document.querySelector("#companion-trace-select"),
   companionTraceSuggest: document.querySelector("#companion-trace-suggest"),
+  companionTraceAlternative: document.querySelector("#companion-trace-alternative"),
   companionTraceReturn: document.querySelector("#companion-trace-return"),
   companionTraceClear: document.querySelector("#companion-trace-clear"),
   companionTraceSend: document.querySelector("#companion-trace-send"),

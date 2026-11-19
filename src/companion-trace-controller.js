@@ -12,6 +12,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
   let suggesting = false;
   let sending = false;
   let path = [];
+  let suggestionContext = null;
 
   function setStatus(message, isError = false) {
     elements.companionTraceStatus.textContent = message;
@@ -28,6 +29,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
     elements.companionTraceDisconnect.hidden = !connection;
     elements.companionTraceSelect.disabled = !connected() || sending;
     elements.companionTraceSuggest.disabled = !connected() || sending || (!suggesting && path.length !== 1);
+    elements.companionTraceAlternative.disabled = !connected() || sending || suggesting || !suggestionContext;
     elements.companionTraceReturn.disabled = path.length < 2 || sending;
     elements.companionTraceClear.disabled = path.length === 0 || sending;
     elements.companionTraceSend.disabled = !connected() || path.length === 0 || sending || suggesting;
@@ -53,6 +55,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
         move.disabled = sending || index + offset < 0 || index + offset >= path.length;
         move.addEventListener("click", () => {
           if (sending) return;
+          suggestionContext = null;
           path = moveTraceHop(path, index, index + offset);
           elements.companionTraceResult.textContent = "";
           renderPath();
@@ -71,6 +74,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
         event.preventDefault();
         event.stopPropagation();
         if (sending || suggesting) return;
+        suggestionContext = null;
         path.splice(index, 1);
         elements.companionTraceResult.textContent = "";
         renderPath();
@@ -98,6 +102,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
         return true;
       }
       path = suggestion.path;
+      suggestionContext = { start: path[0], destination: key, seen: new Set([path.join(",")]) };
       suggesting = false;
       selecting = false;
       elements.companionTraceResult.textContent = t("companionTrace.suggestResult", {
@@ -123,6 +128,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
       return true;
     }
     path.push(key);
+    suggestionContext = null;
     elements.companionTraceResult.textContent = "";
     setStatus(t("companionTrace.status.connected", {
       name: selfInfo.name || "Companion",
@@ -278,6 +284,8 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
   elements.companionTraceReturn.textContent = t("companionTrace.addReturn");
   elements.companionTraceSend.textContent = t("companionTrace.send");
   elements.companionTraceSuggest.hidden = import.meta.env.VITE_BETA !== "1";
+  elements.companionTraceAlternative.hidden = elements.companionTraceSuggest.hidden;
+  elements.companionTraceAlternative.textContent = t("companionTrace.alternative");
   elements.companionTraceSuggestHint.hidden = elements.companionTraceSuggest.hidden;
   elements.companionTraceSuggestHint.textContent = t("companionTrace.suggestHint");
   setStatus(t("companionTrace.status.disconnected"));
@@ -298,6 +306,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
   });
   elements.companionTraceClear.addEventListener("click", () => {
     path = [];
+    suggestionContext = null;
     suggesting = false;
     selecting = false;
     elements.companionTraceResult.textContent = "";
@@ -319,6 +328,24 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
     renderPath();
     updateControls();
   });
+  elements.companionTraceAlternative.addEventListener("click", () => {
+    if (!connected() || sending || suggesting || !suggestionContext) return;
+    const suggestion = suggestTracePath(
+      suggestionContext.start, suggestionContext.destination, neighbors(), allNodes(), Date.now(), suggestionContext.seen,
+    );
+    if (!suggestion) {
+      setStatus(t("companionTrace.alternativeMissing"), true);
+      return;
+    }
+    path = suggestion.path;
+    suggestionContext.seen.add(path.join(","));
+    elements.companionTraceResult.textContent = t("companionTrace.suggestResult", {
+      age: Math.max(0, Math.ceil((Date.now() - suggestion.oldest) / 3_600_000)),
+    });
+    setStatus(t("companionTrace.suggestReady"));
+    renderPath();
+    onPathChange([...path]);
+  });
   elements.companionTraceReturn.addEventListener("click", () => {
     if (sending || path.length < 2) return;
     try {
@@ -327,6 +354,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
       setStatus(t("companionTrace.pathTooLong"), true);
       return;
     }
+    suggestionContext = null;
     elements.companionTraceResult.textContent = "";
     if (connected()) {
       setStatus(t("companionTrace.status.connected", {

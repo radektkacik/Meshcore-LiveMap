@@ -29,3 +29,12 @@ test("suggestion avoids known colliding repeater prefixes", () => {
   const collision = { public_key: `2222${"f".repeat(60)}`, role: "repeater", lat: 50, lon: 15 };
   assert.deepEqual(suggestTracePath(a, c, graph, [...nodes, collision], now).path, [a, d, c, d, a].map((key) => key.toLowerCase()));
 });
+
+test("alternative skips previously suggested routes and keeps their return leg", () => {
+  const first = suggestTracePath(a, c, graph, nodes, now);
+  const seen = new Set([first.path.join(",")]);
+  const second = suggestTracePath(a, c, graph, nodes, now, seen);
+  assert.deepEqual(second.path, [a, d, c, d, a].map((item) => item.toLowerCase()));
+  seen.add(second.path.join(","));
+  assert.equal(suggestTracePath(a, c, graph, nodes, now, seen), null);
+});

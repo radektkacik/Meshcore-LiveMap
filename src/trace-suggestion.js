@@ -1,7 +1,7 @@
 import { appendReturnTracePath, buildTracePath, MAX_TRACE_HOPS } from "./trace-path.js";
 
 // The neighbor index is inferred from observed paths and is not directional proof.
-export function suggestTracePath(start, destination, neighborIndex, nodes, now = Date.now()) {
+export function suggestTracePath(start, destination, neighborIndex, nodes, now = Date.now(), excluded = new Set()) {
   const byKey = new Map(nodes.filter((node) => node?.role === "repeater")
     .map((node) => [String(node.public_key || "").toUpperCase(), node]));
   const prefixes = new Map();
@@ -21,14 +21,14 @@ export function suggestTracePath(start, destination, neighborIndex, nodes, now =
   const maxAge = 7 * 24 * 60 * 60 * 1000;
   const maxOutbound = Math.floor((MAX_TRACE_HOPS + 1) / 2);
   const queue = [{ key: from, path: [from], cost: 0, oldest: now }];
-  const best = new Map();
-  while (queue.length) {
+  let examined = 0;
+  while (queue.length && examined < 5000) {
     queue.sort((a, b) => a.cost - b.cost);
     const current = queue.shift();
-    const stateKey = `${current.key}:${current.path.length}`;
-    if (best.has(stateKey) && best.get(stateKey) < current.cost) continue;
+    examined += 1;
     if (current.key === to) {
       const path = appendReturnTracePath(current.path.map((key) => key.toLowerCase()));
+      if (excluded.has(path.join(","))) continue;
       buildTracePath(path, nodes);
       return { path, oldest: current.oldest };
     }
@@ -39,10 +39,11 @@ export function suggestTracePath(start, destination, neighborIndex, nodes, now =
       const age = now - at;
       if (!usable(key) || current.path.includes(key) || !Number.isFinite(at) || at <= 0 || age < 0 || age > maxAge) continue;
       const cost = current.cost + 1 + age / maxAge;
-      const nextState = `${key}:${current.path.length + 1}`;
-      if (best.has(nextState) && best.get(nextState) <= cost) continue;
-      best.set(nextState, cost);
       queue.push({ key, path: [...current.path, key], cost, oldest: Math.min(current.oldest, at) });
+    }
+    if (queue.length > 5000) {
+      queue.sort((a, b) => a.cost - b.cost);
+      queue.length = 5000;
     }
   }
   return null;
