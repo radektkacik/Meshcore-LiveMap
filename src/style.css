@@ -1008,6 +1008,12 @@ html[data-theme="dark"] .packet-history-cursor { stroke: rgba(230, 236, 239, 0.3
 #photo-lightbox-node { margin-top: 6px; color: #d7e3e8; font: calc(11px * var(--font-scale)) "DM Mono", monospace; }
 #photo-lightbox-author { margin-top: 2px; color: #9fb0b8; font: calc(11px * var(--font-scale)) "DM Mono", monospace; }
 #photo-lightbox-date { margin-top: 3px; color: #c1cfd4; font-size: calc(12px * var(--font-scale)); }
+.photo-lightbox-meta { display: flex; flex: 0 1 auto; justify-content: center; align-items: baseline; flex-wrap: wrap; column-gap: 12px; row-gap: 2px; max-height: 18vh; overflow-y: auto; margin-top: 5px; }
+.photo-lightbox .photo-lightbox-meta p { margin: 0; line-height: 1.35; overflow-wrap: anywhere; }
+.photo-lightbox-meta #photo-lightbox-node, .photo-lightbox-meta #photo-lightbox-author, .photo-lightbox-meta #photo-lightbox-date { margin: 0; }
+.photo-lightbox .photo-lightbox-meta #photo-lightbox-caption { flex: 0 1 100%; }
+.photo-lightbox-actions { display: flex; flex: 0 0 auto; justify-content: center; flex-wrap: wrap; gap: 5px; margin-top: 6px; padding-bottom: env(safe-area-inset-bottom); }
+.photo-lightbox .photo-lightbox-actions button { margin: 0; min-height: 32px; }
 .photo-lightbox-votes { position: absolute; right: 12px; bottom: 12px; z-index: 4; display: flex; gap: 8px; margin: 0; }
 .photo-lightbox-votes button { min-width: 72px; padding: 5px 12px; border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 6px; color: #d7e3e8; background: rgba(10, 16, 20, 0.72); font: 700 calc(10px * var(--font-scale)) "DM Mono", monospace; cursor: pointer; }
 .photo-lightbox-votes button:hover { border-color: var(--green); }
