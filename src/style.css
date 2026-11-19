@@ -132,6 +132,17 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .los-hint { margin-top: 8px; padding: 7px 9px; border: 1px dashed rgba(40, 127, 201, 0.5); border-radius: 7px; color: #246aa6; background: rgba(40, 127, 201, 0.08); font: calc(10px * var(--font-scale))/1.4 "DM Mono", monospace; }
 .los-hint[hidden] { display: none; }
 .filter-block { display: block; margin: 9px 0 0; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; background: rgba(255, 255, 255, 0.72); }
+.companion-trace-block summary { color: #315146; font: 700 calc(11px * var(--font-scale)) Manrope, sans-serif; cursor: pointer; }
+.companion-trace-status, .companion-trace-hint, .companion-trace-result { margin: 7px 0; color: var(--muted); font-size: calc(10px * var(--font-scale)); line-height: 1.4; }
+.companion-trace-status.error { color: #b03024; }
+.companion-trace-connect, .companion-trace-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.companion-trace-connect button, .companion-trace-actions button { min-height: 30px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; color: #3f584e; background: #fff; font: calc(10px * var(--font-scale)) "DM Mono", monospace; cursor: pointer; }
+.companion-trace-actions #companion-trace-send { color: #fff; background: var(--green); border-color: var(--green); }
+.companion-trace-connect button:disabled, .companion-trace-actions button:disabled { opacity: .5; cursor: not-allowed; }
+.companion-trace-path { display: grid; gap: 4px; margin: 7px 0; padding: 0; list-style: none; }
+.companion-trace-path li { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 6px; border-radius: 5px; background: rgba(7,142,98,.08); font-size: calc(10px * var(--font-scale)); }
+.companion-trace-path li button { flex: 0 0 auto; border: 0; color: var(--muted); background: transparent; cursor: pointer; }
+.companion-trace-result { white-space: pre-wrap; overflow-wrap: anywhere; }
 .filter-block legend.filter-title, .filter-block > .filter-title { display: block; padding: 0; color: #3f584e; font-size: calc(10px * var(--font-scale)); font-weight: 700; }
 .filter-block .filter-title { margin-bottom: 5px; color: var(--muted); font: calc(10px * var(--font-scale)) "DM Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
 .filter-chips { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -1147,6 +1158,10 @@ html[data-theme="dark"] .node-popup .leaflet-popup-close-button { color: #9fb0b8
 html[data-theme="dark"] .node-popup-card { color: #e6ecef; }
 html[data-theme="dark"] .node-detail-page { color: #e6ecef; background: #161d24; border-color: var(--line); }
 html[data-theme="dark"] .node-detail-header { background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .companion-trace-block { background: rgba(27,35,43,.72); border-color: var(--line); }
+html[data-theme="dark"] .companion-trace-block summary { color: #cfe0d7; }
+html[data-theme="dark"] .companion-trace-connect button, html[data-theme="dark"] .companion-trace-actions button { color: #d1ded7; background: #1b232b; border-color: var(--line); }
+html[data-theme="dark"] .companion-trace-actions #companion-trace-send { color: #fff; background: var(--green); border-color: var(--green); }
 html[data-theme="dark"] .node-contact-admin { color: #8bd3b4; background: #1d3029; border-color: #35634f; }
 html[data-theme="dark"] .feedback-dialog header .feedback-node-context { color: #8bd3b4; background: #1d3029; border-color: #35634f; }
 html[data-theme="dark"] .node-detail-close { color: #cfd9dd; background: #26323a; }

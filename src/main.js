@@ -4,6 +4,7 @@ import { createState } from "./app-state.js";
 import { elements } from "./elements.js";
 import { createExportController } from "./export-controller.js";
 import { createFeedbackController } from "./feedback-controller.js";
+import { createCompanionTraceController } from "./companion-trace-controller.js";
 import { writeHeaders } from "./turnstile-client.js";
 import { escapeHtml } from "../html.mjs";
 import "leaflet/dist/leaflet.css";
@@ -509,6 +510,7 @@ async function setBaseLayer(key) {
 
 const nodeLayer = L.layerGroup().addTo(map);
 const routeLayer = L.layerGroup().addTo(map);
+const companionTraceLayer = L.layerGroup().addTo(map);
 const observerLayer = L.layerGroup();
 const selectedRouteLayer = L.layerGroup().addTo(map);
 const neighborLayer = L.layerGroup();
@@ -3507,6 +3509,28 @@ function syncHealthBadges() {
   for (const entry of state.nodeMarkers) syncNodeHealthBadge(entry);
 }
 
+let companionTraceController = null;
+
+function renderCompanionTrace(pathKeys, outcome = null) {
+  companionTraceLayer.clearLayers();
+  const points = pathKeys
+    .map((key) => state.nodeByKey.get(String(key).toUpperCase()))
+    .filter((node) => node && validCoords(node.lat, node.lon))
+    .map((node) => [node.lat, node.lon]);
+  if (!points.length) return;
+  const color = outcome?.success === true ? "#078e62"
+    : outcome?.success === false ? "#c63e32" : "#efa438";
+  if (points.length > 1) {
+    L.polyline(points, { color, dashArray: "8 7", opacity: 0.95, weight: 5 }).addTo(companionTraceLayer);
+  }
+  L.circleMarker(points[0], { color: "#fff", fillColor: color, fillOpacity: 1, radius: 7, weight: 2 })
+    .addTo(companionTraceLayer);
+  if (points.length > 1) {
+    L.circleMarker(points.at(-1), { color: "#fff", fillColor: color, fillOpacity: 1, radius: 7, weight: 2 })
+      .addTo(companionTraceLayer);
+  }
+}
+
 function addNodeMarker(node) {
   const active = nodeIsActive(node, nowMs(), NODE_ACTIVE_MS);
   const entry = { active, healthMarker: null, marker: null, node, shown: false, stackRole: node.role || "unknown", styleKey: nodeStyleKey(node, null), tier: null };
@@ -3539,6 +3563,10 @@ function addNodeMarker(node) {
     })
     .on("click", (event) => {
       L.DomEvent.stopPropagation(event);
+      if (companionTraceController?.isSelecting()) {
+        companionTraceController.addHop(node);
+        return;
+      }
       if (state.coverageMode) {
         marker.closePopup();
         void handleCoverageClick(marker.getLatLng());
@@ -7240,6 +7268,11 @@ elements.profileQrDownload.addEventListener("click", () => {
 });
 
 const feedbackController = createFeedbackController({ elements, getJson, postJson, formatNodeDate });
+companionTraceController = createCompanionTraceController({
+  allNodes: () => [...state.nodeByKey.values()],
+  elements,
+  onPathChange: renderCompanionTrace,
+});
 document.addEventListener("click", (event) => {
   const button = event.target instanceof Element ? event.target.closest(".node-contact-admin") : null;
   if (!button) return;

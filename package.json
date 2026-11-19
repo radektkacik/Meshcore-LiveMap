@@ -15,6 +15,7 @@
     "test:reference": "RUN_REFERENCE_TESTS=1 node --test test/reference-map.test.mjs"
   },
   "dependencies": {
+    "@liamcottle/meshcore.js": "^1.15.1",
     "@maplibre/maplibre-gl-leaflet": "^0.1.4",
     "@michaelhart/meshcore-decoder": "^0.3.0",
     "better-sqlite3": "^11.10.0",
