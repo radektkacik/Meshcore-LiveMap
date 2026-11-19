@@ -7282,6 +7282,12 @@ elements.profileQrDownload.addEventListener("click", () => {
 const feedbackController = createFeedbackController({ elements, getJson, postJson, formatNodeDate });
 companionTraceController = createCompanionTraceController({
   allNodes: () => [...state.nodeByKey.values()],
+  // TRACE payloads contain the planned route, not necessarily observed hops.
+  neighbors: () => buildNeighborIndex([
+    ...routeStore.history,
+    ...routeStore.liveByVersion.values(),
+    ...state.archiveRoutes.values(),
+  ].filter((route) => Number(route.packetType) !== 9)),
   elements,
   onPathChange: renderCompanionTrace,
 });

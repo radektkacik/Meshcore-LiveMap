@@ -2,12 +2,14 @@ import WebBleConnection from "@liamcottle/meshcore.js/src/connection/web_ble_con
 import WebSerialConnection from "@liamcottle/meshcore.js/src/connection/web_serial_connection.js";
 import { appendReturnTracePath, buildTracePath, MAX_TRACE_HOPS, moveTraceHop } from "./trace-path.js";
 import { installTwoByteTraceSupport } from "./companion-trace-protocol.js";
+import { suggestTracePath } from "./trace-suggestion.js";
 import { getLocale, t } from "./i18n.js";
 
-export function createCompanionTraceController({ elements, allNodes, onPathChange = () => {} }) {
+export function createCompanionTraceController({ elements, allNodes, neighbors = () => new Map(), onPathChange = () => {} }) {
   let connection = null;
   let selfInfo = null;
   let selecting = false;
+  let suggesting = false;
   let sending = false;
   let path = [];
 
@@ -25,10 +27,12 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
     elements.companionTraceConnectUsb.disabled = Boolean(connection);
     elements.companionTraceDisconnect.hidden = !connection;
     elements.companionTraceSelect.disabled = !connected() || sending;
+    elements.companionTraceSuggest.disabled = !connected() || sending || (!suggesting && path.length !== 1);
     elements.companionTraceReturn.disabled = path.length < 2 || sending;
     elements.companionTraceClear.disabled = path.length === 0 || sending;
-    elements.companionTraceSend.disabled = !connected() || path.length === 0 || sending;
+    elements.companionTraceSend.disabled = !connected() || path.length === 0 || sending || suggesting;
     elements.companionTraceSelect.textContent = t(selecting ? "companionTrace.selectStop" : "companionTrace.selectStart");
+    elements.companionTraceSuggest.textContent = t(suggesting ? "companionTrace.suggestCancel" : "companionTrace.suggest");
   }
 
   function renderPath() {
@@ -61,12 +65,12 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
       const remove = document.createElement("button");
       remove.type = "button";
       remove.textContent = "×";
-      remove.disabled = sending;
+      remove.disabled = sending || suggesting;
       remove.setAttribute("aria-label", getLocale() === "en" ? `Remove hop ${index + 1}` : `Odebrat hop ${index + 1}`);
       remove.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
-        if (sending) return;
+        if (sending || suggesting) return;
         path.splice(index, 1);
         elements.companionTraceResult.textContent = "";
         renderPath();
@@ -87,6 +91,23 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
     }
     const key = String(node.public_key || "").toLowerCase();
     if (!/^[0-9a-f]{64}$/.test(key)) return true;
+    if (suggesting) {
+      const suggestion = suggestTracePath(path[0], key, neighbors(), allNodes());
+      if (!suggestion) {
+        setStatus(t("companionTrace.suggestNotFound"), true);
+        return true;
+      }
+      path = suggestion.path;
+      suggesting = false;
+      selecting = false;
+      elements.companionTraceResult.textContent = t("companionTrace.suggestResult", {
+        age: Math.max(0, Math.ceil((Date.now() - suggestion.oldest) / 3_600_000)),
+      });
+      setStatus(t("companionTrace.suggestReady"));
+      renderPath();
+      onPathChange([...path]);
+      return true;
+    }
     if (path.length >= MAX_TRACE_HOPS) {
       setStatus(t("companionTrace.pathTooLong"), true);
       return true;
@@ -162,6 +183,7 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
         connection = null;
         selfInfo = null;
         selecting = false;
+        suggesting = false;
         setStatus(t("companionTrace.status.disconnected"));
         updateControls();
       };
@@ -181,6 +203,7 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
       if (connection === candidate) connection = null;
       selfInfo = null;
       selecting = false;
+      suggesting = false;
       setStatus(error?.message || t("companionTrace.traceError"), true);
       updateControls();
     }
@@ -191,6 +214,7 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
     connection = null;
     selfInfo = null;
     selecting = false;
+    suggesting = false;
     updateControls();
     try { await current?.close(); } catch {}
     setStatus(t("companionTrace.status.disconnected"));
@@ -253,6 +277,9 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
   elements.companionTraceClear.textContent = t("companionTrace.clear");
   elements.companionTraceReturn.textContent = t("companionTrace.addReturn");
   elements.companionTraceSend.textContent = t("companionTrace.send");
+  elements.companionTraceSuggest.hidden = import.meta.env.VITE_BETA !== "1";
+  elements.companionTraceSuggestHint.hidden = elements.companionTraceSuggest.hidden;
+  elements.companionTraceSuggestHint.textContent = t("companionTrace.suggestHint");
   setStatus(t("companionTrace.status.disconnected"));
   updateControls();
 
@@ -262,17 +289,35 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
   elements.companionTraceSelect.addEventListener("click", () => {
     if (!connected() || sending) return;
     selecting = !selecting;
+    suggesting = false;
     setStatus(selecting ? t("companionTrace.selectHint") : t("companionTrace.status.connected", {
       name: selfInfo.name || "Companion",
       key: bytesToHex(selfInfo.publicKey).slice(0, 12),
     }));
-    updateControls();
+    renderPath();
   });
   elements.companionTraceClear.addEventListener("click", () => {
     path = [];
+    suggesting = false;
+    selecting = false;
     elements.companionTraceResult.textContent = "";
     renderPath();
     onPathChange([]);
+  });
+  elements.companionTraceSuggest.addEventListener("click", () => {
+    if (!connected() || sending) return;
+    if (suggesting) {
+      suggesting = false;
+      selecting = false;
+      setStatus(t("companionTrace.suggestCancelled"));
+    } else {
+      if (path.length !== 1) return;
+      suggesting = true;
+      selecting = true;
+      setStatus(t("companionTrace.suggestSelectDestination"));
+    }
+    renderPath();
+    updateControls();
   });
   elements.companionTraceReturn.addEventListener("click", () => {
     if (sending || path.length < 2) return;
