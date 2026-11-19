@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import Constants from "@liamcottle/meshcore.js/src/constants.js";
-import { encodeTwoByteTraceCommand, installTwoByteTraceSupport, parseTwoByteTracePush } from "../src/companion-trace-protocol.js";
+import { encodeTwoByteTraceCommand, installTwoByteTraceSupport, measuredTraceSnrs, parseTwoByteTracePush } from "../src/companion-trace-protocol.js";
+
+test("measured hop SNRs require the exact expected path and decode signed values", () => {
+  const path = Uint8Array.from([0x12, 0x34, 0x12, 0x34]);
+  assert.deepEqual(measuredTraceSnrs({ pathHashes: path, pathSnrs: Uint8Array.from([8, 248]) }, path), [2, -2]);
+  assert.throws(() => measuredTraceSnrs({ pathHashes: Uint8Array.from([0x12, 0x34]), pathSnrs: [8] }, path), /mismatch/);
+  assert.throws(() => measuredTraceSnrs({ pathHashes: path, pathSnrs: [8] }, path), /mismatch/);
+  assert.throws(() => measuredTraceSnrs({ pathHashes: [0x12, 0x35, 0x12, 0x34], pathSnrs: [8, 8] }, path), /mismatch/);
+});
 
 test("two-byte trace command encodes command, little-endian tag/auth, flag and path", () => {
   const path = Uint8Array.from([0x12, 0x34, 0xab, 0xcd]);

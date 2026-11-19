@@ -1,7 +1,7 @@
 import WebBleConnection from "@liamcottle/meshcore.js/src/connection/web_ble_connection.js";
 import WebSerialConnection from "@liamcottle/meshcore.js/src/connection/web_serial_connection.js";
 import { appendReturnTracePath, buildTracePath, MAX_TRACE_HOPS, moveTraceHop } from "./trace-path.js";
-import { installTwoByteTraceSupport } from "./companion-trace-protocol.js";
+import { installTwoByteTraceSupport, measuredTraceSnrs } from "./companion-trace-protocol.js";
 import { suggestTracePath } from "./trace-suggestion.js";
 import { getLocale, t } from "./i18n.js";
 
@@ -12,6 +12,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
   let suggesting = false;
   let sending = false;
   let path = [];
+  let measuredSnrs = null;
   let suggestionContext = null;
 
   function setStatus(message, isError = false) {
@@ -43,6 +44,12 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
       const item = document.createElement("li");
       const label = document.createElement("span");
       label.textContent = `${index + 1}. ${node?.name || key.slice(0, 12)} · ${key.slice(0, 4).toUpperCase()}`;
+      if (measuredSnrs?.[index] != null) {
+        const snr = document.createElement("small");
+        snr.className = "companion-trace-hop-snr";
+        snr.textContent = t("companionTrace.hopSnr", { snr: measuredSnrs[index].toFixed(1) });
+        label.append(snr);
+      }
       const actions = document.createElement("span");
       actions.className = "companion-trace-hop-actions";
       for (const [direction, symbol, offset] of [["up", "↑", -1], ["down", "↓", 1]]) {
@@ -56,6 +63,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
         move.addEventListener("click", () => {
           if (sending) return;
           suggestionContext = null;
+          measuredSnrs = null;
           path = moveTraceHop(path, index, index + offset);
           elements.companionTraceResult.textContent = "";
           renderPath();
@@ -75,6 +83,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
         event.stopPropagation();
         if (sending || suggesting) return;
         suggestionContext = null;
+        measuredSnrs = null;
         path.splice(index, 1);
         elements.companionTraceResult.textContent = "";
         renderPath();
@@ -102,6 +111,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
         return true;
       }
       path = suggestion.path;
+      measuredSnrs = null;
       suggestionContext = { start: path[0], destination: key, seen: new Set([path.join(",")]) };
       suggesting = false;
       selecting = false;
@@ -128,6 +138,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
       return true;
     }
     path.push(key);
+    measuredSnrs = null;
     suggestionContext = null;
     elements.companionTraceResult.textContent = "";
     setStatus(t("companionTrace.status.connected", {
@@ -244,12 +255,14 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
     }
     selecting = false;
     sending = true;
+    measuredSnrs = null;
     elements.companionTraceResult.textContent = "";
     renderPath();
     setStatus(t("companionTrace.traceSending"));
     try {
       const result = await connection.tracePath(bytes);
-      const snrs = Array.from(result.pathSnrs || []).map((value) => ((value > 127 ? value - 256 : value) / 4).toFixed(1));
+      measuredSnrs = measuredTraceSnrs(result, bytes);
+      const snrs = measuredSnrs.map((value) => value.toFixed(1));
       const route = [...path].map((key) => {
         const node = allNodes().find((candidate) => String(candidate.public_key || "").toLowerCase() === key);
         return node?.name || key.slice(0, 8);
@@ -306,6 +319,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
   });
   elements.companionTraceClear.addEventListener("click", () => {
     path = [];
+    measuredSnrs = null;
     suggestionContext = null;
     suggesting = false;
     selecting = false;
@@ -338,6 +352,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
       return;
     }
     path = suggestion.path;
+    measuredSnrs = null;
     suggestionContext.seen.add(path.join(","));
     elements.companionTraceResult.textContent = t("companionTrace.suggestResult", {
       age: Math.max(0, Math.ceil((Date.now() - suggestion.oldest) / 3_600_000)),
@@ -355,6 +370,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
       return;
     }
     suggestionContext = null;
+    measuredSnrs = null;
     elements.companionTraceResult.textContent = "";
     if (connected()) {
       setStatus(t("companionTrace.status.connected", {

@@ -1,5 +1,16 @@
 import Constants from "@liamcottle/meshcore.js/src/constants.js";
 
+export function measuredTraceSnrs(result, expectedPath) {
+  const hashes = result?.pathHashes;
+  const snrs = result?.pathSnrs;
+  if (!hashes || hashes.length !== expectedPath.length
+      || !Array.from(hashes).every((byte, index) => byte === expectedPath[index])
+      || !snrs || snrs.length !== expectedPath.length / 2) {
+    throw new Error("trace-path-mismatch");
+  }
+  return Array.from(snrs, (value) => (value > 127 ? value - 256 : value) / 4);
+}
+
 export function encodeTwoByteTraceCommand(tag, auth, path) {
   const frame = new Uint8Array(10 + path.length);
   frame[0] = Constants.CommandCodes.SendTracePath;

@@ -142,6 +142,7 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .companion-trace-path { display: grid; gap: 4px; margin: 7px 0; padding: 0; list-style: none; }
 .companion-trace-path li { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 6px; border-radius: 5px; background: rgba(7,142,98,.08); font-size: calc(13px * var(--font-scale)); overflow-wrap: anywhere; }
 .companion-trace-hop-actions { display: flex; flex: 0 0 auto; align-items: center; }
+.companion-trace-hop-snr { display: block; margin-top: 3px; color: var(--muted); font-size: calc(11px * var(--font-scale)); line-height: 1.35; }
 .companion-trace-path li button { min-width: 34px; min-height: 38px; border: 0; color: var(--muted); background: transparent; font-size: calc(16px * var(--font-scale)); cursor: pointer; }
 .companion-trace-path li button:disabled { opacity: .35; cursor: not-allowed; }
 .companion-trace-result { white-space: pre-wrap; overflow-wrap: anywhere; }
