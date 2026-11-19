@@ -206,32 +206,6 @@
               <span><strong>Jen neaktivní nody (12 h)</strong></span>
             </label>
 
-            <div class="legend" aria-label="Legenda">
-              <span><i class="node top"></i> <span id="legend-top">Top 5 % Užitečnost</span></span>
-              <span><i class="node second"></i> <span id="legend-second">Top 5–15 % Užitečnost</span></span>
-              <span><i class="node repeater"></i> Repeater</span>
-              <span><i class="node companion"></i> Companion</span>
-              <span><i class="node new"></i> Nový nod (24 h)</span>
-              <span class="legend-health" hidden><i class="node health-full"></i> Plná</span>
-              <span class="legend-health" hidden><i class="node health-ok"></i> Baterie OK</span>
-              <span class="legend-health" hidden><i class="node health-warn"></i> Nízká</span>
-              <span class="legend-health" hidden><i class="node health-critical"></i> Kritická</span>
-              <span class="legend-health" hidden><i class="node health-stale"></i> Stará data</span>
-              <span><i class="line advert"></i> Advert</span>
-              <span><i class="line trace"></i> TRACE (barvy podle SNR)</span>
-            </div>
-
-            <div class="filter-block" id="font-size-block">
-              <label class="filter-title" id="font-size-label" for="font-size-select">Velikost písma</label>
-              <select id="font-size-select" class="route-retention-select">
-                <option value="xsmall">Nejmenší</option>
-                <option value="small" selected>Menší</option>
-                <option value="normal">Normální</option>
-                <option value="large">Větší</option>
-                <option value="xlarge">Největší</option>
-              </select>
-            </div>
-
             <details class="filter-block companion-trace-block">
               <summary id="companion-trace-title"></summary>
               <p id="companion-trace-status" class="companion-trace-status" role="status"></p>
@@ -260,6 +234,32 @@
               </div>
               <p id="companion-trace-result" class="companion-trace-result" role="status"></p>
             </details>
+
+            <div class="legend" aria-label="Legenda">
+              <span><i class="node top"></i> <span id="legend-top">Top 5 % Užitečnost</span></span>
+              <span><i class="node second"></i> <span id="legend-second">Top 5–15 % Užitečnost</span></span>
+              <span><i class="node repeater"></i> Repeater</span>
+              <span><i class="node companion"></i> Companion</span>
+              <span><i class="node new"></i> Nový nod (24 h)</span>
+              <span class="legend-health" hidden><i class="node health-full"></i> Plná</span>
+              <span class="legend-health" hidden><i class="node health-ok"></i> Baterie OK</span>
+              <span class="legend-health" hidden><i class="node health-warn"></i> Nízká</span>
+              <span class="legend-health" hidden><i class="node health-critical"></i> Kritická</span>
+              <span class="legend-health" hidden><i class="node health-stale"></i> Stará data</span>
+              <span><i class="line advert"></i> Advert</span>
+              <span><i class="line trace"></i> TRACE (barvy podle SNR)</span>
+            </div>
+
+            <div class="filter-block" id="font-size-block">
+              <label class="filter-title" id="font-size-label" for="font-size-select">Velikost písma</label>
+              <select id="font-size-select" class="route-retention-select">
+                <option value="xsmall">Nejmenší</option>
+                <option value="small" selected>Menší</option>
+                <option value="normal">Normální</option>
+                <option value="large">Větší</option>
+                <option value="xlarge">Největší</option>
+              </select>
+            </div>
 
             <div class="viewer-line" title="Kolik lidí má právě otevřenou mapu">
               <span class="viewer-dot" aria-hidden="true"></span>

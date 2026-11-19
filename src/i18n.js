@@ -781,7 +781,7 @@ const en = {
   "companionTrace.suggestNotFound": "No suitable path is available in observations from the last 7 days. Try another destination or select hops manually.",
   "companionTrace.suggestReady": "Suggestion ready. This route is not verified; sending is up to you.",
   "companionTrace.suggestResult": "Suggestion uses neighboring hops inferred from observed paths; the oldest connection is up to {age} h old. Direction and return path are unverified. The first repeater must be in companion range.",
-  "companionTrace.send": "Send live trace",
+  "companionTrace.send": "Send trace",
   "companionTrace.hopNotRepeater": "A trace path can only contain repeaters.",
   "companionTrace.hopDuplicate": "This repeater is already in the route.",
   "companionTrace.hashCollision": "Two-byte hash {prefix} is ambiguous on the network; this hop cannot be used.",
