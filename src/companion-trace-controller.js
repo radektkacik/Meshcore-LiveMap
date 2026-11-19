@@ -1,6 +1,6 @@
 import WebBleConnection from "@liamcottle/meshcore.js/src/connection/web_ble_connection.js";
 import WebSerialConnection from "@liamcottle/meshcore.js/src/connection/web_serial_connection.js";
-import { buildTracePath, MAX_TRACE_HOPS } from "./trace-path.js";
+import { buildTracePath, MAX_TRACE_HOPS, moveTraceHop } from "./trace-path.js";
 import { installTwoByteTraceSupport } from "./companion-trace-protocol.js";
 import { getLocale, t } from "./i18n.js";
 
@@ -36,19 +36,43 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
       const item = document.createElement("li");
       const label = document.createElement("span");
       label.textContent = `${index + 1}. ${node?.name || key.slice(0, 12)} · ${key.slice(0, 4).toUpperCase()}`;
+      const actions = document.createElement("span");
+      actions.className = "companion-trace-hop-actions";
+      for (const [direction, symbol, offset] of [["up", "↑", -1], ["down", "↓", 1]]) {
+        const move = document.createElement("button");
+        move.type = "button";
+        move.textContent = symbol;
+        const description = t(offset < 0 ? "companionTrace.moveUp" : "companionTrace.moveDown", { hop: index + 1 });
+        move.setAttribute("aria-label", description);
+        move.title = description;
+        move.disabled = sending || index + offset < 0 || index + offset >= path.length;
+        move.addEventListener("click", () => {
+          if (sending) return;
+          path = moveTraceHop(path, index, index + offset);
+          elements.companionTraceResult.textContent = "";
+          renderPath();
+          onPathChange([...path]);
+          elements.companionTracePath.children[index + offset]?.querySelector(`[data-direction="${direction}"]`)?.focus();
+        });
+        move.dataset.direction = direction;
+        actions.append(move);
+      }
       const remove = document.createElement("button");
       remove.type = "button";
       remove.textContent = "×";
+      remove.disabled = sending;
       remove.setAttribute("aria-label", getLocale() === "en" ? `Remove hop ${index + 1}` : `Odebrat hop ${index + 1}`);
       remove.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
+        if (sending) return;
         path.splice(index, 1);
         elements.companionTraceResult.textContent = "";
         renderPath();
         onPathChange([...path]);
       });
-      item.append(label, remove);
+      actions.append(remove);
+      item.append(label, actions);
       return item;
     }));
     updateControls();
@@ -195,7 +219,7 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
     selecting = false;
     sending = true;
     elements.companionTraceResult.textContent = "";
-    updateControls();
+    renderPath();
     setStatus(t("companionTrace.traceSending"));
     try {
       const result = await connection.tracePath(bytes);
@@ -221,7 +245,7 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
       onPathChange([...path], { success: false });
     } finally {
       sending = false;
-      updateControls();
+      renderPath();
     }
   }
 

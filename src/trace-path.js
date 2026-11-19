@@ -1,6 +1,14 @@
 export const TRACE_HASH_BYTES = 2;
 export const MAX_TRACE_HOPS = 16;
 
+export function moveTraceHop(path, from, to) {
+  if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= path.length || to >= path.length) return [...path];
+  const result = [...path];
+  const [hop] = result.splice(from, 1);
+  result.splice(to, 0, hop);
+  return result;
+}
+
 export function buildTracePath(keys, nodes) {
   if (!Array.isArray(keys) || keys.length === 0) throw new Error("empty");
   if (keys.length > MAX_TRACE_HOPS) throw new Error("too-long");

@@ -1,8 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildTracePath, MAX_TRACE_HOPS, TRACE_HASH_BYTES } from "../src/trace-path.js";
+import { buildTracePath, MAX_TRACE_HOPS, TRACE_HASH_BYTES, moveTraceHop } from "../src/trace-path.js";
 
 const key = (prefix, tail = "0") => `${prefix}${tail.repeat(64 - prefix.length)}`;
+
+test("moving a hop uses its position, including repeated nodes, without mutating the route", () => {
+  const path = ["a", "b", "a", "c"];
+  assert.deepEqual(moveTraceHop(path, 2, 1), ["a", "a", "b", "c"]);
+  assert.deepEqual(moveTraceHop(path, 0, 1), ["b", "a", "a", "c"]);
+  assert.deepEqual(moveTraceHop(path, 0, -1), path);
+  assert.deepEqual(path, ["a", "b", "a", "c"]);
+});
 
 test("trace paths encode unique two-byte prefixes in selected hop order", () => {
   assert.equal(TRACE_HASH_BYTES, 2);

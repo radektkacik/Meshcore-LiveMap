@@ -141,7 +141,9 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .companion-trace-connect button:disabled, .companion-trace-actions button:disabled { opacity: .5; cursor: not-allowed; }
 .companion-trace-path { display: grid; gap: 4px; margin: 7px 0; padding: 0; list-style: none; }
 .companion-trace-path li { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 4px 6px; border-radius: 5px; background: rgba(7,142,98,.08); font-size: calc(10px * var(--font-scale)); }
-.companion-trace-path li button { flex: 0 0 auto; border: 0; color: var(--muted); background: transparent; cursor: pointer; }
+.companion-trace-hop-actions { display: flex; flex: 0 0 auto; align-items: center; }
+.companion-trace-path li button { min-width: 30px; min-height: 30px; border: 0; color: var(--muted); background: transparent; cursor: pointer; }
+.companion-trace-path li button:disabled { opacity: .35; cursor: not-allowed; }
 .companion-trace-result { white-space: pre-wrap; overflow-wrap: anywhere; }
 .filter-block legend.filter-title, .filter-block > .filter-title { display: block; padding: 0; color: #3f584e; font-size: calc(10px * var(--font-scale)); font-weight: 700; }
 .filter-block .filter-title { margin-bottom: 5px; color: var(--muted); font: calc(10px * var(--font-scale)) "DM Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
