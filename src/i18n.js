@@ -162,7 +162,7 @@ const cs = {
   "companionTrace.suggestNotFound": "Pro tento cíl není dostupná vhodná cesta v pozorovaných datech za posledních 7 dní. Zkus jiný cíl nebo ruční výběr.",
   "companionTrace.suggestReady": "Návrh je připraven. Nejde o ověřenou trasu; odeslání je jen na tobě.",
   "companionTrace.suggestResult": "Návrh vychází ze sousedství odvozených z pozorovaných tras, nejstarší použitá vazba je až {age} h stará. Směr a zpáteční cesta nejsou ověřeny. První repeater musí být v dosahu companionu.",
-  "companionTrace.send": "Odeslat skutečný trace",
+  "companionTrace.send": "Odeslat trace",
   "companionTrace.hopNotRepeater": "Trace lze sestavit jen z repeaterů.",
   "companionTrace.hopDuplicate": "Tento repeater už v trase je.",
   "companionTrace.hashCollision": "Dvoubytový hash {prefix} není v síti jednoznačný; tento hop nelze použít.",
