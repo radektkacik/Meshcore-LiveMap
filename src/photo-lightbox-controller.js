@@ -4,6 +4,7 @@ const PHOTO_SWIPE_DOMINANCE = 1.25;
 export function createPhotoLightboxController({
   appPath,
   elements,
+  formatDateTimeShort,
   onManage = () => {},
   onOpenNode = () => {},
   onVote = () => {},
@@ -208,6 +209,12 @@ export function createPhotoLightboxController({
     elements.photoLightboxCaption.hidden = !active.caption;
     elements.photoLightboxAuthor.textContent = active.author || "";
     elements.photoLightboxAuthor.hidden = !active.author;
+    const createdAt = Number(active.createdAt);
+    const hasDate = Number.isFinite(createdAt) && createdAt > 0 && Number.isFinite(new Date(createdAt).getTime());
+    elements.photoLightboxDate.hidden = !hasDate;
+    elements.photoLightboxDate.textContent = hasDate
+      ? t("photos.uploadedAt", { date: formatDateTimeShort(createdAt) })
+      : "";
     elements.photoLightboxVotes.hidden = !votingEnabled;
     if (votingEnabled) renderVoteState(active);
     elements.photoLike.title = t("photos.like");

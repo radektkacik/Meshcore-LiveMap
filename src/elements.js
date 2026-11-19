@@ -136,6 +136,7 @@ export const elements = {
   photoGalleryTitle: document.querySelector("#photo-gallery-title"),
   photoLightbox: document.querySelector("#photo-lightbox"),
   photoLightboxAuthor: document.querySelector("#photo-lightbox-author"),
+  photoLightboxDate: document.querySelector("#photo-lightbox-date"),
   photoLightboxCaption: document.querySelector("#photo-lightbox-caption"),
   photoLightboxClose: document.querySelector("#photo-lightbox-close"),
   photoLightboxCounter: document.querySelector("#photo-lightbox-counter"),
