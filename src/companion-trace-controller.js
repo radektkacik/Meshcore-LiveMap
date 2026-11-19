@@ -112,7 +112,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
             return;
           }
           path[index] = replacement.key;
-          suggestionContext = null;
+          if (suggestionContext) suggestionContext.seen.add(path.join(","));
           measuredSnrs = null;
           const node = allNodes().find((item) => String(item.public_key || "").toLowerCase() === replacement.key);
           elements.companionTraceResult.textContent = t("companionTrace.replaceResult", {
