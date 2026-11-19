@@ -1,6 +1,6 @@
 import WebBleConnection from "@liamcottle/meshcore.js/src/connection/web_ble_connection.js";
 import WebSerialConnection from "@liamcottle/meshcore.js/src/connection/web_serial_connection.js";
-import { buildTracePath, MAX_TRACE_HOPS, moveTraceHop } from "./trace-path.js";
+import { appendReturnTracePath, buildTracePath, MAX_TRACE_HOPS, moveTraceHop } from "./trace-path.js";
 import { installTwoByteTraceSupport } from "./companion-trace-protocol.js";
 import { getLocale, t } from "./i18n.js";
 
@@ -25,6 +25,7 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
     elements.companionTraceConnectUsb.disabled = Boolean(connection);
     elements.companionTraceDisconnect.hidden = !connection;
     elements.companionTraceSelect.disabled = !connected() || sending;
+    elements.companionTraceReturn.disabled = path.length < 2 || sending;
     elements.companionTraceClear.disabled = path.length === 0 || sending;
     elements.companionTraceSend.disabled = !connected() || path.length === 0 || sending;
     elements.companionTraceSelect.textContent = t(selecting ? "companionTrace.selectStop" : "companionTrace.selectStart");
@@ -250,6 +251,7 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
   elements.companionTraceConnectUsb.textContent = t("companionTrace.connectUsb");
   elements.companionTraceDisconnect.textContent = t("companionTrace.disconnect");
   elements.companionTraceClear.textContent = t("companionTrace.clear");
+  elements.companionTraceReturn.textContent = t("companionTrace.addReturn");
   elements.companionTraceSend.textContent = t("companionTrace.send");
   setStatus(t("companionTrace.status.disconnected"));
   updateControls();
@@ -271,6 +273,24 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
     elements.companionTraceResult.textContent = "";
     renderPath();
     onPathChange([]);
+  });
+  elements.companionTraceReturn.addEventListener("click", () => {
+    if (sending || path.length < 2) return;
+    try {
+      path = appendReturnTracePath(path);
+    } catch {
+      setStatus(t("companionTrace.pathTooLong"), true);
+      return;
+    }
+    elements.companionTraceResult.textContent = "";
+    if (connected()) {
+      setStatus(t("companionTrace.status.connected", {
+        name: selfInfo.name || "Companion",
+        key: bytesToHex(selfInfo.publicKey).slice(0, 12),
+      }));
+    }
+    renderPath();
+    onPathChange([...path]);
   });
   elements.companionTraceSend.addEventListener("click", () => void sendTrace());
 

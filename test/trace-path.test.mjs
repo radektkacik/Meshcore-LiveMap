@@ -1,8 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildTracePath, MAX_TRACE_HOPS, TRACE_HASH_BYTES, moveTraceHop } from "../src/trace-path.js";
+import { appendReturnTracePath, buildTracePath, MAX_TRACE_HOPS, TRACE_HASH_BYTES, moveTraceHop } from "../src/trace-path.js";
 
 const key = (prefix, tail = "0") => `${prefix}${tail.repeat(64 - prefix.length)}`;
+
+test("return path reverses the outbound hops without repeating the turning point", () => {
+  const path = ["a", "b", "c"];
+  assert.deepEqual(appendReturnTracePath(path), ["a", "b", "c", "b", "a"]);
+  assert.deepEqual(path, ["a", "b", "c"]);
+  assert.deepEqual(appendReturnTracePath(["a"]), ["a"]);
+  assert.equal(appendReturnTracePath(Array(8).fill("a")).length, 15);
+  assert.throws(() => appendReturnTracePath(Array(9).fill("a")), /too-long/);
+});
 
 test("moving a hop uses its position, including repeated nodes, without mutating the route", () => {
   const path = ["a", "b", "a", "c"];

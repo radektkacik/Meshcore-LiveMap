@@ -8,6 +8,7 @@ export const elements = {
   companionTraceConnectUsb: document.querySelector("#companion-trace-connect-usb"),
   companionTraceDisconnect: document.querySelector("#companion-trace-disconnect"),
   companionTraceSelect: document.querySelector("#companion-trace-select"),
+  companionTraceReturn: document.querySelector("#companion-trace-return"),
   companionTraceClear: document.querySelector("#companion-trace-clear"),
   companionTraceSend: document.querySelector("#companion-trace-send"),
   activityNew: document.querySelector("#activity-new"),

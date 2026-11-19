@@ -1,6 +1,12 @@
 export const TRACE_HASH_BYTES = 2;
 export const MAX_TRACE_HOPS = 16;
 
+export function appendReturnTracePath(path) {
+  if (path.length < 2) return [...path];
+  if (path.length * 2 - 1 > MAX_TRACE_HOPS) throw new Error("too-long");
+  return [...path, ...path.slice(0, -1).reverse()];
+}
+
 export function moveTraceHop(path, from, to) {
   if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= path.length || to >= path.length) return [...path];
   const result = [...path];
