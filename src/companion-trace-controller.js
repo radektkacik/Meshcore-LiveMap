@@ -51,6 +51,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
   function setStatus(message, isError = false) {
     elements.companionTraceStatus.textContent = message;
     elements.companionTraceStatus.classList.toggle("error", isError);
+    if (isError) elements.companionTraceStatus.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
   }
 
   function connected() {
