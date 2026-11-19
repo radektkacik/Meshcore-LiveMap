@@ -133,6 +133,7 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .los-hint[hidden] { display: none; }
 .filter-block { display: block; margin: 9px 0 0; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; background: rgba(255, 255, 255, 0.72); }
 .companion-trace-block summary { color: #315146; font: 700 calc(14px * var(--font-scale)) Manrope, sans-serif; cursor: pointer; }
+.companion-trace-new { display: inline-block; margin-left: 7px; padding: 5px 8px; clip-path: polygon(0 8%, 17% 19%, 28% 0, 42% 16%, 59% 4%, 72% 19%, 100% 5%, 90% 32%, 100% 48%, 90% 64%, 99% 94%, 73% 81%, 61% 100%, 44% 85%, 27% 100%, 17% 81%, 0 93%, 9% 66%, 0 50%, 9% 33%); color: #171100; background: #ffd000; font: 800 calc(9px * var(--font-scale))/1 Manrope, sans-serif; vertical-align: middle; letter-spacing: 0; }
 .companion-trace-status, .companion-trace-hint, .companion-trace-result { margin: 7px 0; color: var(--muted); font-size: calc(13px * var(--font-scale)); line-height: 1.45; }
 .companion-trace-status.error { color: #b03024; }
 .companion-trace-connect, .companion-trace-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
