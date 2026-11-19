@@ -17,6 +17,13 @@ test("trace paths reject known ambiguous prefixes", () => {
   assert.throws(() => buildTracePath([first], [{ public_key: first, role: "repeater" }, { public_key: collision, role: "repeater" }]), /ambiguous-prefix/);
 });
 
+test("trace paths preserve repeated repeaters on the return leg", () => {
+  const first = key("1234");
+  const second = key("abcd");
+  const nodes = [first, second].map((public_key) => ({ public_key, role: "repeater" }));
+  assert.deepEqual([...buildTracePath([first, second, first], nodes)], [0x12, 0x34, 0xab, 0xcd, 0x12, 0x34]);
+});
+
 test("trace paths reject empty, malformed, and overlong routes", () => {
   const valid = key("cafe");
   assert.throws(() => buildTracePath([], []), /empty/);

@@ -62,10 +62,6 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
     }
     const key = String(node.public_key || "").toLowerCase();
     if (!/^[0-9a-f]{64}$/.test(key)) return true;
-    if (path.includes(key)) {
-      setStatus(t("companionTrace.hopDuplicate"), true);
-      return true;
-    }
     if (path.length >= MAX_TRACE_HOPS) {
       setStatus(t("companionTrace.pathTooLong"), true);
       return true;
@@ -184,22 +180,33 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
       setStatus(t("companionTrace.pathEmpty"), true);
       return;
     }
+    let bytes;
+    try {
+      bytes = buildTracePath(path, allNodes());
+    } catch {
+      setStatus(t("companionTrace.traceError"), true);
+      return;
+    }
+    const plan = path.map((key, index) => {
+      const node = allNodes().find((candidate) => String(candidate.public_key || "").toLowerCase() === key);
+      return `${index + 1}. ${node?.name || key.slice(0, 12)} (${key.slice(0, 4).toUpperCase()})`;
+    }).join("\n");
+    if (!window.confirm(`${t("companionTrace.confirm")}\n\n${plan}`)) return;
     selecting = false;
     sending = true;
     elements.companionTraceResult.textContent = "";
     updateControls();
     setStatus(t("companionTrace.traceSending"));
     try {
-      const bytes = buildTracePath(path, allNodes());
       const result = await connection.tracePath(bytes);
-      const snrs = Array.from(result.pathSnrs || []).map((value) => (value / 4).toFixed(1));
+      const snrs = Array.from(result.pathSnrs || []).map((value) => ((value > 127 ? value - 256 : value) / 4).toFixed(1));
       const route = [...path].map((key) => {
         const node = allNodes().find((candidate) => String(candidate.public_key || "").toLowerCase() === key);
         return node?.name || key.slice(0, 8);
       });
       const trace = route.map((name, index) => `${name}${snrs[index] == null ? "" : ` (${snrs[index]} dB)`}`).join(" → ");
       elements.companionTraceResult.textContent = t("companionTrace.traceResult", {
-        hops: result.pathHashes?.length || path.length,
+        hops: result.pathHashes ? result.pathHashes.length / 2 : path.length,
         route: trace,
         snr: (Number(result.lastSnr) || 0).toFixed(1),
       });
