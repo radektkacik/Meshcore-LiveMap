@@ -1,8 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { appendReturnTracePath, buildTracePath, MAX_TRACE_HOPS, TRACE_HASH_BYTES, moveTraceHop } from "../src/trace-path.js";
+import { appendReturnTracePath, buildTracePath, hasReturnTracePath, MAX_TRACE_HOPS, TRACE_HASH_BYTES, moveTraceHop } from "../src/trace-path.js";
 
 const key = (prefix, tail = "0") => `${prefix}${tail.repeat(64 - prefix.length)}`;
+
+test("completed return paths are recognized even when the return leg differs", () => {
+  assert.equal(hasReturnTracePath(["a", "b", "c", "b", "a"]), true);
+  assert.equal(hasReturnTracePath(["a", "b", "a"]), true);
+  assert.equal(hasReturnTracePath(["a", "b", "c", "a"]), true);
+  assert.equal(hasReturnTracePath(["a", "b", "c"]), false);
+  assert.equal(hasReturnTracePath(["a", "b"]), false);
+  assert.equal(hasReturnTracePath(["a"]), false);
+});
 
 test("return path reverses the outbound hops without repeating the turning point", () => {
   const path = ["a", "b", "c"];

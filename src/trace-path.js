@@ -1,6 +1,10 @@
 export const TRACE_HASH_BYTES = 2;
 export const MAX_TRACE_HOPS = 16;
 
+export function hasReturnTracePath(path) {
+  return path.length >= 3 && path[0] === path.at(-1);
+}
+
 export function appendReturnTracePath(path) {
   if (path.length < 2) return [...path];
   if (path.length * 2 - 1 > MAX_TRACE_HOPS) throw new Error("too-long");

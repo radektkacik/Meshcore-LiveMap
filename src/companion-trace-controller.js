@@ -1,6 +1,6 @@
 import WebBleConnection from "@liamcottle/meshcore.js/src/connection/web_ble_connection.js";
 import WebSerialConnection from "@liamcottle/meshcore.js/src/connection/web_serial_connection.js";
-import { appendReturnTracePath, buildTracePath, MAX_TRACE_HOPS, moveTraceHop } from "./trace-path.js";
+import { appendReturnTracePath, buildTracePath, hasReturnTracePath, MAX_TRACE_HOPS, moveTraceHop } from "./trace-path.js";
 import { installTwoByteTraceSupport, measuredTraceSnrs } from "./companion-trace-protocol.js";
 import { suggestTracePath } from "./trace-suggestion.js";
 import { getLocale, t } from "./i18n.js";
@@ -31,7 +31,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
     elements.companionTraceSelect.disabled = !connected() || sending;
     elements.companionTraceSuggest.disabled = !connected() || sending || (!suggesting && path.length !== 1);
     elements.companionTraceAlternative.disabled = !connected() || sending || suggesting || !suggestionContext;
-    elements.companionTraceReturn.disabled = path.length < 2 || sending;
+    elements.companionTraceReturn.disabled = path.length < 2 || sending || hasReturnTracePath(path);
     elements.companionTraceClear.disabled = path.length === 0 || sending;
     elements.companionTraceSend.disabled = !connected() || path.length === 0 || sending || suggesting;
     elements.companionTraceSelect.textContent = t(selecting ? "companionTrace.selectStop" : "companionTrace.selectStart");
@@ -362,7 +362,7 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
     onPathChange([...path]);
   });
   elements.companionTraceReturn.addEventListener("click", () => {
-    if (sending || path.length < 2) return;
+    if (sending || path.length < 2 || hasReturnTracePath(path)) return;
     try {
       path = appendReturnTracePath(path);
     } catch {
