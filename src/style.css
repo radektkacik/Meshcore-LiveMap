@@ -156,6 +156,20 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 }
 .hud .companion-trace-connect button, .hud .companion-trace-actions button { font-weight: 600; }
 .hud .packet-filter small, .hud .legend span, .hud .viewer-line { line-height: 1.4; }
+/* A consistent type scale for the map controls; the user setting still scales it. */
+.hud .filter-block .filter-title,
+.hud .filter-chips label, .hud .filter-chips button,
+.hud .route-retention-select, .hud .packet-filter strong,
+.hud .legend span, .hud .viewer-line,
+.hud .companion-trace-status, .hud .companion-trace-hint,
+.hud .companion-trace-result, .hud .companion-trace-path li,
+.hud .companion-trace-connect button, .hud .companion-trace-actions button {
+  font-size: calc(13px * var(--font-scale));
+}
+.hud .packet-filter small, .hud .source-note, .hud .companion-trace-hop-snr {
+  font-size: calc(12px * var(--font-scale));
+}
+.hud .companion-trace-block summary { font-size: calc(14px * var(--font-scale)); }
 .filter-block legend.filter-title, .filter-block > .filter-title { display: block; padding: 0; color: #3f584e; font-size: calc(10px * var(--font-scale)); font-weight: 700; }
 .filter-block .filter-title { margin-bottom: 5px; color: var(--muted); font: calc(10px * var(--font-scale)) "DM Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
 .filter-chips { display: flex; flex-wrap: wrap; gap: 5px; }
