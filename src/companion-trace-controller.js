@@ -3,7 +3,7 @@ import WebSerialConnection from "@liamcottle/meshcore.js/src/connection/web_seri
 import Constants from "@liamcottle/meshcore.js/src/constants.js";
 import { appendReturnTracePath, buildTracePath, hasReturnTracePath, MAX_TRACE_HOPS, moveTraceHop } from "./trace-path.js";
 import { installTwoByteTraceSupport, measuredTraceSnrs, partialTraceSnrs, traceSnrTone } from "./companion-trace-protocol.js";
-import { suggestTracePath } from "./trace-suggestion.js";
+import { suggestReplacement, suggestTracePath } from "./trace-suggestion.js";
 import { getPreferredRepeater, setPreferredRepeater } from "./trace-preferred.js";
 import { getLocale, t } from "./i18n.js";
 
@@ -96,6 +96,34 @@ export function createCompanionTraceController({ elements, allNodes, neighbors =
       }
       const actions = document.createElement("span");
       actions.className = "companion-trace-hop-actions";
+      if (index > 0 && index < path.length - 1) {
+        const replace = document.createElement("button");
+        replace.type = "button";
+        replace.textContent = "⇄";
+        replace.disabled = sending || suggesting;
+        replace.title = t("companionTrace.replaceHop", { hop: index + 1 });
+        replace.setAttribute("aria-label", replace.title);
+        replace.addEventListener("click", () => {
+          if (sending || suggesting) return;
+          const replacement = suggestReplacement(path, index, neighbors(), allNodes());
+          if (!replacement) {
+            setStatus(t("companionTrace.replaceMissing"), true);
+            return;
+          }
+          path[index] = replacement.key;
+          suggestionContext = null;
+          measuredSnrs = null;
+          const node = allNodes().find((item) => String(item.public_key || "").toLowerCase() === replacement.key);
+          elements.companionTraceResult.textContent = t("companionTrace.replaceResult", {
+            name: node?.name || replacement.key.slice(0, 12).toUpperCase(),
+            age: Math.max(0, Math.ceil((Date.now() - replacement.oldest) / 3_600_000)),
+          });
+          setStatus(t("companionTrace.suggestReady"));
+          renderPath();
+          onPathChange([...path]);
+        });
+        actions.append(replace);
+      }
       for (const [direction, symbol, offset] of [["up", "↑", -1], ["down", "↓", 1]]) {
         const move = document.createElement("button");
         move.type = "button";

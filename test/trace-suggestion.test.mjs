@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { suggestTracePath } from "../src/trace-suggestion.js";
+import { suggestReplacement, suggestTracePath } from "../src/trace-suggestion.js";
 
 const now = 1_800_000_000_000;
 const key = (prefix) => prefix.padEnd(64, "0").toUpperCase();
@@ -45,4 +45,25 @@ test("alternative skips previously suggested routes and keeps their return leg",
   assert.deepEqual(second.path, [a, d, c, d, a].map((item) => item.toLowerCase()));
   seen.add(second.path.join(","));
   assert.equal(suggestTracePath(a, c, graph, nodes, now, seen), null);
+});
+
+test("hop replacement requires fresh observations to both neighboring hops", () => {
+  const links = new Map([
+    [a, new Map([[b, edge(now - 100)], [d, edge(now - 200)]])],
+    [d, new Map([[c, edge(now - 300)]])],
+  ]);
+  assert.equal(suggestReplacement([a, b, c], 1, links, nodes, now).key, d.toLowerCase());
+  assert.equal(suggestReplacement([a, b, c], 0, links, nodes, now), null);
+  assert.equal(suggestReplacement([a, b, c], 1, links, nodes, now + 8 * 86400000), null);
+  assert.equal(suggestReplacement([a, b, c], 1, new Map([[a, links.get(a)]]), nodes, now), null);
+});
+
+test("hop replacement rejects ambiguous hashes and supports the same neighbor on both sides", () => {
+  const links = new Map([
+    [a, new Map([[d, edge(now - 200)]])],
+    [d, new Map([[a, edge(now - 200)]])],
+  ]);
+  assert.equal(suggestReplacement([a, b, a], 1, links, nodes, now).key, d.toLowerCase());
+  const collision = { public_key: `4444${"f".repeat(60)}`, role: "repeater", lat: 50, lon: 15 };
+  assert.equal(suggestReplacement([a, b, a], 1, links, [...nodes, collision], now), null);
 });
