@@ -1,7 +1,7 @@
 import WebBleConnection from "@liamcottle/meshcore.js/src/connection/web_ble_connection.js";
 import WebSerialConnection from "@liamcottle/meshcore.js/src/connection/web_serial_connection.js";
-import Constants from "@liamcottle/meshcore.js/src/constants.js";
 import { buildTracePath, MAX_TRACE_HOPS } from "./trace-path.js";
+import { installTwoByteTraceSupport } from "./companion-trace-protocol.js";
 import { getLocale, t } from "./i18n.js";
 
 export function createCompanionTraceController({ elements, allNodes, onPathChange = () => {} }) {
@@ -258,36 +258,4 @@ export function createCompanionTraceController({ elements, allNodes, onPathChang
 
 function bytesToHex(bytes) {
   return Array.from(bytes || []).map((byte) => Number(byte).toString(16).padStart(2, "0")).join("");
-}
-
-// meshcore.js 1.x hardcodes one-byte trace hashes and parses reply SNRs using
-// the hash-byte count. MeshCore supports two-byte hashes; patch the per-session
-// adapter to send flags=1 and parse its returned SNR array correctly.
-function installTwoByteTraceSupport(connection) {
-  connection.sendCommandSendTracePath = async function sendTwoByteTrace(tag, auth, path) {
-    const frame = new Uint8Array(10 + path.length);
-    frame[0] = Constants.CommandCodes.SendTracePath;
-    const view = new DataView(frame.buffer);
-    view.setUint32(1, tag, true);
-    view.setUint32(5, auth, true);
-    frame[9] = 1; // hash width: 1 << 1 = 2 bytes
-    frame.set(path, 10);
-    await this.sendToRadioFrame(frame);
-  };
-  connection.onTraceDataPush = function parseTwoByteTrace(bufferReader) {
-    const reserved = bufferReader.readByte();
-    const pathLen = bufferReader.readUInt8();
-    const flags = bufferReader.readUInt8();
-    const pathSizeShift = flags & 0x03;
-    this.emit(Constants.PushCodes.TraceData, {
-      reserved,
-      pathLen,
-      flags,
-      tag: bufferReader.readUInt32LE(),
-      authCode: bufferReader.readUInt32LE(),
-      pathHashes: bufferReader.readBytes(pathLen),
-      pathSnrs: bufferReader.readBytes(pathLen >> pathSizeShift),
-      lastSnr: bufferReader.readInt8() / 4,
-    });
-  };
 }
