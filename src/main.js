@@ -3513,21 +3513,33 @@ let companionTraceController = null;
 
 function renderCompanionTrace(pathKeys, outcome = null) {
   companionTraceLayer.clearLayers();
-  const points = pathKeys
-    .map((key) => state.nodeByKey.get(String(key).toUpperCase()))
-    .filter((node) => node && validCoords(node.lat, node.lon))
-    .map((node) => [node.lat, node.lon]);
+  const points = [];
+  const labels = new Map();
+  pathKeys.forEach((key, index) => {
+    const node = state.nodeByKey.get(String(key).toUpperCase());
+    if (!node || !validCoords(node.lat, node.lon)) return;
+    const point = [node.lat, node.lon];
+    points.push(point);
+    const coordinate = `${node.lat},${node.lon}`;
+    if (!labels.has(coordinate)) labels.set(coordinate, { point, positions: [] });
+    labels.get(coordinate).positions.push(index + 1);
+  });
   if (!points.length) return;
   const color = outcome?.success === true ? "#078e62"
     : outcome?.success === false ? "#c63e32" : "#efa438";
   if (points.length > 1) {
-    L.polyline(points, { color, dashArray: "8 7", opacity: 0.95, weight: 5 }).addTo(companionTraceLayer);
+    L.polyline(points, { color, dashArray: "8 7", opacity: 0.95, weight: 5, interactive: false }).addTo(companionTraceLayer);
   }
-  L.circleMarker(points[0], { color: "#fff", fillColor: color, fillOpacity: 1, radius: 7, weight: 2 })
-    .addTo(companionTraceLayer);
-  if (points.length > 1) {
-    L.circleMarker(points.at(-1), { color: "#fff", fillColor: color, fillOpacity: 1, radius: 7, weight: 2 })
-      .addTo(companionTraceLayer);
+  for (const { point, positions } of labels.values()) {
+    L.marker(point, {
+      interactive: false,
+      icon: L.divIcon({
+        className: "companion-trace-order-icon",
+        html: `<span style="background:${color}">${positions.join(" · ")}</span>`,
+        iconSize: null,
+        iconAnchor: [-8, 12],
+      }),
+    }).addTo(companionTraceLayer);
   }
 }
 
