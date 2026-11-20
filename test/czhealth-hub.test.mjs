@@ -96,6 +96,15 @@ test("revoking the newest report restores previous metadata without deleting sam
   assert.equal(store.history(prefix, 7, now).samples.battery.length, 1);
 }));
 
+test("firmware uses the newer build even when an older config arrived later", () => withStore((store) => {
+  store.applyPage(page([
+    change({ id: 1, decoded: { build: "v1.18.0.03" } }),
+    change({ id: 2, msg_type: "config", received_at: "2026-11-20T04:30:00Z", device_time: null,
+      decoded: { firmware_version: "v1.18.0.02rc.10-meshcz", regions_present: true }, samples: [] }),
+  ], 2));
+  assert.equal(store.history(prefix, 7, now).latest.firmware, "v1.18.0.03");
+}));
+
 test("public key must match its repeater prefix", () => withStore((store) => {
   assert.throws(() => store.applyPage(page([change({ public_key: "f".repeat(64) })], 1)));
   assert.equal(store.cursor(), 0);

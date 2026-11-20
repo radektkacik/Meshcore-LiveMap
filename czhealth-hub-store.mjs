@@ -5,6 +5,19 @@ const validPrefix = (value) => /^[0-9a-f]{16}$/.test(value);
 const valueOrNull = (value) => typeof value === "number" && Number.isFinite(value) ? value : null;
 const parseTime = (value) => typeof value === "string" ? Date.parse(value) : NaN;
 const json = (value) => JSON.stringify(value);
+function versionParts(value) {
+  return String(value || "").match(/\d+/g)?.map(Number) || [];
+}
+function newerVersion(first, second) {
+  if (!first) return second || null;
+  if (!second) return first;
+  const a = versionParts(first), b = versionParts(second);
+  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
+    const left = a[index] ?? 0, right = b[index] ?? 0;
+    if (left !== right) return left > right ? first : second;
+  }
+  return first;
+}
 const COMMON_FIELDS = ["uptime_s", "reset", "last_shutdown", "flags", "hops", "build"];
 const TYPE_FIELDS = {
   day: ["temp_source", "battery_type", "battery_cells"],
@@ -48,7 +61,8 @@ export function createCzHealthHubStore(path, { retentionMs = 90 * DAY } = {}) {
   const lastReceived = db.prepare("SELECT MAX(received_at) AS at FROM hub_messages WHERE prefix=?");
   const byKind = db.prepare("SELECT * FROM hub_messages WHERE prefix=? AND kind=? ORDER BY COALESCE(device_time,received_at) DESC, id DESC LIMIT 1");
   const regionsQuery = db.prepare("SELECT * FROM hub_messages WHERE prefix=? AND kind='config' AND COALESCE(json_extract(decoded,'$.regions_present'),1) != 0 ORDER BY COALESCE(device_time,received_at) DESC,id DESC LIMIT 1");
-  const firmwareQuery = db.prepare("SELECT * FROM hub_messages WHERE prefix=? AND (json_extract(decoded,'$.build') IS NOT NULL OR (kind='config' AND json_extract(decoded,'$.firmware_version') IS NOT NULL)) ORDER BY COALESCE(device_time,received_at) DESC,id DESC LIMIT 1");
+  const buildQuery = db.prepare("SELECT * FROM hub_messages WHERE prefix=? AND json_extract(decoded,'$.build') IS NOT NULL ORDER BY COALESCE(device_time,received_at) DESC,id DESC LIMIT 1");
+  const firmwareQuery = db.prepare("SELECT * FROM hub_messages WHERE prefix=? AND kind='config' AND json_extract(decoded,'$.firmware_version') IS NOT NULL ORDER BY COALESCE(device_time,received_at) DESC,id DESC LIMIT 1");
   const tempSourceQuery = db.prepare("SELECT * FROM hub_messages WHERE prefix=? AND json_extract(decoded,'$.temp_source') IS NOT NULL ORDER BY COALESCE(device_time,received_at) DESC,id DESC LIMIT 1");
   const samples = db.prepare("SELECT * FROM hub_samples WHERE prefix=? AND sampled_at>=? ORDER BY sampled_at DESC");
   const latestSample = Object.fromEntries(["battery_mv", "temp_c", "current_ma", "humidity_pct"].map((field) => [
@@ -104,7 +118,9 @@ export function createCzHealthHubStore(path, { retentionMs = 90 * DAY } = {}) {
     const at = lastReceived.get(prefix)?.at || latest.received_at, d = latest.data;
     const regions = decode(regionsQuery.get(prefix));
     const config = decode(byKind.get(prefix, "config"));
-    const firmware = decode(firmwareQuery.get(prefix));
+    const built = decode(buildQuery.get(prefix));
+    const configured = decode(firmwareQuery.get(prefix));
+    const firmware = newerVersion(built?.data.build, configured?.data.firmware_version);
     const selectedBattery = sampleOrSummary(battery, "battery_mv", "battery_mv");
     const summaryAt = summaryRow ? (summaryRow.device_time ?? summaryRow.received_at) : 0;
     const usingSummaryBattery = valueOrNull(summary?.battery_mv?.last) != null && summaryAt > (battery?.sampled_at || 0);
@@ -131,7 +147,7 @@ export function createCzHealthHubStore(path, { retentionMs = 90 * DAY } = {}) {
         resetReason: d.reset || null, shutdownReason: d.last_shutdown || null,
         observedAt: new Date(at).toISOString(), deviceTime: latest.device_time ? new Date(latest.device_time).toISOString() : null,
         ageSec: Math.max(0, Math.floor((now - at) / 1000)), stale: now - at > 2 * DAY,
-        firmware: firmware?.data.build || firmware?.data.firmware_version || null,
+        firmware,
         boardName: config?.data.board_name || null,
         sampleAt: usingSummaryBattery ? new Date(summaryAt).toISOString() : (battery ? new Date(battery.sampled_at).toISOString() : null),
         summary: summary ? { battery: summary.battery_mv || null, temperature: summary.temp_c || null, humidity: summary.humidity_pct || null } : null,
