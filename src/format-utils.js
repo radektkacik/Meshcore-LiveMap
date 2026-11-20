@@ -62,3 +62,10 @@ export function voltageSourceName(value) {
     bms: "BMS",
   }[value] || value;
 }
+
+export function temperatureSourceName(value) {
+  return {
+    mcu: "MCU",
+    sensor: "sensor",
+  }[value] || value;
+}

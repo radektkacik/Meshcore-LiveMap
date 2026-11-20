@@ -81,6 +81,7 @@ import {
   formatScore,
   rankSuffix,
   scoredWithRank,
+  temperatureSourceName,
   usefulnessGrade,
   voltageSourceName,
 } from "./format-utils.js";
@@ -2016,6 +2017,7 @@ function nodeTrafficDetails(node, { compact = false } = {}) {
     [t("node.battery"), battery == null ? null : `${formatDecimal(battery / 1000, 2)} V${batteryStatus ? ` · ${batteryStatus}` : ""}`, t("node.batteryHelp"), "", trend],
     [t("node.batterySpec"), batterySpec, t("node.batterySpecHelp")],
     [t("node.temperature"), temperature == null ? null : `${formatDecimal(temperature, 1)} °C`, null, "", trend],
+    [t("node.czTempSource"), !compact && health?.temperatureSource ? temperatureSourceName(health.temperatureSource) : null],
     [t("node.czFirmware"), health?.firmware || null],
     [t("node.czBoard"), health?.boardName || null],
     [t("node.current"), health?.currentMa != null && Number.isFinite(Number(health.currentMa)) ? `${formatNumber(health.currentMa)} mA` : null],
