@@ -1039,8 +1039,8 @@ function renderObservers() {
         icon: L.divIcon({
           className: `observer-cluster-icon${position.approx ? "" : " exact"}`,
           html: `<span>${observers.length}</span>`,
-          iconSize: [30, 30],
-          iconAnchor: [15, 15],
+          iconSize: [32, 32],
+          iconAnchor: [16, 16],
         }),
         interactive: true,
         keyboard: true,
@@ -1052,8 +1052,8 @@ function renderObservers() {
         })
         .bindPopup(observerClusterPopupHtml(observers, position), {
           className: "observer-popup",
-          maxWidth: 330,
-          minWidth: 260,
+          maxWidth: 360,
+          minWidth: 300,
           autoPan: true,
         })
         .on("click", (event) => {
@@ -1087,8 +1087,8 @@ function renderObservers() {
       })
       .bindPopup(observerPopupHtml(observer, position), {
         className: "observer-popup",
-        maxWidth: 300,
-        minWidth: 220,
+        maxWidth: 320,
+        minWidth: 250,
         autoPan: true,
       })
       .addTo(observerLayer);
@@ -7098,7 +7098,7 @@ async function revealSearchObserver(observer) {
   const position = observerPosition(observer);
   if (!position) return;
   map.flyTo([position.lat, position.lon], Math.max(map.getZoom(), 11), { duration: 0.7 });
-  L.popup({ className: "observer-popup", maxWidth: 300, minWidth: 220, autoPan: true })
+  L.popup({ className: "observer-popup", maxWidth: 320, minWidth: 250, autoPan: true })
     .setLatLng([position.lat, position.lon])
     .setContent(observerPopupHtml(observer, position))
     .openOn(map);
