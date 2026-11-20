@@ -462,21 +462,24 @@ je neúplná.
 
 ## Telemetrie (CzHealth)
 
-Pro přechod se testuje volitelný režim `CZ_HEALTH_SOURCE=hub`: synchronizuje
-stránky CzHealth-Hubu na serveru do samostatné databáze
-`CZ_HEALTH_HUB_DB_PATH`, ukládá kurzor v transakci a nepoužívá MQTT dekodér.
-Vyžaduje serverové proměnné `CZHEALTH_API_KEY`, `CZHEALTH_CF_CLIENT_ID`,
-`CZHEALTH_CF_CLIENT_SECRET` a volitelně `CZHEALTH_API_URL`. Dokud není režim nakonfigurován a ověřen,
-zůstává aktivní níže popsaný původní zdroj. Klíče nepatří do repozitáře.
+Výchozím zdrojem telemetrie je **CzHealth-Hub**. Server mapy každých 5 minut
+stahuje nové změny do vlastní databáze `CZ_HEALTH_HUB_DB_PATH`
+(`data/czhealth-hub.sqlite`), ukládá kurzor ve stejné transakci jako data a mapa
+čte pouze z této databáze. Režim se zapíná `CZ_HEALTH_SOURCE=hub`; bez něj
+zůstává původní MQTT dekodér v3/v4 dostupný jako záložní cesta.
 
-Repeatery s firmwarem mesh-cz v1.18.0.02rc8+ vysílají do MQTT telemetrii
-CzHealth. Server přijímá formát **v3** i novější **v4** (DAY, SUMMARY, CONFIG)
-současně a obojí ukládá do `data/cz-health.sqlite`; formáty 3 a 4 žijí vedle
-sebe a historická data zůstávají zachovaná.
+Vyžaduje serverové proměnné `CZHEALTH_API_KEY`, `CZHEALTH_CF_CLIENT_ID`,
+`CZHEALTH_CF_CLIENT_SECRET` a volitelně `CZHEALTH_API_URL`. Klíče ani služební
+token nepatří do repozitáře, logů ani do prohlížeče.
 
 - `GET /api/node-health?key=<public_key>&days=7` vrací vzorky (napětí, teplota,
-  vlhkost, proud, zdroj napětí) a konfiguraci baterie (typ, počet článků,
-  verze firmware).
+  vlhkost, proud, zdroj napětí), konfiguraci baterie, firmware, desku, dobu běhu,
+  důvod startu/vypnutí a regiony. Grafy proudu a vlhkosti se zobrazí, jen když
+  pro ně existují data.
+- Denní `stats` z Hubu se u dostupných repeaterů zobrazí jako sekce Provoz
+  (šum, TX/RX airtime, pakety, duplicity); bez dat se sekce nezobrazuje.
+- U křivek napětí a proudu se odstraňují krátké propady o jeden až dva vzorky
+  (vzorky při vysílání); špičky nahoru zůstávají.
 - Stav baterie se vyhodnocuje podle chemie a napětí: Li-ion 4050/3600/3400 mV,
   LiFePO4 3350/3200/3000 mV, LTO 2600/2400/2200 mV a Pb 2100/2050/1950 mV
   (úrovně full/ok/warn/critical). Typ `auto` se počítá jako Li-ion; `other`,
