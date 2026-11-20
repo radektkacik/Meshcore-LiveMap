@@ -473,6 +473,8 @@ html[data-theme="dark"] .node-health-series-head span { color: #d7e2dc; }
 html[data-theme="dark"] .node-health-series-head small { color: #8fa0a8; }
 html[data-theme="dark"] .node-health-windows button { color: #b9c9d2; background: #1b232b; border-color: #2f3d46; }
 html[data-theme="dark"] .node-health-windows button.active { color: #fff; background: var(--green); border-color: var(--green); }
+html[data-theme="dark"] .node-health-export { color: #8bd3b4; background: #1d3029; border-color: #35634f; }
+html[data-theme="dark"] .node-health-export:hover { background: #243b31; }
 html[data-theme="dark"] .node-health-chart-battery { --health-color: #5fd0a5; --health-fill: rgba(95, 208, 165, 0.14); }
 html[data-theme="dark"] .node-health-chart-temperature { --health-color: #f0a044; --health-fill: rgba(240, 160, 68, 0.14); }
 html[data-theme="dark"] .node-health-chart-current { --health-color: #b7a6ff; --health-fill: rgba(183, 166, 255, 0.16); }
@@ -513,9 +515,13 @@ html[data-theme="dark"] .node-health-config-warning { color: #f0a044; }
 .node-health-history-highlight { box-shadow: inset 0 0 0 2px rgba(7, 142, 98, 0.42); }
 .node-health-history-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
 .node-health-history-head h4 { margin: 0; color: var(--muted); font: calc(10px * var(--font-scale)) "DM Mono", monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+.node-health-history-actions { display: flex; align-items: center; gap: 5px; }
 .node-health-windows { display: flex; gap: 3px; }
 .node-health-windows button { padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; color: #49665b; background: #fff; font: calc(9px * var(--font-scale)) "DM Mono", monospace; cursor: pointer; }
 .node-health-windows button.active { color: #fff; border-color: var(--green); background: var(--green); }
+.node-health-export { padding: 3px 7px; border: 1px solid rgba(7, 142, 98, 0.4); border-radius: 5px; color: #087a57; background: #edf7f1; font: 600 calc(9px * var(--font-scale)) "DM Mono", monospace; cursor: pointer; white-space: nowrap; }
+.node-health-export:hover { border-color: var(--green); background: #e4f3ea; }
+.node-health-export[hidden] { display: none; }
 .node-health-series { margin-top: 7px; }
 .node-health-series-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .node-health-series-head span { color: #3f584e; font: 500 calc(11px * var(--font-scale)) "DM Mono", monospace; }

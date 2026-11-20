@@ -31,6 +31,7 @@ import {
   multiLineFeature,
   pointFeature,
 } from "./export-model.js";
+import { HEALTH_EXPORT_COLUMNS, healthExportRows } from "./health-export.js";
 import { createPerfMonitor } from "./perf.js";
 import { routeAnimationFps } from "./route-animation.js";
 import { observerAnchor } from "./observer-locations.js";
@@ -2215,10 +2216,13 @@ function nodeHealthHistory(node) {
     <section class="node-health-history" data-node-key="${escapeHtml(node.public_key.toUpperCase())}">
       <div class="node-health-history-head">
         <h4>${t("node.healthHistoryTitle")}</h4>
-        <div class="node-health-windows" role="group" aria-label="${t("node.healthHistoryTitle")}">
-          <button type="button" data-health-days="1" class="active">${t("node.healthHistory24h")}</button>
-          <button type="button" data-health-days="7">${t("node.healthHistory7d")}</button>
-          <button type="button" data-health-days="30">${t("node.healthHistory30d")}</button>
+        <div class="node-health-history-actions">
+          <div class="node-health-windows" role="group" aria-label="${t("node.healthHistoryTitle")}">
+            <button type="button" data-health-days="1" class="active">${t("node.healthHistory24h")}</button>
+            <button type="button" data-health-days="7">${t("node.healthHistory7d")}</button>
+            <button type="button" data-health-days="30">${t("node.healthHistory30d")}</button>
+          </div>
+          <button type="button" class="node-health-export" data-health-export hidden title="${t("node.healthExportTitle")}">${t("node.healthExport")}</button>
         </div>
       </div>
       <div class="node-health-series node-health-series-battery" data-health-metric="battery">
@@ -2711,12 +2715,27 @@ async function loadNodeHealthHistory(root, node, days = 1) {
   for (const button of section.querySelectorAll("[data-health-days]")) {
     button.classList.toggle("active", Number(button.dataset.healthDays) === days);
   }
+  const exportButton = section.querySelector("[data-health-export]");
+  if (exportButton) exportButton.hidden = true;
   try {
     const data = await getJson(`/api/node-health?key=${encodeURIComponent(key)}&days=${days}`);
     if (!root.isConnected) return;
     const empty = section.querySelector(".node-health-history-empty");
     if (empty) empty.hidden = true;
     renderNodeHealthHistory(section, data);
+    if (exportButton) {
+      const rows = healthExportRows(data?.samples || {});
+      exportButton.hidden = rows.length === 0;
+      exportButton.onclick = () => {
+        if (!rows.length) return;
+        const prefix = `health-${node.name || key.slice(0, 8)}-${days}d`;
+        exportController.downloadTextFile(
+          exportFileName(prefix, "csv"),
+          buildCsv(HEALTH_EXPORT_COLUMNS, rows),
+          "text/csv;charset=utf-8",
+        );
+      };
+    }
   } catch (error) {
     console.error("Historii zdraví nodu se nepodařilo načíst", error);
     if (!root.isConnected) return;
@@ -7136,7 +7155,7 @@ document.addEventListener("click", (event) => {
   showNodeNeighborsOnMap(node);
 }, true);
 
-createExportController({
+const exportController = createExportController({
   state,
   elements,
   routeStore,
