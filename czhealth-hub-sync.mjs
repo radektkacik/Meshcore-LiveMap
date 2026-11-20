@@ -1,4 +1,4 @@
-const ENDPOINT = "https://czhealth-api.meshcore.website/czhealth/v1/changes";
+const DEFAULT_ENDPOINT = "https://czhealth-api.meshcore.website";
 const INTERVAL = 5 * 60_000;
 
 export function retryAfterMs(value, now = Date.now()) {
@@ -30,23 +30,45 @@ async function readJsonBounded(response, limit = 4 * 1024 * 1024) {
   return JSON.parse(new TextDecoder().decode(bytes));
 }
 
-export function createCzHealthHubSync({ store, apiKey, clientId, clientSecret, fetchImpl = fetch, logger = console }) {
+export function createCzHealthHubSync({ store, baseUrl = DEFAULT_ENDPOINT, apiKey, clientId, clientSecret, fetchImpl = fetch, logger = console }) {
   let timer = null, stopped = true, running = false, backoffUntil = 0, controller = null;
   let lastSuccess = null, lastError = null;
-  const configured = Boolean(apiKey && clientId && clientSecret);
+  const base = String(baseUrl || DEFAULT_ENDPOINT).trim().replace(/\/$/, "");
+  const key = String(apiKey || "").trim();
+  const accessId = String(clientId || "").trim();
+  const accessSecret = String(clientSecret || "").trim();
+  const configured = Boolean(base && key && accessId && accessSecret);
+
+  async function describeFailure(response) {
+    const type = response.headers.get("content-type") || "";
+    const via = (response.headers.get("via") || "").toLowerCase();
+    const source = via.includes("caddy") ? "API" : "Cloudflare";
+    let body = "";
+    if (type.includes("application/json") || type.startsWith("text/")) {
+      try { body = (await response.text()).slice(0, 200); } catch {}
+    }
+    return `${source} HTTP ${response.status} ${type} cf-ray=${response.headers.get("cf-ray") || "-"}`
+      + ` location=${response.headers.get("location") || "-"} body=${JSON.stringify(body)}`;
+  }
 
   async function run() {
     if (!configured || running || Date.now() < backoffUntil) return;
     running = true;
     try {
       for (let count = 0; count < 1000 && !stopped; count += 1) {
-        const url = new URL(ENDPOINT);
+        const url = new URL(`${base}/czhealth/v1/changes`);
         url.searchParams.set("cursor", String(store.cursor()));
         url.searchParams.set("limit", "500");
         controller = new AbortController();
         const response = await fetchImpl(url, {
-          headers: { Authorization: `Bearer ${apiKey}`, "CF-Access-Client-Id": clientId, "CF-Access-Client-Secret": clientSecret },
-          redirect: "error", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]),
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "CF-Access-Client-Id": accessId,
+            "CF-Access-Client-Secret": accessSecret,
+            "User-Agent": "mapa-sync/1.0",
+          },
+          redirect: "manual",
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30_000)]),
         });
         if (stopped) return;
         if (response.status === 429) {
@@ -56,8 +78,12 @@ export function createCzHealthHubSync({ store, apiKey, clientId, clientSecret, f
           return;
         }
         if (!response.ok) {
-          lastError = `http-${response.status}`;
-          logger.warn(`CzHealth Hub: HTTP ${response.status}; zachovávám uložená data.`);
+          lastError = response.status === 401 ? "unauthorized"
+            : response.status === 403 ? "forbidden" : `http-${response.status}`;
+          if (response.status === 401 || response.status === 403) {
+            backoffUntil = Date.now() + 30 * 60_000;
+          }
+          logger.warn(`CzHealth Hub: ${await describeFailure(response)}; zachovávám uložená data.`);
           return;
         }
         const contentType = response.headers.get("content-type") || "";

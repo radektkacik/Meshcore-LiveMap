@@ -465,8 +465,8 @@ je neúplná.
 Pro přechod se testuje volitelný režim `CZ_HEALTH_SOURCE=hub`: synchronizuje
 stránky CzHealth-Hubu na serveru do samostatné databáze
 `CZ_HEALTH_HUB_DB_PATH`, ukládá kurzor v transakci a nepoužívá MQTT dekodér.
-Vyžaduje serverové proměnné `CZ_HEALTH_HUB_API_KEY`, `CZ_HEALTH_CF_CLIENT_ID`
-a `CZ_HEALTH_CF_CLIENT_SECRET`. Dokud není režim nakonfigurován a ověřen,
+Vyžaduje serverové proměnné `CZHEALTH_API_KEY`, `CZHEALTH_CF_CLIENT_ID`,
+`CZHEALTH_CF_CLIENT_SECRET` a volitelně `CZHEALTH_API_URL`. Dokud není režim nakonfigurován a ověřen,
 zůstává aktivní níže popsaný původní zdroj. Klíče nepatří do repozitáře.
 
 Repeatery s firmwarem mesh-cz v1.18.0.02rc8+ vysílají do MQTT telemetrii

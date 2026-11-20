@@ -71,8 +71,10 @@ const healthStore = hubHealth
   ? createCzHealthHubStore(process.env.CZ_HEALTH_HUB_DB_PATH || join(process.cwd(), "data", "czhealth-hub.sqlite"), { retentionMs: healthRetention })
   : createCzHealthStore(healthDbPath, { retentionMs: healthRetention });
 const healthHubSync = hubHealth ? createCzHealthHubSync({
-  store: healthStore, apiKey: process.env.CZ_HEALTH_HUB_API_KEY,
-  clientId: process.env.CZ_HEALTH_CF_CLIENT_ID, clientSecret: process.env.CZ_HEALTH_CF_CLIENT_SECRET,
+  store: healthStore, baseUrl: process.env.CZHEALTH_API_URL,
+  apiKey: process.env.CZHEALTH_API_KEY || process.env.CZ_HEALTH_HUB_API_KEY,
+  clientId: process.env.CZHEALTH_CF_CLIENT_ID || process.env.CZ_HEALTH_CF_CLIENT_ID,
+  clientSecret: process.env.CZHEALTH_CF_CLIENT_SECRET || process.env.CZ_HEALTH_CF_CLIENT_SECRET,
 }) : null;
 const visitsDbPath = process.env.VISITS_DB_PATH || join(process.cwd(), "data", "visits.sqlite");
 const visitStore = createVisitStatsStore(visitsDbPath);

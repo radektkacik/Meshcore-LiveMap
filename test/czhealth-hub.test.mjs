@@ -138,19 +138,24 @@ test("hub synchronizer fetches pages and resumes at committed cursor", async () 
   assert.equal(logs.length, 0);
 });
 
-test("hub HTTP errors never log secrets or change cursor", async () => {
+test("hub HTTP errors include sanitized diagnostics, never secrets, and do not change cursor", async () => {
   const logs = [], calls = [];
   const store = { cursor: () => 3, applyPage() { throw new Error("should not write"); } };
   const sync = createCzHealthHubSync({ store, apiKey: "super-secret", clientId: "client", clientSecret: "another-secret",
     logger: { warn: (message) => logs.push(message) },
-    fetchImpl: async (url) => { calls.push(url.href); return new Response("<html>private</html>", { status: 403 }); },
+    fetchImpl: async (url) => {
+      calls.push(url.href);
+      return new Response("<html>blocked-page</html>", { status: 403, headers: { "Content-Type": "text/html", "CF-Ray": "test-ray" } });
+    },
   });
   sync.start();
   for (let i = 0; i < 50 && !logs.length; i += 1) await new Promise((resolve) => setImmediate(resolve));
   sync.stop();
   assert.equal(logs.length, 1);
-  assert.match(logs[0], /403/);
-  assert.doesNotMatch(JSON.stringify({ logs, calls }), /super-secret|another-secret|private/);
+  assert.match(logs[0], /Cloudflare HTTP 403/);
+  assert.match(logs[0], /cf-ray=test-ray/);
+  assert.match(logs[0], /blocked-page/);
+  assert.doesNotMatch(JSON.stringify({ logs, calls }), /super-secret|another-secret/);
 });
 
 test("rate limiting honors retry-after without an immediate retry", async () => {
