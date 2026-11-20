@@ -3,6 +3,15 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-20 — Telemetrie z CzHealth-Hubu
+- Prostředí: produkce i beta
+- Build: 20261120-1126-3be352c
+- Beta build: 20261120-1103-56026cd
+- Telemetrie repeaterů se nově načítá z CzHealth-Hubu do vlastní databáze mapy.
+- Detail nodu nabízí firmware, desku, dobu běhu, důvod startu a vypnutí a regiony.
+- Grafy nově zobrazují i proud a vlhkost, pokud je repeater posílá.
+- Nody s novějšími statistikami mají sekci Provoz; starší firmware zobrazuje jen dostupné údaje.
+
 ## 2026-11-19 — Skutečný trace přes připojený companion
 - Prostředí: produkce i beta
 - Build: 20261119-2050-b24b575
