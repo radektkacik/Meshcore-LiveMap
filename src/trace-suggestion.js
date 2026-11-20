@@ -1,6 +1,15 @@
 import { appendReturnTracePath, buildTracePath, MAX_TRACE_HOPS } from "./trace-path.js";
 import { validCoords } from "./node-model.js";
 
+function edgeCost(info, now, maxAge) {
+  const at = Number(info?.lastAt);
+  if (!Number.isFinite(at) || at <= 0 || at > now) return Infinity;
+  const age = Math.max(0, Math.min(maxAge, now - at)) / maxAge;
+  const observations = Math.max(1, Number(info?.count) || 1);
+  const confidence = Math.min(1, Math.log1p(observations) / Math.log1p(20));
+  return 1 + 0.55 * age - 0.35 * confidence;
+}
+
 export function suggestReplacement(path, index, neighborIndex, nodes, now = Date.now()) {
   if (!Array.isArray(path) || !Number.isInteger(index) || index <= 0 || index >= path.length - 1) return null;
   const previous = String(path[index - 1]).toUpperCase();
@@ -23,9 +32,14 @@ export function suggestReplacement(path, index, neighborIndex, nodes, now = Date
     const proposed = [...path];
     proposed[index] = key.toLowerCase();
     try { buildTracePath(proposed, nodes); } catch { continue; }
-    candidates.push({ key: key.toLowerCase(), oldest: Math.min(firstAt, secondAt), count: (Number(first.count) || 0) + (Number(second.count) || 0) });
+    candidates.push({
+      key: key.toLowerCase(),
+      oldest: Math.min(firstAt, secondAt),
+      count: (Number(first.count) || 0) + (Number(second.count) || 0),
+      cost: edgeCost(first, now, maxAge) + edgeCost(second, now, maxAge),
+    });
   }
-  candidates.sort((a, b) => b.oldest - a.oldest || b.count - a.count || a.key.localeCompare(b.key));
+  candidates.sort((a, b) => a.cost - b.cost || b.count - a.count || b.oldest - a.oldest || a.key.localeCompare(b.key));
   return candidates[0] || null;
 }
 
@@ -66,7 +80,7 @@ export function suggestTracePath(start, destination, neighborIndex, nodes, now =
       const at = Number(info?.lastAt);
       const age = now - at;
       if (!usable(key) || current.path.includes(key) || !Number.isFinite(at) || at <= 0 || age < 0 || age > maxAge) continue;
-      const cost = current.cost + 1 + age / maxAge;
+      const cost = current.cost + edgeCost(info, now, maxAge);
       queue.push({ key, path: [...current.path, key], cost, oldest: Math.min(current.oldest, at) });
     }
     if (queue.length > 5000) {

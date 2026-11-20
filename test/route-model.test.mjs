@@ -139,6 +139,12 @@ test("neighbor index counts undirected adjacencies and keeps newest name and tim
   assert.equal(index.get("BBBB").get("CCCC").count, 1);
   assert.equal(index.get("AAAA").get("BBBB").lastAt, 200);
   assert.deepEqual([...index.get("CCCC").keys()], ["BBBB"]);
+
+  const deduped = buildNeighborIndex([
+    { id: "same", versionId: "same", points: [{ publicKey: "AAAA" }, { publicKey: "BBBB" }], timestamp: 100 },
+    { id: "same", versionId: "same", points: [{ publicKey: "AAAA" }, { publicKey: "BBBB" }], timestamp: 200 },
+  ]);
+  assert.equal(deduped.get("AAAA").get("BBBB").count, 1);
 });
 
 test("trace observations are grouped by tag and the most complete route wins", () => {

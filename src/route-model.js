@@ -179,7 +179,13 @@ export function buildNeighborIndex(routes) {
     neighbors.set(toKey, entry);
   };
 
+  const seen = new Set();
   for (const route of routes) {
+    const routeKey = route?.versionId || route?.id;
+    if (routeKey) {
+      if (seen.has(routeKey)) continue;
+      seen.add(routeKey);
+    }
     const points = route?.points || [];
     for (let index2 = 0; index2 < points.length - 1; index2 += 1) {
       const from = points[index2].publicKey?.toUpperCase();
