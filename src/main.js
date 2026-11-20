@@ -32,6 +32,7 @@ import {
   pointFeature,
 } from "./export-model.js";
 import { HEALTH_EXPORT_COLUMNS, healthExportRows } from "./health-export.js";
+import { routeHopSnr, routeSegmentSnr } from "./route-snr.js";
 import { createPerfMonitor } from "./perf.js";
 import { routeAnimationFps } from "./route-animation.js";
 import { observerAnchor } from "./observer-locations.js";
@@ -779,8 +780,8 @@ function routeDetailHtml(route) {
       totalMeters += meters;
       distance = `${formatDecimal(meters / 1000, 1)} km`;
     }
-    const hopSnr = index > 0 ? route.snrValues?.[index - 1] : null;
-    const detail = [distance, Number.isFinite(hopSnr) ? `SNR ${formatDecimal(hopSnr, 1)} dB` : null]
+    const hopSnr = routeHopSnr(route, point, index);
+    const detail = [distance, hopSnr != null ? `SNR ${formatDecimal(hopSnr, 1)} dB` : null]
       .filter(Boolean).map((value) => escapeHtml(value)).join(" · ");
     return `<li><i>${index + 1}</i><span>${escapeHtml(point.name || t("common.unknownShort"))}</span><small>${detail}</small></li>`;
   }).join("");
@@ -4453,8 +4454,8 @@ function packetPoints(packet, path, hashBytes = packetPathHashBytes(packet, path
   const decoded = parseDecoded(packet);
   const points = [];
   let breakNext = false;
-  const pushPoint = (lat, lon, name, publicKey) => {
-    points.push({ lat, lon, name, publicKey, breakBefore: breakNext && points.length > 0 });
+  const pushPoint = (lat, lon, name, publicKey, pathIndex = null) => {
+    points.push({ lat, lon, name, publicKey, pathIndex, breakBefore: breakNext && points.length > 0 });
     breakNext = false;
   };
 
@@ -4480,7 +4481,9 @@ function packetPoints(packet, path, hashBytes = packetPathHashBytes(packet, path
 
   let block = [];
   const blocks = [];
-  for (const prefix of path) {
+  const pathIndexByCandidate = new Map();
+  for (let pathIndex = 0; pathIndex < path.length; pathIndex += 1) {
+    const prefix = path[pathIndex];
     const resolved = state.prefixCache.get(prefix);
     const candidates = (resolved?.candidates || []).filter((candidate) => (
       validCoords(candidate.lat, candidate.lon)
@@ -4491,6 +4494,7 @@ function packetPoints(packet, path, hashBytes = packetPathHashBytes(packet, path
       breakNext = true;
       continue;
     }
+    for (const candidate of candidates) pathIndexByCandidate.set(candidate, pathIndex);
     block.push(candidates);
   }
   if (block.length) blocks.push(block);
@@ -4512,6 +4516,7 @@ function packetPoints(packet, path, hashBytes = packetPathHashBytes(packet, path
         candidate.lon,
         candidate.name || candidate.pubkey || t("common.unknownShort"),
         candidate.pubkey || candidate.public_key,
+        pathIndexByCandidate.get(candidate),
       );
     }
   }
@@ -4579,7 +4584,8 @@ function historyRoutePoints(packet, hashBytes = packetPathHashBytes(packet)) {
   const points = [];
   const seen = new Set();
   let breakNext = false;
-  for (const hop of resolved) {
+  for (let pathIndex = 0; pathIndex < resolved.length; pathIndex += 1) {
+    const hop = resolved[pathIndex];
     const key = String(hop || "").toUpperCase();
     if (!key || key.length < 4) {
       breakNext = true;
@@ -4602,6 +4608,7 @@ function historyRoutePoints(packet, hashBytes = packetPathHashBytes(packet)) {
       lon: node.lon,
       name: node.name || key.slice(0, 2),
       publicKey: key,
+      pathIndex,
       breakBefore: breakNext && points.length > 0,
     });
     breakNext = false;
@@ -4636,11 +4643,12 @@ function routeRecord(packet, points, hashBytes, id, versionId, createdAt, timest
     observerName: String(packet.observer_name || "").trim() || null,
     packetHash: String(packet.hash || "").toUpperCase(),
     packetType: packet.payload_type,
-    points: points.map(({ lat, lon, name, publicKey, breakBefore }) => ({
+    points: points.map(({ lat, lon, name, publicKey, pathIndex, breakBefore }) => ({
       lat,
       lon,
       name,
       publicKey,
+      pathIndex: Number.isInteger(pathIndex) ? pathIndex : null,
       breakBefore: Boolean(breakBefore),
     })),
     rssi: Number.isFinite(rssi) ? rssi : null,
@@ -4739,22 +4747,24 @@ function rebuildSnrLabels() {
   snrLabelLayer.clearLayers();
   let count = 0;
   for (const route of routes) {
-    for (let index = 1; index < route.points.length; index += 1) {
+    for (let index = 0; index < route.points.length; index += 1) {
       if (count >= 150) return;
-      const previous = route.points[index - 1];
       const point = route.points[index];
-      if (point.breakBefore) continue;
-      if (index - 1 >= route.snrValues.length) continue;
-      const snr = Number(route.snrValues[index - 1]);
-      if (!Number.isFinite(snr)) continue;
+      const previous = route.points[index - 1];
+      const snr = routeHopSnr(route, point, index);
+      if (snr == null) continue;
       const tone = snr >= SNR_GOOD_DB ? "good" : snr >= SNR_FAIR_DB ? "fair" : "bad";
+      const onSegment = index > 0 && !point.breakBefore && previous;
+      const latlng = onSegment
+        ? [previous.lat + (point.lat - previous.lat) * 0.55, previous.lon + (point.lon - previous.lon) * 0.55]
+        : [point.lat, point.lon];
       L.marker(
-        [previous.lat + (point.lat - previous.lat) * 0.55, previous.lon + (point.lon - previous.lon) * 0.55],
+        latlng,
         {
           icon: L.divIcon({
             className: `route-snr-label ${tone}`,
             html: `${formatDecimal(snr, 1)} dB`,
-            iconAnchor: [32, 11],
+            iconAnchor: onSegment ? [32, 11] : [32, 32],
             iconSize: [64, 22],
           }),
           interactive: false,
@@ -4806,10 +4816,10 @@ function renderRoute(route, { archive = false } = {}) {
         }
         continue;
       }
-      const snr = index - 1 < snrValues.length ? Number(snrValues[index - 1]) : null;
+      const snr = routeSegmentSnr(route, point, index);
       lines.push(L.polyline([[previous.lat, previous.lon], [point.lat, point.lon]], {
         renderer: layerRenderer,
-        color: Number.isFinite(snr) ? snrColor(snr) : route.color,
+        color: snr != null ? snrColor(snr) : route.color,
         className: lineClass,
         dashArray,
         lineCap: "round",
