@@ -16,7 +16,7 @@ APP_USER=${APP_USER:-meshcore-map}
 APP_GROUP=${APP_GROUP:-meshcore-map}
 ROLLBACK_SCRIPT=${ROLLBACK_SCRIPT:-/root/rollback-meshcore.sh}
 
-for file in server.mjs http-server.mjs admin-auth.mjs monitor.mjs mqtt-ingest.mjs collectors.mjs elevation-terrain.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs cz-health.mjs cz-health-store.mjs visit-stats.mjs feedback.mjs photos.mjs node-info.mjs comments.mjs repeater-pages.mjs notify.mjs html.mjs sqlite-store.mjs admin-pages.mjs legacy-pages.mjs http-utils.mjs security-events.mjs turnstile.mjs package.json package-lock.json dist/index.html \
+for file in server.mjs http-server.mjs admin-auth.mjs monitor.mjs mqtt-ingest.mjs collectors.mjs elevation-terrain.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs cz-health.mjs cz-health-store.mjs czhealth-hub-store.mjs czhealth-hub-sync.mjs visit-stats.mjs feedback.mjs photos.mjs node-info.mjs comments.mjs repeater-pages.mjs notify.mjs html.mjs sqlite-store.mjs admin-pages.mjs legacy-pages.mjs http-utils.mjs security-events.mjs turnstile.mjs package.json package-lock.json dist/index.html \
   rollback-vps.sh \
   "$STORAGE_CONF_NAME" \
   node_modules/@michaelhart/meshcore-decoder/package.json \
@@ -37,6 +37,8 @@ node --check node-metrics.mjs
 node --check packet-store.mjs
 node --check cz-health.mjs
 node --check cz-health-store.mjs
+node --check czhealth-hub-store.mjs
+node --check czhealth-hub-sync.mjs
 node --check visit-stats.mjs
 node --check feedback.mjs
 node --check photos.mjs
@@ -151,6 +153,12 @@ fi
 if [[ -f "$APP_DIR/cz-health-store.mjs" ]]; then
   backup_paths+=(cz-health-store.mjs)
 fi
+if [[ -f "$APP_DIR/czhealth-hub-store.mjs" ]]; then
+  backup_paths+=(czhealth-hub-store.mjs)
+fi
+if [[ -f "$APP_DIR/czhealth-hub-sync.mjs" ]]; then
+  backup_paths+=(czhealth-hub-sync.mjs)
+fi
 if [[ -f "$APP_DIR/visit-stats.mjs" ]]; then
   backup_paths+=(visit-stats.mjs)
 fi
@@ -224,6 +232,8 @@ install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/node-metrics.mjs" "$APP_DI
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/packet-store.mjs" "$APP_DIR/packet-store.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/cz-health.mjs" "$APP_DIR/cz-health.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/cz-health-store.mjs" "$APP_DIR/cz-health-store.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/czhealth-hub-store.mjs" "$APP_DIR/czhealth-hub-store.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/czhealth-hub-sync.mjs" "$APP_DIR/czhealth-hub-sync.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/visit-stats.mjs" "$APP_DIR/visit-stats.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/feedback.mjs" "$APP_DIR/feedback.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/photos.mjs" "$APP_DIR/photos.mjs"

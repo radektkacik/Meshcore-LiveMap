@@ -7,6 +7,7 @@ export function createMqttIngest({
   broadcast,
   broadcastStatus,
   healthStore,
+  healthEnabled = true,
   packetStore,
   recentPackets,
   toStoreRow,
@@ -79,7 +80,7 @@ export function createMqttIngest({
   }
 
   function ingestHealth(rawHex, observedAt, packetHash = null) {
-    if (!rawHex) return null;
+    if (!healthEnabled || !rawHex) return null;
     const health = decodeCzHealth(rawHex, Number(observedAt) || Date.now());
     if (!health) return null;
     try {
@@ -91,6 +92,7 @@ export function createMqttIngest({
   }
 
   function backfillHealth() {
+    if (!healthEnabled) return;
     const rows = packetStore.queryPayloadType(6, 20_000);
     const seen = new Set();
     let decoded = 0;

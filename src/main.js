@@ -4,6 +4,7 @@ import { createState } from "./app-state.js";
 import { elements } from "./elements.js";
 import { createExportController } from "./export-controller.js";
 import { createFeedbackController } from "./feedback-controller.js";
+import { smoothHealthDips } from "./health-chart-utils.js";
 import { createCompanionTraceController } from "./companion-trace-controller.js";
 import { writeHeaders } from "./turnstile-client.js";
 import { escapeHtml } from "../html.mjs";
@@ -576,7 +577,7 @@ function nodeHealthSnapshot(node) {
 }
 
 function nodeHealthSampleText(node) {
-  const observedAt = node?.health?.observedAt;
+  const observedAt = node?.health?.sampleAt || node?.health?.observedAt;
   return observedAt ? t("node.healthSampleTime", { time: formatDateTimeShort(observedAt) }) : "";
 }
 
@@ -1972,6 +1973,7 @@ function nodePopupContent(node, active) {
     ${nodeTrafficDetails(node)}
     ${nodeHealthSummary(node)}
     ${nodeHealthConfig(node)}
+    ${nodeHealthStats(node)}
     ${nodeHealthHistory(node)}
     ${nodeNetworkDetails(node)}
     ${nodeAnalytics(node)}
@@ -2018,8 +2020,39 @@ function nodeTrafficDetails(node, { compact = false } = {}) {
     [t("node.charging"), health ? (health.charging ? t("common.yes") : t("common.no")) : null],
     [t("node.externalPower"), health ? (health.externalPower ? t("common.yes") : t("common.no")) : null],
     [t("node.healthObserved"), health?.observedAt ? formatNodeDate(health.observedAt) : null],
-    [t("node.healthSample"), health?.observedAt ? formatDateTimeShort(health.observedAt) : null],
+    [t("node.healthSample"), (health?.sampleAt || health?.observedAt) ? formatDateTimeShort(health.sampleAt || health.observedAt) : null],
+    [t("node.czFirmware"), health?.firmware || null],
+    [t("node.czBoard"), health?.boardName || null],
+    [t("node.czUptime"), health?.uptimeS != null ? `${Math.floor(health.uptimeS / 86400)} d ${Math.floor((health.uptimeS % 86400) / 3600)} h` : null],
+    [t("node.czBoot"), health?.bootAt ? formatDateTime(health.bootAt) : null],
+    [t("node.czReset"), health?.resetReason || null],
+    [t("node.czShutdown"), health?.shutdownReason || null],
   ], "", "node-traffic-details");
+}
+
+function nodeHealthStats(node) {
+  const stats = node.health?.stats;
+  if (!stats) return "";
+  const number = (value) => typeof value === "number" && Number.isFinite(value) ? value : null;
+  const period = number(stats.period_min);
+  const airtime = (value) => {
+    const seconds = number(value);
+    if (seconds == null) return null;
+    const ratio = period > 0 ? ` · ${formatDecimal(seconds / (period * 60) * 100, 1)} %` : "";
+    return `${formatNumber(seconds)} s${ratio}`;
+  };
+  const noise = stats.noise_floor_dbm;
+  const noiseText = noise && [noise.min, noise.avg, noise.max].some((value) => number(value) != null)
+    ? `${[noise.min, noise.avg, noise.max].map((value) => number(value) == null ? "—" : formatNumber(value)).join(" / ")} dBm` : null;
+  return renderNodeDetails(t("node.czStats"), [
+    [t("node.czPeriod"), period == null ? null : `${formatDecimal(period / 60, 1)} h`],
+    [t("node.czNoise"), noiseText],
+    [t("node.czTx"), airtime(stats.tx_airtime_s)],
+    [t("node.czRx"), airtime(stats.rx_airtime_s)],
+    [t("node.czReceived"), number(stats.packets_received) == null ? null : formatNumber(stats.packets_received)],
+    [t("node.czSent"), number(stats.packets_sent) == null ? null : formatNumber(stats.packets_sent)],
+    [t("node.czDuplicates"), number(stats.flood_duplicates) == null ? null : formatNumber(stats.flood_duplicates)],
+  ]);
 }
 
 // Icons: Tabler Icons (MIT), battery-vertical-1/2/4/off + temperature.
@@ -2193,6 +2226,14 @@ function nodeHealthHistory(node) {
       <div class="node-health-series node-health-series-temperature" data-health-metric="temperature">
         <div class="node-health-series-head"><span>${t("node.temperature")}</span><small>${t("node.healthHistoryLoading")}</small></div>
         <div class="node-health-chart node-health-chart-temperature"></div>
+      </div>
+      <div class="node-health-series" data-health-metric="current" hidden>
+        <div class="node-health-series-head"><span>${t("node.current")}</span><small></small></div>
+        <div class="node-health-chart"></div>
+      </div>
+      <div class="node-health-series" data-health-metric="humidity" hidden>
+        <div class="node-health-series-head"><span>${t("node.humidity")}</span><small></small></div>
+        <div class="node-health-chart"></div>
       </div>
       <p class="node-health-history-empty" hidden></p>
     </section>
@@ -2532,10 +2573,13 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
   const chart = container.querySelector(".node-health-chart");
   const summary = container.querySelector(".node-health-series-head small");
   if (!chart) return;
-  const points = (rawPoints || [])
+  const gapMs = metric === "battery" ? 1.5 * 60 * 60 * 1000 : 3 * 60 * 60 * 1000;
+  const input = (rawPoints || [])
+    .filter((sample) => sample.value != null)
     .map((sample) => ({ time: Date.parse(sample.at), value: Number(sample.value) }))
     .filter((point) => Number.isFinite(point.time) && Number.isFinite(point.value))
     .sort((a, b) => a.time - b.time);
+  const points = smoothHealthDips(input, metric, gapMs);
   if (points.length < 2) {
     chart.classList.add("empty");
     chart.textContent = t("node.healthHistoryEmpty");
@@ -2558,7 +2602,7 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
   const valueSpan = Math.max(1, yMax - yMin);
   const x = (time) => pad + (width - 2 * pad) * ((time - firstTime) / timeSpan);
   const y = (value) => height - pad - (height - 2 * pad) * ((value - yMin) / valueSpan);
-  const segments = splitHealthSegments(points, metric === "battery" ? 2 * 60 * 60 * 1000 : 6 * 60 * 60 * 1000);
+  const segments = splitHealthSegments(points, gapMs);
   const shapes = segments.map((segment) => {
     if (segment.length === 1) {
       return `<circle cx="${x(segment[0].time).toFixed(1)}" cy="${y(segment[0].value).toFixed(1)}" r="2.5" class="node-health-dot"></circle>`;
@@ -2626,7 +2670,7 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
 function renderNodeHealthHistory(section, data) {
   if (!section) return;
   const samples = data?.samples || {};
-  const hasSamples = (samples.battery || []).length || (samples.temperature || []).length;
+  const hasSamples = ["battery", "temperature", "current", "humidity"].some((metric) => (samples[metric] || []).length);
   if (!hasSamples && data?.latest?.summary) {
     for (const metric of ["battery", "temperature"]) {
       const series = section.querySelector(`[data-health-metric="${metric}"]`);
@@ -2649,6 +2693,12 @@ function renderNodeHealthHistory(section, data) {
     samples.temperature || [],
     "temperature",
   );
+  for (const metric of ["current", "humidity"]) {
+    const sectionMetric = section.querySelector(`[data-health-metric="${metric}"]`);
+    if (!sectionMetric) continue;
+    sectionMetric.hidden = !(samples[metric] || []).length;
+    if (!sectionMetric.hidden) renderNodeHealthSeries(sectionMetric, samples[metric], metric);
+  }
 }
 
 async function loadNodeHealthHistory(root, node, days = 1) {

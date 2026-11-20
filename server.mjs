@@ -8,6 +8,8 @@ import { TimeBoundRingBuffer } from "./backend-utils.mjs";
 import { createNodeMetricsStore } from "./node-metrics.mjs";
 import { createPacketStore } from "./packet-store.mjs";
 import { createCzHealthStore } from "./cz-health-store.mjs";
+import { createCzHealthHubStore } from "./czhealth-hub-store.mjs";
+import { createCzHealthHubSync } from "./czhealth-hub-sync.mjs";
 import { createVisitStatsStore } from "./visit-stats.mjs";
 import { createFeedbackStore } from "./feedback.mjs";
 import { createPhotoStore, detectImage, PhotoError } from "./photos.mjs";
@@ -63,9 +65,15 @@ const packetStore = createPacketStore(packetDbPath, {
 });
 const packetCollectionMs = Math.max(30_000, Number(process.env.PACKET_COLLECT_MS || 5 * 60 * 1000));
 const healthDbPath = process.env.CZ_HEALTH_DB_PATH || join(process.cwd(), "data", "cz-health.sqlite");
-const healthStore = createCzHealthStore(healthDbPath, {
-  retentionMs: Math.max(1, Number(process.env.CZ_HEALTH_RETENTION_MS || 90 * 24 * 60 * 60 * 1000)),
-});
+const hubHealth = process.env.CZ_HEALTH_SOURCE === "hub";
+const healthRetention = Math.max(90 * 24 * 60 * 60 * 1000, Number(process.env.CZ_HEALTH_RETENTION_MS || 90 * 24 * 60 * 60 * 1000));
+const healthStore = hubHealth
+  ? createCzHealthHubStore(process.env.CZ_HEALTH_HUB_DB_PATH || join(process.cwd(), "data", "czhealth-hub.sqlite"), { retentionMs: healthRetention })
+  : createCzHealthStore(healthDbPath, { retentionMs: healthRetention });
+const healthHubSync = hubHealth ? createCzHealthHubSync({
+  store: healthStore, apiKey: process.env.CZ_HEALTH_HUB_API_KEY,
+  clientId: process.env.CZ_HEALTH_CF_CLIENT_ID, clientSecret: process.env.CZ_HEALTH_CF_CLIENT_SECRET,
+}) : null;
 const visitsDbPath = process.env.VISITS_DB_PATH || join(process.cwd(), "data", "visits.sqlite");
 const visitStore = createVisitStatsStore(visitsDbPath);
 const feedbackDbPath = process.env.FEEDBACK_DB_PATH || join(process.cwd(), "data", "feedback.sqlite");
@@ -1202,6 +1210,7 @@ function healthPayload() {
       telegram: telegramNotifier.enabled,
       telegramInteractive: telegramInteractiveEnabled,
     },
+    ...(healthHubSync ? { czHealthSync: healthHubSync.getState() } : {}),
     databases: {
       feedback: { bytes: statBytes(feedbackDbPath) },
       packets: { bytes: statBytes(packetDbPath) },
@@ -1219,11 +1228,13 @@ const mqttIngest = createMqttIngest({
   broadcast,
   broadcastStatus,
   healthStore,
+  healthEnabled: !hubHealth,
   packetStore,
   recentPackets,
   toStoreRow,
 });
 mqttIngest.start();
+healthHubSync?.start();
 
 setInterval(() => {
   for (const client of packetStreams) writePacketStream(client, ": keepalive\n\n");
@@ -1552,6 +1563,7 @@ const monitor = createMonitor({
 monitor.start();
 
 function shutdown() {
+  healthHubSync?.stop();
   for (const client of packetStreams) closePacketStream(client);
   metricsStore.close();
   packetStore.close();

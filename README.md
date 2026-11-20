@@ -462,6 +462,13 @@ je neúplná.
 
 ## Telemetrie (CzHealth)
 
+Pro přechod se testuje volitelný režim `CZ_HEALTH_SOURCE=hub`: synchronizuje
+stránky CzHealth-Hubu na serveru do samostatné databáze
+`CZ_HEALTH_HUB_DB_PATH`, ukládá kurzor v transakci a nepoužívá MQTT dekodér.
+Vyžaduje serverové proměnné `CZ_HEALTH_HUB_API_KEY`, `CZ_HEALTH_CF_CLIENT_ID`
+a `CZ_HEALTH_CF_CLIENT_SECRET`. Dokud není režim nakonfigurován a ověřen,
+zůstává aktivní níže popsaný původní zdroj. Klíče nepatří do repozitáře.
+
 Repeatery s firmwarem mesh-cz v1.18.0.02rc8+ vysílají do MQTT telemetrii
 CzHealth. Server přijímá formát **v3** i novější **v4** (DAY, SUMMARY, CONFIG)
 současně a obojí ukládá do `data/cz-health.sqlite`; formáty 3 a 4 žijí vedle
