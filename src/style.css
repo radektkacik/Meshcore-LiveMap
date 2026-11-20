@@ -475,6 +475,8 @@ html[data-theme="dark"] .node-health-windows button { color: #b9c9d2; background
 html[data-theme="dark"] .node-health-windows button.active { color: #fff; background: var(--green); border-color: var(--green); }
 html[data-theme="dark"] .node-health-chart-battery { --health-color: #5fd0a5; --health-fill: rgba(95, 208, 165, 0.14); }
 html[data-theme="dark"] .node-health-chart-temperature { --health-color: #f0a044; --health-fill: rgba(240, 160, 68, 0.14); }
+html[data-theme="dark"] .node-health-chart-current { --health-color: #b7a6ff; --health-fill: rgba(183, 166, 255, 0.16); }
+html[data-theme="dark"] .node-health-chart-humidity { --health-color: #6eb8f0; --health-fill: rgba(110, 184, 240, 0.16); }
 html[data-theme="dark"] .node-health-cursor { background: rgba(230, 236, 239, 0.3); }
 html[data-theme="dark"] .node-health-tip { color: #17271f; background: #e6ecef; }
 html[data-theme="dark"] .node-health-yaxis,
@@ -532,6 +534,8 @@ html[data-theme="dark"] .node-health-config-warning { color: #f0a044; }
 .node-health-dot { fill: var(--health-color); stroke: #fff; stroke-width: 1.5; }
 .node-health-chart-battery { --health-color: #078e62; --health-fill: rgba(7, 142, 98, 0.13); }
 .node-health-chart-temperature { --health-color: #d87412; --health-fill: rgba(216, 116, 18, 0.13); }
+.node-health-chart-current { --health-color: #6f5bd3; --health-fill: rgba(111, 91, 211, 0.14); }
+.node-health-chart-humidity { --health-color: #287fc9; --health-fill: rgba(40, 127, 201, 0.15); }
 .node-health-cursor { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(23, 39, 31, 0.35); pointer-events: none; }
 .node-health-tip { position: absolute; top: 1px; z-index: 2; padding: 2px 5px; border-radius: 4px; color: #fff; background: #17271f; font: calc(9px * var(--font-scale)) "DM Mono", monospace; white-space: nowrap; pointer-events: none; transform: translateX(-50%); }
 .node-health-history-empty { margin: 8px 0 0; color: var(--muted); font-size: calc(10px * var(--font-scale)); }

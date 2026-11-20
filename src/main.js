@@ -2231,11 +2231,11 @@ function nodeHealthHistory(node) {
       </div>
       <div class="node-health-series" data-health-metric="current" hidden>
         <div class="node-health-series-head"><span>${t("node.current")}</span><small></small></div>
-        <div class="node-health-chart"></div>
+        <div class="node-health-chart node-health-chart-current"></div>
       </div>
       <div class="node-health-series" data-health-metric="humidity" hidden>
         <div class="node-health-series-head"><span>${t("node.humidity")}</span><small></small></div>
-        <div class="node-health-chart"></div>
+        <div class="node-health-chart node-health-chart-humidity"></div>
       </div>
       <p class="node-health-history-empty" hidden></p>
     </section>
