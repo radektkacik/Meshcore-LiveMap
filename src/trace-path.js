@@ -1,5 +1,5 @@
 export const TRACE_HASH_BYTES = 2;
-export const MAX_TRACE_HOPS = 16;
+export const MAX_TRACE_HOPS = 20;
 
 export function hasReturnTracePath(path) {
   return path.length >= 3 && path[0] === path.at(-1);

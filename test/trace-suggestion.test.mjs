@@ -19,6 +19,14 @@ test("suggestion uses fresh observed neighbors and adds reversed return path", (
   assert.equal(result.oldest, now - 2000);
 });
 
+test("suggestion allows ten outbound hops and returns nineteen total entries", () => {
+  const keys = Array.from({ length: 11 }, (_, index) => key((index + 1).toString(16).padStart(4, "0")));
+  const longNodes = keys.map((public_key) => ({ public_key, role: "repeater", lat: 50, lon: 15 }));
+  const links = new Map(keys.slice(0, -1).map((item, index) => [item, new Map([[keys[index + 1], edge(now - 1000)]])]));
+  assert.equal(suggestTracePath(keys[0], keys[9], links, longNodes, now).path.length, 19);
+  assert.equal(suggestTracePath(keys[0], keys[10], links, longNodes, now), null);
+});
+
 test("suggestion does not invent missing or stale links", () => {
   assert.equal(suggestTracePath(c, a, graph, nodes, now), null);
   assert.equal(suggestTracePath(a, c, graph, nodes, now + 8 * 86400000), null);

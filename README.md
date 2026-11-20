@@ -213,7 +213,7 @@ přihlašovací údaje zůstávají pouze na serveru.
   3–60 s a jitterem, takže výpadek brokeru nezpůsobí smyčku stovek připojení.
 - `/api/resolve-hops` převádí path prefixy na repeatery a souřadnice.
 - Beta obsahuje panel **Companion · skutečný trace**. Po ručním připojení rádia
-  přes Web Bluetooth nebo Web Serial lze klikáním vybrat až 16 repeaterů v pořadí
+  přes Web Bluetooth nebo Web Serial lze klikáním vybrat až 20 hopů v pořadí
   a tlačítkem odeslat skutečný MeshCore TRACE paket. Výsledná cesta a SNR se
   zobrazí v panelu i na mapě; pouhé klikání nic nevysílá. TRACE používá
   dvoubajtové prefixy a odmítne prefix známý jako nejednoznačný v seznamu nodů.

@@ -18,8 +18,8 @@ test("return path reverses the outbound hops without repeating the turning point
   assert.deepEqual(appendReturnTracePath(path), ["a", "b", "c", "b", "a"]);
   assert.deepEqual(path, ["a", "b", "c"]);
   assert.deepEqual(appendReturnTracePath(["a"]), ["a"]);
-  assert.equal(appendReturnTracePath(Array(8).fill("a")).length, 15);
-  assert.throws(() => appendReturnTracePath(Array(9).fill("a")), /too-long/);
+  assert.equal(appendReturnTracePath(Array(10).fill("a")).length, 19);
+  assert.throws(() => appendReturnTracePath(Array(11).fill("a")), /too-long/);
 });
 
 test("moving a hop uses its position, including repeated nodes, without mutating the route", () => {
@@ -52,6 +52,7 @@ test("trace paths preserve repeated repeaters on the return leg", () => {
 
 test("trace paths reject empty, malformed, and overlong routes", () => {
   const valid = key("cafe");
+  assert.equal(buildTracePath(Array(20).fill(valid), []).length, 40);
   assert.throws(() => buildTracePath([], []), /empty/);
   assert.throws(() => buildTracePath(["not-a-key"], []), /invalid-key/);
   assert.throws(() => buildTracePath(Array(MAX_TRACE_HOPS + 1).fill(valid), []), /too-long/);
