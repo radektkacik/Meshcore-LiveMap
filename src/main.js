@@ -2020,13 +2020,15 @@ function nodeTrafficDetails(node, { compact = false } = {}) {
     [t("node.charging"), health ? (health.charging ? t("common.yes") : t("common.no")) : null],
     [t("node.externalPower"), health ? (health.externalPower ? t("common.yes") : t("common.no")) : null],
     [t("node.healthObserved"), health?.observedAt ? formatNodeDate(health.observedAt) : null],
-    [t("node.healthSample"), (health?.sampleAt || health?.observedAt) ? formatDateTimeShort(health.sampleAt || health.observedAt) : null],
-    [t("node.czFirmware"), health?.firmware || null],
-    [t("node.czBoard"), health?.boardName || null],
-    [t("node.czUptime"), health?.uptimeS != null ? `${Math.floor(health.uptimeS / 86400)} d ${Math.floor((health.uptimeS % 86400) / 3600)} h` : null],
-    [t("node.czBoot"), health?.bootAt ? formatDateTime(health.bootAt) : null],
-    [t("node.czReset"), health?.resetReason || null],
-    [t("node.czShutdown"), health?.shutdownReason || null],
+    ...(compact ? [] : [
+      [t("node.healthSample"), (health?.sampleAt || health?.observedAt) ? formatDateTimeShort(health.sampleAt || health.observedAt) : null],
+      [t("node.czFirmware"), health?.firmware || null],
+      [t("node.czBoard"), health?.boardName || null],
+      [t("node.czUptime"), health?.uptimeS != null ? `${Math.floor(health.uptimeS / 86400)} d ${Math.floor((health.uptimeS % 86400) / 3600)} h` : null],
+      [t("node.czBoot"), health?.bootAt ? formatDateTime(health.bootAt) : null],
+      [t("node.czReset"), health?.resetReason || null],
+      [t("node.czShutdown"), health?.shutdownReason || null],
+    ]),
   ], "", "node-traffic-details");
 }
 
