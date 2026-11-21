@@ -180,6 +180,7 @@ install_nginx() {
     -e "s/server_name mapa.meshcore.cz;/server_name $DOMAIN;/" \
     -e "s#127.0.0.1:4173#127.0.0.1:$PORT#g" \
     "$ROOT_DIR/deploy/nginx-mapa-meshcore.conf" > "$target"
+  install -m 644 -o root -g root "$ROOT_DIR/deploy/nginx-cms-block.conf" /etc/nginx/snippets/meshcore-cms-block.conf
   ln -sfn "$target" "/etc/nginx/sites-enabled/$site"
   nginx -t
   systemctl reload nginx

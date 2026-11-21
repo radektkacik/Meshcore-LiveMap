@@ -100,6 +100,12 @@ Konfigurace pro Cloudflare a reverse proxy jsou v `deploy/nginx-*.conf`.
 Pokud na VPS běží výchozí nginx stránka, můžete vypnout
 `/etc/nginx/sites-enabled/default`.
 
+CMS a běžné skenovací cesty (`/wp-*`, `/xmlrpc.php`, `/graphql`,
+`/administrator`, `/.env` apod.) jsou **záměrně blokované** snippetem
+`deploy/nginx-cms-block.conf` a vracejí 404. Mapa je vlastní Node aplikace a
+tyto cesty nepoužívá. Pokud někdy přidáte skutečnou routu s takovým prefixem,
+upravte nejdřív tento seznam; jinak se požadavek do aplikace vůbec nedostane.
+
 ### Převod existujících dat
 
 Při přesunu z jiného VPS zkopírujte před instalací nebo po ní `.env`, `data/`
