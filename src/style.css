@@ -679,6 +679,8 @@ html[data-theme="dark"] .node-user-info-toggle { color: #5fd0a5; background: rgb
 .node-qr-toggle { width: 100%; padding: 9px 10px; border: 1px solid rgba(7, 142, 98, 0.32); border-radius: 7px; color: #087a57; background: #edf7f1; font-size: calc(11px * var(--font-scale)); font-weight: 700; cursor: pointer; }
 .node-qr-toggle:hover { border-color: var(--green); background: #e4f3ea; }
 .node-qr-toggle:disabled { cursor: wait; opacity: 0.6; }
+.node-profile-qr-toggle { width: 100%; padding: 9px 10px; border: 1px solid rgba(7, 142, 98, 0.32); border-radius: 7px; color: #087a57; background: #edf7f1; font-size: calc(11px * var(--font-scale)); font-weight: 700; cursor: pointer; }
+.node-profile-qr-toggle:hover { border-color: var(--green); background: #e4f3ea; }
 .node-popup-actions { display: flex; flex-direction: column; gap: 7px; }
 .node-link-copy { width: 100%; padding: 9px 10px; border: 1px solid rgba(40, 127, 201, 0.3); border-radius: 7px; color: #246aa6; background: #eef6fc; font-size: calc(11px * var(--font-scale)); font-weight: 700; cursor: pointer; }
 .node-link-copy:hover { border-color: #287fc9; background: #e2eff9; }
@@ -1288,6 +1290,75 @@ html[data-theme="dark"] .los-budget-summary.ok { color: #5fd0a5; background: rgb
 html[data-theme="dark"] .los-budget-summary.tight { color: #ffc46b; background: rgba(216, 116, 18, 0.16); border-color: rgba(216, 116, 18, 0.4); }
 html[data-theme="dark"] .los-budget-summary.fail { color: #ff9aa6; background: rgba(209, 55, 77, 0.16); border-color: rgba(209, 55, 77, 0.4); }
 html[data-theme="dark"] .los-note { color: #8fa0a8; }
+
+/* Kontrastní opravy tmavého režimu */
+html[data-theme="dark"] .leaflet-control-attribution a { color: #9fd1f5 !important; }
+html[data-theme="dark"] .beta-badge { color: #1b1209; background: #f0a044; }
+html[data-theme="dark"] .filter-block legend.filter-title,
+html[data-theme="dark"] .filter-block > .filter-title,
+html[data-theme="dark"] .filter-block .filter-title { color: #cdd9de; }
+
+html[data-theme="dark"] .map-actions > button.active,
+html[data-theme="dark"] .companion-trace-actions #companion-trace-send,
+html[data-theme="dark"] .filter-chips button.active,
+html[data-theme="dark"] .activity-pause.active,
+html[data-theme="dark"] .activity-new,
+html[data-theme="dark"] .stats-counts button.active,
+html[data-theme="dark"] .node-detail-tabs button.active,
+html[data-theme="dark"] .node-health-windows button.active,
+html[data-theme="dark"] .node-score-help[open] summary,
+html[data-theme="dark"] .node-archive-filter.active,
+html[data-theme="dark"] .packet-history-windows button.active,
+html[data-theme="dark"] .feedback-actions button[type="submit"],
+html[data-theme="dark"] .export-actions button,
+html[data-theme="dark"] .photo-manage-actions #photo-manage-save,
+html[data-theme="dark"] .node-popup-card header > span.active,
+html[data-theme="dark"] .node-detail-header > div > span.active {
+  color: #fff;
+  background: #067a55;
+  border-color: #067a55;
+}
+
+html[data-theme="dark"] .node-popup-card,
+html[data-theme="dark"] .node-detail-shell { color: #e6ecef; }
+html[data-theme="dark"] .node-popup-card dt,
+html[data-theme="dark"] .node-detail-shell dt { color: #9fb0b8; }
+html[data-theme="dark"] .node-detail-header > div > span.inactive,
+html[data-theme="dark"] .node-popup-card header > span.inactive { color: #e6ecef; background: #4a5a63; }
+html[data-theme="dark"] .node-profile-qr-toggle { color: #5fd0a5; background: rgba(7, 142, 98, 0.16); border-color: rgba(7, 142, 98, 0.4); }
+html[data-theme="dark"] .node-profile-qr-toggle:hover { background: rgba(7, 142, 98, 0.26); }
+
+html[data-theme="dark"] .node-score-help summary { color: #8bd3b4; background: #1d3029; border-color: #35634f; }
+html[data-theme="dark"] .node-score-help[open] summary { color: #fff; background: #067a55; border-color: #067a55; }
+html[data-theme="dark"] .node-score-help-panel { background: #1b232b; border-color: var(--line); color: #d7e2dc; }
+html[data-theme="dark"] .node-score-help-panel > strong { color: #e6ecef; }
+html[data-theme="dark"] .node-score-help-panel > p,
+html[data-theme="dark"] .node-score-help-panel dd { color: #a9b8bf; }
+html[data-theme="dark"] .node-score-help-panel dt { color: #cfd9dd; }
+html[data-theme="dark"] .node-score-help-panel small { color: #8bd3b4; }
+html[data-theme="dark"] .node-metric-info { color: #8bd3b4; border-color: rgba(95, 208, 165, 0.4); }
+
+html[data-theme="dark"] .stats-help summary { color: #b9c9d2; }
+html[data-theme="dark"] .stats-help summary:hover,
+html[data-theme="dark"] .stats-help[open] summary { color: #8bd3b4; }
+html[data-theme="dark"] .stats-help-panel p,
+html[data-theme="dark"] .stats-help-panel dt { color: #cdd9de; }
+html[data-theme="dark"] .stats-help-panel dd { color: #9fb0b8; }
+html[data-theme="dark"] .stats-help-icon { color: #8bd3b4; border-color: rgba(95, 208, 165, 0.4); }
+html[data-theme="dark"] #stats-close { color: #9fb0b8; }
+html[data-theme="dark"] .network-observer-line .online { color: #5fd0a5; }
+html[data-theme="dark"] .network-observer-line .stale { color: #ffc46b; }
+html[data-theme="dark"] .network-observer-line .offline { color: #9fb0b8; }
+
+html[data-theme="dark"] .route-feed b,
+html[data-theme="dark"] .route-feed p span {
+  color: #8ec5f0;
+  color: color-mix(in srgb, var(--route-color), #fff 38%);
+}
+
+html[data-theme="dark"] .packet-hop-snr { color: #8bd3b4 !important; }
+html[data-theme="dark"] .qr-dialog-close { color: #cfd9dd; background: #26323a; }
+html[data-theme="dark"] .observer-popup .leaflet-popup-close-button { color: #9fb0b8 !important; }
 
 /* Větší písmo v celém UI */
 .hud-title small { font-size: calc(12px * var(--font-scale)); }
