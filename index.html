@@ -81,6 +81,21 @@
               <ol id="search-results" class="search-results" hidden></ol>
             </div>
 
+            <div class="filter-actions">
+              <button id="filters-toggle" class="filter-toggle" type="button" aria-haspopup="dialog" aria-controls="filter-dialog" aria-expanded="false">
+                <span id="filters-toggle-label">Filtry</span>
+                <span id="filters-count" class="filter-count" hidden>0</span>
+              </button>
+            </div>
+            <div id="filter-active-panel" class="filter-active-panel" hidden>
+              <div class="filter-active-head">
+                <strong>Filtr aktivní</strong>
+                <span id="filter-visible-count" class="filter-visible-count"></span>
+                <button id="filters-clear" class="filter-clear" type="button">Zrušit</button>
+              </div>
+              <div id="active-filters" class="active-filters" aria-label="Aktivní filtry"></div>
+            </div>
+
             <div class="map-actions">
               <button id="activity-toggle" type="button" aria-pressed="false">Aktivita</button>
               <button id="stats-toggle" type="button" aria-pressed="false">Statistiky</button>
@@ -122,15 +137,6 @@
                 <option value="120000">2 min</option>
               </select>
             </div>
-
-            <fieldset class="filter-block">
-              <legend class="filter-title">Velikost hashe</legend>
-              <div class="filter-chips">
-                <label><input id="size-toggle-1" type="checkbox" /> 1B</label>
-                <label><input id="size-toggle-2" type="checkbox" checked /> 2B</label>
-                <label><input id="size-toggle-3" type="checkbox" checked /> 3B</label>
-              </div>
-            </fieldset>
 
             <fieldset class="filter-block">
               <legend class="filter-title">Typ nodu</legend>
@@ -175,35 +181,6 @@
             <label class="packet-filter" title="Telemetrii zobrazujeme u repeaterů, pro které ji dodává CzHealth-Hub.">
               <input id="health-only-toggle" type="checkbox" />
               <span><strong>Jen nody s telemetrií</strong><small>CzHealth-Hub · všechna podporovaná FW</small></span>
-            </label>
-
-            <div class="filter-block health-status-block" id="health-status-block" hidden>
-              <label class="filter-title" for="health-status-select">Stav telemetrie</label>
-              <select id="health-status-select" class="route-retention-select">
-                <option value="all">Všechny stavy</option>
-                <option value="full">Plná</option>
-                <option value="ok">Baterie OK</option>
-                <option value="below-ok">&lt; Baterie OK</option>
-                <option value="warn">Nízká</option>
-                <option value="critical">Kritická</option>
-                <option value="stale">Stará data</option>
-              </select>
-              <label class="health-values-toggle" for="health-values-toggle">
-                <input id="health-values-toggle" type="checkbox" />
-                <span><strong>Hodnota na mapě</strong></span>
-              </label>
-              <label class="health-value-mode" id="health-value-mode-wrap" for="health-value-mode" hidden>
-                <span>Zobrazit</span>
-                <select id="health-value-mode" class="route-retention-select">
-                  <option value="temperature">Teplotu</option>
-                  <option value="voltage">Napětí</option>
-                </select>
-              </label>
-            </div>
-
-            <label class="packet-filter">
-              <input id="inactive-only-toggle" type="checkbox" />
-              <span><strong>Jen neaktivní nody (12 h)</strong></span>
             </label>
 
             <details class="filter-block companion-trace-block">
@@ -754,6 +731,75 @@
           <h3>Veřejné vzkazy</h3>
           <ul id="feedback-list" class="feedback-list"></ul>
         </section>
+      </dialog>
+
+      <dialog id="filter-dialog" class="export-dialog filter-dialog" aria-labelledby="filter-dialog-title">
+        <button id="filter-dialog-close" class="qr-dialog-close" type="button" aria-label="Zavřít">×</button>
+        <header>
+          <h2 id="filter-dialog-title">Filtry nodů</h2>
+          <p>Rychlé volby zůstávají v panelu; zde nastavíš podrobnosti.</p>
+        </header>
+        <div class="filter-dialog-body">
+          <section class="filter-group">
+            <h3>Trasy</h3>
+            <fieldset class="filter-block">
+              <legend class="filter-title">Velikost hashe</legend>
+              <div class="filter-chips">
+                <label><input id="size-toggle-1" type="checkbox" /> 1B</label>
+                <label><input id="size-toggle-2" type="checkbox" checked /> 2B</label>
+                <label><input id="size-toggle-3" type="checkbox" checked /> 3B</label>
+              </div>
+            </fieldset>
+          </section>
+
+          <section class="filter-group">
+            <h3>Telemetrie</h3>
+            <div class="filter-block health-status-block" id="health-status-block">
+              <label class="filter-title" for="health-status-select">Stav telemetrie</label>
+              <select id="health-status-select" class="route-retention-select">
+                <option value="all">Všechny stavy</option>
+                <option value="full">Plná</option>
+                <option value="ok">Baterie OK</option>
+                <option value="below-ok">&lt; Baterie OK</option>
+                <option value="warn">Nízká</option>
+                <option value="critical">Kritická</option>
+                <option value="stale">Stará data</option>
+              </select>
+              <label class="health-values-toggle" for="health-values-toggle">
+                <input id="health-values-toggle" type="checkbox" />
+                <span><strong>Hodnota na mapě</strong></span>
+              </label>
+              <label class="health-value-mode" id="health-value-mode-wrap" for="health-value-mode" hidden>
+                <span>Zobrazit</span>
+                <select id="health-value-mode" class="route-retention-select">
+                  <option value="temperature">Teplotu</option>
+                  <option value="voltage">Napětí</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="filter-block firmware-block">
+              <div class="filter-block-head">
+                <span class="filter-title">Firmware</span>
+                <button id="firmware-select-all" class="filter-mini-button" type="button">Vše</button>
+              </div>
+              <div id="firmware-options" class="firmware-options" role="group" aria-label="Firmware"></div>
+              <p class="filter-note">Firmware je známý jen u nodů s telemetrií.</p>
+            </div>
+          </section>
+
+          <section class="filter-group">
+            <h3>Nody</h3>
+            <label class="packet-filter">
+              <input id="inactive-only-toggle" type="checkbox" />
+              <span><strong>Jen neaktivní nody (12 h)</strong></span>
+            </label>
+          </section>
+        </div>
+        <div class="filter-dialog-actions">
+          <button id="filter-dialog-reset" type="button">Vyčistit filtry</button>
+          <button id="filter-dialog-done" type="button">Hotovo</button>
+        </div>
       </dialog>
 
       <dialog id="export-dialog" class="export-dialog" aria-labelledby="export-title">

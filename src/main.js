@@ -32,6 +32,7 @@ import {
   pointFeature,
 } from "./export-model.js";
 import { HEALTH_EXPORT_COLUMNS, healthExportRows } from "./health-export.js";
+import { FIRMWARE_NONE, firmwareGroups, firmwareKey, firmwareMatches, firmwareShortLabel } from "./firmware-filter.js";
 import { routeHopSnr, routeSegmentSnr } from "./route-snr.js";
 import { createPerfMonitor } from "./perf.js";
 import { routeAnimationFps } from "./route-animation.js";
@@ -343,8 +344,9 @@ function applyInitialFilters() {
   elements.healthValuesToggle.checked = state.showHealthValues;
   elements.healthValueMode.value = state.healthValueMode;
   elements.healthValueModeWrap.hidden = !state.showHealthValues;
-  elements.healthStatusBlock.hidden = !state.healthOnly;
   updateHealthLegend();
+  const firmware = INITIAL_PARAMS.get("fw");
+  if (firmware !== null) state.firmwareFilter = new Set(firmware.split(",").filter(Boolean));
   const inactive = readFlag("inactive");
   if (inactive !== null) {
     state.inactiveOnly = inactive;
@@ -2802,9 +2804,11 @@ function applyNodeFilterRouteVisibility() {
 
 async function setPhotosOnly(on) {
   state.photosOnly = Boolean(on);
+  elements.photosOnlyToggle.checked = state.photosOnly;
   if (state.photosOnly) await loadPhotoNodes();
   applyNodeFilterRouteVisibility();
   refreshNodeState();
+  updateFilterSummary();
 }
 
 function setRoutesHidden(hidden) {
@@ -3530,6 +3534,7 @@ function nodeIsActive(node, now = nowMs(), activeMs = NODE_ACTIVE_MS) {
 function nodePassesFilters(node) {
   const key = String(node.public_key || "").toUpperCase();
   if (!isNodeRoleAllowed(node, state.allowedRoles)) return false;
+  if (!firmwareMatches(state.firmwareFilter, node)) return false;
   if (state.photosOnly && !state.photoNodeKeys.has(key)) return false;
   if (state.healthOnly) {
     if (!node.health) return false;
@@ -3537,6 +3542,196 @@ function nodePassesFilters(node) {
   }
   if (state.inactiveOnly && nodeIsActive(node)) return false;
   return true;
+}
+
+function hasDefaultHashFilter() {
+  return state.allowedHashBytes.size === 2
+    && state.allowedHashBytes.has(2)
+    && state.allowedHashBytes.has(3);
+}
+
+function firmwareDisplayLabel(key) {
+  if (key === FIRMWARE_NONE) return t("filters.firmwareUnknown");
+  return firmwareShortLabel(key) || String(key);
+}
+
+let firmwareOptionsCache = [];
+
+function renderFirmwareOptions() {
+  const container = elements.firmwareOptions;
+  if (!container) return;
+  const groups = firmwareGroups([...state.nodeByKey.values()].filter((node) => validCoords(node.lat, node.lon)));
+  firmwareOptionsCache = groups;
+  container.replaceChildren();
+  if (!groups.length) {
+    const empty = document.createElement("p");
+    empty.className = "filter-note";
+    empty.textContent = t("filters.firmwareLoading");
+    container.append(empty);
+    return;
+  }
+  for (const group of groups) {
+    const option = document.createElement("label");
+    option.className = "firmware-option";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.dataset.firmwareKey = group.key;
+    input.checked = state.firmwareFilter === null || state.firmwareFilter.has(group.key);
+    const name = document.createElement("span");
+    name.className = "firmware-option-name";
+    name.textContent = firmwareDisplayLabel(group.key);
+    name.title = group.key === FIRMWARE_NONE ? t("filters.firmwareUnknown") : group.key;
+    const count = document.createElement("span");
+    count.className = "firmware-option-count";
+    count.textContent = formatNumber(group.count);
+    option.append(input, name, count);
+    container.append(option);
+  }
+}
+
+function setHealthOnly(next) {
+  state.healthOnly = Boolean(next);
+  elements.healthOnlyToggle.checked = state.healthOnly;
+  if (!state.healthOnly) {
+    state.healthStatus = "all";
+    elements.healthStatusSelect.value = "all";
+  }
+  applyNodeFilterChanges({ routes: true });
+}
+
+function applyNodeFilterChanges({ routes = false } = {}) {
+  if (routes) applyNodeFilterRouteVisibility();
+  refreshNodeState();
+  updateFilterSummary();
+}
+
+function resetRoleFilter() {
+  state.allowedRoles = new Set(ALL_NODE_ROLES);
+  for (const input of elements.roleToggles) input.checked = true;
+  applyNodeFilterChanges();
+}
+
+function resetHashFilter() {
+  state.allowedHashBytes = new Set([2, 3]);
+  for (const input of elements.sizeToggles) input.checked = input.id !== "size-toggle-1";
+  refreshAfterFilterChange();
+  updateFilterSummary();
+}
+
+function resetHealthStatusFilter() {
+  state.healthStatus = "all";
+  elements.healthStatusSelect.value = "all";
+  applyNodeFilterChanges({ routes: true });
+}
+
+function removeFirmwareFilter(key) {
+  const allKeys = firmwareOptionsCache.map((group) => group.key);
+  const next = new Set(state.firmwareFilter === null ? allKeys : state.firmwareFilter);
+  next.delete(key);
+  state.firmwareFilter = next.size === 0 || next.size === allKeys.length ? null : next;
+  renderFirmwareOptions();
+  applyNodeFilterChanges();
+}
+
+function resetAllFilters() {
+  state.allowedRoles = new Set(ALL_NODE_ROLES);
+  for (const input of elements.roleToggles) input.checked = true;
+  state.allowedHashBytes = new Set([2, 3]);
+  for (const input of elements.sizeToggles) input.checked = input.id !== "size-toggle-1";
+  state.healthOnly = false;
+  elements.healthOnlyToggle.checked = false;
+  state.healthStatus = "all";
+  elements.healthStatusSelect.value = "all";
+  state.firmwareFilter = null;
+  state.photosOnly = false;
+  elements.photosOnlyToggle.checked = false;
+  state.inactiveOnly = false;
+  elements.inactiveOnlyToggle.checked = false;
+  renderFirmwareOptions();
+  refreshAfterFilterChange();
+  applyNodeFilterChanges({ routes: true });
+}
+
+function makeFilterChip(label, remove) {
+  const chip = document.createElement("button");
+  chip.type = "button";
+  chip.className = "active-filter-chip";
+  chip.title = t("filters.removeFilter");
+  const text = document.createElement("span");
+  text.textContent = label;
+  const close = document.createElement("span");
+  close.className = "active-filter-chip-close";
+  close.setAttribute("aria-hidden", "true");
+  close.textContent = "×";
+  chip.append(text, close);
+  chip.addEventListener("click", remove);
+  return chip;
+}
+
+function updateFilterSummary() {
+  if (!elements.activeFilters) return;
+  const chips = [];
+  if (state.allowedRoles.size !== ALL_NODE_ROLES.length) {
+    const selected = ALL_NODE_ROLES.filter((role) => state.allowedRoles.has(role)).map(roleLabel);
+    chips.push(makeFilterChip(`${t("filters.roles")}: ${selected.length ? selected.join(", ") : t("filters.none")}`, resetRoleFilter));
+  }
+  if (!hasDefaultHashFilter()) {
+    const sizes = [...state.allowedHashBytes].sort((first, second) => first - second);
+    const label = sizes.length ? `${sizes.join(", ")}B` : t("filters.none");
+    chips.push(makeFilterChip(`${t("filters.hash")}: ${label}`, resetHashFilter));
+  }
+  if (state.healthOnly) {
+    chips.push(makeFilterChip(t("filters.telemetryOnly"), () => setHealthOnly(false)));
+  }
+  if (state.healthOnly && state.healthStatus !== "all") {
+    const status = elements.healthStatusSelect.selectedOptions[0]?.textContent || state.healthStatus;
+    chips.push(makeFilterChip(`${t("filters.status")}: ${status}`, resetHealthStatusFilter));
+  }
+  if (state.firmwareFilter !== null) {
+    if (!state.firmwareFilter.size) {
+      chips.push(makeFilterChip(t("filters.firmwareNoneSelected"), () => {
+        state.firmwareFilter = null;
+        renderFirmwareOptions();
+        applyNodeFilterChanges();
+      }));
+    } else {
+      for (const key of [...state.firmwareFilter].sort()) {
+        chips.push(makeFilterChip(`${t("filters.firmwareChip")} ${firmwareDisplayLabel(key)}`, () => removeFirmwareFilter(key)));
+      }
+    }
+  }
+  if (state.photosOnly) {
+    chips.push(makeFilterChip(t("filters.photosOnly"), () => {
+      state.photosOnly = false;
+      elements.photosOnlyToggle.checked = false;
+      applyNodeFilterChanges({ routes: true });
+    }));
+  }
+  if (state.inactiveOnly) {
+    chips.push(makeFilterChip(t("filters.inactiveOnly"), () => {
+      state.inactiveOnly = false;
+      elements.inactiveOnlyToggle.checked = false;
+      applyNodeFilterChanges();
+    }));
+  }
+  elements.activeFilters.replaceChildren(...chips);
+  elements.filtersCount.textContent = String(chips.length);
+  elements.filtersCount.hidden = chips.length === 0;
+  elements.filtersToggle.classList.toggle("active", chips.length > 0);
+  elements.filterActivePanel.hidden = chips.length === 0;
+  const total = state.nodeMarkers.length;
+  const visible = total ? state.nodeMarkers.filter((entry) => nodePassesFilters(entry.node)).length : 0;
+  elements.filterVisibleCount.textContent = chips.length === 0
+    ? ""
+    : total
+      ? t("filters.visibleCount", { visible: formatNumber(visible), total: formatNumber(total) })
+      : t("filters.loadingNodes");
+}
+
+function openFilterDialog() {
+  renderFirmwareOptions();
+  elements.filtersToggle.setAttribute("aria-expanded", "true");
+  if (!elements.filterDialog.open) elements.filterDialog.showModal();
 }
 
 function syncNodeHealthBadge(entry) {
@@ -3760,6 +3955,7 @@ function buildShareUrl(node = null) {
     url.searchParams.set("healthValues", "1");
     url.searchParams.set("healthValue", state.healthValueMode);
   }
+  if (state.firmwareFilter !== null) url.searchParams.set("fw", [...state.firmwareFilter].sort().join(","));
   url.searchParams.set("inactive", state.inactiveOnly ? "1" : "0");
   url.searchParams.set("observers", state.showObservers ? "1" : "0");
   if (state.animationMode === "svg") url.searchParams.set("anim", "svg");
@@ -4024,6 +4220,8 @@ function syncNodes(nodes) {
     }
   }
   scheduleNodeRefresh();
+  if (elements.filterDialog?.open) renderFirmwareOptions();
+  updateFilterSummary();
 }
 
 let nodeRefreshPromise = null;
@@ -5921,6 +6119,7 @@ for (const toggle of elements.sizeToggles) {
       .filter((input) => input.checked)
       .map((input) => Number(input.id.replace("size-toggle-", ""))));
     refreshAfterFilterChange();
+    updateFilterSummary();
   });
 }
 
@@ -5930,6 +6129,7 @@ for (const toggle of elements.roleToggles) {
       .filter((input) => input.checked)
       .map((input) => input.id.replace("role-toggle-", "")));
     refreshNodeState();
+    updateFilterSummary();
   });
 }
 
@@ -6854,19 +7054,18 @@ elements.photosOnlyToggle.addEventListener("change", () => {
   void setPhotosOnly(elements.photosOnlyToggle.checked);
 });
 elements.healthOnlyToggle.addEventListener("change", () => {
-  state.healthOnly = elements.healthOnlyToggle.checked;
-  elements.healthStatusBlock.hidden = !state.healthOnly;
-  applyNodeFilterRouteVisibility();
-  refreshNodeState();
+  setHealthOnly(elements.healthOnlyToggle.checked);
 });
 elements.healthValuesToggle.checked = state.showHealthValues;
 elements.healthValueMode.value = state.healthValueMode;
 elements.healthValueModeWrap.hidden = !state.showHealthValues;
 elements.healthValuesToggle.addEventListener("change", () => {
   state.showHealthValues = elements.healthValuesToggle.checked;
+  if (state.showHealthValues && !state.healthOnly) setHealthOnly(true);
   elements.healthValueModeWrap.hidden = !state.showHealthValues;
   localStorage.setItem("meshcoreShowHealthValues", String(state.showHealthValues));
   scheduleNodeLabels();
+  updateFilterSummary();
 });
 elements.healthValueMode.addEventListener("change", () => {
   state.healthValueMode = elements.healthValueMode.value === "voltage" ? "voltage" : "temperature";
@@ -6876,15 +7075,42 @@ elements.healthValueMode.addEventListener("change", () => {
 elements.healthStatusSelect.addEventListener("change", () => {
   const next = elements.healthStatusSelect.value;
   state.healthStatus = HEALTH_STATUS_FILTERS.includes(next) ? next : "all";
-  refreshNodeState();
+  if (state.healthStatus !== "all" && !state.healthOnly) {
+    state.healthOnly = true;
+    elements.healthOnlyToggle.checked = true;
+  }
+  applyNodeFilterChanges({ routes: true });
 });
 elements.inactiveOnlyToggle.addEventListener("change", () => {
   state.inactiveOnly = elements.inactiveOnlyToggle.checked;
-  refreshNodeState();
+  applyNodeFilterChanges();
+});
+
+elements.filtersToggleLabel.textContent = t("filters.open");
+elements.filtersToggle.addEventListener("click", openFilterDialog);
+elements.filtersClear.addEventListener("click", resetAllFilters);
+elements.filterDialogClose.addEventListener("click", () => elements.filterDialog.close());
+elements.filterDialogDone.addEventListener("click", () => elements.filterDialog.close());
+elements.filterDialogReset.addEventListener("click", resetAllFilters);
+elements.filterDialog.addEventListener("click", (event) => {
+  if (event.target === elements.filterDialog) elements.filterDialog.close();
+});
+elements.filterDialog.addEventListener("close", () => elements.filtersToggle.setAttribute("aria-expanded", "false"));
+elements.firmwareOptions.addEventListener("change", () => {
+  const inputs = [...elements.firmwareOptions.querySelectorAll("input[data-firmware-key]")];
+  const checked = inputs.filter((input) => input.checked).map((input) => input.dataset.firmwareKey);
+  state.firmwareFilter = checked.length === inputs.length ? null : new Set(checked);
+  applyNodeFilterChanges();
+});
+elements.firmwareSelectAll.addEventListener("click", () => {
+  for (const input of elements.firmwareOptions.querySelectorAll("input[data-firmware-key]")) input.checked = true;
+  state.firmwareFilter = null;
+  applyNodeFilterChanges();
 });
 elements.hideRoutesToggle.addEventListener("change", () => {
   setRoutesHidden(elements.hideRoutesToggle.checked);
 });
+updateFilterSummary();
 map.on("moveend zoomend resize", scheduleNodeLabels);
 map.on("moveend zoomend resize", scheduleViewportRender);
 map.on("moveend zoomend", () => scheduleSnrLabels(150));
