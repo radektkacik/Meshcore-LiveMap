@@ -25,6 +25,13 @@ const nodes = [
   },
 ];
 
+test("battery status sorts by the reported assessment, not by pack voltage", () => {
+  const full = { health: { batteryStatus: "full", batteryMv: 3350 } };
+  const low = { health: { batteryStatus: "critical", batteryMv: 12000 } };
+  const unrated = { health: { batteryMv: 4100 } };
+  assert.deepEqual(sortNodeList([low, unrated, full], { sortBy: "batteryStatus" }), [full, low, unrated]);
+});
+
 test("telemetry columns sort numerically and the filter includes zero readings", () => {
   const a = { health: { temperatureC: "-5", humidityPct: 0, currentMa: "12" } };
   const b = { health: { temperatureC: "2", humidityPct: 20, currentMa: "3" } };

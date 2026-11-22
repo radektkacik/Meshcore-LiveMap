@@ -7,6 +7,8 @@ const TELEMETRY_FIELDS = {
   current: "currentMa",
 };
 
+const BATTERY_STATUS_RANK = new Map(["stale", "critical", "warn", "ok", "full"].map((status, rank) => [status, rank]));
+
 export function nodeListTelemetry(node, metric) {
   const value = node.health?.[TELEMETRY_FIELDS[metric]];
   return value != null && value !== "" && Number.isFinite(Number(value)) ? Number(value) : null;
@@ -64,6 +66,8 @@ function nodeSortValue(node, sortBy, activityAt) {
     case "humidity":
     case "current":
       return nodeListTelemetry(node, sortBy);
+    case "batteryStatus":
+      return BATTERY_STATUS_RANK.get(String(node.health?.batteryStatus ?? "").toLowerCase());
     case "activity":
       return activityAt(node);
     case "name":

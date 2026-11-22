@@ -7354,6 +7354,7 @@ nodeListNext.textContent = nodeListEn ? "Next" : "Další";
 const NODE_LIST_SORT_LABELS = {
   activity: "nodeList.column.activity",
   battery: "nodeList.column.battery",
+  batteryStatus: "nodeList.column.batteryStatus",
   current: "node.current",
   humidity: "node.humidity",
   temperature: "node.temperature",
@@ -7443,7 +7444,7 @@ function renderNodeList() {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
     cell.className = "node-list-empty";
-    cell.colSpan = 11;
+    cell.colSpan = 12;
     cell.textContent = allNodes.length ? t("nodeList.noResults") : t("nodeList.loading");
     row.appendChild(cell);
     fragment.appendChild(row);
@@ -7526,6 +7527,7 @@ function renderNodeList() {
         nodeListCell("node-list-activity", lastSeen),
         ...telemetryCells,
       );
+      telemetryCells[0].after(nodeListCell("node-list-telemetry", nodeHealthStatusText(node) || "—"));
       fragment.appendChild(row);
     }
   }
