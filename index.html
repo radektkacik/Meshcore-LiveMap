@@ -46,6 +46,9 @@
               <div><strong>MeshCore CZ</strong> <span id="beta-badge" class="beta-badge" hidden>BETA</span></div>
               <small>live mapa</small>
             </div>
+            <button id="settings-toggle" class="external-link settings-toggle" type="button" aria-haspopup="dialog" aria-controls="settings-dialog" aria-expanded="false" aria-label="Nastavení" title="Nastavení">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
             <button id="theme-toggle" class="external-link theme-toggle" type="button" aria-label="Přepnout světlé a tmavé téma" title="Přepnout světlé a tmavé téma">
               <svg class="theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
               <svg class="theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" fill="currentColor" /></svg>
@@ -103,18 +106,6 @@
               <button id="coverage-toggle" type="button" aria-pressed="false" title="Simulovat pokrytí terénu z jednoho bodu">Pokrytí</button>
               <button id="export-toggle" type="button" class="wide" title="Stáhnout nody, observery nebo trasy jako CSV či GeoJSON">Export</button>
               <button id="share-view" type="button" class="wide" hidden title="Zkopírovat odkaz na aktuální pohled mapy">Sdílet pohled</button>
-              <button id="feedback-toggle" type="button" class="wide">Kniha návštěv</button>
-            </div>
-
-            <div class="filter-block">
-              <span class="filter-title">Podklad mapy</span>
-              <div class="filter-chips" id="base-layer-buttons" role="group" aria-label="Podklad mapy">
-                <button type="button" data-layer="osm">Základní</button>
-                <button type="button" data-layer="vector">OSM Vector</button>
-                <button type="button" data-layer="versatiles">VersaTiles</button>
-                <button type="button" data-layer="topo">OpenTopoMap</button>
-                <button type="button" data-layer="sat">Satelitní</button>
-              </div>
             </div>
 
             <div class="filter-block">
@@ -128,129 +119,8 @@
               <p class="archive-filter-hint" id="archive-filter-hint" hidden></p>
             </div>
 
-            <div class="filter-block">
-              <label class="filter-title" for="route-retention">Zobrazení tras</label>
-              <select id="route-retention" class="route-retention-select">
-                <option value="15000">15 s</option>
-                <option value="30000" selected>30 s</option>
-                <option value="60000">60 s</option>
-                <option value="120000">2 min</option>
-              </select>
-            </div>
-
-            <fieldset class="filter-block">
-              <legend class="filter-title">Typ nodu</legend>
-              <div class="filter-chips">
-                <label><input id="role-toggle-repeater" type="checkbox" checked /> Repeater</label>
-                <label><input id="role-toggle-companion" type="checkbox" checked /> Companion</label>
-                <label><input id="role-toggle-room" type="checkbox" checked /> Room</label>
-                <label><input id="role-toggle-sensor" type="checkbox" checked /> Sensor</label>
-                <label><input id="role-toggle-unknown" type="checkbox" checked /> Ostatní</label>
-                <label class="layer-observers"><input id="observers-toggle" type="checkbox" /> Observer</label>
-              </div>
-            </fieldset>
-
-            <label class="packet-filter">
-              <input id="other-types-toggle" type="checkbox" />
-              <span><strong>Zobrazit ostatní typy</strong><small>REQ, RESPONSE, ACK, DATA a CONTROL</small></span>
-            </label>
-
-            <label class="packet-filter">
-              <input id="animation-toggle" type="checkbox" checked />
-              <span><strong>Animovat trasy</strong></span>
-            </label>
-
-            <label class="packet-filter">
-              <input id="node-labels-toggle" type="checkbox" />
-              <span><strong>Zobrazit názvy nodů</strong></span>
-            </label>
-
-            <label class="packet-filter">
-              <input id="hide-routes-toggle" type="checkbox" />
-              <span><strong>Skrýt trasy</strong></span>
-            </label>
-
-            <div class="photo-filter-row">
-              <label class="packet-filter">
-                <input id="photos-only-toggle" type="checkbox" />
-                <span><strong>Jen nody s fotkou</strong></span>
-              </label>
-              <button id="photo-gallery-open" class="photo-gallery-trigger" type="button" title="Otevřít galerii všech fotek">Galerie</button>
-            </div>
-
-            <label class="packet-filter" title="Telemetrii zobrazujeme u repeaterů, pro které ji dodává CzHealth-Hub.">
-              <input id="health-only-toggle" type="checkbox" />
-              <span><strong>Jen nody s telemetrií</strong><small>CzHealth-Hub · všechna podporovaná FW</small></span>
-            </label>
-
-            <details class="filter-block companion-trace-block">
-              <summary><span id="companion-trace-title"></span><span class="companion-trace-new">NEW</span></summary>
-              <div class="companion-trace-connect">
-                <button id="companion-trace-connect-ble" type="button"></button>
-                <button id="companion-trace-connect-usb" type="button"></button>
-                <button id="companion-trace-disconnect" type="button" hidden></button>
-              </div>
-              <p id="companion-trace-hint" class="companion-trace-hint"></p>
-              <p id="companion-trace-suggest-hint" class="companion-trace-hint" hidden></p>
-              <div id="companion-trace-preferred" class="companion-trace-preferred" hidden>
-                <p id="companion-trace-preferred-status" class="companion-trace-hint"></p>
-                <div class="companion-trace-actions">
-                  <button id="companion-trace-preferred-save" type="button" disabled></button>
-                  <button id="companion-trace-preferred-forget" type="button" disabled></button>
-                </div>
-              </div>
-              <ol id="companion-trace-path" class="companion-trace-path"></ol>
-              <p id="companion-trace-status" class="companion-trace-status" role="status"></p>
-              <div class="companion-trace-actions">
-                <button id="companion-trace-select" type="button" disabled></button>
-                <button id="companion-trace-suggest" type="button" hidden disabled></button>
-                <button id="companion-trace-alternative" type="button" hidden disabled></button>
-                <button id="companion-trace-return" type="button" disabled></button>
-                <button id="companion-trace-clear" type="button" disabled></button>
-                <button id="companion-trace-send" type="button" disabled></button>
-              </div>
-              <p id="companion-trace-result" class="companion-trace-result" role="status"></p>
-            </details>
-
-            <div class="legend" aria-label="Legenda">
-              <span><i class="node top"></i> <span id="legend-top">Top 5 % Užitečnost</span></span>
-              <span><i class="node second"></i> <span id="legend-second">Top 5–15 % Užitečnost</span></span>
-              <span><i class="node repeater"></i> Repeater</span>
-              <span><i class="node companion"></i> Companion</span>
-              <span><i class="node new"></i> Nový nod (24 h)</span>
-              <span class="legend-health" hidden><i class="node health-full"></i> Plná</span>
-              <span class="legend-health" hidden><i class="node health-ok"></i> Baterie OK</span>
-              <span class="legend-health" hidden><i class="node health-warn"></i> Nízká</span>
-              <span class="legend-health" hidden><i class="node health-critical"></i> Kritická</span>
-              <span class="legend-health" hidden><i class="node health-stale"></i> Stará data</span>
-              <span><i class="line advert"></i> Advert</span>
-              <span><i class="line trace"></i> TRACE (barvy podle SNR)</span>
-            </div>
-
-            <div class="filter-block" id="font-size-block">
-              <label class="filter-title" id="font-size-label" for="font-size-select">Velikost písma</label>
-              <select id="font-size-select" class="route-retention-select">
-                <option value="xsmall">Nejmenší</option>
-                <option value="small" selected>Menší</option>
-                <option value="normal">Normální</option>
-                <option value="large">Větší</option>
-                <option value="xlarge">Největší</option>
-              </select>
-            </div>
-
-            <div class="viewer-line" title="Kolik lidí má právě otevřenou mapu">
-              <span class="viewer-dot" aria-hidden="true"></span>
-              <strong id="viewer-count">—</strong>
-              <span>právě prohlíží mapu</span>
-            </div>
-
             <div class="los-hint" id="los-hint" hidden></div>
             <div class="los-hint" id="coverage-hint" hidden></div>
-
-            <p class="source-note">Data: CoreScope / MeshCore CZ (živý MQTT feed), archiv z vlastní databáze. Soukromý obsah zpráv zůstává šifrovaný. Podklady: OpenStreetMap, OpenTopoMap, Esri, OpenFreeMap, VersaTiles. Výšky: Open-Meteo, Mapzen Terrarium (AWS). Ikona: selfh.st (CC BY 4.0).</p>
-            <p class="source-note license-note"><span>Kód: licence MIT</span> · © 2026 MeshCore.cz · <a href="LICENSE.txt" target="_blank" rel="noreferrer">LICENSE</a> · <a href="https://github.com/radektkacik/Meshcore-LiveMap" target="_blank" rel="noreferrer" title="Zdrojový kód na GitHubu">GitHub</a> · <a href="changelog" title="Historie změn a nasazených verzí">Změny verzí</a> · <a id="beta-footer-link" href="https://mapa.meshcore.cz/beta/" target="_blank" rel="noreferrer" title="Vyzkoušet beta verzi mapy">Beta</a></p>
-
-            <small class="build-stamp" id="build-stamp">—</small>
           </div>
         </section>
 
@@ -737,7 +607,7 @@
         <button id="filter-dialog-close" class="qr-dialog-close" type="button" aria-label="Zavřít">×</button>
         <header>
           <h2 id="filter-dialog-title">Filtry nodů</h2>
-          <p>Rychlé volby zůstávají v panelu; zde nastavíš podrobnosti.</p>
+          <p>Všechny filtry na jednom místě. Změny se projeví okamžitě.</p>
         </header>
         <div class="filter-dialog-body">
           <section class="filter-group">
@@ -776,6 +646,10 @@
                   <option value="voltage">Napětí</option>
                 </select>
               </label>
+              <label class="packet-filter" title="Telemetrii zobrazujeme u repeaterů, pro které ji dodává CzHealth-Hub.">
+                <input id="health-only-toggle" type="checkbox" />
+                <span><strong>Jen nody s telemetrií</strong><small>CzHealth-Hub · všechna podporovaná FW</small></span>
+              </label>
             </div>
 
             <div class="filter-block firmware-block">
@@ -790,15 +664,159 @@
 
           <section class="filter-group">
             <h3>Nody</h3>
+            <fieldset class="filter-block">
+              <legend class="filter-title">Typ nodu</legend>
+              <div class="filter-chips">
+                <label><input id="role-toggle-repeater" type="checkbox" checked /> Repeater</label>
+                <label><input id="role-toggle-companion" type="checkbox" checked /> Companion</label>
+                <label><input id="role-toggle-room" type="checkbox" checked /> Room</label>
+                <label><input id="role-toggle-sensor" type="checkbox" checked /> Sensor</label>
+                <label><input id="role-toggle-unknown" type="checkbox" checked /> Ostatní</label>
+                <label class="layer-observers"><input id="observers-toggle" type="checkbox" /> Observer</label>
+              </div>
+            </fieldset>
             <label class="packet-filter">
               <input id="inactive-only-toggle" type="checkbox" />
               <span><strong>Jen neaktivní nody (12 h)</strong></span>
             </label>
+            <div class="photo-filter-row">
+              <label class="packet-filter">
+                <input id="photos-only-toggle" type="checkbox" />
+                <span><strong>Jen nody s fotkou</strong></span>
+              </label>
+              <button id="photo-gallery-open" class="photo-gallery-trigger" type="button" title="Otevřít galerii všech fotek">Galerie</button>
+            </div>
           </section>
         </div>
         <div class="filter-dialog-actions">
           <button id="filter-dialog-reset" type="button">Vyčistit filtry</button>
           <button id="filter-dialog-done" type="button">Hotovo</button>
+        </div>
+      </dialog>
+
+      <dialog id="settings-dialog" class="export-dialog settings-dialog" aria-labelledby="settings-dialog-title">
+        <button id="settings-close" class="qr-dialog-close" type="button" aria-label="Zavřít nastavení">×</button>
+        <header>
+          <h2 id="settings-dialog-title">Nastavení</h2>
+          <p>Zobrazení mapy a pokročilé volby. Filtry nodů a tras najdeš v samostatném panelu.</p>
+        </header>
+        <div class="settings-dialog-body">
+          <section class="settings-group">
+            <h3>Zobrazení mapy</h3>
+            <div class="filter-block">
+              <span class="filter-title">Podklad mapy</span>
+              <div class="filter-chips" id="base-layer-buttons" role="group" aria-label="Podklad mapy">
+                <button type="button" data-layer="osm">Základní</button>
+                <button type="button" data-layer="vector">OSM Vector</button>
+                <button type="button" data-layer="versatiles">VersaTiles</button>
+                <button type="button" data-layer="topo">OpenTopoMap</button>
+                <button type="button" data-layer="sat">Satelitní</button>
+              </div>
+            </div>
+            <div class="filter-block">
+              <label class="filter-title" for="route-retention">Zobrazení tras</label>
+              <select id="route-retention" class="route-retention-select">
+                <option value="15000">15 s</option>
+                <option value="30000" selected>30 s</option>
+                <option value="60000">60 s</option>
+                <option value="120000">2 min</option>
+              </select>
+            </div>
+            <div class="filter-block" id="font-size-block">
+              <label class="filter-title" id="font-size-label" for="font-size-select">Velikost písma</label>
+              <select id="font-size-select" class="route-retention-select">
+                <option value="xsmall">Nejmenší</option>
+                <option value="small" selected>Menší</option>
+                <option value="normal">Normální</option>
+                <option value="large">Větší</option>
+                <option value="xlarge">Největší</option>
+              </select>
+            </div>
+            <label class="packet-filter">
+              <input id="animation-toggle" type="checkbox" checked />
+              <span><strong>Animovat trasy</strong></span>
+            </label>
+            <label class="packet-filter">
+              <input id="node-labels-toggle" type="checkbox" />
+              <span><strong>Zobrazit názvy nodů</strong></span>
+            </label>
+            <label class="packet-filter">
+              <input id="hide-routes-toggle" type="checkbox" />
+              <span><strong>Skrýt trasy</strong></span>
+            </label>
+            <label class="packet-filter">
+              <input id="other-types-toggle" type="checkbox" />
+              <span><strong>Zobrazit ostatní typy</strong><small>REQ, RESPONSE, ACK, DATA a CONTROL</small></span>
+            </label>
+          </section>
+
+          <section class="settings-group">
+            <h3>Companion TRACE</h3>
+            <details class="filter-block companion-trace-block">
+              <summary><span id="companion-trace-title"></span><span class="companion-trace-new">NEW</span></summary>
+              <div class="companion-trace-connect">
+                <button id="companion-trace-connect-ble" type="button"></button>
+                <button id="companion-trace-connect-usb" type="button"></button>
+                <button id="companion-trace-disconnect" type="button" hidden></button>
+              </div>
+              <p id="companion-trace-hint" class="companion-trace-hint"></p>
+              <p id="companion-trace-suggest-hint" class="companion-trace-hint" hidden></p>
+              <div id="companion-trace-preferred" class="companion-trace-preferred" hidden>
+                <p id="companion-trace-preferred-status" class="companion-trace-hint"></p>
+                <div class="companion-trace-actions">
+                  <button id="companion-trace-preferred-save" type="button" disabled></button>
+                  <button id="companion-trace-preferred-forget" type="button" disabled></button>
+                </div>
+              </div>
+              <ol id="companion-trace-path" class="companion-trace-path"></ol>
+              <p id="companion-trace-status" class="companion-trace-status" role="status"></p>
+              <div class="companion-trace-actions">
+                <button id="companion-trace-select" type="button" disabled></button>
+                <button id="companion-trace-suggest" type="button" hidden disabled></button>
+                <button id="companion-trace-alternative" type="button" hidden disabled></button>
+                <button id="companion-trace-return" type="button" disabled></button>
+                <button id="companion-trace-clear" type="button" disabled></button>
+                <button id="companion-trace-send" type="button" disabled></button>
+              </div>
+              <p id="companion-trace-result" class="companion-trace-result" role="status"></p>
+            </details>
+          </section>
+
+          <section class="settings-group">
+            <h3>Legenda</h3>
+            <div class="legend" aria-label="Legenda">
+              <span><i class="node top"></i> <span id="legend-top">Top 5 % Užitečnost</span></span>
+              <span><i class="node second"></i> <span id="legend-second">Top 5–15 % Užitečnost</span></span>
+              <span><i class="node repeater"></i> Repeater</span>
+              <span><i class="node companion"></i> Companion</span>
+              <span><i class="node new"></i> Nový nod (24 h)</span>
+              <span class="legend-health" hidden><i class="node health-full"></i> Plná</span>
+              <span class="legend-health" hidden><i class="node health-ok"></i> Baterie OK</span>
+              <span class="legend-health" hidden><i class="node health-warn"></i> Nízká</span>
+              <span class="legend-health" hidden><i class="node health-critical"></i> Kritická</span>
+              <span class="legend-health" hidden><i class="node health-stale"></i> Stará data</span>
+              <span><i class="line advert"></i> Advert</span>
+              <span><i class="line trace"></i> TRACE (barvy podle SNR)</span>
+            </div>
+          </section>
+
+          <section class="settings-group">
+            <h3>O aplikaci</h3>
+            <div class="viewer-line" title="Kolik lidí má právě otevřenou mapu">
+              <span class="viewer-dot" aria-hidden="true"></span>
+              <strong id="viewer-count">—</strong>
+              <span>právě prohlíží mapu</span>
+            </div>
+            <div class="settings-about-actions">
+              <button id="feedback-toggle" type="button">Kniha návštěv</button>
+            </div>
+            <p class="source-note">Data: CoreScope / MeshCore CZ (živý MQTT feed), archiv z vlastní databáze. Soukromý obsah zpráv zůstává šifrovaný. Podklady: OpenStreetMap, OpenTopoMap, Esri, OpenFreeMap, VersaTiles. Výšky: Open-Meteo, Mapzen Terrarium (AWS). Ikona: selfh.st (CC BY 4.0).</p>
+            <p class="source-note license-note"><span>Kód: licence MIT</span> · © 2026 MeshCore.cz · <a href="LICENSE.txt" target="_blank" rel="noreferrer">LICENSE</a> · <a href="https://github.com/radektkacik/Meshcore-LiveMap" target="_blank" rel="noreferrer" title="Zdrojový kód na GitHubu">GitHub</a> · <a href="changelog" title="Historie změn a nasazených verzí">Změny verzí</a> · <a id="beta-footer-link" href="https://mapa.meshcore.cz/beta/" target="_blank" rel="noreferrer" title="Vyzkoušet beta verzi mapy">Beta</a></p>
+            <small class="build-stamp" id="build-stamp">—</small>
+          </section>
+        </div>
+        <div class="settings-dialog-actions">
+          <button id="settings-done" type="button">Hotovo</button>
         </div>
       </dialog>
 

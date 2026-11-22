@@ -1531,6 +1531,12 @@ export const STATIC_EN = {
   "Zobrazit graf 24 h / 7 dní": "Show the 24 h / 7 day chart",
   "Zobrazit graf paketů za hodinu": "Show the packets-per-hour chart",
   "Skutečná data z Analyzeru, sběr každých 5 minut. Mezery = výpadek nebo doba před začátkem sběru; aktuální hodina je neúplná.": "Actual Analyzer data, collected every 5 minutes. Gaps mean an outage or time before collection began; the current hour is incomplete.",
+  "Nastavení": "Settings",
+  "Zavřít nastavení": "Close settings",
+  "Zobrazení mapy": "Map display",
+  "O aplikaci": "About",
+  "Zobrazení mapy a pokročilé volby. Filtry nodů a tras najdeš v samostatném panelu.": "Map display and advanced options. Node and route filters are in a separate panel.",
+  "Všechny filtry na jednom místě. Změny se projeví okamžitě.": "All filters in one place. Changes apply immediately.",
 };
 
 function resolveLocale() {

@@ -3729,6 +3729,7 @@ function updateFilterSummary() {
 }
 
 function openFilterDialog() {
+  if (elements.settingsDialog?.open) elements.settingsDialog.close();
   renderFirmwareOptions();
   elements.filtersToggle.setAttribute("aria-expanded", "true");
   if (!elements.filterDialog.open) elements.filterDialog.showModal();
@@ -7120,6 +7121,33 @@ const hudToggle = document.querySelector("#hud-toggle");
 const activityToggle = document.querySelector("#activity-toggle");
 const activityPanel = document.querySelector(".activity-panel");
 const ACTIVITY_SIZE_KEY = "meshcoreActivitySize";
+
+function openSettingsDialog() {
+  if (elements.filterDialog.open) elements.filterDialog.close();
+  if (!elements.settingsDialog.open) elements.settingsDialog.showModal();
+  elements.settingsToggle.setAttribute("aria-expanded", "true");
+}
+
+function closeSettingsDialog() {
+  if (elements.settingsDialog.open) elements.settingsDialog.close();
+  elements.settingsToggle.setAttribute("aria-expanded", "false");
+}
+
+elements.settingsToggle.addEventListener("click", () => {
+  if (elements.settingsDialog.open) closeSettingsDialog();
+  else openSettingsDialog();
+});
+elements.settingsClose.addEventListener("click", closeSettingsDialog);
+elements.settingsDone.addEventListener("click", closeSettingsDialog);
+elements.settingsDialog.addEventListener("click", (event) => {
+  if (event.target === elements.settingsDialog) closeSettingsDialog();
+});
+elements.settingsDialog.addEventListener("close", () => {
+  elements.settingsToggle.setAttribute("aria-expanded", "false");
+});
+elements.feedbackToggle.addEventListener("click", () => {
+  if (elements.settingsDialog.open) closeSettingsDialog();
+}, { capture: true });
 
 function activitySizeLimits() {
   return {
