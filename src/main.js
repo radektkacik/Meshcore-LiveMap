@@ -46,6 +46,7 @@ import { createPhotoUploadController } from "./photo-upload-controller.js";
 import { getPhotoJson, voteForPhoto } from "./photo-vote-client.js";
 import { createSearchController } from "./search-controller.js";
 import { createStatsController } from "./stats-controller.js";
+import { filterNodeList, sortNodeList } from "./node-list-model.js";
 import {
   isNewNode,
   isNodeRoleAllowed,
@@ -1113,6 +1114,7 @@ async function loadObservers(force = false) {
     if (state.showObservers) renderObservers();
     statsPanel.renderNetworkSummary();
     if (state.nodeMarkers.length) refreshNodeState();
+    scheduleNodeListRender();
   } catch (error) {
     console.error("Observery se nepodařilo načíst", error);
   } finally {
@@ -4035,6 +4037,7 @@ function refreshNodeState() {
   syncHealthBadges();
   statsPanel.renderStats();
   scheduleNodeLabels();
+  scheduleNodeListRender();
 }
 
 let nodeRefreshTimer = null;
@@ -4223,6 +4226,7 @@ function syncNodes(nodes) {
   scheduleNodeRefresh();
   if (elements.filterDialog?.open) renderFirmwareOptions();
   updateFilterSummary();
+  scheduleNodeListRender();
 }
 
 let nodeRefreshPromise = null;
@@ -4601,6 +4605,7 @@ function updateAdvertNode(packet) {
     };
     state.nodeByKey.set(key, node);
   }
+  scheduleNodeListRender();
 
   const entry = state.nodeMarkerByKey.get(key);
   if (entry) {
@@ -7327,6 +7332,233 @@ const statsPanel = createStatsController({
 statsPanel.bind();
 elements.statsToggle.addEventListener("click", () => {
   if (!elements.statsPanel.hidden) void loadNetworkTrend();
+});
+
+let nodeListIncludeInactive = false;
+let nodeListSortBy = "activity";
+let nodeListSortDirection = "desc";
+let nodeListRenderTimer = null;
+
+const NODE_LIST_SORT_LABELS = {
+  activity: "nodeList.column.activity",
+  battery: "nodeList.column.telemetry",
+  id: "nodeList.column.id",
+  name: "nodeList.column.name",
+  relay: "nodeList.column.relay",
+  role: "nodeList.column.role",
+};
+
+function updateNodeListControls() {
+  elements.nodeListClose.setAttribute("aria-label", t("nodeList.close"));
+  elements.nodeListSearch.placeholder = t("nodeList.search");
+  elements.nodeListSearch.setAttribute("aria-label", t("nodeList.search"));
+  elements.nodeListRoleLabel.textContent = t("nodeList.role");
+  for (const option of elements.nodeListRole.options) {
+    option.textContent = option.value === "all" ? t("nodeList.allRoles") : roleLabel(option.value);
+  }
+  elements.nodeListInactiveToggle.textContent = t(
+    nodeListIncludeInactive ? "nodeList.hideInactive" : "nodeList.includeInactive",
+  );
+  elements.nodeListInactiveToggle.setAttribute("aria-pressed", String(nodeListIncludeInactive));
+
+  for (const button of elements.nodeListSortButtons) {
+    const key = button.dataset.sort;
+    const indicator = button.querySelector("span");
+    const label = t(NODE_LIST_SORT_LABELS[key] || "nodeList.column.name");
+    if (button.firstChild?.nodeType === Node.TEXT_NODE) button.firstChild.nodeValue = `${label} `;
+    if (indicator) indicator.textContent = key === nodeListSortBy
+      ? nodeListSortDirection === "asc" ? "↑" : "↓"
+      : "↕";
+    const heading = button.closest("th");
+    heading?.setAttribute("aria-sort", key === nodeListSortBy
+      ? nodeListSortDirection === "asc" ? "ascending" : "descending"
+      : "none");
+  }
+}
+
+function nodeListCell(className, text) {
+  const cell = document.createElement("td");
+  if (className) cell.className = className;
+  cell.textContent = text;
+  return cell;
+}
+
+function renderNodeList() {
+  if (!elements.nodeListDialog) return;
+  updateNodeListControls();
+  const allNodes = [...state.nodeByKey.values()];
+  const now = nowMs();
+  const activeCount = allNodes.filter((node) => nodeIsActive(node, now, NODE_ACTIVE_MS)).length;
+  const availableNodes = nodeListIncludeInactive ? allNodes : allNodes.filter((node) => nodeIsActive(node, now, NODE_ACTIVE_MS));
+  elements.nodeListSummary.textContent = t("nodeList.activeSummary", {
+    active: formatNumber(activeCount),
+    total: formatNumber(allNodes.length),
+  });
+
+  const filtered = filterNodeList(allNodes, {
+    query: elements.nodeListSearch.value,
+    includeInactive: nodeListIncludeInactive,
+    isActive: (node) => nodeIsActive(node, now, NODE_ACTIVE_MS),
+    role: elements.nodeListRole.value || "all",
+    locale: getLocale() === "en" ? "en-GB" : "cs-CZ",
+  });
+  const sorted = sortNodeList(filtered, {
+    sortBy: nodeListSortBy,
+    direction: nodeListSortDirection,
+    activityAt: nodeActivityAt,
+    locale: getLocale() === "en" ? "en-GB" : "cs-CZ",
+  });
+  elements.nodeListResults.textContent = t("nodeList.results", {
+    shown: formatNumber(sorted.length),
+    total: formatNumber(availableNodes.length),
+  });
+
+  const fragment = document.createDocumentFragment();
+  if (!sorted.length) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.className = "node-list-empty";
+    cell.colSpan = 8;
+    cell.textContent = allNodes.length ? t("nodeList.noResults") : t("nodeList.loading");
+    row.appendChild(cell);
+    fragment.appendChild(row);
+  } else {
+    for (const node of sorted) {
+      const key = String(node.public_key || "").toUpperCase();
+      const health = nodeHealthSnapshot(node);
+      const active = nodeIsActive(node, now, NODE_ACTIVE_MS);
+      const row = document.createElement("tr");
+
+      const idCell = document.createElement("td");
+      idCell.className = "node-list-id";
+      const status = document.createElement("span");
+      status.className = `node-list-status-dot${active ? " active" : ""}`;
+      status.title = active ? t("common.active") : t("common.inactive");
+      status.setAttribute("aria-label", status.title);
+      const id = document.createElement("code");
+      id.textContent = key.slice(0, 8) || "—";
+      id.title = key;
+      idCell.append(status, id);
+
+      const nameCell = document.createElement("td");
+      nameCell.className = "node-list-name";
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "node-list-open";
+      open.dataset.nodeKey = key;
+      open.setAttribute("aria-label", t("nodeList.openNode", {
+        name: node.name || t("common.unknownNode"),
+      }));
+      const name = document.createElement("strong");
+      name.textContent = node.name || t("common.unknownNode");
+      const prefix = document.createElement("small");
+      prefix.textContent = shortNodePrefix(node);
+      open.append(name, prefix);
+      nameCell.appendChild(open);
+
+      const hardwareCell = document.createElement("td");
+      hardwareCell.className = "node-list-hardware";
+      const hardware = document.createElement("span");
+      hardware.textContent = health.health?.boardName || "—";
+      const firmware = document.createElement("small");
+      firmware.textContent = health.health?.firmware || "";
+      hardwareCell.append(hardware, firmware);
+
+      const position = validCoords(Number(node.lat), Number(node.lon))
+        ? `${formatDecimal(Number(node.lat), 4)}, ${formatDecimal(Number(node.lon), 4)}`
+        : t("nodeList.noLocation");
+
+      const relayCount = Number(node.relay_count_24h);
+      const relay = node.relay_count_24h != null && Number.isFinite(relayCount)
+        ? formatNumber(relayCount)
+        : "—";
+
+      const activity = nodeActivityAt(node);
+      const lastSeen = activity ? formatNodeDate(activity) : t("common.unknown");
+      const telemetryLines = [];
+      if (health.battery != null) telemetryLines.push(`${formatDecimal(health.battery / 1000, 2)} V`);
+      if (health.temperature != null) telemetryLines.push(`${formatDecimal(health.temperature, 1)} °C`);
+      if (health.health?.stale) telemetryLines.push(t("nodeList.telemetryStale"));
+      const telemetryCell = document.createElement("td");
+      telemetryCell.className = "node-list-telemetry";
+      if (telemetryLines.length) {
+        for (const [index, line] of telemetryLines.entries()) {
+          const value = document.createElement(index === telemetryLines.length - 1 && health.health?.stale ? "small" : "span");
+          value.textContent = line;
+          telemetryCell.appendChild(value);
+        }
+      } else {
+        telemetryCell.textContent = "—";
+      }
+
+      row.append(
+        idCell,
+        nameCell,
+        nodeListCell("node-list-role", roleLabel(node.role)),
+        hardwareCell,
+        nodeListCell("node-list-position", position),
+        nodeListCell("node-list-relays", relay),
+        nodeListCell("node-list-activity", lastSeen),
+        telemetryCell,
+      );
+      fragment.appendChild(row);
+    }
+  }
+  elements.nodeListRows.replaceChildren(fragment);
+}
+
+function scheduleNodeListRender() {
+  if (!elements.nodeListDialog?.open || nodeListRenderTimer != null) return;
+  nodeListRenderTimer = setTimeout(() => {
+    nodeListRenderTimer = null;
+    renderNodeList();
+  }, 500);
+}
+
+function openNodeList() {
+  renderNodeList();
+  if (!state.nodeByKey.size) void loadNodes().then(renderNodeList);
+  if (!elements.nodeListDialog.open) elements.nodeListDialog.showModal();
+  elements.nodeListToggle.setAttribute("aria-expanded", "true");
+  requestAnimationFrame(() => elements.nodeListSearch.focus({ preventScroll: true }));
+}
+
+elements.nodeListToggle.setAttribute("aria-haspopup", "dialog");
+elements.nodeListToggle.setAttribute("aria-controls", "node-list-dialog");
+elements.nodeListToggle.setAttribute("aria-expanded", "false");
+elements.nodeListToggle.addEventListener("click", openNodeList);
+elements.nodeListClose.addEventListener("click", () => elements.nodeListDialog.close());
+elements.nodeListDialog.addEventListener("close", () => {
+  elements.nodeListToggle.setAttribute("aria-expanded", "false");
+});
+elements.nodeListDialog.addEventListener("click", (event) => {
+  if (event.target === elements.nodeListDialog) elements.nodeListDialog.close();
+});
+elements.nodeListSearch.addEventListener("input", renderNodeList);
+elements.nodeListRole.addEventListener("change", renderNodeList);
+elements.nodeListInactiveToggle.addEventListener("click", () => {
+  nodeListIncludeInactive = !nodeListIncludeInactive;
+  renderNodeList();
+});
+for (const button of elements.nodeListSortButtons) {
+  button.addEventListener("click", () => {
+    const next = button.dataset.sort;
+    if (next === nodeListSortBy) {
+      nodeListSortDirection = nodeListSortDirection === "asc" ? "desc" : "asc";
+    } else {
+      nodeListSortBy = next;
+      nodeListSortDirection = ["id", "name", "role"].includes(next) ? "asc" : "desc";
+    }
+    renderNodeList();
+  });
+}
+elements.nodeListRows.addEventListener("click", (event) => {
+  const button = event.target instanceof Element ? event.target.closest(".node-list-open") : null;
+  if (!button) return;
+  const node = state.nodeByKey.get(String(button.dataset.nodeKey || "").toUpperCase());
+  if (!node) return;
+  elements.nodeListDialog.close();
+  openNodeDetail(node);
 });
 
 function shortNodePrefix(node) {

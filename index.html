@@ -100,6 +100,7 @@
             </div>
 
             <div class="map-actions">
+              <button id="node-list-toggle" type="button">Uzly</button>
               <button id="activity-toggle" type="button" aria-pressed="false">Aktivita</button>
               <button id="stats-toggle" type="button" aria-pressed="false">Statistiky</button>
               <button id="los-toggle" type="button" aria-pressed="false" title="Změřit přímou viditelnost mezi dvěma body">LOS</button>
@@ -313,6 +314,52 @@
         <div class="mobile-sheet-handle" aria-hidden="true"></div>
         <button id="mobile-sheet-close" class="mobile-sheet-close" type="button" aria-label="Zavřít">×</button>
         <div id="mobile-sheet-content" class="mobile-sheet-content"></div>
+      </dialog>
+
+      <dialog id="node-list-dialog" class="node-list-dialog" aria-labelledby="node-list-title">
+        <header class="node-list-header">
+          <div>
+            <h2 id="node-list-title">Uzly</h2>
+            <p id="node-list-summary"></p>
+          </div>
+          <button id="node-list-close" class="node-list-close" type="button" aria-label="Zavřít seznam uzlů">×</button>
+        </header>
+        <div class="node-list-controls">
+          <label class="node-list-search">
+            <span class="node-list-search-icon" aria-hidden="true">⌕</span>
+            <input id="node-list-search" type="search" autocomplete="off" placeholder="Hledat název, ID nebo hardware…" />
+          </label>
+          <label class="node-list-role-wrap">
+            <span id="node-list-role-label">Typ uzlu</span>
+            <select id="node-list-role">
+              <option value="all">Všechny role</option>
+              <option value="repeater">Repeater</option>
+              <option value="companion">Companion</option>
+              <option value="room">Room</option>
+              <option value="sensor">Sensor</option>
+              <option value="unknown">Ostatní</option>
+            </select>
+          </label>
+          <button id="node-list-inactive-toggle" class="node-list-inactive-toggle" type="button" aria-pressed="false">Zobrazit i neaktivní</button>
+          <span id="node-list-results" class="node-list-results" role="status"></span>
+        </div>
+        <div class="node-list-table-scroll" tabindex="0" aria-label="Tabulka uzlů">
+          <table class="node-list-table">
+            <thead>
+              <tr>
+                <th scope="col" data-sort-column="id"><button type="button" data-sort="id">ID <span aria-hidden="true">↕</span></button></th>
+                <th scope="col" data-sort-column="name"><button type="button" data-sort="name">Název <span aria-hidden="true">↕</span></button></th>
+                <th scope="col" data-sort-column="role"><button type="button" data-sort="role">Role <span aria-hidden="true">↕</span></button></th>
+                <th scope="col">Hardware / firmware</th>
+                <th scope="col">Poloha</th>
+                <th scope="col" data-sort-column="relay"><button type="button" data-sort="relay">Relay / 24 h <span aria-hidden="true">↕</span></button></th>
+                <th scope="col" data-sort-column="activity"><button type="button" data-sort="activity">Naposledy slyšen <span aria-hidden="true">↕</span></button></th>
+                <th scope="col" data-sort-column="battery"><button type="button" data-sort="battery">Telemetrie <span aria-hidden="true">↕</span></button></th>
+              </tr>
+            </thead>
+            <tbody id="node-list-rows"></tbody>
+          </table>
+        </div>
       </dialog>
 
       <dialog id="node-detail-page" class="node-detail-page" aria-labelledby="node-detail-title">
