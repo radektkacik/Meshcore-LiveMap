@@ -3,6 +3,14 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-22 — Přehlednější detail nodu a delší historie
+- Prostředí: beta
+- Beta build: 20261122-0659-1c08265
+- Horní lišta detailu nodu se na mobilu už nezmenšuje a nepřekrývá.
+- Tlačítko „Napsat správci soukromě“ je na mobilu pod titulem na samostatném řádku.
+- Historie užitečnosti nově zobrazuje výchozích 14 dní.
+- Beta obsahuje panel Filtry s filtrem firmwaru, telemetrie a přehledem aktivních filtrů.
+
 ## 2026-11-20 — Telemetrie z CzHealth-Hubu
 - Prostředí: produkce i beta
 - Build: 20261120-1126-3be352c
