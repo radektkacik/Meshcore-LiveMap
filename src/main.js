@@ -6701,7 +6701,7 @@ async function handleLosClick(latlng, node = null) {
   setLosEndpoint(1, latlng, node);
 }
 
-let coverageTimer = null;
+const coverageInputs = [elements.coverageAntenna, elements.coverageRadius, elements.coverageFrequency];
 
 function coverageSettings() {
   const antenna = Math.min(300, Math.max(1, Number(elements.coverageAntenna.value) || 10));
@@ -6750,7 +6750,6 @@ function setCoverageMode(on) {
   elements.coverageHint.textContent = next ? t("coverage.hint") : "";
   map.getContainer().style.cursor = next || state.losMode ? "crosshair" : "";
   if (!next) {
-    clearTimeout(coverageTimer);
     cancelCoverageCompute();
     clearCoverageOverlay();
     clearCoverageMarker();
@@ -6917,12 +6916,6 @@ function handleCoverageClick(latlng) {
   void computeCoverage();
 }
 
-const scheduleCoverage = () => {
-  if (!state.coverageCenter) return;
-  clearTimeout(coverageTimer);
-  coverageTimer = setTimeout(() => void computeCoverage(), 350);
-};
-
 function setLosMode(on) {
   if (on && state.coverageMode) setCoverageMode(false);
   state.losMode = Boolean(on);
@@ -6961,8 +6954,12 @@ elements.coverageDialog.addEventListener("close", () => {
   if (state.coverageMode) setCoverageMode(false);
 });
 elements.coverageRecompute.addEventListener("click", () => void computeCoverage());
-for (const input of [elements.coverageAntenna, elements.coverageRadius, elements.coverageFrequency]) {
-  input.addEventListener("input", scheduleCoverage);
+for (const input of coverageInputs) {
+  input.addEventListener("change", () => {
+    if (coverageInputs.every((field) => Number.isFinite(field.valueAsNumber) && field.validity.valid)) {
+      void computeCoverage();
+    }
+  });
 }
 state.losRecomputeButton.addEventListener("click", () => void computeLos());
 elements.losClose.addEventListener("click", () => elements.losDialog.close());
