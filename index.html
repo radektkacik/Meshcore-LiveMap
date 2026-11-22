@@ -349,6 +349,18 @@
             <span id="node-list-battery-label">Stav baterie</span>
             <select id="node-list-battery"></select>
           </label>
+          <label class="node-list-role-wrap">
+            <span data-node-list-range-label="metric"></span>
+            <select id="node-list-range-metric"></select>
+          </label>
+          <label class="node-list-role-wrap" id="node-list-range-min-wrap" hidden>
+            <span data-node-list-range-label="min"></span>
+            <input id="node-list-range-min" type="number" step="any" />
+          </label>
+          <label class="node-list-role-wrap" id="node-list-range-max-wrap" hidden>
+            <span data-node-list-range-label="max"></span>
+            <input id="node-list-range-max" type="number" step="any" />
+          </label>
           <span id="node-list-results" class="node-list-results" role="status"></span>
         </div>
         <div class="node-list-table-scroll" tabindex="0" aria-label="Tabulka nodů">

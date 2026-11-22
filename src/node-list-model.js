@@ -28,6 +28,9 @@ export function filterNodeList(nodes, {
   role = "all",
   data = "all",
   batteryStatus = "all",
+  rangeValue = () => null,
+  min = null,
+  max = null,
   locale = "cs-CZ",
 } = {}) {
   const terms = normalizedText(query, locale).trim().split(/\s+/).filter(Boolean);
@@ -39,6 +42,10 @@ export function filterNodeList(nodes, {
     if (data === "position" && !validCoords(node.lat, node.lon)) return false;
     if (data === "hardware" && !node.health?.boardName && !node.health?.firmware) return false;
     if (data === "telemetry" && !Object.keys(TELEMETRY_FIELDS).some((metric) => nodeListTelemetry(node, metric) != null)) return false;
+    if (min != null || max != null) {
+      const value = rangeValue(node);
+      if (!Number.isFinite(value) || (min != null && value < min) || (max != null && value > max)) return false;
+    }
     if (!terms.length) return true;
 
     const publicKey = normalizedText(node.public_key, locale);

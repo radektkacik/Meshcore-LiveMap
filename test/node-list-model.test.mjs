@@ -25,6 +25,13 @@ const nodes = [
   },
 ];
 
+test("numeric ranges include their bounds and exclude missing values", () => {
+  const rangeValue = (node) => node.relay_count_24h;
+  assert.deepEqual(filterNodeList(nodes, { rangeValue, min: 3, max: 12 }), nodes.slice(0, 2));
+  assert.deepEqual(filterNodeList(nodes, { rangeValue, max: 3 }), [nodes[1]]);
+  assert.deepEqual(filterNodeList(nodes, { rangeValue, min: 12 }), [nodes[0]]);
+});
+
 test("battery status sorts by the reported assessment, not by pack voltage", () => {
   const full = { health: { batteryStatus: "full", batteryMv: 3350 } };
   const low = { health: { batteryStatus: "critical", batteryMv: 12000 } };

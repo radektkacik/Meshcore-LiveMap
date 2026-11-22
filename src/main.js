@@ -7337,6 +7337,9 @@ let nodeListPage = 0;
 const NODE_LIST_PAGE_SIZE = 100;
 const nodeListData = document.querySelector("#node-list-data");
 const nodeListBattery = document.querySelector("#node-list-battery");
+const nodeListRangeMetric = document.querySelector("#node-list-range-metric");
+const nodeListRangeMin = document.querySelector("#node-list-range-min");
+const nodeListRangeMax = document.querySelector("#node-list-range-max");
 const nodeListPrev = document.querySelector("#node-list-prev");
 const nodeListNext = document.querySelector("#node-list-next");
 const nodeListPageLabel = document.querySelector("#node-list-page");
@@ -7355,6 +7358,20 @@ for (const status of ALL_HEALTH_STATUSES) {
   nodeListBattery.add(new Option(t(`node.healthBattery.${status}`), status));
 }
 nodeListBattery.add(new Option(nodeListEn ? "Not assessed" : "Bez hodnocení", "unknown"));
+for (const [key, cs, en] of [
+  ["metric", "Rozsah hodnot", "Value range"],
+  ["min", "Od", "Min"],
+  ["max", "Do", "Max"],
+]) document.querySelector(`[data-node-list-range-label="${key}"]`).textContent = nodeListEn ? en : cs;
+for (const [value, cs, en] of [
+  ["all", "Bez omezení", "Any"],
+  ["battery", "Napětí baterie (V)", "Battery voltage (V)"],
+  ["temperature", "Teplota (°C)", "Temperature (°C)"],
+  ["humidity", "Vlhkost (%)", "Humidity (%)"],
+  ["current", "Proud (mA)", "Current (mA)"],
+  ["relay", "Relay / 24 h", "Relays / 24 h"],
+  ["activity", "Od poslední aktivity (h)", "Since last activity (h)"],
+]) nodeListRangeMetric.add(new Option(nodeListEn ? en : cs, value));
 nodeListPrev.textContent = nodeListEn ? "Previous" : "Předchozí";
 nodeListNext.textContent = nodeListEn ? "Next" : "Další";
 
@@ -7415,6 +7432,7 @@ function renderNodeList() {
   updateNodeListControls();
   const allNodes = [...state.nodeByKey.values()];
   const now = nowMs();
+  const rangeMetric = nodeListRangeMetric.value;
   const activeCount = allNodes.filter((node) => nodeIsActive(node, now, NODE_ACTIVE_MS)).length;
   const availableNodes = nodeListIncludeInactive ? allNodes : allNodes.filter((node) => nodeIsActive(node, now, NODE_ACTIVE_MS));
   elements.nodeListSummary.textContent = t("nodeList.activeSummary", {
@@ -7429,6 +7447,17 @@ function renderNodeList() {
     role: elements.nodeListRole.value || "all",
     data: nodeListData.value,
     batteryStatus: nodeListBattery.value,
+    min: rangeMetric === "all" || !Number.isFinite(nodeListRangeMin.valueAsNumber) ? null : nodeListRangeMin.valueAsNumber,
+    max: rangeMetric === "all" || !Number.isFinite(nodeListRangeMax.valueAsNumber) ? null : nodeListRangeMax.valueAsNumber,
+    rangeValue: (node) => {
+      if (rangeMetric === "activity") {
+        const activity = nodeActivityAt(node);
+        return activity > 0 ? Math.max(0, now - activity) / 3_600_000 : null;
+      }
+      if (rangeMetric === "relay") return node.relay_count_24h == null ? null : Number(node.relay_count_24h);
+      const value = nodeListTelemetry(node, rangeMetric);
+      return value == null ? null : value / (rangeMetric === "battery" ? 1000 : 1);
+    },
     locale: getLocale() === "en" ? "en-GB" : "cs-CZ",
   });
   const sorted = sortNodeList(filtered, {
@@ -7573,6 +7602,16 @@ elements.nodeListSearch.addEventListener("input", () => changeNodeListPage());
 elements.nodeListRole.addEventListener("change", () => changeNodeListPage());
 nodeListData.addEventListener("change", () => changeNodeListPage());
 nodeListBattery.addEventListener("change", () => changeNodeListPage());
+nodeListRangeMetric.addEventListener("change", () => {
+  for (const input of [nodeListRangeMin, nodeListRangeMax]) {
+    input.value = "";
+    input.closest("label").hidden = nodeListRangeMetric.value === "all";
+  }
+  changeNodeListPage();
+});
+for (const input of [nodeListRangeMin, nodeListRangeMax]) {
+  input.addEventListener("input", () => changeNodeListPage());
+}
 nodeListPrev.addEventListener("click", () => changeNodeListPage(nodeListPage - 1));
 nodeListNext.addEventListener("click", () => changeNodeListPage(nodeListPage + 1));
 elements.nodeListInactiveToggle.addEventListener("click", () => {
