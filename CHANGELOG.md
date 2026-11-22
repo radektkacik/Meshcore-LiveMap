@@ -5,8 +5,9 @@ nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-22 — Jednodušší levý panel a dialog Nastavení
 - Prostředí: beta
-- Build: 20261122-0757-4ffb134
-- Levý panel obsahuje stav, hledání, filtry, časové okno, hlavní akce, přepínače zobrazení, Companion TRACE, legendu a informace o aplikaci.
+- Build: 20261122-0811-9636069
+- Levý panel obsahuje stav, hledání, filtry, časové okno a hlavní akce.
+- Přepínače zobrazení, Companion TRACE, legenda a informace o aplikaci jsou v hlavním panelu v rozbalovacích skupinách.
 - V dialogu Nastavení zůstává podklad mapy, zobrazení tras a velikost písma.
 - Všechny filtry nodů a tras jsou na jednom místě v panelu Filtry.
 - Nastavení otevírá tlačítko v záhlaví panelu.
