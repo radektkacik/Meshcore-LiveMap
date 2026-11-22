@@ -7336,6 +7336,7 @@ let nodeListSortDirection = "desc";
 let nodeListPage = 0;
 const NODE_LIST_PAGE_SIZE = 100;
 const nodeListData = document.querySelector("#node-list-data");
+const nodeListBattery = document.querySelector("#node-list-battery");
 const nodeListPrev = document.querySelector("#node-list-prev");
 const nodeListNext = document.querySelector("#node-list-next");
 const nodeListPageLabel = document.querySelector("#node-list-page");
@@ -7348,6 +7349,12 @@ for (const [value, cs, en] of [
   ["hardware", "S hardwarem nebo firmwarem", "With hardware or firmware"],
   ["telemetry", "S telemetrií", "With telemetry"],
 ]) nodeListData.add(new Option(nodeListEn ? en : cs, value));
+document.querySelector("#node-list-battery-label").textContent = t("nodeList.column.batteryStatus");
+nodeListBattery.add(new Option(nodeListEn ? "All statuses" : "Všechny stavy", "all"));
+for (const status of ALL_HEALTH_STATUSES) {
+  nodeListBattery.add(new Option(t(`node.healthBattery.${status}`), status));
+}
+nodeListBattery.add(new Option(nodeListEn ? "Not assessed" : "Bez hodnocení", "unknown"));
 nodeListPrev.textContent = nodeListEn ? "Previous" : "Předchozí";
 nodeListNext.textContent = nodeListEn ? "Next" : "Další";
 
@@ -7421,6 +7428,7 @@ function renderNodeList() {
     isActive: (node) => nodeIsActive(node, now, NODE_ACTIVE_MS),
     role: elements.nodeListRole.value || "all",
     data: nodeListData.value,
+    batteryStatus: nodeListBattery.value,
     locale: getLocale() === "en" ? "en-GB" : "cs-CZ",
   });
   const sorted = sortNodeList(filtered, {
@@ -7564,6 +7572,7 @@ elements.nodeListDialog.addEventListener("click", (event) => {
 elements.nodeListSearch.addEventListener("input", () => changeNodeListPage());
 elements.nodeListRole.addEventListener("change", () => changeNodeListPage());
 nodeListData.addEventListener("change", () => changeNodeListPage());
+nodeListBattery.addEventListener("change", () => changeNodeListPage());
 nodeListPrev.addEventListener("click", () => changeNodeListPage(nodeListPage - 1));
 nodeListNext.addEventListener("click", () => changeNodeListPage(nodeListPage + 1));
 elements.nodeListInactiveToggle.addEventListener("click", () => {

@@ -30,6 +30,8 @@ test("battery status sorts by the reported assessment, not by pack voltage", () 
   const low = { health: { batteryStatus: "critical", batteryMv: 12000 } };
   const unrated = { health: { batteryMv: 4100 } };
   assert.deepEqual(sortNodeList([low, unrated, full], { sortBy: "batteryStatus" }), [full, low, unrated]);
+  assert.deepEqual(filterNodeList([low, unrated, full], { batteryStatus: "critical" }), [low]);
+  assert.deepEqual(filterNodeList([low, unrated, full], { batteryStatus: "unknown" }), [unrated]);
 });
 
 test("telemetry columns sort numerically and the filter includes zero readings", () => {

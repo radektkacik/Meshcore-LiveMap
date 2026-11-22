@@ -27,12 +27,15 @@ export function filterNodeList(nodes, {
   isActive = () => true,
   role = "all",
   data = "all",
+  batteryStatus = "all",
   locale = "cs-CZ",
 } = {}) {
   const terms = normalizedText(query, locale).trim().split(/\s+/).filter(Boolean);
   return nodes.filter((node) => {
     if (!includeInactive && !isActive(node)) return false;
     if (role !== "all" && (node.role || "unknown") !== role) return false;
+    const status = String(node.health?.batteryStatus ?? "").toLowerCase();
+    if (batteryStatus !== "all" && (batteryStatus === "unknown" ? BATTERY_STATUS_RANK.has(status) : status !== batteryStatus)) return false;
     if (data === "position" && !validCoords(node.lat, node.lon)) return false;
     if (data === "hardware" && !node.health?.boardName && !node.health?.firmware) return false;
     if (data === "telemetry" && !Object.keys(TELEMETRY_FIELDS).some((metric) => nodeListTelemetry(node, metric) != null)) return false;
