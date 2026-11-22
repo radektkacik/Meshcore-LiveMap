@@ -25,6 +25,16 @@ const nodes = [
   },
 ];
 
+test("data filters combine with role and sorting places missing data last", () => {
+  const located = { ...nodes[1], lat: 49.2, lon: 16.6 };
+  const entries = [...nodes, located];
+  assert.deepEqual(filterNodeList(entries, { data: "position", role: "companion" }), [located]);
+  assert.deepEqual(filterNodeList(entries, { data: "hardware" }), [nodes[0]]);
+  assert.deepEqual(filterNodeList(nodes, { data: "telemetry" }), nodes.slice(0, 2));
+  assert.equal(sortNodeList(entries, { sortBy: "position", direction: "asc" })[0], located);
+  assert.equal(sortNodeList(nodes, { sortBy: "hardware", direction: "asc" })[0], nodes[0]);
+});
+
 test("node list search ignores diacritics and matches key, role and hardware", () => {
   assert.deepEqual(filterNodeList(nodes, { query: "zizkov" }), [nodes[0]]);
   assert.deepEqual(filterNodeList(nodes, { query: "b2c3" }), [nodes[1]]);

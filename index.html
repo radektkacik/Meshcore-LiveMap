@@ -341,6 +341,10 @@
             </select>
           </label>
           <button id="node-list-inactive-toggle" class="node-list-inactive-toggle" type="button" aria-pressed="false">Zobrazit i neaktivní</button>
+          <label class="node-list-role-wrap">
+            <span id="node-list-data-label">Dostupná data</span>
+            <select id="node-list-data"></select>
+          </label>
           <span id="node-list-results" class="node-list-results" role="status"></span>
         </div>
         <div class="node-list-table-scroll" tabindex="0" aria-label="Tabulka uzlů">
@@ -350,8 +354,8 @@
                 <th scope="col" data-sort-column="id"><button type="button" data-sort="id">ID <span aria-hidden="true">↕</span></button></th>
                 <th scope="col" data-sort-column="name"><button type="button" data-sort="name">Název <span aria-hidden="true">↕</span></button></th>
                 <th scope="col" data-sort-column="role"><button type="button" data-sort="role">Role <span aria-hidden="true">↕</span></button></th>
-                <th scope="col">Hardware / firmware</th>
-                <th scope="col">Poloha</th>
+                <th scope="col"><button type="button" data-sort="hardware">Hardware / firmware <span aria-hidden="true">↕</span></button></th>
+                <th scope="col"><button type="button" data-sort="position">Poloha <span aria-hidden="true">↕</span></button></th>
                 <th scope="col" data-sort-column="relay"><button type="button" data-sort="relay">Relay / 24 h <span aria-hidden="true">↕</span></button></th>
                 <th scope="col" data-sort-column="activity"><button type="button" data-sort="activity">Naposledy slyšen <span aria-hidden="true">↕</span></button></th>
                 <th scope="col" data-sort-column="battery"><button type="button" data-sort="battery">Telemetrie <span aria-hidden="true">↕</span></button></th>
@@ -360,6 +364,11 @@
             <tbody id="node-list-rows"></tbody>
           </table>
         </div>
+        <footer class="node-list-controls">
+          <button id="node-list-prev" class="node-list-inactive-toggle" type="button"></button>
+          <span id="node-list-page" role="status"></span>
+          <button id="node-list-next" class="node-list-inactive-toggle" type="button"></button>
+        </footer>
       </dialog>
 
       <dialog id="node-detail-page" class="node-detail-page" aria-labelledby="node-detail-title">

@@ -1114,7 +1114,6 @@ async function loadObservers(force = false) {
     if (state.showObservers) renderObservers();
     statsPanel.renderNetworkSummary();
     if (state.nodeMarkers.length) refreshNodeState();
-    scheduleNodeListRender();
   } catch (error) {
     console.error("Observery se nepodařilo načíst", error);
   } finally {
@@ -4037,7 +4036,6 @@ function refreshNodeState() {
   syncHealthBadges();
   statsPanel.renderStats();
   scheduleNodeLabels();
-  scheduleNodeListRender();
 }
 
 let nodeRefreshTimer = null;
@@ -4226,7 +4224,6 @@ function syncNodes(nodes) {
   scheduleNodeRefresh();
   if (elements.filterDialog?.open) renderFirmwareOptions();
   updateFilterSummary();
-  scheduleNodeListRender();
 }
 
 let nodeRefreshPromise = null;
@@ -4605,7 +4602,6 @@ function updateAdvertNode(packet) {
     };
     state.nodeByKey.set(key, node);
   }
-  scheduleNodeListRender();
 
   const entry = state.nodeMarkerByKey.get(key);
   if (entry) {
@@ -7337,15 +7333,33 @@ elements.statsToggle.addEventListener("click", () => {
 let nodeListIncludeInactive = false;
 let nodeListSortBy = "activity";
 let nodeListSortDirection = "desc";
-let nodeListRenderTimer = null;
+let nodeListPage = 0;
+const NODE_LIST_PAGE_SIZE = 100;
+const nodeListData = document.querySelector("#node-list-data");
+const nodeListPrev = document.querySelector("#node-list-prev");
+const nodeListNext = document.querySelector("#node-list-next");
+const nodeListPageLabel = document.querySelector("#node-list-page");
+const nodeListScroll = elements.nodeListRows.closest(".node-list-table-scroll");
+const nodeListEn = getLocale() === "en";
+document.querySelector("#node-list-data-label").textContent = nodeListEn ? "Available data" : "Dostupná data";
+for (const [value, cs, en] of [
+  ["all", "Bez omezení", "Any"],
+  ["position", "S polohou", "With location"],
+  ["hardware", "S hardwarem nebo firmwarem", "With hardware or firmware"],
+  ["telemetry", "S telemetrií", "With telemetry"],
+]) nodeListData.add(new Option(nodeListEn ? en : cs, value));
+nodeListPrev.textContent = nodeListEn ? "Previous" : "Předchozí";
+nodeListNext.textContent = nodeListEn ? "Next" : "Další";
 
 const NODE_LIST_SORT_LABELS = {
   activity: "nodeList.column.activity",
   battery: "nodeList.column.telemetry",
   id: "nodeList.column.id",
+  hardware: "nodeList.column.hardware",
   name: "nodeList.column.name",
   relay: "nodeList.column.relay",
   role: "nodeList.column.role",
+  position: "nodeList.column.position",
 };
 
 function updateNodeListControls() {
@@ -7365,6 +7379,8 @@ function updateNodeListControls() {
     const key = button.dataset.sort;
     const indicator = button.querySelector("span");
     const label = t(NODE_LIST_SORT_LABELS[key] || "nodeList.column.name");
+    if (key === "battery") button.title = nodeListEn ? "Sort by battery voltage" : "Řadit podle napětí baterie";
+    if (key === "position") button.title = nodeListEn ? "Sort by latitude" : "Řadit podle zeměpisné šířky";
     if (button.firstChild?.nodeType === Node.TEXT_NODE) button.firstChild.nodeValue = `${label} `;
     if (indicator) indicator.textContent = key === nodeListSortBy
       ? nodeListSortDirection === "asc" ? "↑" : "↓"
@@ -7400,6 +7416,7 @@ function renderNodeList() {
     includeInactive: nodeListIncludeInactive,
     isActive: (node) => nodeIsActive(node, now, NODE_ACTIVE_MS),
     role: elements.nodeListRole.value || "all",
+    data: nodeListData.value,
     locale: getLocale() === "en" ? "en-GB" : "cs-CZ",
   });
   const sorted = sortNodeList(filtered, {
@@ -7414,6 +7431,11 @@ function renderNodeList() {
   });
 
   const fragment = document.createDocumentFragment();
+  const pageCount = Math.max(1, Math.ceil(sorted.length / NODE_LIST_PAGE_SIZE));
+  nodeListPage = Math.min(nodeListPage, pageCount - 1);
+  nodeListPrev.disabled = nodeListPage === 0;
+  nodeListNext.disabled = nodeListPage >= pageCount - 1;
+  nodeListPageLabel.textContent = `${nodeListPage + 1} / ${pageCount}`;
   if (!sorted.length) {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
@@ -7423,7 +7445,7 @@ function renderNodeList() {
     row.appendChild(cell);
     fragment.appendChild(row);
   } else {
-    for (const node of sorted) {
+    for (const node of sorted.slice(nodeListPage * NODE_LIST_PAGE_SIZE, (nodeListPage + 1) * NODE_LIST_PAGE_SIZE)) {
       const key = String(node.public_key || "").toUpperCase();
       const health = nodeHealthSnapshot(node);
       const active = nodeIsActive(node, now, NODE_ACTIVE_MS);
@@ -7464,8 +7486,8 @@ function renderNodeList() {
       firmware.textContent = health.health?.firmware || "";
       hardwareCell.append(hardware, firmware);
 
-      const position = validCoords(Number(node.lat), Number(node.lon))
-        ? `${formatDecimal(Number(node.lat), 4)}, ${formatDecimal(Number(node.lon), 4)}`
+      const position = validCoords(node.lat, node.lon)
+        ? `${formatDecimal(node.lat, 4)} / ${formatDecimal(node.lon, 4)}`
         : t("nodeList.noLocation");
 
       const relayCount = Number(node.relay_count_24h);
@@ -7507,17 +7529,17 @@ function renderNodeList() {
   elements.nodeListRows.replaceChildren(fragment);
 }
 
-function scheduleNodeListRender() {
-  if (!elements.nodeListDialog?.open || nodeListRenderTimer != null) return;
-  nodeListRenderTimer = setTimeout(() => {
-    nodeListRenderTimer = null;
-    renderNodeList();
-  }, 500);
+function changeNodeListPage(page = 0) {
+  nodeListPage = page;
+  renderNodeList();
+  nodeListScroll.scrollTop = 0;
 }
 
 function openNodeList() {
-  renderNodeList();
-  if (!state.nodeByKey.size) void loadNodes().then(renderNodeList);
+  changeNodeListPage();
+  if (!state.nodeByKey.size) void loadNodes().then(() => {
+    if (elements.nodeListDialog.open) changeNodeListPage();
+  });
   if (!elements.nodeListDialog.open) elements.nodeListDialog.showModal();
   elements.nodeListToggle.setAttribute("aria-expanded", "true");
   requestAnimationFrame(() => elements.nodeListSearch.focus({ preventScroll: true }));
@@ -7534,11 +7556,14 @@ elements.nodeListDialog.addEventListener("close", () => {
 elements.nodeListDialog.addEventListener("click", (event) => {
   if (event.target === elements.nodeListDialog) elements.nodeListDialog.close();
 });
-elements.nodeListSearch.addEventListener("input", renderNodeList);
-elements.nodeListRole.addEventListener("change", renderNodeList);
+elements.nodeListSearch.addEventListener("input", () => changeNodeListPage());
+elements.nodeListRole.addEventListener("change", () => changeNodeListPage());
+nodeListData.addEventListener("change", () => changeNodeListPage());
+nodeListPrev.addEventListener("click", () => changeNodeListPage(nodeListPage - 1));
+nodeListNext.addEventListener("click", () => changeNodeListPage(nodeListPage + 1));
 elements.nodeListInactiveToggle.addEventListener("click", () => {
   nodeListIncludeInactive = !nodeListIncludeInactive;
-  renderNodeList();
+  changeNodeListPage();
 });
 for (const button of elements.nodeListSortButtons) {
   button.addEventListener("click", () => {
@@ -7547,9 +7572,9 @@ for (const button of elements.nodeListSortButtons) {
       nodeListSortDirection = nodeListSortDirection === "asc" ? "desc" : "asc";
     } else {
       nodeListSortBy = next;
-      nodeListSortDirection = ["id", "name", "role"].includes(next) ? "asc" : "desc";
+      nodeListSortDirection = ["id", "name", "role", "hardware", "position"].includes(next) ? "asc" : "desc";
     }
-    renderNodeList();
+    changeNodeListPage();
   });
 }
 elements.nodeListRows.addEventListener("click", (event) => {

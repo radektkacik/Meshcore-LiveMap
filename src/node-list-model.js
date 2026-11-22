@@ -1,3 +1,5 @@
+import { validCoords } from "./node-model.js";
+
 function normalizedText(value, locale) {
   return String(value || "")
     .normalize("NFD")
@@ -10,12 +12,16 @@ export function filterNodeList(nodes, {
   includeInactive = false,
   isActive = () => true,
   role = "all",
+  data = "all",
   locale = "cs-CZ",
 } = {}) {
   const terms = normalizedText(query, locale).trim().split(/\s+/).filter(Boolean);
   return nodes.filter((node) => {
     if (!includeInactive && !isActive(node)) return false;
     if (role !== "all" && (node.role || "unknown") !== role) return false;
+    if (data === "position" && !validCoords(node.lat, node.lon)) return false;
+    if (data === "hardware" && !node.health?.boardName && !node.health?.firmware) return false;
+    if (data === "telemetry" && node.health?.batteryMv == null && node.health?.temperatureC == null) return false;
     if (!terms.length) return true;
 
     const publicKey = normalizedText(node.public_key, locale);
@@ -35,10 +41,14 @@ function nodeSortValue(node, sortBy, activityAt) {
       return node.public_key || "";
     case "role":
       return node.role || "unknown";
+    case "hardware":
+      return [node.health?.boardName, node.health?.firmware].filter(Boolean).join(" ");
+    case "position":
+      return validCoords(node.lat, node.lon) ? node.lat : null;
     case "relay":
       return node.relay_count_24h;
     case "battery":
-      return node.health?.batteryMv ?? node.battery_mv;
+      return node.health?.batteryMv ?? null;
     case "activity":
       return activityAt(node);
     case "name":
