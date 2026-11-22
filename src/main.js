@@ -2497,7 +2497,7 @@ async function loadNodeHistory(root, node) {
     return;
   }
   try {
-    const data = await getJson(`/api/node-history?key=${encodeURIComponent(key)}&days=7`);
+    const data = await getJson(`/api/node-history?key=${encodeURIComponent(key)}&days=14`);
     state.nodeHistoryCache.set(key, { at: Date.now(), samples: data.samples || [] });
     if (root.isConnected) renderNodeHistory(root, data.samples || []);
   } catch (error) {

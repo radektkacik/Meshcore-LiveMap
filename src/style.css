@@ -412,7 +412,7 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-detail-page { width: min(920px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 0; overflow: hidden; border: 1px solid rgba(30, 65, 49, 0.2); border-radius: 16px; color: #263b33; background: #fffef9; box-shadow: 0 24px 80px rgba(20, 42, 32, 0.3); }
 .node-detail-page::backdrop { background: rgba(12, 24, 18, 0.48); backdrop-filter: blur(2px); }
 .node-detail-shell { display: flex; flex-direction: column; max-height: calc(100dvh - 34px); }
-.node-detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 15px 18px 12px; border-bottom: 1px solid var(--line); background: #f3f7f3; }
+.node-detail-header { display: flex; flex: 0 0 auto; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 15px 18px 12px; border-bottom: 1px solid var(--line); background: #f3f7f3; }
 .node-detail-header > div { min-width: 0; flex: 1; }
 .node-detail-header small { display: block; color: var(--muted); font: calc(10px * var(--font-scale)) "DM Mono", monospace; letter-spacing: 0.09em; text-transform: uppercase; }
 .node-detail-header h2 { margin: 3px 0 0; font-size: calc(18px * var(--font-scale)); line-height: 1.25; }
@@ -424,7 +424,7 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-detail-close:hover { color: #b03024; background: #f3e9e7; }
 .node-contact-admin { min-height: 32px; flex: 0 0 auto; padding: 6px 10px; border: 1px solid rgba(7, 142, 98, 0.35); border-radius: 7px; color: #087a57; background: #edf7f1; font: 600 calc(11px * var(--font-scale)) Manrope, sans-serif; cursor: pointer; }
 .node-contact-admin:hover { border-color: var(--green); background: #e1f2e8; }
-.node-detail-tabs { display: flex; gap: 4px; padding: 8px 12px; overflow-x: auto; border-bottom: 1px solid var(--line); background: #fbfcf8; }
+.node-detail-tabs { display: flex; flex: 0 0 auto; align-items: center; gap: 4px; padding: 8px 12px; overflow-x: auto; border-bottom: 1px solid var(--line); background: #fbfcf8; }
 .node-detail-tabs button { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; min-height: 28px; padding: 6px 9px; border: 1px solid transparent; border-radius: 6px; color: #49665b; background: transparent; font: calc(10px * var(--font-scale))/1.2 "DM Mono", monospace; white-space: nowrap; cursor: pointer; box-sizing: border-box; }
 .node-detail-tabs button:hover { color: var(--green); background: #edf7f1; }
 .node-detail-tabs button.active { color: #fff; background: var(--green); border-color: var(--green); }
@@ -1126,7 +1126,10 @@ html[data-theme="dark"] .photo-manage-uploads button { color: #5fd0a5; backgroun
 @media (max-width: 700px) {
   .node-detail-page { width: 100vw; height: 100dvh; max-height: none; border: 0; border-radius: 0; }
   .node-detail-shell { max-height: 100dvh; }
-  .node-detail-header { padding-top: max(14px, env(safe-area-inset-top)); }
+  .node-detail-header { flex-wrap: wrap; gap: 8px; padding: max(14px, env(safe-area-inset-top)) 14px 10px; }
+  .node-detail-header > div { flex: 1 1 calc(100% - 42px); }
+  .node-detail-close { order: 2; }
+  .node-contact-admin { order: 3; flex: 1 1 100%; min-height: 34px; }
   .node-compact-actions { grid-template-columns: 1fr 1fr; }
   .node-compact-actions .node-detail-open { grid-column: 1 / -1; }
   .hud { top: 9px; left: 9px; width: min(330px, calc(100vw - 18px)); max-height: calc(100vh - 18px); max-height: calc(100dvh - 18px); }
