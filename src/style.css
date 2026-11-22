@@ -486,6 +486,8 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-detail-panel > .node-user-info, .node-detail-panel > .node-photos, .node-detail-panel > .node-comments { border-top: 0; }
 .node-detail-panel > .node-popup-actions { padding-top: 14px; }
 .node-popup-card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 15px 42px 12px 15px; border-bottom: 1px solid var(--line); background: #f3f7f3; }
+.node-popup-card.compact > header { position: sticky; top: 0; z-index: 1; }
+.node-popup .leaflet-popup-close-button, .mobile-sheet-close { z-index: 2; }
 .node-popup-card header small, .node-public-key span { display: block; color: var(--muted); font: calc(10px * var(--font-scale)) "DM Mono", monospace; letter-spacing: 0.09em; text-transform: uppercase; }
 .node-popup-card h3 { margin: 3px 0 0; font-size: calc(16px * var(--font-scale)); line-height: 1.25; }
 .node-popup-card header > span { flex: 0 0 auto; margin-top: 2px; padding: 3px 6px; border-radius: 5px; color: #fff; font: 500 calc(10px * var(--font-scale)) "DM Mono", monospace; text-transform: uppercase; }
@@ -1185,6 +1187,7 @@ html[data-theme="dark"] .photo-manage-uploads button { color: #5fd0a5; backgroun
 .mobile-sheet-content { max-height: calc(80dvh - 22px); overflow-y: auto; overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); }
 .mobile-sheet-content .node-popup-card,
 .mobile-sheet-content .route-popup-card { max-height: none; }
+.mobile-sheet-content .node-popup-card.compact { overflow: visible; }
 
 @media (max-width: 700px) {
   .node-detail-page { width: 100vw; height: 100dvh; max-height: none; border: 0; border-radius: 0; }
