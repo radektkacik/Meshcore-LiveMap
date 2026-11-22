@@ -3,6 +3,12 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-22 — Přehled uzlů
+- Prostředí: beta
+- Build: 20261122-0933-90eb3d4
+- Nový přehled uzlů s hledáním, filtrem rolí, řazením a přepínačem neaktivních uzlů.
+- Tabulka ukazuje dostupnou polohu, aktivitu, relay provoz, hardware, firmware a telemetrii; kliknutím se otevře detail nodu.
+
 ## 2026-11-22 — Jednodušší levý panel a dialog Nastavení
 - Prostředí: beta
 - Build: 20261122-0811-9636069
