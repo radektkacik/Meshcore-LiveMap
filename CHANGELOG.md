@@ -3,6 +3,14 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-22 — Jednodušší levý panel a dialog Nastavení
+- Prostředí: beta
+- Beta build: 20261122-0753-ae1cad9
+- Levý panel nově obsahuje jen stav připojení, hledání, filtry, časové okno a hlavní akce.
+- Do nového dialogu Nastavení se přesunul podklad mapy, zobrazení tras, velikost písma, animace, popisky, companion TRACE, legenda a informace o aplikaci.
+- Všechny filtry nodů a tras jsou na jednom místě v panelu Filtry.
+- Nastavení otevírá tlačítko v záhlaví panelu.
+
 ## 2026-11-22 — Přehlednější detail nodu a delší historie
 - Prostředí: produkce i beta
 - Build: 20261122-0705-33d0fe9
