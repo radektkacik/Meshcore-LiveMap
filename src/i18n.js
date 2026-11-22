@@ -1535,7 +1535,7 @@ export const STATIC_EN = {
   "Zavřít nastavení": "Close settings",
   "Zobrazení mapy": "Map display",
   "O aplikaci": "About",
-  "Zobrazení mapy a pokročilé volby. Filtry nodů a tras najdeš v samostatném panelu.": "Map display and advanced options. Node and route filters are in a separate panel.",
+  "Podklad mapy, zobrazení tras a velikost písma. Filtry nodů a tras najdeš v samostatném panelu.": "Basemap, route display and font size. Node and route filters are in a separate panel.",
   "Všechny filtry na jednom místě. Změny se projeví okamžitě.": "All filters in one place. Changes apply immediately.",
 };
 
