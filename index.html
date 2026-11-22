@@ -100,7 +100,7 @@
             </div>
 
             <div class="map-actions">
-              <button id="node-list-toggle" type="button">Uzly</button>
+              <button id="node-list-toggle" type="button">Nody</button>
               <button id="activity-toggle" type="button" aria-pressed="false">Aktivita</button>
               <button id="stats-toggle" type="button" aria-pressed="false">Statistiky</button>
               <button id="los-toggle" type="button" aria-pressed="false" title="Změřit přímou viditelnost mezi dvěma body">LOS</button>
@@ -319,10 +319,10 @@
       <dialog id="node-list-dialog" class="node-list-dialog" aria-labelledby="node-list-title">
         <header class="node-list-header">
           <div>
-            <h2 id="node-list-title">Uzly</h2>
+            <h2 id="node-list-title">Přehled nodů</h2>
             <p id="node-list-summary"></p>
           </div>
-          <button id="node-list-close" class="node-list-close" type="button" aria-label="Zavřít seznam uzlů">×</button>
+          <button id="node-list-close" class="node-list-close" type="button" aria-label="Zavřít seznam nodů">×</button>
         </header>
         <div class="node-list-controls">
           <label class="node-list-search">
@@ -330,7 +330,7 @@
             <input id="node-list-search" type="search" autocomplete="off" placeholder="Hledat název, ID nebo hardware…" />
           </label>
           <label class="node-list-role-wrap">
-            <span id="node-list-role-label">Typ uzlu</span>
+            <span id="node-list-role-label">Typ nodu</span>
             <select id="node-list-role">
               <option value="all">Všechny role</option>
               <option value="repeater">Repeater</option>
@@ -347,7 +347,7 @@
           </label>
           <span id="node-list-results" class="node-list-results" role="status"></span>
         </div>
-        <div class="node-list-table-scroll" tabindex="0" aria-label="Tabulka uzlů">
+        <div class="node-list-table-scroll" tabindex="0" aria-label="Tabulka nodů">
           <table class="node-list-table">
             <thead>
               <tr>
