@@ -429,7 +429,7 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .node-list-position { color: #53685e; white-space: nowrap; }
 .node-list-relays { font-weight: 500; text-align: right; }
 .node-list-activity { white-space: nowrap; }
-.node-list-telemetry { min-width: 100px; color: #315b4b; }
+.node-list-telemetry { min-width: 78px; color: #315b4b; white-space: nowrap; }
 .node-list-telemetry span, .node-list-telemetry small { display: block; white-space: nowrap; }
 .node-list-telemetry small { color: #9a6420; font-size: calc(9px * var(--font-scale)); }
 .node-list-empty { height: 120px !important; color: var(--muted); text-align: center; }

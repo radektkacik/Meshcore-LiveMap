@@ -1,5 +1,17 @@
 import { validCoords } from "./node-model.js";
 
+const TELEMETRY_FIELDS = {
+  battery: "batteryMv",
+  temperature: "temperatureC",
+  humidity: "humidityPct",
+  current: "currentMa",
+};
+
+export function nodeListTelemetry(node, metric) {
+  const value = node.health?.[TELEMETRY_FIELDS[metric]];
+  return value != null && value !== "" && Number.isFinite(Number(value)) ? Number(value) : null;
+}
+
 function normalizedText(value, locale) {
   return String(value || "")
     .normalize("NFD")
@@ -21,7 +33,7 @@ export function filterNodeList(nodes, {
     if (role !== "all" && (node.role || "unknown") !== role) return false;
     if (data === "position" && !validCoords(node.lat, node.lon)) return false;
     if (data === "hardware" && !node.health?.boardName && !node.health?.firmware) return false;
-    if (data === "telemetry" && node.health?.batteryMv == null && node.health?.temperatureC == null) return false;
+    if (data === "telemetry" && !Object.keys(TELEMETRY_FIELDS).some((metric) => nodeListTelemetry(node, metric) != null)) return false;
     if (!terms.length) return true;
 
     const publicKey = normalizedText(node.public_key, locale);
@@ -48,7 +60,10 @@ function nodeSortValue(node, sortBy, activityAt) {
     case "relay":
       return node.relay_count_24h;
     case "battery":
-      return node.health?.batteryMv ?? null;
+    case "temperature":
+    case "humidity":
+    case "current":
+      return nodeListTelemetry(node, sortBy);
     case "activity":
       return activityAt(node);
     case "name":

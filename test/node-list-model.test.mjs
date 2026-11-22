@@ -25,6 +25,17 @@ const nodes = [
   },
 ];
 
+test("telemetry columns sort numerically and the filter includes zero readings", () => {
+  const a = { health: { temperatureC: "-5", humidityPct: 0, currentMa: "12" } };
+  const b = { health: { temperatureC: "2", humidityPct: 20, currentMa: "3" } };
+  const missing = { health: { temperatureC: "", currentMa: "invalid" } };
+  assert.deepEqual(filterNodeList([a, b, missing], { data: "telemetry" }), [a, b]);
+  assert.equal(filterNodeList([{ health: { humidityPct: 0 } }], { data: "telemetry" }).length, 1);
+  assert.deepEqual(sortNodeList([missing, b, a], { sortBy: "temperature", direction: "asc" }), [a, b, missing]);
+  assert.deepEqual(sortNodeList([missing, a, b], { sortBy: "current", direction: "asc" }), [b, a, missing]);
+  assert.deepEqual(sortNodeList([missing, a, b], { sortBy: "humidity", direction: "asc" }), [a, b, missing]);
+});
+
 test("data filters combine with role and sorting places missing data last", () => {
   const located = { ...nodes[1], lat: 49.2, lon: 16.6 };
   const entries = [...nodes, located];

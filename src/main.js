@@ -46,7 +46,7 @@ import { createPhotoUploadController } from "./photo-upload-controller.js";
 import { getPhotoJson, voteForPhoto } from "./photo-vote-client.js";
 import { createSearchController } from "./search-controller.js";
 import { createStatsController } from "./stats-controller.js";
-import { filterNodeList, sortNodeList } from "./node-list-model.js";
+import { filterNodeList, nodeListTelemetry, sortNodeList } from "./node-list-model.js";
 import {
   isNewNode,
   isNodeRoleAllowed,
@@ -7353,7 +7353,10 @@ nodeListNext.textContent = nodeListEn ? "Next" : "Další";
 
 const NODE_LIST_SORT_LABELS = {
   activity: "nodeList.column.activity",
-  battery: "nodeList.column.telemetry",
+  battery: "nodeList.column.battery",
+  current: "node.current",
+  humidity: "node.humidity",
+  temperature: "node.temperature",
   id: "nodeList.column.id",
   hardware: "nodeList.column.hardware",
   name: "nodeList.column.name",
@@ -7440,7 +7443,7 @@ function renderNodeList() {
     const row = document.createElement("tr");
     const cell = document.createElement("td");
     cell.className = "node-list-empty";
-    cell.colSpan = 8;
+    cell.colSpan = 11;
     cell.textContent = allNodes.length ? t("nodeList.noResults") : t("nodeList.loading");
     row.appendChild(cell);
     fragment.appendChild(row);
@@ -7497,21 +7500,21 @@ function renderNodeList() {
 
       const activity = nodeActivityAt(node);
       const lastSeen = activity ? formatNodeDate(activity) : t("common.unknown");
-      const telemetryLines = [];
-      if (health.battery != null) telemetryLines.push(`${formatDecimal(health.battery / 1000, 2)} V`);
-      if (health.temperature != null) telemetryLines.push(`${formatDecimal(health.temperature, 1)} °C`);
-      if (health.health?.stale) telemetryLines.push(t("nodeList.telemetryStale"));
-      const telemetryCell = document.createElement("td");
-      telemetryCell.className = "node-list-telemetry";
-      if (telemetryLines.length) {
-        for (const [index, line] of telemetryLines.entries()) {
-          const value = document.createElement(index === telemetryLines.length - 1 && health.health?.stale ? "small" : "span");
-          value.textContent = line;
-          telemetryCell.appendChild(value);
+      const telemetryCells = [
+        ["battery", 1000, 2, "V"],
+        ["temperature", 1, 1, "°C"],
+        ["humidity", 1, 1, "%"],
+        ["current", 1, 1, "mA"],
+      ].map(([metric, scale, digits, unit]) => {
+        const value = nodeListTelemetry(node, metric);
+        const cell = nodeListCell("node-list-telemetry", value == null ? "—" : `${formatDecimal(value / scale, digits)} ${unit}`);
+        if (value != null && health.health?.stale) {
+          const stale = document.createElement("small");
+          stale.textContent = t("nodeList.telemetryStale");
+          cell.appendChild(stale);
         }
-      } else {
-        telemetryCell.textContent = "—";
-      }
+        return cell;
+      });
 
       row.append(
         idCell,
@@ -7521,7 +7524,7 @@ function renderNodeList() {
         nodeListCell("node-list-position", position),
         nodeListCell("node-list-relays", relay),
         nodeListCell("node-list-activity", lastSeen),
-        telemetryCell,
+        ...telemetryCells,
       );
       fragment.appendChild(row);
     }
