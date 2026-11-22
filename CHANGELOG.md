@@ -4,7 +4,8 @@ Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam 
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
 ## 2026-11-22 — Přehlednější detail nodu a delší historie
-- Prostředí: beta
+- Prostředí: produkce i beta
+- Build: 20261122-0705-33d0fe9
 - Beta build: 20261122-0659-1c08265
 - Horní lišta detailu nodu se na mobilu už nezmenšuje a nepřekrývá.
 - Tlačítko „Napsat správci soukromě“ je na mobilu pod titulem na samostatném řádku.
