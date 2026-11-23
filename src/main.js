@@ -7134,10 +7134,21 @@ function closeSettingsDialog() {
 
 if (IS_BETA) {
   const layoutKey = "meshcoreBetaHudLayout";
+  const tipKey = "meshcoreBetaHudLayoutTipSeen";
   const layoutSelect = document.querySelector("#hud-layout-select");
   const quick = document.querySelector("#hud-quick");
   const quickActions = document.querySelector("#hud-quick-actions");
   const tools = document.querySelector("#hud-tools");
+  const tip = document.querySelector("#hud-layout-tip");
+  const dismissTip = () => {
+    localStorage.setItem(tipKey, "1");
+    tip.hidden = true;
+  };
+  document.querySelector("#hud-layout-tip-dismiss").addEventListener("click", dismissTip);
+  document.querySelector("#hud-layout-tip-open").addEventListener("click", () => {
+    elements.settingsToggle.click();
+    if (elements.settingsDialog.open) layoutSelect.focus();
+  });
   const moves = [
     [document.querySelector(".hud .node-search"), quick, quickActions],
     [document.querySelector("#node-list-toggle"), quickActions],
@@ -7157,11 +7168,13 @@ if (IS_BETA) {
       else anchor.after(element);
     }
     quick.hidden = tools.hidden = !compact;
+    tip.hidden = !compact || localStorage.getItem(tipKey) === "1";
   }
   document.querySelector("#hud-layout-setting").hidden = false;
   layoutSelect.value = localStorage.getItem(layoutKey) === "classic" ? "classic" : "compact";
   applyLayout();
   layoutSelect.addEventListener("change", () => {
+    dismissTip();
     localStorage.setItem(layoutKey, layoutSelect.value);
     applyLayout();
   });

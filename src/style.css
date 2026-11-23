@@ -115,6 +115,11 @@ html[data-theme="dark"] .theme-toggle .theme-icon-moon { display: block; }
 .hud-quick { position: relative; z-index: 6; flex: 0 0 auto; padding: 8px 14px 12px; }
 .hud-quick[hidden], .hud.collapsed .hud-quick, #hud-tools[hidden] { display: none; }
 .hud-quick .node-search, .hud-quick .filter-actions { margin-top: 0; }
+.hud-layout-tip { display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-top: 6px; }
+.hud-layout-tip[hidden] { display: none; }
+.hud-layout-tip button { border: 0; padding: 4px; background: transparent; color: var(--muted); font-size: 0.75rem; cursor: pointer; }
+.hud-layout-tip button:hover { color: var(--green); }
+.hud-layout-dot { display: inline-block; width: 0.45rem; height: 0.45rem; margin-right: 0.25rem; border-radius: 50%; background: var(--green); vertical-align: 0.06em; }
 .hud-quick-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin-top: 8px; }
 .hud-quick-actions > button, .hud-quick-actions .filter-toggle {
   min-width: 0; min-height: 36px; padding: 5px; border: 1px solid var(--line);
