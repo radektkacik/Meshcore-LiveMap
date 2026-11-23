@@ -1390,8 +1390,6 @@ const en = {
 export const TRANSLATIONS = { cs, en };
 
 export const STATIC_EN = {
-  "Nový vzhled · změnit v Nastavení": "New layout · change in Settings",
-  "Skrýt upozornění na nový vzhled": "Dismiss new layout notice",
   "Vzhled levého panelu": "Sidebar layout",
   "Kompaktní + tlumený podklad": "Compact + muted basemap",
   "Původní vzhled": "Original layout",
