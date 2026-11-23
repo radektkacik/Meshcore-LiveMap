@@ -5,7 +5,16 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createCzHealthHubStore } from "../czhealth-hub-store.mjs";
 import { createCzHealthHubSync, retryAfterMs } from "../czhealth-hub-sync.mjs";
-import { smoothHealthDips } from "../src/health-chart-utils.js";
+import { healthChartReferences, smoothHealthDips } from "../src/health-chart-utils.js";
+
+test("chart references use pack voltage and omit unknown chemistry", () => {
+  assert.deepEqual(healthChartReferences("battery", { batteryType: "lifepo4", batteryCells: 4 }), [
+    { kind: "warn", value: 12800 }, { kind: "critical", value: 12000 },
+  ]);
+  assert.deepEqual(healthChartReferences("battery", { batteryType: "lto-vlastik", batteryCells: 4 }), []);
+  assert.deepEqual(healthChartReferences("battery", { batteryType: "liion", batteryCells: 1, voltageSource: "none" }), []);
+  assert.deepEqual(healthChartReferences("current"), [{ kind: "zero", value: 0 }]);
+});
 
 function withStore(callback) {
   const dir = mkdtempSync(join(tmpdir(), "czhub-test-"));

@@ -4,7 +4,7 @@ import { createState } from "./app-state.js";
 import { elements } from "./elements.js";
 import { createExportController } from "./export-controller.js";
 import { createFeedbackController } from "./feedback-controller.js";
-import { smoothHealthDips } from "./health-chart-utils.js";
+import { healthChartReferences, smoothHealthDips } from "./health-chart-utils.js";
 import { createCompanionTraceController } from "./companion-trace-controller.js";
 import { writeHeaders } from "./turnstile-client.js";
 import { escapeHtml } from "../html.mjs";
@@ -2626,18 +2626,18 @@ function openNodeHealthChart(node, days) {
   void loadNodeHealthHistory(dialog, node, days);
 }
 
-function renderNodeHealthSeries(container, rawPoints, metric) {
+function renderNodeHealthSeries(container, rawPoints, metric, health = null) {
   if (!container) return;
   const chart = container.querySelector(".node-health-chart");
   const summary = container.querySelector(".node-health-series-head small");
   if (!chart) return;
-  const gapMs = metric === "battery" ? 1.5 * 60 * 60 * 1000 : 3 * 60 * 60 * 1000;
+  const expanded = Boolean(container.closest(".node-health-expanded"));
+  const gapMs = (metric === "battery" ? 1.5 : expanded ? 4 : 3) * 3_600_000;
   const input = (rawPoints || [])
     .filter((sample) => sample.value != null)
     .map((sample) => ({ time: Date.parse(sample.at), value: Number(sample.value) }))
     .filter((point) => Number.isFinite(point.time) && Number.isFinite(point.value))
     .sort((a, b) => a.time - b.time);
-  const expanded = Boolean(container.closest(".node-health-expanded"));
   const points = expanded ? input : smoothHealthDips(input, metric, gapMs);
   if (points.length < (expanded ? 1 : 2)) {
     chart.classList.add("empty");
@@ -2656,12 +2656,19 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
   const valueMin = Math.min(...values);
   const valueMax = Math.max(...values);
   const valuePadding = metric === "battery" ? 100 : 1;
-  const yMin = valueMin - valuePadding;
-  const yMax = valueMax + valuePadding;
+  const references = expanded ? healthChartReferences(metric, health) : [];
+  const referenceValues = references.map(({ value }) => value);
+  const yMin = Math.min(valueMin, ...referenceValues) - valuePadding;
+  const yMax = Math.max(valueMax, ...referenceValues) + valuePadding;
   const valueSpan = Math.max(1, yMax - yMin);
   const x = (time) => pad + (width - 2 * pad) * ((time - firstTime) / timeSpan);
   const y = (value) => height - pad - (height - 2 * pad) * ((value - yMin) / valueSpan);
   const segments = splitHealthSegments(points, gapMs);
+  const gaps = expanded ? segments.slice(1).map((segment, index) => {
+    const start = x(segments[index].at(-1).time);
+    const end = x(segment[0].time);
+    return `<rect class="node-health-gap" x="${start}" y="${pad}" width="${end - start}" height="${height - 2 * pad}"><title>${escapeHtml(t("node.healthChartGap"))}</title></rect>`;
+  }).join("") : "";
   const shapes = segments.map((segment) => {
     if (segment.length === 1) {
       return `<circle cx="${x(segment[0].time).toFixed(1)}" cy="${y(segment[0].value).toFixed(1)}" r="2.5" class="node-health-dot"></circle>`;
@@ -2681,10 +2688,30 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
     .map((time) => `<span>${escapeHtml(healthAxisTime(time, timeSpan))}</span>`)
     .join("")}</div>`;
   chart.innerHTML = `${yAxis}<div class="node-health-chart-plot"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(t("node.healthHistoryTitle"))}">
+    ${gaps}
     ${expanded ? yTicks.map((value) => `<line class="node-health-gridline" x1="${pad}" x2="${width - pad}" y1="${y(value)}" y2="${y(value)}"/>`).join("") : ""}
     ${shapes}
+    ${references.map(({ kind, value }) => `<line class="node-health-reference ${kind}" x1="${pad}" x2="${width - pad}" y1="${y(value)}" y2="${y(value)}"/>`).join("")}
     <circle cx="${x(points.at(-1).time).toFixed(1)}" cy="${y(points.at(-1).value).toFixed(1)}" r="3" class="node-health-dot"></circle>
   </svg></div>${xAxis}`;
+  container.querySelector(".node-health-reference-legend")?.remove();
+  if (references.length || gaps) {
+    const legend = document.createElement("div");
+    legend.className = "node-health-reference-legend";
+    for (const { kind, value } of references) {
+      const label = document.createElement("span");
+      label.className = kind;
+      label.textContent = `${t(`node.healthChartReference.${kind}`)}: ${healthValueText(metric, value)}`;
+      legend.append(label);
+    }
+    if (gaps) {
+      const label = document.createElement("span");
+      label.className = "gap";
+      label.textContent = t("node.healthChartGap");
+      legend.append(label);
+    }
+    chart.after(legend);
+  }
   const plot = chart.querySelector(".node-health-chart-plot");
   const cursor = document.createElement("div");
   cursor.className = "node-health-cursor";
@@ -2736,7 +2763,7 @@ function renderNodeHealthHistory(section, data) {
     for (const metric of ["battery", "temperature", "current", "humidity"]) {
       const series = section.querySelector(`[data-health-metric="${metric}"]`);
       series.hidden = !(samples[metric] || []).length;
-      if (!series.hidden) renderNodeHealthSeries(series, samples[metric], metric);
+      if (!series.hidden) renderNodeHealthSeries(series, samples[metric], metric, data?.latest);
     }
     const empty = section.querySelector(".node-health-history-empty");
     empty.hidden = hasSamples;

@@ -4,6 +4,10 @@ const TAGS = { cs: "cs-CZ", en: "en-GB" };
 
 const cs = {
   "node.healthExpand": "Zvětšit graf",
+  "node.healthChartGap": "Výpadek měření",
+  "node.healthChartReference.warn": "Hranice varování",
+  "node.healthChartReference.critical": "Kritická hranice",
+  "node.healthChartReference.zero": "Nulový proud",
   "node.healthTelemetryHistory": "Historie telemetrie",
   "node.healthHistoryYear": "1 rok",
   "node.healthSelectedRange": "Vybráno: {from} – {to}",
@@ -709,6 +713,10 @@ const cs = {
 
 const en = {
   "node.healthExpand": "Expand chart",
+  "node.healthChartGap": "Missing data",
+  "node.healthChartReference.warn": "Warning threshold",
+  "node.healthChartReference.critical": "Critical threshold",
+  "node.healthChartReference.zero": "Zero current",
   "node.healthTelemetryHistory": "Telemetry history",
   "node.healthHistoryYear": "1 year",
   "node.healthSelectedRange": "Selected: {from} – {to}",

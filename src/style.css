@@ -614,6 +614,13 @@ html[data-theme="dark"] .node-health-config-warning { color: #f0a044; }
 .node-health-expanded .node-health-chart:not(.empty) { grid-template-columns: 4rem minmax(0, 1fr); grid-template-rows: 208px 1.4em; font-size: .75rem; }
 .node-health-expanded .node-health-chart-plot, .node-health-expanded .node-health-chart svg { height: 208px; }
 .node-health-expanded .node-health-gridline { stroke: var(--line); vector-effect: non-scaling-stroke; }
+.node-health-gap { fill: currentColor; opacity: .13; }
+.node-health-reference { stroke: currentColor; stroke-width: 1.5px; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; }
+.node-health-reference-legend { display: flex; flex-wrap: wrap; gap: 5px 14px; margin: 4px 0 8px; color: var(--muted); font-size: .75rem; }
+.node-health-reference.warn, .node-health-reference-legend .warn { color: #a2570a; }
+.node-health-reference.critical, .node-health-reference-legend .critical { color: #b0342e; }
+html[data-theme="dark"] .node-health-expanded :is(.node-health-reference.warn, .node-health-reference-legend .warn) { color: #ffbe75; }
+html[data-theme="dark"] .node-health-expanded :is(.node-health-reference.critical, .node-health-reference-legend .critical) { color: #ff9b95; }
 .node-health-expanded .node-health-history-actions { flex-wrap: wrap; }
 .node-health-history-highlight { box-shadow: inset 0 0 0 2px rgba(7, 142, 98, 0.42); }
 .node-health-history-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 10px; }
