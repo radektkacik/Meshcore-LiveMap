@@ -1594,8 +1594,19 @@ async function handleRequest(request, response) {
       return;
     }
     const requestedDays = Number(url.searchParams.get("days") || 7);
-    const days = Number.isFinite(requestedDays) ? Math.min(90, Math.max(1, requestedDays)) : 7;
-    const data = healthStore.history(key, days);
+    let days = Number.isFinite(requestedDays) ? Math.min(365, Math.max(1, requestedDays)) : 7;
+    let bounds = null;
+    if (url.searchParams.has("from") || url.searchParams.has("to")) {
+      const from = Number(url.searchParams.get("from") || NaN);
+      const to = Number(url.searchParams.get("to") || NaN);
+      if (!Number.isSafeInteger(from) || !Number.isSafeInteger(to) || from < 0 || to <= from || to - from > 366 * 86_400_000 || to > Date.now() + 86_400_000) {
+        sendJson(response, 400, { error: "Neplatný rozsah historie (nejvýše jeden rok)." });
+        return;
+      }
+      bounds = { from, to };
+      days = Math.ceil((to - from) / 86_400_000);
+    }
+    const data = healthStore.history(key, days, Date.now(), bounds);
     if (!data) {
       sendJson(response, 400, { error: "Neplatný klíč uzlu." });
       return;

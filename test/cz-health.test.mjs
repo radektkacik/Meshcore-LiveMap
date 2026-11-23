@@ -365,6 +365,11 @@ test("CzHealth store keeps v3 and v4 messages side by side", () => {
     assert.equal(node.health.batteryMv, 4300);
     const history = store.history(publicKey, 7, OBSERVED_AT + 60_000);
     assert.equal(history.samples.battery.length, 2);
+    const from = Date.parse(history.samples.battery[0].at);
+    const to = Date.parse(history.samples.battery[1].at);
+    assert.ok(to > from);
+    const bounded = store.history(publicKey, 1, OBSERVED_AT + 60_000, { from, to });
+    assert.deepEqual(bounded.samples.battery, history.samples.battery.slice(0, 1));
     assert.ok(history.samples.battery.some((sample) => sample.value === 3312));
     assert.ok(history.samples.battery.some((sample) => sample.value === 4300));
     assert.equal(store.count(), 2);

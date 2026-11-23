@@ -66,7 +66,7 @@ const packetStore = createPacketStore(packetDbPath, {
 const packetCollectionMs = Math.max(30_000, Number(process.env.PACKET_COLLECT_MS || 5 * 60 * 1000));
 const healthDbPath = process.env.CZ_HEALTH_DB_PATH || join(process.cwd(), "data", "cz-health.sqlite");
 const hubHealth = process.env.CZ_HEALTH_SOURCE === "hub";
-const healthRetention = Math.max(90 * 24 * 60 * 60 * 1000, Number(process.env.CZ_HEALTH_RETENTION_MS || 90 * 24 * 60 * 60 * 1000));
+const healthRetention = Math.max(90 * 86_400_000, Number(process.env.CZ_HEALTH_RETENTION_MS || 366 * 86_400_000));
 const healthStore = hubHealth
   ? createCzHealthHubStore(process.env.CZ_HEALTH_HUB_DB_PATH || join(process.cwd(), "data", "czhealth-hub.sqlite"), { retentionMs: healthRetention })
   : createCzHealthStore(healthDbPath, { retentionMs: healthRetention });

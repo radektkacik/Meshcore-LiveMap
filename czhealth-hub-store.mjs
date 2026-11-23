@@ -64,7 +64,7 @@ export function createCzHealthHubStore(path, { retentionMs = 90 * DAY } = {}) {
   const buildQuery = db.prepare("SELECT * FROM hub_messages WHERE prefix=? AND json_extract(decoded,'$.build') IS NOT NULL ORDER BY COALESCE(device_time,received_at) DESC,id DESC LIMIT 1");
   const firmwareQuery = db.prepare("SELECT * FROM hub_messages WHERE prefix=? AND kind='config' AND json_extract(decoded,'$.firmware_version') IS NOT NULL ORDER BY COALESCE(device_time,received_at) DESC,id DESC LIMIT 1");
   const tempSourceQuery = db.prepare("SELECT * FROM hub_messages WHERE prefix=? AND json_extract(decoded,'$.temp_source') IS NOT NULL ORDER BY COALESCE(device_time,received_at) DESC,id DESC LIMIT 1");
-  const samples = db.prepare("SELECT * FROM hub_samples WHERE prefix=? AND sampled_at>=? ORDER BY sampled_at DESC");
+  const samples = db.prepare("SELECT * FROM hub_samples WHERE prefix=? AND sampled_at>=? AND sampled_at<? ORDER BY sampled_at DESC");
   const latestSample = Object.fromEntries(["battery_mv", "temp_c", "current_ma", "humidity_pct"].map((field) => [
     field, db.prepare(`SELECT * FROM hub_samples WHERE prefix=? AND sampled_at>=? AND ${field} IS NOT NULL ORDER BY sampled_at DESC LIMIT 1`),
   ]));
@@ -181,12 +181,12 @@ export function createCzHealthHubStore(path, { retentionMs = 90 * DAY } = {}) {
         return { ...cleanNode, ...(latest ? { health: latest } : {}), ...(config ? { healthConfig: config } : {}) };
       });
     },
-    history(key, days = 7, now = Date.now()) {
+    history(key, days = 7, now = Date.now(), bounds = null) {
       const prefix = String(key || "").toLowerCase().slice(0, 16);
       if (!validPrefix(prefix)) return null;
-      const range = Math.max(1, Math.min(90, Number(days) || 7));
+      const range = Math.max(1, Math.min(365, Number(days) || 7));
       const series = { battery: [], temperature: [], current: [], humidity: [] };
-      for (const row of samples.all(prefix, now - range * DAY).reverse()) {
+      for (const row of samples.all(prefix, bounds?.from ?? now - range * DAY, bounds?.to ?? Number.MAX_SAFE_INTEGER).reverse()) {
         for (const [metric, field] of [["battery", "battery_mv"], ["temperature", "temp_c"], ["current", "current_ma"], ["humidity", "humidity_pct"]]) {
           if (row[field] == null) continue;
           series[metric].push({ at: new Date(row.sampled_at).toISOString(), value: row[field], source: metric === "battery" ? row.voltage_source : null });

@@ -2229,13 +2229,14 @@ function nodeHealthHistory(node, expanded = false) {
   return `
     <section class="node-health-history" data-node-key="${escapeHtml(node.public_key.toUpperCase())}">
       <div class="node-health-history-head">
-        <h4>${t("node.healthHistoryTitle")}</h4>
+        <h4>${t(expanded ? "node.healthTelemetryHistory" : "node.healthHistoryTitle")}</h4>
         <div class="node-health-history-actions">
           ${expanded ? "" : `<button class="node-health-export" type="button" data-health-expand>${t("node.healthExpand")}</button>`}
           <div class="node-health-windows" role="group" aria-label="${t("node.healthHistoryTitle")}">
             <button type="button" data-health-days="1" class="active">${t("node.healthHistory24h")}</button>
             <button type="button" data-health-days="7">${t("node.healthHistory7d")}</button>
             <button type="button" data-health-days="30">${t("node.healthHistory30d")}</button>
+            ${expanded ? `<button type="button" data-health-days="365">${t("node.healthHistoryYear")}</button>` : ""}
           </div>
           <button type="button" class="node-health-export" data-health-export hidden title="${t("node.healthExportTitle")}">${t("node.healthExport")}</button>
         </div>
@@ -2595,12 +2596,31 @@ function openNodeHealthChart(node, days) {
   dialog.setAttribute("aria-labelledby", "node-health-expanded-title");
   dialog.innerHTML = `<header><h2 id="node-health-expanded-title">${escapeHtml(node.name || t("common.unknownNode"))}</h2>
     <button type="button" class="node-detail-close" aria-label="${escapeHtml(t("common.close"))}">×</button></header>
-    <div class="node-health-expanded-body">${nodeHealthHistory(node, true)}</div>`;
+    <div class="node-health-expanded-body">
+      <form class="node-health-custom-range">
+        <label>${t("node.healthRangeFrom")} <input name="from" type="date" required></label>
+        <label>${t("node.healthRangeTo")} <input name="to" type="date" required></label>
+        <button class="node-health-export" type="submit">${t("node.healthRangeApply")}</button>
+        <small role="status">${t("node.healthRangeNote")}</small>
+      </form>
+      ${nodeHealthHistory(node, true)}
+    </div>`;
   dialog.querySelector(".node-detail-close").onclick = () => dialog.close();
   dialog.addEventListener("close", () => dialog.remove(), { once: true });
   for (const button of dialog.querySelectorAll("[data-health-days]")) {
     button.onclick = () => void loadNodeHealthHistory(dialog, node, Number(button.dataset.healthDays));
   }
+  const rangeForm = dialog.querySelector(".node-health-custom-range");
+  rangeForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const from = new Date(`${rangeForm.elements.from.value}T00:00:00`);
+    const to = new Date(`${rangeForm.elements.to.value}T00:00:00`);
+    to.setDate(to.getDate() + 1);
+    const span = to - from;
+    const valid = Number.isFinite(span) && span > 0 && span <= 366 * 86_400_000 && to.getTime() <= Date.now() + 86_400_000;
+    rangeForm.querySelector("small").textContent = t(valid ? "node.healthRangeNote" : "node.healthRangeInvalid");
+    if (valid) void loadNodeHealthHistory(dialog, node, Math.ceil(span / 86_400_000), { from: from.getTime(), to: to.getTime() });
+  });
   document.body.append(dialog);
   dialog.showModal();
   void loadNodeHealthHistory(dialog, node, days);
@@ -2619,7 +2639,7 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
     .sort((a, b) => a.time - b.time);
   const expanded = Boolean(container.closest(".node-health-expanded"));
   const points = expanded ? input : smoothHealthDips(input, metric, gapMs);
-  if (points.length < 2) {
+  if (points.length < (expanded ? 1 : 2)) {
     chart.classList.add("empty");
     chart.textContent = t("node.healthHistoryEmpty");
     if (summary) summary.textContent = "";
@@ -2629,8 +2649,8 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
   const width = expanded ? 720 : 300;
   const height = expanded ? 208 : 58;
   const pad = expanded ? 10 : 5;
-  const firstTime = points[0].time;
-  const lastTime = points.at(-1).time;
+  const firstTime = points[0].time - (points.length === 1 ? 1_800_000 : 0);
+  const lastTime = points.at(-1).time + (points.length === 1 ? 1_800_000 : 0);
   const timeSpan = Math.max(1, lastTime - firstTime);
   const values = points.map((point) => point.value);
   const valueMin = Math.min(...values);
@@ -2663,7 +2683,7 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
   chart.innerHTML = `${yAxis}<div class="node-health-chart-plot"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(t("node.healthHistoryTitle"))}">
     ${expanded ? yTicks.map((value) => `<line class="node-health-gridline" x1="${pad}" x2="${width - pad}" y1="${y(value)}" y2="${y(value)}"/>`).join("") : ""}
     ${shapes}
-    <circle cx="${x(lastTime).toFixed(1)}" cy="${y(points.at(-1).value).toFixed(1)}" r="3" class="node-health-dot"></circle>
+    <circle cx="${x(points.at(-1).time).toFixed(1)}" cy="${y(points.at(-1).value).toFixed(1)}" r="3" class="node-health-dot"></circle>
   </svg></div>${xAxis}`;
   const plot = chart.querySelector(".node-health-chart-plot");
   const cursor = document.createElement("div");
@@ -2712,6 +2732,17 @@ function renderNodeHealthHistory(section, data) {
   if (!section) return;
   const samples = data?.samples || {};
   const hasSamples = ["battery", "temperature", "current", "humidity"].some((metric) => (samples[metric] || []).length);
+  if (section.closest(".node-health-expanded")) {
+    for (const metric of ["battery", "temperature", "current", "humidity"]) {
+      const series = section.querySelector(`[data-health-metric="${metric}"]`);
+      series.hidden = !(samples[metric] || []).length;
+      if (!series.hidden) renderNodeHealthSeries(series, samples[metric], metric);
+    }
+    const empty = section.querySelector(".node-health-history-empty");
+    empty.hidden = hasSamples;
+    empty.textContent = t("node.healthHistoryEmpty");
+    return;
+  }
   if (!hasSamples && data?.latest?.summary) {
     for (const metric of ["battery", "temperature"]) {
       const series = section.querySelector(`[data-health-metric="${metric}"]`);
@@ -2744,7 +2775,7 @@ function renderNodeHealthHistory(section, data) {
 
 const nodeHealthHistoryRequests = new WeakMap();
 
-async function loadNodeHealthHistory(root, node, days = 1) {
+async function loadNodeHealthHistory(root, node, days = 1, bounds = null) {
   const section = root.querySelector(".node-health-history");
   if (!section) return;
   const key = String(node.public_key || "").toUpperCase();
@@ -2752,12 +2783,17 @@ async function loadNodeHealthHistory(root, node, days = 1) {
   const request = Symbol();
   nodeHealthHistoryRequests.set(section, request);
   for (const button of section.querySelectorAll("[data-health-days]")) {
-    button.classList.toggle("active", Number(button.dataset.healthDays) === days);
+    button.classList.toggle("active", !bounds && Number(button.dataset.healthDays) === days);
   }
   const exportButton = section.querySelector("[data-health-export]");
   if (exportButton) exportButton.hidden = true;
   try {
-    const data = await getJson(`/api/node-health?key=${encodeURIComponent(key)}&days=${days}`);
+    const params = new URLSearchParams({ key, days });
+    if (bounds) {
+      params.set("from", bounds.from);
+      params.set("to", bounds.to);
+    }
+    const data = await getJson(`/api/node-health?${params}`);
     if (!section.isConnected || nodeHealthHistoryRequests.get(section) !== request) return;
     const empty = section.querySelector(".node-health-history-empty");
     if (empty) empty.hidden = true;

@@ -289,7 +289,7 @@ export function createCzHealthStore(dbPath, {
   const selectSamples = db.prepare(`
     SELECT metric, sampled_at, value, source, format_version
     FROM health_samples
-    WHERE prefix = ? AND sampled_at >= ? AND format_version IN (3, 4)
+    WHERE prefix = ? AND sampled_at >= ? AND sampled_at < ? AND format_version IN (3, 4)
     ORDER BY sampled_at ASC
   `);
   const countRows = db.prepare("SELECT COUNT(*) AS total FROM health_messages WHERE format_version IN (3, 4)");
@@ -420,11 +420,11 @@ export function createCzHealthStore(dbPath, {
         return decorated;
       });
     },
-    history: (key, days = 7, now = Date.now()) => {
+    history: (key, days = 7, now = Date.now(), bounds = null) => {
       const prefix = String(key || "").toLowerCase().slice(0, 16);
       if (!/^[0-9a-f]{16}$/.test(prefix)) return null;
-      const since = now - Math.max(1, Math.min(90, Number(days) || 7)) * DAY_MS;
-      const samples = selectSamples.all(prefix, since);
+      const range = Math.max(1, Math.min(365, Number(days) || 7));
+      const samples = selectSamples.all(prefix, bounds?.from ?? now - range * DAY_MS, bounds?.to ?? Number.MAX_SAFE_INTEGER);
       const series = { battery: [], temperature: [], current: [], humidity: [] };
       for (const sample of samples) {
         const bucket = series[sample.metric];
@@ -436,7 +436,7 @@ export function createCzHealthStore(dbPath, {
         });
       }
       return {
-        days: Math.max(1, Math.min(90, Number(days) || 7)),
+        days: range,
         latest: latestHealth(selectLatest.get(prefix), now),
         config: latestConfig(selectConfig.get(prefix), now),
         prefix,

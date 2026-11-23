@@ -4,6 +4,13 @@ const TAGS = { cs: "cs-CZ", en: "en-GB" };
 
 const cs = {
   "node.healthExpand": "Zvětšit graf",
+  "node.healthTelemetryHistory": "Historie telemetrie",
+  "node.healthHistoryYear": "1 rok",
+  "node.healthRangeFrom": "Od",
+  "node.healthRangeTo": "Do",
+  "node.healthRangeApply": "Zobrazit období",
+  "node.healthRangeNote": "Grafy ukazují jen dostupná měření ve zvoleném období.",
+  "node.healthRangeInvalid": "Zadej platné období do jednoho roku, nejpozději do dneška.",
   "common.unknown": "Neznámé",
   "common.unknownNode": "Neznámý nod",
   "common.unknownShort": "Neznámý",
@@ -700,6 +707,13 @@ const cs = {
 
 const en = {
   "node.healthExpand": "Expand chart",
+  "node.healthTelemetryHistory": "Telemetry history",
+  "node.healthHistoryYear": "1 year",
+  "node.healthRangeFrom": "From",
+  "node.healthRangeTo": "To",
+  "node.healthRangeApply": "Show date range",
+  "node.healthRangeNote": "Charts show only available measurements in the selected period.",
+  "node.healthRangeInvalid": "Enter a valid range of up to one year ending no later than today.",
   "common.unknown": "Unknown",
   "common.unknownNode": "Unknown node",
   "common.unknownShort": "Unknown",

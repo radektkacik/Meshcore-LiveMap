@@ -607,6 +607,9 @@ html[data-theme="dark"] .node-health-config-warning { color: #f0a044; }
 .node-health-expanded > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
 .node-health-expanded h2 { margin: 0; font-size: 1.125rem; overflow-wrap: anywhere; }
 .node-health-expanded-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.node-health-custom-range { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 15px; border-bottom: 1px solid var(--line); font-size: .875rem; }
+.node-health-custom-range input { font: inherit; color: inherit; background: var(--paper); border: 1px solid var(--line); border-radius: 5px; padding: 4px; }
+.node-health-custom-range small { color: var(--muted); }
 .node-health-expanded .node-health-chart:not(.empty) { grid-template-columns: 4rem minmax(0, 1fr); grid-template-rows: 208px 1.4em; font-size: .75rem; }
 .node-health-expanded .node-health-chart-plot, .node-health-expanded .node-health-chart svg { height: 208px; }
 .node-health-expanded .node-health-gridline { stroke: var(--line); vector-effect: non-scaling-stroke; }
