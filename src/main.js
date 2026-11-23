@@ -1518,6 +1518,13 @@ function setupNodePopup(popup, node) {
       void loadNodeHealthHistory(root, node, Number(button.dataset.healthDays) || 1);
     });
   }
+  const healthSection = root.querySelector(".node-health-history");
+  healthSection?.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element) || !event.target.closest("[data-health-expand], .node-health-chart-plot")) return;
+    event.stopPropagation();
+    const days = Number(healthSection.querySelector("[data-health-days].active")?.dataset.healthDays) || 1;
+    openNodeHealthChart(node, days);
+  });
   void loadNodeHistory(root, node);
   void loadNodeHealthHistory(root, node);
   void loadNodePhotos(root, node);
@@ -2217,13 +2224,14 @@ function nodeHealthConfig(node) {
   `;
 }
 
-function nodeHealthHistory(node) {
+function nodeHealthHistory(node, expanded = false) {
   if (!node.health || !/^[0-9a-f]{64}$/i.test(node.public_key || "")) return "";
   return `
     <section class="node-health-history" data-node-key="${escapeHtml(node.public_key.toUpperCase())}">
       <div class="node-health-history-head">
         <h4>${t("node.healthHistoryTitle")}</h4>
         <div class="node-health-history-actions">
+          ${expanded ? "" : `<button class="node-health-export" type="button" data-health-expand>${t("node.healthExpand")}</button>`}
           <div class="node-health-windows" role="group" aria-label="${t("node.healthHistoryTitle")}">
             <button type="button" data-health-days="1" class="active">${t("node.healthHistory24h")}</button>
             <button type="button" data-health-days="7">${t("node.healthHistory7d")}</button>
@@ -2581,6 +2589,23 @@ function healthAxisTime(value, spanMs) {
   return new Intl.DateTimeFormat(getLocale(), { day: "2-digit", month: "2-digit" }).format(date);
 }
 
+function openNodeHealthChart(node, days) {
+  const dialog = document.createElement("dialog");
+  dialog.className = "node-health-expanded";
+  dialog.setAttribute("aria-labelledby", "node-health-expanded-title");
+  dialog.innerHTML = `<header><h2 id="node-health-expanded-title">${escapeHtml(node.name || t("common.unknownNode"))}</h2>
+    <button type="button" class="node-detail-close" aria-label="${escapeHtml(t("common.close"))}">×</button></header>
+    <div class="node-health-expanded-body">${nodeHealthHistory(node, true)}</div>`;
+  dialog.querySelector(".node-detail-close").onclick = () => dialog.close();
+  dialog.addEventListener("close", () => dialog.remove(), { once: true });
+  for (const button of dialog.querySelectorAll("[data-health-days]")) {
+    button.onclick = () => void loadNodeHealthHistory(dialog, node, Number(button.dataset.healthDays));
+  }
+  document.body.append(dialog);
+  dialog.showModal();
+  void loadNodeHealthHistory(dialog, node, days);
+}
+
 function renderNodeHealthSeries(container, rawPoints, metric) {
   if (!container) return;
   const chart = container.querySelector(".node-health-chart");
@@ -2592,7 +2617,8 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
     .map((sample) => ({ time: Date.parse(sample.at), value: Number(sample.value) }))
     .filter((point) => Number.isFinite(point.time) && Number.isFinite(point.value))
     .sort((a, b) => a.time - b.time);
-  const points = smoothHealthDips(input, metric, gapMs);
+  const expanded = Boolean(container.closest(".node-health-expanded"));
+  const points = expanded ? input : smoothHealthDips(input, metric, gapMs);
   if (points.length < 2) {
     chart.classList.add("empty");
     chart.textContent = t("node.healthHistoryEmpty");
@@ -2600,9 +2626,9 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
     return;
   }
   chart.classList.remove("empty");
-  const width = 300;
-  const height = 58;
-  const pad = 5;
+  const width = expanded ? 720 : 300;
+  const height = expanded ? 208 : 58;
+  const pad = expanded ? 10 : 5;
   const firstTime = points[0].time;
   const lastTime = points.at(-1).time;
   const timeSpan = Math.max(1, lastTime - firstTime);
@@ -2625,15 +2651,17 @@ function renderNodeHealthSeries(container, rawPoints, metric) {
     const last = segment.at(-1);
     return `<polygon points="${x(first.time).toFixed(1)},${height - pad} ${line} ${x(last.time).toFixed(1)},${height - pad}" class="node-health-area"></polygon><polyline points="${line}" class="node-health-line"></polyline>`;
   }).join("");
-  const yTicks = [yMax, (yMax + yMin) / 2, yMin];
+  const tickCount = expanded ? 5 : 3;
+  const yTicks = Array.from({ length: tickCount }, (_, index) => yMax - (yMax - yMin) * index / (tickCount - 1));
   const yAxis = `<div class="node-health-yaxis" aria-hidden="true">${yTicks
     .map((value) => `<span style="top:${y(value).toFixed(1)}px">${escapeHtml(healthValueText(metric, value))}</span>`)
     .join("")}</div>`;
-  const xTicks = [firstTime, firstTime + timeSpan / 2, lastTime];
+  const xTicks = Array.from({ length: tickCount }, (_, index) => firstTime + timeSpan * index / (tickCount - 1));
   const xAxis = `<div class="node-health-xaxis" aria-hidden="true">${xTicks
     .map((time) => `<span>${escapeHtml(healthAxisTime(time, timeSpan))}</span>`)
     .join("")}</div>`;
   chart.innerHTML = `${yAxis}<div class="node-health-chart-plot"><svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(t("node.healthHistoryTitle"))}">
+    ${expanded ? yTicks.map((value) => `<line class="node-health-gridline" x1="${pad}" x2="${width - pad}" y1="${y(value)}" y2="${y(value)}"/>`).join("") : ""}
     ${shapes}
     <circle cx="${x(lastTime).toFixed(1)}" cy="${y(points.at(-1).value).toFixed(1)}" r="3" class="node-health-dot"></circle>
   </svg></div>${xAxis}`;
@@ -2714,11 +2742,15 @@ function renderNodeHealthHistory(section, data) {
   }
 }
 
+const nodeHealthHistoryRequests = new WeakMap();
+
 async function loadNodeHealthHistory(root, node, days = 1) {
   const section = root.querySelector(".node-health-history");
   if (!section) return;
   const key = String(node.public_key || "").toUpperCase();
   if (!key) return;
+  const request = Symbol();
+  nodeHealthHistoryRequests.set(section, request);
   for (const button of section.querySelectorAll("[data-health-days]")) {
     button.classList.toggle("active", Number(button.dataset.healthDays) === days);
   }
@@ -2726,7 +2758,7 @@ async function loadNodeHealthHistory(root, node, days = 1) {
   if (exportButton) exportButton.hidden = true;
   try {
     const data = await getJson(`/api/node-health?key=${encodeURIComponent(key)}&days=${days}`);
-    if (!root.isConnected) return;
+    if (!section.isConnected || nodeHealthHistoryRequests.get(section) !== request) return;
     const empty = section.querySelector(".node-health-history-empty");
     if (empty) empty.hidden = true;
     renderNodeHealthHistory(section, data);
@@ -2745,7 +2777,7 @@ async function loadNodeHealthHistory(root, node, days = 1) {
     }
   } catch (error) {
     console.error("Historii zdraví nodu se nepodařilo načíst", error);
-    if (!root.isConnected) return;
+    if (!section.isConnected || nodeHealthHistoryRequests.get(section) !== request) return;
     const empty = section.querySelector(".node-health-history-empty");
     if (empty) {
       empty.hidden = false;

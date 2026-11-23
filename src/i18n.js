@@ -3,6 +3,7 @@ const LOCALES = ["cs", "en"];
 const TAGS = { cs: "cs-CZ", en: "en-GB" };
 
 const cs = {
+  "node.healthExpand": "Zvětšit graf",
   "common.unknown": "Neznámé",
   "common.unknownNode": "Neznámý nod",
   "common.unknownShort": "Neznámý",
@@ -698,6 +699,7 @@ const cs = {
 };
 
 const en = {
+  "node.healthExpand": "Expand chart",
   "common.unknown": "Unknown",
   "common.unknownNode": "Unknown node",
   "common.unknownShort": "Unknown",
