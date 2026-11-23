@@ -2647,7 +2647,7 @@ function renderNodeHealthSeries(container, rawPoints, metric, health = null) {
   }
   chart.classList.remove("empty");
   const width = expanded ? 720 : 300;
-  const height = expanded ? 208 : 58;
+  const height = expanded ? 280 : 58;
   const pad = expanded ? 10 : 5;
   const firstTime = points[0].time - (points.length === 1 ? 1_800_000 : 0);
   const lastTime = points.at(-1).time + (points.length === 1 ? 1_800_000 : 0);
