@@ -56,6 +56,9 @@
             <a class="external-link" href="https://meshcore.cz/" target="_blank" rel="noreferrer" aria-label="Otevřít MeshCore.cz" title="Otevřít MeshCore.cz">↗</a>
           </header>
 
+          <div class="hud-quick" id="hud-quick" hidden>
+            <div class="hud-quick-actions" id="hud-quick-actions"></div>
+          </div>
           <div class="hud-body">
             <aside id="beta-notice" class="beta-notice" aria-label="Beta verze" hidden>
               <div class="beta-notice-copy">
@@ -99,7 +102,7 @@
               <div id="active-filters" class="active-filters" aria-label="Aktivní filtry"></div>
             </div>
 
-            <div class="map-actions">
+            <div class="map-actions" id="hud-map-actions">
               <button id="node-list-toggle" type="button">Nody</button>
               <button id="activity-toggle" type="button" aria-pressed="false">Aktivita</button>
               <button id="stats-toggle" type="button" aria-pressed="false">Statistiky</button>
@@ -108,6 +111,9 @@
               <button id="export-toggle" type="button" class="wide" title="Stáhnout nody, observery nebo trasy jako CSV či GeoJSON">Export</button>
               <button id="share-view" type="button" class="wide" hidden title="Zkopírovat odkaz na aktuální pohled mapy">Sdílet pohled</button>
             </div>
+            <details class="filter-block hud-details" id="hud-tools" hidden>
+              <summary>Nástroje</summary>
+            </details>
 
             <div class="filter-block">
               <span class="filter-title">Časové okno</span>
@@ -865,6 +871,13 @@
         <div class="settings-dialog-body">
           <section class="settings-group">
             <h3>Zobrazení mapy</h3>
+            <div class="filter-block" id="hud-layout-setting" hidden>
+              <label class="filter-title" for="hud-layout-select">Vzhled levého panelu</label>
+              <select id="hud-layout-select" class="route-retention-select">
+                <option value="compact">Kompaktní + tlumený podklad</option>
+                <option value="classic">Původní vzhled</option>
+              </select>
+            </div>
             <div class="filter-block">
               <span class="filter-title">Podklad mapy</span>
               <div class="filter-chips" id="base-layer-buttons" role="group" aria-label="Podklad mapy">

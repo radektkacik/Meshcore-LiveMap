@@ -395,6 +395,7 @@ if (Number.isFinite(initialLat) && Number.isFinite(initialLon)
 const rasterBaseLayers = {
   osm: L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: "&copy; OpenStreetMap contributors",
+    className: "standard-basemap",
     maxZoom: 19,
   }),
   topo: L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
@@ -7129,6 +7130,41 @@ function openSettingsDialog() {
 function closeSettingsDialog() {
   if (elements.settingsDialog.open) elements.settingsDialog.close();
   elements.settingsToggle.setAttribute("aria-expanded", "false");
+}
+
+if (IS_BETA) {
+  const layoutKey = "meshcoreBetaHudLayout";
+  const layoutSelect = document.querySelector("#hud-layout-select");
+  const quick = document.querySelector("#hud-quick");
+  const quickActions = document.querySelector("#hud-quick-actions");
+  const tools = document.querySelector("#hud-tools");
+  const moves = [
+    [document.querySelector(".hud .node-search"), quick, quickActions],
+    [document.querySelector("#node-list-toggle"), quickActions],
+    [document.querySelector(".hud .filter-actions"), quickActions],
+    [document.querySelector("#activity-toggle"), quickActions],
+    [document.querySelector("#hud-map-actions"), tools],
+  ].map(([element, target, before]) => {
+    const anchor = document.createComment("classic layout");
+    element.before(anchor);
+    return { element, target, before, anchor };
+  });
+  function applyLayout() {
+    const compact = layoutSelect.value === "compact";
+    document.documentElement.classList.toggle("meshcore-compact-hud", compact);
+    for (const { element, target, before, anchor } of moves) {
+      if (compact) target.insertBefore(element, before || null);
+      else anchor.after(element);
+    }
+    quick.hidden = tools.hidden = !compact;
+  }
+  document.querySelector("#hud-layout-setting").hidden = false;
+  layoutSelect.value = localStorage.getItem(layoutKey) === "classic" ? "classic" : "compact";
+  applyLayout();
+  layoutSelect.addEventListener("change", () => {
+    localStorage.setItem(layoutKey, layoutSelect.value);
+    applyLayout();
+  });
 }
 
 elements.settingsToggle.addEventListener("click", () => {

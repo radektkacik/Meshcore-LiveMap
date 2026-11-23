@@ -1390,6 +1390,10 @@ const en = {
 export const TRANSLATIONS = { cs, en };
 
 export const STATIC_EN = {
+  "Vzhled levého panelu": "Sidebar layout",
+  "Kompaktní + tlumený podklad": "Compact + muted basemap",
+  "Původní vzhled": "Original layout",
+  "Nástroje": "Tools",
   "Živá mapa paketových tras české sítě MeshCore": "Live map of packet routes on the Czech MeshCore network",
   "MeshCore CZ · živý provoz": "MeshCore CZ · live traffic",
   "Mapa živých tras": "Live route map",
