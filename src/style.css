@@ -610,6 +610,7 @@ html[data-theme="dark"] .node-health-config-warning { color: #f0a044; }
 .node-health-custom-range { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 15px; border-bottom: 1px solid var(--line); font-size: .875rem; }
 .node-health-custom-range input { font: inherit; color: inherit; background: var(--paper); border: 1px solid var(--line); border-radius: 5px; padding: 4px; }
 .node-health-custom-range small { color: var(--muted); }
+.node-health-selected-range { margin: 8px 0; color: var(--muted); font-size: .8125rem; }
 .node-health-expanded .node-health-chart:not(.empty) { grid-template-columns: 4rem minmax(0, 1fr); grid-template-rows: 208px 1.4em; font-size: .75rem; }
 .node-health-expanded .node-health-chart-plot, .node-health-expanded .node-health-chart svg { height: 208px; }
 .node-health-expanded .node-health-gridline { stroke: var(--line); vector-effect: non-scaling-stroke; }

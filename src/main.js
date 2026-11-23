@@ -2241,6 +2241,7 @@ function nodeHealthHistory(node, expanded = false) {
           <button type="button" class="node-health-export" data-health-export hidden title="${t("node.healthExportTitle")}">${t("node.healthExport")}</button>
         </div>
       </div>
+      ${expanded ? '<p class="node-health-selected-range" role="status"></p>' : ""}
       <div class="node-health-series node-health-series-battery" data-health-metric="battery">
         <div class="node-health-series-head"><span>${t("node.battery")}</span><small>${t("node.healthHistoryLoading")}</small></div>
         <div class="node-health-chart node-health-chart-battery"></div>
@@ -2782,8 +2783,18 @@ async function loadNodeHealthHistory(root, node, days = 1, bounds = null) {
   if (!key) return;
   const request = Symbol();
   nodeHealthHistoryRequests.set(section, request);
+  const rangeStatus = section.querySelector(".node-health-selected-range");
+  const requestedAt = Date.now();
+  const date = new Intl.DateTimeFormat(getLocale(), { dateStyle: "medium" });
+  const selection = rangeStatus ? t("node.healthSelectedRange", {
+    from: date.format(bounds?.from ?? requestedAt - days * 86_400_000),
+    to: date.format(bounds ? bounds.to - 1 : requestedAt),
+  }) : "";
+  if (rangeStatus) rangeStatus.textContent = `${selection} · ${t("node.healthHistoryLoading")}`;
   for (const button of section.querySelectorAll("[data-health-days]")) {
-    button.classList.toggle("active", !bounds && Number(button.dataset.healthDays) === days);
+    const active = !bounds && Number(button.dataset.healthDays) === days;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
   }
   const exportButton = section.querySelector("[data-health-export]");
   if (exportButton) exportButton.hidden = true;
@@ -2798,6 +2809,21 @@ async function loadNodeHealthHistory(root, node, days = 1, bounds = null) {
     const empty = section.querySelector(".node-health-history-empty");
     if (empty) empty.hidden = true;
     renderNodeHealthHistory(section, data);
+    if (rangeStatus) {
+      let first = Infinity;
+      let last = -Infinity;
+      for (const series of Object.values(data.samples || {})) {
+        for (const sample of series) {
+          const at = Date.parse(sample.at);
+          if (!Number.isFinite(at)) continue;
+          first = Math.min(first, at);
+          last = Math.max(last, at);
+        }
+      }
+      rangeStatus.textContent = Number.isFinite(first) ? `${selection} · ${t("node.healthAvailableRange", {
+        from: date.format(first), to: date.format(last),
+      })}` : selection;
+    }
     if (exportButton) {
       const rows = healthExportRows(data?.samples || {});
       exportButton.hidden = rows.length === 0;
@@ -2814,6 +2840,7 @@ async function loadNodeHealthHistory(root, node, days = 1, bounds = null) {
   } catch (error) {
     console.error("Historii zdraví nodu se nepodařilo načíst", error);
     if (!section.isConnected || nodeHealthHistoryRequests.get(section) !== request) return;
+    if (rangeStatus) rangeStatus.textContent = selection;
     const empty = section.querySelector(".node-health-history-empty");
     if (empty) {
       empty.hidden = false;
