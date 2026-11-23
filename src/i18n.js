@@ -1467,7 +1467,7 @@ export const STATIC_EN = {
   "Otevřít galerii všech fotek": "Open the gallery of all photos",
   "Hledat nod, popis nebo autora…": "Search node, caption or author…",
   "Všechny schválené fotky nodů. Kliknutím otevřete fotku.": "All approved node photos. Click a photo to open it.",
-  "Nový nod (24 h)": "New node (24 h)",
+  "Nový nod (3 dny)": "New node (3 days)",
   "Jen nody s telemetrií": "Only nodes with telemetry",
   "CzHealth-Hub · všechna podporovaná FW": "CzHealth-Hub · all supported firmware",
   "Telemetrii zobrazujeme u repeaterů, pro které ji dodává CzHealth-Hub.": "Telemetry is shown for repeaters for which CzHealth-Hub provides data.",
