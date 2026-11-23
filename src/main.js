@@ -2308,7 +2308,6 @@ function nodeDetailShell(node, active) {
         <span class="${active ? "active" : "inactive"}">${active ? t("common.active") : t("common.inactive")}</span>
         ${nodeHealthBadge(node)}
       </div>
-      <button class="node-contact-admin" type="button" data-node-contact-key="${escapeHtml(String(node.public_key || "").toLowerCase())}">${t("node.contactAdmin")}</button>
       <button class="node-detail-close" type="button" aria-label="${t("nodeDetail.close")}">×</button>
     </header>
     <nav class="node-detail-tabs" aria-label="${t("nodeDetail.tabs")}">
@@ -8077,15 +8076,6 @@ companionTraceController = createCompanionTraceController({
   ].filter((route) => Number(route.packetType) !== 9)),
   elements,
   onPathChange: renderCompanionTrace,
-});
-document.addEventListener("click", (event) => {
-  const button = event.target instanceof Element ? event.target.closest(".node-contact-admin") : null;
-  if (!button) return;
-  event.preventDefault();
-  event.stopPropagation();
-  const key = String(button.dataset.nodeContactKey || "").toUpperCase();
-  const node = state.nodeByKey.get(key);
-  if (node) feedbackController.openForNode(node);
 });
 
 document.addEventListener("visibilitychange", updateRouteAnimation);
