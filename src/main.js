@@ -2427,22 +2427,17 @@ function applyInitialDetail() {
   openNodeDetail(node);
 }
 
-function renderNodeHistory(root, samples, node) {
+function renderNodeHistory(root, samples) {
   const chart = root.querySelector(".node-history-chart");
   const summary = root.querySelector(".node-history-head small");
   if (!chart) return;
-  const longTerm = node.long_term_usefulness_score != null && Number.isFinite(Number(node.long_term_usefulness_score));
-  const current = nodeMetric(node, "usefulness_score");
-  const currentText = current != null && Number.isFinite(Number(current))
-    ? t(longTerm ? "node.historyCurrentAverage" : "node.historyCurrentScore", { value: formatPercent(current) })
-    : "";
   const points = samples.filter((sample) => sample.usefulness != null).map((sample) => ({
     time: Date.parse(sample.sampledAt),
     value: Number(sample.usefulness),
   })).filter((point) => Number.isFinite(point.time) && Number.isFinite(point.value));
   if (points.length < 2) {
     chart.textContent = t("node.historyEmpty");
-    if (summary) summary.textContent = currentText;
+    if (summary) summary.textContent = "";
     return;
   }
   const width = 300;
@@ -2496,11 +2491,11 @@ function renderNodeHistory(root, samples, node) {
     tip.hidden = true;
   };
   if (summary) {
-    summary.textContent = [t("node.historyRange", {
+    summary.textContent = t("node.historyRange", {
       min: formatPercent(min),
       max: formatPercent(max),
       count: points.length,
-    }), t("node.historyLastSample", { value: formatPercent(last.value) }), currentText].filter(Boolean).join(" · ");
+    });
   }
 }
 
@@ -2509,13 +2504,13 @@ async function loadNodeHistory(root, node) {
   if (!key || !root.querySelector(".node-history")) return;
   const cached = state.nodeHistoryCache.get(key);
   if (cached && Date.now() - cached.at < NODE_HISTORY_TTL_MS) {
-    renderNodeHistory(root, cached.samples, node);
+    renderNodeHistory(root, cached.samples);
     return;
   }
   try {
     const data = await getJson(`/api/node-history?key=${encodeURIComponent(key)}&days=14`);
     state.nodeHistoryCache.set(key, { at: Date.now(), samples: data.samples || [] });
-    if (root.isConnected) renderNodeHistory(root, data.samples || [], node);
+    if (root.isConnected) renderNodeHistory(root, data.samples || []);
   } catch (error) {
     console.error("Historii nodu se nepodařilo načíst", error);
     if (!root.isConnected) return;

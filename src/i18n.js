@@ -3,9 +3,6 @@ const LOCALES = ["cs", "en"];
 const TAGS = { cs: "cs-CZ", en: "en-GB" };
 
 const cs = {
-  "node.historyLastSample": "Poslední vzorek: {value}",
-  "node.historyCurrentAverage": "V tabulce (7denní průměr): {value}",
-  "node.historyCurrentScore": "V tabulce (aktuální skóre): {value}",
   "node.healthExpand": "Zvětšit graf",
   "node.healthChartGap": "Výpadek měření",
   "node.healthChartReference.warn": "Hranice varování",
@@ -715,9 +712,6 @@ const cs = {
 };
 
 const en = {
-  "node.historyLastSample": "Last sample: {value}",
-  "node.historyCurrentAverage": "In table (7-day average): {value}",
-  "node.historyCurrentScore": "In table (current score): {value}",
   "node.healthExpand": "Expand chart",
   "node.healthChartGap": "Missing data",
   "node.healthChartReference.warn": "Warning threshold",
