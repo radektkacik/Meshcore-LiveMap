@@ -7487,9 +7487,6 @@ const statsPanel = createStatsController({
   state,
 });
 statsPanel.bind();
-elements.statsToggle.addEventListener("click", () => {
-  if (!elements.statsPanel.hidden) void loadNetworkTrend();
-});
 
 let nodeListIncludeInactive = false;
 let nodeListSortBy = "activity";
