@@ -1582,6 +1582,16 @@ async function handleRequest(request, response) {
     return;
   }
 
+  if (url.pathname === "/api/node-neighbors") {
+    if (request.method !== "GET") return methodNotAllowed(response, "GET");
+    if (!enforceReadRate(request, response, checkNodeHealth)) return;
+    const key = (url.searchParams.get("key") || "").toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(key)) return sendJson(response, 400, { error: "Neplatný klíč uzlu." });
+    const now = Date.now();
+    sendJson(response, 200, { neighbors: packetStore.neighborsSince(key, now - 86_400_000, now) });
+    return;
+  }
+
   if (url.pathname === "/api/node-health") {
     if (request.method !== "GET") {
       methodNotAllowed(response, "GET");

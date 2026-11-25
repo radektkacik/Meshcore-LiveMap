@@ -119,6 +119,11 @@ export function createPacketStore(dbPath, {
     )
   `);
   const countRows = db.prepare("SELECT COUNT(*) AS total FROM packet_routes");
+  const neighborRoutes = db.prepare(`
+    SELECT resolved_path, observed_at FROM packet_routes
+    WHERE observed_at >= ? AND observed_at <= ? AND instr(lower(resolved_path), ?) > 0
+  `);
+  const neighborCache = new Map();
   const oldestRow = db.prepare("SELECT MIN(observed_at) AS oldest FROM packet_routes");
   const newestRow = db.prepare("SELECT MAX(observed_at) AS newest FROM packet_routes");
   const countDistinctSince = db.prepare(`
@@ -136,6 +141,28 @@ export function createPacketStore(dbPath, {
   });
 
   return {
+    neighborsSince(key, since, now) {
+      const cached = neighborCache.get(key);
+      if (cached && now >= cached.at && now - cached.at < 60_000 && now - since === cached.window) return cached.rows;
+      const neighbors = new Map();
+      for (const row of neighborRoutes.iterate(since, now, key)) {
+        const path = safeArray(row.resolved_path).map((hop) => String(hop ?? "").toLowerCase());
+        for (let i = 0; i + 1 < path.length; i++) {
+          const a = path[i], b = path[i + 1];
+          const other = a === key ? b : b === key ? a : "";
+          if (other === key || !/^[0-9a-f]{64}$/.test(other)) continue;
+          const entry = neighbors.get(other) || { key: other, count: 0, lastAt: 0 };
+          entry.count++;
+          entry.lastAt = Math.max(entry.lastAt, row.observed_at);
+          neighbors.set(other, entry);
+        }
+      }
+      const rows = [...neighbors.values()];
+      neighborCache.delete(key);
+      neighborCache.set(key, { at: now, window: now - since, rows });
+      if (neighborCache.size > 100) neighborCache.delete(neighborCache.keys().next().value);
+      return rows;
+    },
     close: () => db.close(),
     count: () => countRows.get().total,
     countDistinctSince: (sinceMs) => countDistinctSince.get(Math.floor(sinceMs)).total,

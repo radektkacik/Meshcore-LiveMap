@@ -1473,6 +1473,7 @@ function setupNodePopup(popup, node) {
 
   bindNodeRouteButton(routeButton, node);
   root.querySelectorAll(".node-neighbor").forEach(bindNodeNeighborButton);
+  if (root.querySelector(".node-neighbors")) void loadNodeNeighbors(root, node);
   root.querySelector(".node-photo-add")?.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -1554,11 +1555,34 @@ function nodeLastRoute(node) {
   `;
 }
 
+const neighbors24h = new Map();
+
+async function loadNodeNeighbors(root, node) {
+  const key = String(node.public_key || "").toUpperCase();
+  if (!/^[0-9A-F]{64}$/.test(key)) return;
+  let entry = neighbors24h.get(key);
+  if (!entry || (!entry.pending && Date.now() - entry.at > 60_000)) {
+    entry = { pending: true, at: Date.now() };
+    neighbors24h.set(key, entry);
+    if (neighbors24h.size > 100) neighbors24h.delete(neighbors24h.keys().next().value);
+    entry.promise = getJson(`/api/node-neighbors?key=${key}`).then((data) => {
+      entry.neighbors = new Map(data.neighbors.map((item) => [item.key.toUpperCase(), item]));
+    }).catch(() => { entry.failed = true; }).finally(() => { entry.pending = false; });
+  }
+  await entry.promise;
+  const section = root.querySelector(".node-neighbors");
+  if (!section?.isConnected || root.querySelector(".node-neighbors") !== section) return;
+  section.outerHTML = nodeNeighbors(node);
+  root.querySelectorAll(".node-neighbor").forEach(bindNodeNeighborButton);
+}
+
 function nodeNeighbors(node) {
   const key = node.public_key?.toUpperCase();
-  const neighbors = key ? state.neighborByNode.get(key) : null;
+  const entry = key ? neighbors24h.get(key) : null;
+  const title = `${t("node.neighborsTitle")} · 24 h`;
+  const neighbors = entry?.neighbors;
   if (!neighbors || !neighbors.size) {
-    return `<div class="node-neighbors"><span>${t("node.neighborsTitle")}</span><p>${t("node.noNeighbors")}</p></div>`;
+    return `<div class="node-neighbors"><span>${title}</span><p>${t(!entry || entry.pending ? "node.healthHistoryLoading" : entry.failed ? "node.healthHistoryUnavailable" : "node.noNeighbors")}</p></div>`;
   }
   const items = [...neighbors.entries()]
     .sort((a, b) => b[1].count - a[1].count || (b[1].lastAt || 0) - (a[1].lastAt || 0))
@@ -1580,7 +1604,7 @@ function nodeNeighbors(node) {
         <li>
           <button class="node-neighbor" type="button" data-neighbor-key="${escapeHtml(neighborKey)}">
             <span class="node-neighbor-main">
-              <b>${escapeHtml(info.name || neighborKey.slice(0, 8))}</b>
+              <b>${escapeHtml(neighborNode?.name || neighborKey.slice(0, 8))}</b>
               ${meta ? `<em>${escapeHtml(meta)}</em>` : ""}
             </span>
             <small>${info.count}×</small>
@@ -1592,7 +1616,7 @@ function nodeNeighbors(node) {
   const connections = [...neighbors.values()].reduce((sum, info) => sum + info.count, 0);
   return `
     <div class="node-neighbors">
-      <span>${t("node.neighborsTitle")}</span>
+      <span>${title}</span>
       <ul class="node-neighbor-list">${items}</ul>
       <small>${t("node.neighborsTotal", {
         neighbors: tCount("units.neighbors", neighbors.size),
@@ -1829,7 +1853,7 @@ function clearNeighborFocus() {
 function showNodeNeighborsOnMap(node) {
   const key = String(node.public_key || "").toUpperCase();
   if (!key || !validCoords(node.lat, node.lon)) return;
-  const neighbors = state.neighborByNode.get(key);
+  const neighbors = neighbors24h.get(key)?.neighbors;
   if (!neighbors?.size) return;
   const entries = [];
   for (const [neighborKey, info] of neighbors) {
