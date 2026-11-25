@@ -4326,7 +4326,7 @@ function rebuildNodeLabels() {
   const healthMarkers = [];
   for (const { node, tone, value } of labels) {
     const html = showHealthValues
-      ? `<span class="node-label-values${tone ? ` ${tone}` : ""}">${escapeHtml(value)}</span>`
+      ? `<span class="node-label-values${tone ? ` ${tone}` : ""}">${tone === "tone-cold" ? '<span class="node-label-snowflake" aria-hidden="true">❄︎</span> ' : ""}${escapeHtml(value)}</span>`
       : escapeHtml(node.name);
     const marker = L.marker([node.lat, node.lon], {
       interactive: false,

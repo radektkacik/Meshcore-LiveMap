@@ -1626,6 +1626,7 @@ html[data-theme="dark"] .node-label { color: #eef4f6; text-shadow: 0 0 3px #0f14
   color: #123c72;
   text-shadow: -1px 0 #fff, 1px 0 #fff, 0 -1px #fff, 0 1px #fff, 0 0 4px #fff;
 }
+.node-label-snowflake { font-size: .85em; }
 html[data-theme="dark"] .node-label { background: rgba(15, 20, 24, 0.85); color: #eef4f6; border-color: rgba(255, 255, 255, 0.22); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); text-shadow: none; }
 html[data-theme="dark"] .node-label.node-label-health { background: transparent; border: 0; box-shadow: none; }
 html[data-theme="dark"] .node-label-values { color: #9fc3b2; }
