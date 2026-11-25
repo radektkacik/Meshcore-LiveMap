@@ -25,6 +25,11 @@ test("stores hourly samples and decorates nodes with a seven-day average", () =>
     assert.equal(history.length, 2);
     assert.equal(history[0].usefulness, 0.8);
     assert.match(history[0].sampledAt, /^2026-09-01T10:00:00/);
+    const later = start + 10 * 24 * 60 * 60 * 1000;
+    store.recordNodes([node], later);
+    const [monthly] = store.decorateNodes([node], later);
+    assert.ok(Math.abs(monthly.month_usefulness_score - (0.8 + 0.4 + 0.2) / 3) < 1e-10);
+    assert.equal(monthly.long_term_usefulness_score, 0.2);
   } finally {
     store.close();
     rmSync(directory, { recursive: true, force: true });

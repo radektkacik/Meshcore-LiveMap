@@ -13,7 +13,7 @@ export function createStatsController({
   onRevealNode,
   state,
 }) {
-  let count = 10;
+  const count = 50;
   let metric = "usefulness";
   let networkStats = null;
   let windowValue = "24h";
@@ -151,15 +151,6 @@ export function createStatsController({
       renderStats();
     });
 
-    for (const button of elements.statsCounts.querySelectorAll("button")) {
-      button.addEventListener("click", () => {
-        count = Number(button.dataset.count);
-        for (const other of elements.statsCounts.querySelectorAll("button")) {
-          other.classList.toggle("active", other === button);
-        }
-        renderStats();
-      });
-    }
   }
 
   return {

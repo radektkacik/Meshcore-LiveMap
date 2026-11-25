@@ -136,6 +136,13 @@ export function createNodeMetricsStore(dbPath, {
     GROUP BY public_key
   `);
   const readRollups = db.prepare("SELECT * FROM node_score_rollups");
+  const readMonthRollups = db.prepare(`
+    SELECT public_key, ${METRIC_FIELDS.map((field) => `AVG(${field}) AS ${field}`).join(", ")}
+    FROM node_score_samples WHERE sampled_at >= ? AND sampled_at <= ?
+    GROUP BY public_key
+  `);
+  let monthRollups = new Map();
+  let monthRollupsAt = -Infinity;
   const readSamples = db.prepare(`
     SELECT sampled_at, usefulness_score, coverage_score, traffic_share_score,
       bridge_score, redundancy_score
@@ -248,15 +255,24 @@ export function createNodeMetricsStore(dbPath, {
     purgeSamples.run(now - historyDays * DAY_MS);
     clearRollups.run();
     rebuildRollups.run(now - windowDays * DAY_MS);
+    monthRollupsAt = -Infinity;
     return recorded;
   });
 
-  function decorateNodes(nodes) {
+  function decorateNodes(nodes, now = Date.now()) {
     const rollups = new Map(readRollups.all().map((row) => [row.public_key, row]));
+    if (now < monthRollupsAt || now - monthRollupsAt >= 5 * 60_000) {
+      monthRollups = new Map(readMonthRollups.all(now - 30 * DAY_MS, now).map((row) => [row.public_key, row]));
+      monthRollupsAt = now;
+    }
     return nodes.map((node) => {
-      const rollup = rollups.get(String(node.public_key || "").toLowerCase());
-      if (!rollup) return node;
+      const key = String(node.public_key || "").toLowerCase();
+      const rollup = rollups.get(key);
+      const month = monthRollups.get(key);
+      if (!rollup && !month) return node;
       const decorated = { ...node };
+      if (month) for (const field of METRIC_FIELDS) decorated[`month_${field}`] = month[field];
+      if (!rollup) return decorated;
       for (const field of METRIC_FIELDS) decorated[`long_term_${field}`] = rollup[field];
       decorated.long_term_sample_count = rollup.sample_count;
       decorated.long_term_first_sample = new Date(rollup.first_sample_at).toISOString();

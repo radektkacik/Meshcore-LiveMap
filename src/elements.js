@@ -318,7 +318,6 @@ export const elements = {
   sizeToggles: [1, 2, 3].map((size) => document.querySelector(`#size-toggle-${size}`)),
   statsClose: document.querySelector("#stats-close"),
   networkSummary: document.querySelector("#network-summary"),
-  statsCounts: document.querySelector("#stats-counts"),
   statsList: document.querySelector("#stats-list"),
   statsMetric: document.querySelector("#stats-metric"),
   statsPanel: document.querySelector("#stats-panel"),

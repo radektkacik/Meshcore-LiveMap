@@ -389,6 +389,7 @@ html[data-theme="dark"] .network-grid strong { color: #e6ecef; }
 .stats-counts button { padding: 6px 9px; border: 1px solid var(--line); border-radius: 6px; color: #3f584e; background: #fff; font: calc(10px * var(--font-scale)) "DM Mono", monospace; cursor: pointer; }
 .stats-counts button.active { color: #fff; border-color: var(--green); background: var(--green); }
 .stats-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; list-style: none; margin: 0; padding: 4px 6px 8px; }
+.stats-panel { max-height: min(calc(100dvh - 32px), 940px); }
 .stats-list li { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
 .stats-list li:last-child { border-bottom: 0; }
 .stats-row { width: 100%; display: flex; align-items: center; gap: 8px; padding: 7px 6px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; text-align: left; }
