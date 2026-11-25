@@ -808,10 +808,13 @@
                   <option value="voltage">Napětí</option>
                 </select>
               </label>
-              <label class="packet-filter" title="Telemetrii zobrazujeme u repeaterů, pro které ji dodává CzHealth-Hub.">
-                <input id="health-only-toggle" type="checkbox" />
-                <span><strong>Jen nody s telemetrií</strong><small>CzHealth-Hub · všechna podporovaná FW</small></span>
-              </label>
+              <div class="telemetry-filter-with-info">
+                <label class="packet-filter" title="Telemetrii zobrazujeme u repeaterů, pro které ji dodává CzHealth-Hub.">
+                  <input id="health-only-toggle" type="checkbox" />
+                  <span><strong>Jen nody s telemetrií</strong><small>CzHealth-Hub · všechna podporovaná FW</small></span>
+                </label>
+                <a id="telemetry-firmware-info" href="https://github.com/mesh-cz/MeshCore-Czech" target="_blank" rel="noopener noreferrer" aria-label="Popis telemetrie a firmware" title="Popis telemetrie a firmware">ⓘ</a>
+              </div>
             </div>
 
             <div class="filter-block firmware-block">

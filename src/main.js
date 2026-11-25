@@ -90,6 +90,7 @@ import {
 } from "./format-utils.js";
 
 applyStaticTranslations();
+if (getLocale() === "en") document.querySelector("#telemetry-firmware-info").hash = "english";
 
 const MAX_FEED_ITEMS = 8;
 const FEED_SOURCE_LIMIT = MAX_FEED_ITEMS * 4;

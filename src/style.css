@@ -1824,3 +1824,7 @@ html[data-theme="dark"] .node-label-health .node-label-values.tone-cold {
   }
   .route-svg-path { animation-duration: 1s !important; animation-iteration-count: infinite !important; }
 }
+.telemetry-filter-with-info { position: relative; }
+.telemetry-filter-with-info > .packet-filter { padding-inline-end: 38px; }
+.telemetry-filter-with-info > a { position: absolute; inset-inline-end: 4px; top: 50%; translate: 0 -50%; display: grid; place-items: center; width: 30px; height: 30px; color: var(--green); font-size: 1rem; text-decoration: none; border-radius: 5px; }
+.telemetry-filter-with-info > a:hover { background: var(--line); }

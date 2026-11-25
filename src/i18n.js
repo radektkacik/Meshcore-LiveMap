@@ -1418,6 +1418,7 @@ const en = {
 export const TRANSLATIONS = { cs, en };
 
 export const STATIC_EN = {
+  "Popis telemetrie a firmware": "Telemetry documentation and firmware",
   "Vzhled levého panelu": "Sidebar layout",
   "Kompaktní + tlumený podklad": "Compact + muted basemap",
   "Původní vzhled": "Original layout",
