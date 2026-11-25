@@ -1621,6 +1621,7 @@ html[data-theme="dark"] .node-label { color: #eef4f6; text-shadow: 0 0 3px #0f14
 .node-label.node-label-health { display: inline-block; padding: 0; border: 0; background: transparent; box-shadow: none; }
 .node-label-health .node-label-values { color: #17271f; font: 800 calc(15px * var(--font-scale))/1 "Manrope", sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; text-shadow: 0 0 2px #fff, 0 0 3px #fff, 0 0 4px #fff; }
 .node-label-health .node-label-values.tone-alert { color: #c63e32; }
+.node-label-health .node-label-values { border-radius: 4px; box-shadow: 0 0 0 2px rgba(250, 252, 248, .82); background: rgba(250, 252, 248, .82); }
 .node-label-health .node-label-values.tone-cold {
   color: #123c72;
   text-shadow: -1px 0 #fff, 1px 0 #fff, 0 -1px #fff, 0 1px #fff, 0 0 4px #fff;
@@ -1629,6 +1630,7 @@ html[data-theme="dark"] .node-label { background: rgba(15, 20, 24, 0.85); color:
 html[data-theme="dark"] .node-label.node-label-health { background: transparent; border: 0; box-shadow: none; }
 html[data-theme="dark"] .node-label-values { color: #9fc3b2; }
 html[data-theme="dark"] .node-label-health .node-label-values { color: #eef4f6; text-shadow: 0 0 2px #0f1418, 0 0 3px #0f1418, 0 0 4px #0f1418; }
+html[data-theme="dark"] .node-label-health .node-label-values { box-shadow: 0 0 0 2px rgba(15, 20, 24, .82); background: rgba(15, 20, 24, .82); }
 
 .map-status { position: absolute; z-index: 550; top: 16px; left: 50%; transform: translateX(-50%); padding: 10px 16px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: rgba(255, 255, 251, 0.92); box-shadow: var(--shadow); backdrop-filter: blur(8px); font: calc(12px * var(--font-scale)) "DM Mono", monospace; text-align: center; pointer-events: none; }
 .packet-focus-bar { position: absolute; z-index: 610; top: 16px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px); padding: 8px 10px 8px 14px; border: 1px solid rgba(40, 127, 201, 0.45); border-radius: 10px; color: #245f94; background: rgba(240, 248, 255, 0.96); box-shadow: var(--shadow); backdrop-filter: blur(8px); font: calc(11px * var(--font-scale)) "DM Mono", monospace; }
