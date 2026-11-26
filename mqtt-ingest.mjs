@@ -135,6 +135,13 @@ export function createMqttIngest({
       username,
     });
     client.on("connect", () => {
+      const stream = client.stream;
+      if (stream && stream.listenerCount("close") === 0) {
+        stream.on("close", (code, reason) => {
+          console.warn(`MQTT websocket closed: code ${code || "none"}${reason?.length ? `, reason ${String(reason)}` : ""}`);
+        });
+        stream.on("error", (error) => console.warn(`MQTT websocket error: ${error.message}`));
+      }
       console.log(`MQTT connected after ${connectedAt ? `${Math.round((Date.now() - connectedAt) / 1000)} s` : "initial connect"}`);
       connectedAt = Date.now();
       connectedSince = connectedAt;
@@ -147,14 +154,17 @@ export function createMqttIngest({
       });
       broadcastStatus();
     });
-    client.on("close", () => {
+    client.on("close", (disconnectPacket) => {
       const sessionSec = connectedAt ? Math.round((Date.now() - connectedAt) / 1000) : null;
+      const reason = disconnectPacket?.reasonCode != null
+        ? `broker reason ${disconnectPacket.reasonCode}${disconnectPacket.properties?.reasonString ? `: ${disconnectPacket.properties.reasonString}` : ""}`
+        : sessionSec == null ? "before connect" : `session ${sessionSec} s`;
       connected = false;
       connectedSince = 0;
       if (connectedAt && Date.now() - connectedAt >= stableMs) reconnectDelay = reconnectMs;
       connectedAt = 0;
       broadcastStatus();
-      scheduleReconnect(sessionSec == null ? "before connect" : `session ${sessionSec} s`);
+      scheduleReconnect(reason);
     });
 
     let lastConnectedAt = 0;
