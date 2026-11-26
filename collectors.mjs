@@ -57,7 +57,10 @@ export function createCollectors({
       metricsStore.recordStats(data);
       storeStatsCache(body, response.headers.get("content-type"));
     } catch (error) {
-      console.error(`Stats collection failed: ${error.message}`);
+      const context = error.name === "AbortError"
+        ? `timeout after ${Math.round(statsTimeoutMs / 1000)} s`
+        : String(error.cause?.code || error.message);
+      console.error(`Stats collection failed: ${context} (${upstream})`);
     } finally {
       clearTimeout(timeout);
       statsActive = false;

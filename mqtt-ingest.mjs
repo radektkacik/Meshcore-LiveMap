@@ -105,12 +105,12 @@ export function createMqttIngest({
     console.log(`CzHealth backfill: ${decoded} unique packets`);
   }
 
-  function scheduleReconnect() {
+  function scheduleReconnect(reason = "") {
     if (reconnectTimer) return;
     reconnects += 1;
     const factor = 1 - jitter + Math.random() * jitter * 2;
     const delay = Math.round(reconnectDelay * factor);
-    console.log(`MQTT reconnect in ${delay} ms`);
+    console.log(`MQTT reconnect in ${delay} ms (${reason || "connection closed"}, total ${reconnects})`);
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
       client.reconnect();
@@ -135,7 +135,7 @@ export function createMqttIngest({
       username,
     });
     client.on("connect", () => {
-      console.log("MQTT connected");
+      console.log(`MQTT connected after ${connectedAt ? `${Math.round((Date.now() - connectedAt) / 1000)} s` : "initial connect"}`);
       connectedAt = Date.now();
       connectedSince = connectedAt;
       reconnectDelay = reconnectMs;
@@ -148,13 +148,19 @@ export function createMqttIngest({
       broadcastStatus();
     });
     client.on("close", () => {
+      const sessionSec = connectedAt ? Math.round((Date.now() - connectedAt) / 1000) : null;
       connected = false;
       connectedSince = 0;
       if (connectedAt && Date.now() - connectedAt >= stableMs) reconnectDelay = reconnectMs;
       connectedAt = 0;
       broadcastStatus();
-      scheduleReconnect();
+      scheduleReconnect(sessionSec == null ? "before connect" : `session ${sessionSec} s`);
     });
+
+    let lastConnectedAt = 0;
+    client.on("offline", () => console.warn("MQTT offline"));
+    client.on("reconnect", () => console.log("MQTT reconnecting"));
+    client.on("end", () => console.warn("MQTT connection ended"));
     let lastErrorLog = 0;
     let lastErrorMessage = "";
     client.on("error", (error) => {
@@ -170,6 +176,10 @@ export function createMqttIngest({
         const packet = parseMqttPacket(topic, message);
         if (!packet?.hash) return;
         lastPacketAt = Date.now();
+        if (Date.now() - lastConnectedAt > 3 * 60_000) {
+          lastConnectedAt = Date.now();
+          console.log("MQTT packet stream active");
+        }
         recentPackets.add(packet);
         ingestHealth(packet.raw_hex, lastPacketAt, packet.hash);
         const stored = toStoreRow(packet, lastPacketAt);
@@ -179,6 +189,12 @@ export function createMqttIngest({
         console.error(`Invalid MQTT packet on ${topic}: ${error.message}`);
       }
     });
+
+    setInterval(() => {
+      if (Date.now() - lastPacketAt > 2 * 60_000) {
+        console.warn(`MQTT no packet for ${Math.round((Date.now() - lastPacketAt) / 1000)} s (connected: ${connected})`);
+      }
+    }, 60_000).unref();
   }
 
   function stop() {
