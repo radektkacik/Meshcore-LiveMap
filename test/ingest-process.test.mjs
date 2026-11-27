@@ -18,6 +18,7 @@ test("isolated ingest announces status and keeps the web process independent", a
       MQTT_PASSWORD: "test",
       MQTT_RECONNECT_MS: "1000",
       MQTT_RECONNECT_MAX_MS: "2000",
+      EVENT_LOOP_DIAGNOSTICS: "1",
     },
     stdio: ["ignore", "ignore", "ignore", "ipc"],
   });
@@ -33,6 +34,8 @@ test("isolated ingest announces status and keeps the web process independent", a
     assert.equal(status.enabled, true);
     assert.equal(status.state.connected, false);
     assert.equal(status.state.reconnects, 0);
+    assert.ok(status.state.eventLoop);
+    assert.ok(Number.isFinite(status.state.eventLoop.recentMaxMs));
     assert.ok(readFileSync(join(directory, "packets.sqlite")).length > 0);
     assert.ok(readFileSync(join(directory, "health.sqlite")).length > 0);
   } finally {

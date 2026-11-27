@@ -1153,6 +1153,7 @@ function healthPayload() {
       connectedForSec: mqttState.connectedSince ? Math.floor((now - mqttState.connectedSince) / 1000) : null,
       reconnects: mqttState.reconnects,
       lastPacketAgeSec: mqttState.lastPacketAt ? Math.floor((now - mqttState.lastPacketAt) / 1000) : null,
+      ...(mqttState.eventLoop ? { eventLoop: mqttState.eventLoop } : {}),
     },
     streams: packetStreams.size,
     caches: {

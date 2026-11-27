@@ -1,4 +1,5 @@
 import mqtt from "mqtt";
+import WebSocket from "ws";
 import { MeshCorePacketDecoder } from "@michaelhart/meshcore-decoder";
 import { decodedPacketHashBytes, decodedPacketPath } from "./backend-utils.mjs";
 import { decodeCzHealth } from "./cz-health.mjs";
@@ -133,6 +134,16 @@ export function createMqttIngest({
       clean: true,
       clientId: `meshcore-map-${Math.random().toString(16).slice(2)}`,
       connectTimeout: 10_000,
+      createWebsocket: (wsUrl, protocols) => {
+        const socket = new WebSocket(wsUrl, protocols);
+        socket.on("open", () => console.log("MQTT websocket open"));
+        socket.on("close", (code, reason) => {
+          const text = reason?.length ? `, reason ${reason.toString()}` : "";
+          console.warn(`MQTT websocket closed: code ${code}${text}`);
+        });
+        socket.on("error", (error) => console.warn(`MQTT websocket error: ${error.message}`));
+        return socket;
+      },
       keepalive: keepaliveS,
       password,
       protocolVersion: 4,
@@ -140,13 +151,6 @@ export function createMqttIngest({
       username,
     });
     client.on("connect", () => {
-      const stream = client.stream;
-      if (stream && stream.listenerCount("close") === 0) {
-        stream.on("close", (code, reason) => {
-          console.warn(`MQTT websocket closed: code ${code || "none"}${reason?.length ? `, reason ${String(reason)}` : ""}`);
-        });
-        stream.on("error", (error) => console.warn(`MQTT websocket error: ${error.message}`));
-      }
       console.log(`MQTT connected after ${connectedAt ? `${Math.round((Date.now() - connectedAt) / 1000)} s` : "initial connect"}`);
       connectedAt = Date.now();
       connectedSince = connectedAt;

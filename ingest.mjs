@@ -2,8 +2,11 @@ import { createPacketStore } from "./packet-store.mjs";
 import { createCzHealthStore } from "./cz-health-store.mjs";
 import { createCzHealthHubStore } from "./czhealth-hub-store.mjs";
 import { createMqttIngest } from "./mqtt-ingest.mjs";
+import { startEventLoopMonitor } from "./monitor.mjs";
 import { packetToStoreRow } from "./packet-row.mjs";
 import { join } from "node:path";
+
+const eventLoopMonitor = process.env.EVENT_LOOP_DIAGNOSTICS === "1" ? startEventLoopMonitor() : null;
 
 const healthDbPath = process.env.CZ_HEALTH_DB_PATH || join(process.cwd(), "data", "cz-health.sqlite");
 const hubHealth = process.env.CZ_HEALTH_SOURCE === "hub";
@@ -25,8 +28,13 @@ const mqttIngest = createMqttIngest({
   broadcast: (event, packet) => {
     if (event === "packet") child({ type: "packet", packet });
   },
-  broadcastStatus: () => child({ type: "status", state: mqttIngest.getState(), enabled: mqttIngest.enabled }),
+  broadcastStatus: () => child({
+    type: "status",
+    state: { ...mqttIngest.getState(), ...(eventLoopMonitor ? { eventLoop: eventLoopMonitor.snapshot() } : {}) },
+    enabled: mqttIngest.enabled,
+  }),
   onPacket: (packet) => child({ type: "packet", packet: { ...packet, resolved_path: packet.resolved_path || [] } }),
+  getEventLoopDelay: eventLoopMonitor ? () => eventLoopMonitor.snapshot() : null,
   healthStore,
   healthEnabled: !hubHealth,
   packetStore,
