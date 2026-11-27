@@ -1206,6 +1206,8 @@ function startIngestChild() {
   child.on("message", (message) => {
     if (message?.type === "packet") {
       recentPackets.add(message.packet);
+      const lastSeen = Date.parse(message.packet.first_seen || "");
+      mqttState = { ...mqttState, lastPacketAt: Number.isFinite(lastSeen) ? lastSeen : Date.now() };
       broadcast("packet", message.packet);
     } else if (message?.type === "status") {
       mqttState = message.state;
@@ -1228,8 +1230,7 @@ function startIngestChild() {
 
 if (usingIngestProcess) {
   startIngestChild();
-} else {
-  const inlineIngest = createMqttIngest({
+} else {  const inlineIngest = createMqttIngest({
     broadcast,
     broadcastStatus,
     getEventLoopDelay: eventLoopMonitor ? () => eventLoopMonitor.snapshot() : null,
