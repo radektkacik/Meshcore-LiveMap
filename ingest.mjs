@@ -26,6 +26,7 @@ const mqttIngest = createMqttIngest({
     if (event === "packet") child({ type: "packet", packet });
   },
   broadcastStatus: () => child({ type: "status", state: mqttIngest.getState(), enabled: mqttIngest.enabled }),
+  onPacket: (packet) => child({ type: "packet", packet }),
   healthStore,
   healthEnabled: !hubHealth,
   packetStore,
