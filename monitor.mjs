@@ -1,5 +1,43 @@
 import { statfsSync } from "node:fs";
+import { monitorEventLoopDelay, performance } from "node:perf_hooks";
 import { connect as connectTls } from "node:tls";
+
+export function startEventLoopMonitor({ sampleMs = 10_000, windowMs = 60_000, warnMs = 1_000 } = {}) {
+  const histogram = monitorEventLoopDelay({ resolution: 20 });
+  const samples = [];
+  let lastSample = performance.now();
+  let peakMs = 0;
+  histogram.enable();
+
+  const currentMax = (now) => Math.max(histogram.max / 1e6, now - lastSample - sampleMs, 0);
+  const timer = setInterval(() => {
+    const now = performance.now();
+    const maxMs = currentMax(now);
+    samples.push({ at: now, maxMs });
+    while (samples[0].at <= now - windowMs) samples.shift();
+    peakMs = Math.max(peakMs, maxMs);
+    if (maxMs >= warnMs) {
+      console.warn(`Event loop delay: max=${Math.round(maxMs)} ms, p99=${Math.round(histogram.percentile(99) / 1e6)} ms, window=${Math.round(now - lastSample)} ms`);
+    }
+    lastSample = now;
+    histogram.reset();
+  }, sampleMs).unref();
+
+  return {
+    snapshot() {
+      const now = performance.now();
+      let recentMaxMs = currentMax(now);
+      for (const sample of samples) {
+        if (sample.at > now - windowMs) recentMaxMs = Math.max(recentMaxMs, sample.maxMs);
+      }
+      return { recentMaxMs: Math.round(recentMaxMs), peakMs: Math.round(Math.max(peakMs, recentMaxMs)), windowMs };
+    },
+    stop() {
+      clearInterval(timer);
+      histogram.disable();
+    },
+  };
+}
 
 export function createMonitor({
   getLastPacketAt,

@@ -6,6 +6,7 @@ import { decodeCzHealth } from "./cz-health.mjs";
 export function createMqttIngest({
   broadcast,
   broadcastStatus,
+  getEventLoopDelay = null,
   healthStore,
   healthEnabled = true,
   packetStore,
@@ -110,7 +111,9 @@ export function createMqttIngest({
     reconnects += 1;
     const factor = 1 - jitter + Math.random() * jitter * 2;
     const delay = Math.round(reconnectDelay * factor);
-    console.log(`MQTT reconnect in ${delay} ms (${reason || "connection closed"}, total ${reconnects})`);
+    const lag = getEventLoopDelay?.();
+    const diagnostic = lag ? `; event loop max ~${lag.windowMs / 1000} s: ${lag.recentMaxMs} ms` : "";
+    console.log(`MQTT reconnect in ${delay} ms (${reason || "connection closed"}, total ${reconnects})${diagnostic}`);
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
       client.reconnect();

@@ -22,7 +22,7 @@ import { createAdminAuth } from "./admin-auth.mjs";
 import { createAdminPages } from "./admin-pages.mjs";
 import { createCollectors } from "./collectors.mjs";
 import { createElevationTerrain } from "./elevation-terrain.mjs";
-import { createMonitor } from "./monitor.mjs";
+import { createMonitor, startEventLoopMonitor } from "./monitor.mjs";
 import { createHttpRequestHandler } from "./http-server.mjs";
 import { createSecurityEvents } from "./security-events.mjs";
 import { createTurnstile } from "./turnstile.mjs";
@@ -35,6 +35,7 @@ const host = process.env.HOST || "0.0.0.0";
 const dist = join(process.cwd(), "dist");
 const buildManifestPath = join(dist, "build.json");
 const upstream = process.env.CORESCOPE_URL || "https://analyzer.meshcore.cz";
+const eventLoopMonitor = process.env.EVENT_LOOP_DIAGNOSTICS === "1" ? startEventLoopMonitor() : null;
 
 function currentBuild() {
   try {
@@ -1186,6 +1187,7 @@ function healthPayload() {
     build: currentBuild(),
     time: now,
     uptimeSec: Math.floor((now - serverStartedAt) / 1000),
+    ...(eventLoopMonitor ? { eventLoop: eventLoopMonitor.snapshot() } : {}),
     upstream,
     mqtt: {
       enabled: mqttIngest.enabled,
@@ -1229,6 +1231,7 @@ function broadcastStatus() {
 const mqttIngest = createMqttIngest({
   broadcast,
   broadcastStatus,
+  getEventLoopDelay: eventLoopMonitor ? () => eventLoopMonitor.snapshot() : null,
   healthStore,
   healthEnabled: !hubHealth,
   packetStore,
@@ -1565,6 +1568,7 @@ const monitor = createMonitor({
 monitor.start();
 
 function shutdown() {
+  eventLoopMonitor?.stop();
   healthHubSync?.stop();
   for (const client of packetStreams) closePacketStream(client);
   metricsStore.close();
