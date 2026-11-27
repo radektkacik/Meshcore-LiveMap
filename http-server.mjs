@@ -1895,5 +1895,17 @@ async function handleRequest(request, response) {
   sendFile(response, filePath);
 }
 
-  return handleRequest;
+  async function timedHandleRequest(request, response) {
+    const startedAt = Date.now();
+    const path = String(request.url || "").split("?")[0];
+    response.once("finish", () => {
+      const duration = Date.now() - startedAt;
+      if (duration >= 1_000 && !path.endsWith("/events/packets")) {
+        console.warn(`Slow HTTP ${request.method || "?"} ${path} ${duration} ms`);
+      }
+    });
+    return handleRequest(request, response);
+  }
+
+  return timedHandleRequest;
 }

@@ -30,8 +30,10 @@ export function createCollectors({
       if (!response.ok) throw new Error(`CoreScope returned HTTP ${response.status}`);
       const data = await response.json();
       storeNodesCache(data);
+      const writeStartedAt = Date.now();
       const recorded = metricsStore.recordNodes(Array.isArray(data.nodes) ? data.nodes : []);
-      console.log(`Node metrics updated: ${recorded} hourly samples`);
+      const writeMs = Date.now() - writeStartedAt;
+      console.log(`Node metrics updated: ${recorded} hourly samples (SQLite ${writeMs} ms)`);
     } catch (error) {
       console.error(`Node metrics update failed: ${error.message}`);
     } finally {
@@ -46,6 +48,7 @@ export function createCollectors({
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), statsTimeoutMs);
     timeout.unref();
+    const startedAt = Date.now();
     try {
       const response = await fetch(`${upstream}/api/stats`, {
         headers: { Accept: "application/json" },
@@ -54,8 +57,11 @@ export function createCollectors({
       if (!response.ok) throw new Error(`CoreScope returned HTTP ${response.status}`);
       const body = Buffer.from(await response.arrayBuffer());
       const data = JSON.parse(body.toString("utf8"));
+      const writeStartedAt = Date.now();
       metricsStore.recordStats(data);
+      const writeMs = Date.now() - writeStartedAt;
       storeStatsCache(body, response.headers.get("content-type"));
+      if (writeMs > 500) console.warn(`Stats SQLite write took ${writeMs} ms`);
     } catch (error) {
       const context = error.name === "AbortError"
         ? `timeout after ${Math.round(statsTimeoutMs / 1000)} s`
@@ -120,9 +126,13 @@ export function createCollectors({
           || now;
         mqttIngest.ingestHealth(row.raw_hex, observedAt, row.hash);
       }
+      const writeStartedAt = Date.now();
       const stored = packetStore.record(rows);
+      const writeMs = Date.now() - writeStartedAt;
+      const pruneStartedAt = Date.now();
       packetStore.prune(now);
-      console.log(`Packet routes updated: ${stored} stored, ${packetStore.count()} total`);
+      const pruneMs = Date.now() - pruneStartedAt;
+      console.log(`Packet routes updated: ${stored} stored, ${packetStore.count()} total (write ${writeMs} ms, prune ${pruneMs} ms)`);
     } catch (error) {
       console.error(`Packet route update failed: ${error.message}`);
     } finally {
