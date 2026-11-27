@@ -1269,12 +1269,11 @@ const collectors = createCollectors({
   toStoreRow,
   upstream,
   upstreamTimeoutMs,
-  skipPacketWrites: usingIngestProcess,
 });
 if (!usingIngestProcess) mqttIngest.backfillHealth();
 collectors.start();
 
-if (!usingIngestProcess) setInterval(() => healthStore.prune(), 6 * 60 * 60 * 1000).unref();
+setInterval(() => healthStore.prune(), 6 * 60 * 60 * 1000).unref();
 
 visitStore.prune();
 setInterval(() => visitStore.prune(), 24 * 60 * 60 * 1000).unref();
