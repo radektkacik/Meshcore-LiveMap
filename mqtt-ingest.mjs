@@ -68,6 +68,8 @@ export function createMqttIngest({
   const password = process.env.MQTT_PASSWORD;
   const enabled = Boolean(url && username && password);
   const keepaliveS = Math.min(300, Math.max(10, Number(process.env.MQTT_KEEPALIVE || 30)));
+  const requestedFamily = Number(process.env.MQTT_IP_FAMILY ?? 4);
+  const socketFamily = requestedFamily === 6 ? 6 : requestedFamily === 4 ? 4 : 0;
   const reconnectMs = Math.max(1_000, Number(process.env.MQTT_RECONNECT_MS || 3_000));
   const reconnectMaxMs = Math.max(reconnectMs, Number(process.env.MQTT_RECONNECT_MAX_MS || 60_000));
   const stableMs = 30_000;
@@ -135,8 +137,11 @@ export function createMqttIngest({
       clientId: `meshcore-map-${Math.random().toString(16).slice(2)}`,
       connectTimeout: 10_000,
       createWebsocket: (wsUrl, protocols) => {
-        const socket = new WebSocket(wsUrl, protocols);
-        socket.on("open", () => console.log("MQTT websocket open"));
+        const socket = new WebSocket(wsUrl, protocols, socketFamily ? { family: socketFamily } : {});
+        socket.on("open", () => {
+          const peer = socket._socket?.remoteAddress || "unknown";
+          console.log(`MQTT websocket open (IPv${socketFamily || "auto"}, peer ${peer})`);
+        });
         socket.on("close", (code, reason) => {
           const text = reason?.length ? `, reason ${reason.toString()}` : "";
           console.warn(`MQTT websocket closed: code ${code}${text}`);
