@@ -3,6 +3,54 @@ import { MeshCorePacketDecoder } from "@michaelhart/meshcore-decoder";
 import { decodedPacketHashBytes, decodedPacketPath } from "./backend-utils.mjs";
 import { decodeCzHealth } from "./cz-health.mjs";
 
+export function parseMqttPacket(topic, message) {
+  const source = JSON.parse(message.toString("utf8"));
+  if (source.type !== "PACKET" || !source.raw) return null;
+  const topicParts = topic.split("/");
+  let decoded;
+  try {
+    decoded = MeshCorePacketDecoder.decode(source.raw);
+  } catch {
+    return null;
+  }
+
+  const payloadType = decoded.payloadType ?? 0;
+  const routeType = decoded.routeType ?? 0;
+  const payloadDecoded = decoded?.payload?.decoded ?? decoded?.payload ?? {};
+  const appData = payloadDecoded?.appData ?? payloadDecoded?.appdata ?? {};
+  const path = decodedPacketPath(decoded).map((hop) => String(hop).toUpperCase());
+  const advertData = payloadType === 4 ? {
+    pubKey: (payloadDecoded.publicKey || payloadDecoded.publickey || "").toLowerCase(),
+    lat: appData.location?.latitude ?? appData.location?.lat ?? null,
+    lon: appData.location?.longitude ?? appData.location?.lon ?? null,
+    name: appData.name || null,
+    type: "ADVERT",
+  } : {};
+  const senderPubkey = advertData.pubKey
+    || decoded?.payload?.senderPubkey
+    || payloadDecoded?.senderPubkey
+    || payloadDecoded?.sender
+    || null;
+
+  return {
+    decoded_json: JSON.stringify(payloadType === 4 ? advertData : payloadType === 9 ? payloadDecoded : advertData),
+    first_seen: new Date().toISOString(),
+    hash: String(source.hash || decoded.messageHash || "").toLowerCase(),
+    latest: new Date().toISOString(),
+    observer_count: 1,
+    observer_iata: topicParts[1] || "",
+    observer_id: topicParts[2] || "",
+    observer_name: source.origin || "",
+    origin_id: senderPubkey || "",
+    path_hash_bytes: decodedPacketHashBytes(decoded),
+    path_json: JSON.stringify(path),
+    payload_type: payloadType,
+    raw_hex: source.raw,
+    route_type: routeType,
+    rssi: Number(source.RSSI),
+    snr: Number(source.SNR),
+  };
+}
 export function createMqttIngest({
   broadcast,
   broadcastStatus,
@@ -12,6 +60,7 @@ export function createMqttIngest({
   packetStore,
   recentPackets,
   toStoreRow,
+  onPacket = null,
 }) {
   const url = process.env.MQTT_URL;
   const username = process.env.MQTT_USERNAME;
@@ -31,54 +80,7 @@ export function createMqttIngest({
   let reconnectTimer = null;
   let reconnects = 0;
 
-  function parseMqttPacket(topic, message) {
-    const source = JSON.parse(message.toString("utf8"));
-    if (source.type !== "PACKET" || !source.raw) return null;
-    const topicParts = topic.split("/");
-    let decoded;
-    try {
-      decoded = MeshCorePacketDecoder.decode(source.raw);
-    } catch {
-      return null;
-    }
 
-    const payloadType = decoded.payloadType ?? 0;
-    const routeType = decoded.routeType ?? 0;
-    const payloadDecoded = decoded?.payload?.decoded ?? decoded?.payload ?? {};
-    const appData = payloadDecoded?.appData ?? payloadDecoded?.appdata ?? {};
-    const path = decodedPacketPath(decoded).map((hop) => String(hop).toUpperCase());
-    const advertData = payloadType === 4 ? {
-      pubKey: (payloadDecoded.publicKey || payloadDecoded.publickey || "").toLowerCase(),
-      lat: appData.location?.latitude ?? appData.location?.lat ?? null,
-      lon: appData.location?.longitude ?? appData.location?.lon ?? null,
-      name: appData.name || null,
-      type: "ADVERT",
-    } : {};
-    const senderPubkey = advertData.pubKey
-      || decoded?.payload?.senderPubkey
-      || payloadDecoded?.senderPubkey
-      || payloadDecoded?.sender
-      || null;
-
-    return {
-      decoded_json: JSON.stringify(payloadType === 4 ? advertData : payloadType === 9 ? payloadDecoded : advertData),
-      first_seen: new Date().toISOString(),
-      hash: String(source.hash || decoded.messageHash || "").toLowerCase(),
-      latest: new Date().toISOString(),
-      observer_count: 1,
-      observer_iata: topicParts[1] || "",
-      observer_id: topicParts[2] || "",
-      observer_name: source.origin || "",
-      origin_id: senderPubkey || "",
-      path_hash_bytes: decodedPacketHashBytes(decoded),
-      path_json: JSON.stringify(path),
-      payload_type: payloadType,
-      raw_hex: source.raw,
-      route_type: routeType,
-      rssi: Number(source.RSSI),
-      snr: Number(source.SNR),
-    };
-  }
 
   function ingestHealth(rawHex, observedAt, packetHash = null) {
     if (!healthEnabled || !rawHex) return null;
@@ -197,7 +199,8 @@ export function createMqttIngest({
         ingestHealth(packet.raw_hex, lastPacketAt, packet.hash);
         const stored = toStoreRow(packet, lastPacketAt);
         if (stored) packetStore.record([stored]);
-        broadcast("packet", packet);
+        if (onPacket) onPacket(packet);
+        else broadcast("packet", packet);
       } catch (error) {
         console.error(`Invalid MQTT packet on ${topic}: ${error.message}`);
       }

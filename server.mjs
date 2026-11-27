@@ -1,7 +1,7 @@
 import { createHmac, randomBytes } from "node:crypto";
 import { createReadStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
-import { execFileSync } from "node:child_process";
+import { execFileSync, fork } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, extname, join, normalize } from "node:path";
 import { TimeBoundRingBuffer } from "./backend-utils.mjs";
@@ -27,6 +27,7 @@ import { createHttpRequestHandler } from "./http-server.mjs";
 import { createSecurityEvents } from "./security-events.mjs";
 import { createTurnstile } from "./turnstile.mjs";
 import { createMqttIngest } from "./mqtt-ingest.mjs";
+import { packetToStoreRow } from "./packet-row.mjs";
 import { createLegacyPages } from "./legacy-pages.mjs";
 import { createRateLimiter, formatCsDate, hashIp, methodNotAllowed, safeEqualText } from "./http-utils.mjs";
 
@@ -1040,50 +1041,7 @@ function clientIp(request) {
   return peer || "unknown";
 }
 
-function rawPathHashBytes(rawHex, routeType) {
-  const raw = String(rawHex || "").replace(/\s/g, "");
-  const type = Number.isInteger(Number(routeType))
-    ? Number(routeType)
-    : (Number.parseInt(raw.slice(0, 2), 16) & 0x03);
-  const offset = type === 0 || type === 3 ? 5 : 1;
-  const pathByte = Number.parseInt(raw.slice(offset * 2, offset * 2 + 2), 16);
-  if (!Number.isFinite(pathByte)) return null;
-  const size = (pathByte >> 6) + 1;
-  return size >= 1 && size <= 3 ? size : null;
-}
-
-function toStoreRow(packet, now) {
-  const hash = String(packet.hash || "");
-  const observerId = String(packet.observer_id || "");
-  if (!hash || !observerId) return null;
-  const resolved = Array.isArray(packet.resolved_path) ? packet.resolved_path : [];
-  let path = [];
-  try {
-    const parsed = JSON.parse(typeof packet.path_json === "string" ? packet.path_json : "[]");
-    if (Array.isArray(parsed)) path = parsed;
-  } catch {
-    path = [];
-  }
-  if (!resolved.some(Boolean) && !path.length) return null;
-  const observedAt = Date.parse(packet.timestamp || packet.first_seen || "");
-  return {
-    decoded_json: packet.decoded_json || "",
-    hash,
-    observer_id: observerId,
-    observer_iata: packet.observer_iata || "",
-    observer_name: packet.observer_name || "",
-    observed_at: Number.isFinite(observedAt) ? observedAt : now,
-    path_hash_bytes: rawPathHashBytes(packet.raw_hex, packet.route_type),
-    path_json: typeof packet.path_json === "string" ? packet.path_json : JSON.stringify(packet.path_json || []),
-    payload_type: Number(packet.payload_type) || 0,
-    raw_hex: packet.raw_hex || "",
-    resolved_path: JSON.stringify(resolved),
-    route_type: Number(packet.route_type) || 0,
-    rssi: Number.isFinite(Number(packet.rssi)) ? Number(packet.rssi) : null,
-    scope_name: packet.scope_name || null,
-    snr: Number.isFinite(Number(packet.snr)) ? Number(packet.snr) : null,
-  };
-}
+const toStoreRow = packetToStoreRow;
 
 function historyRowToPacket(row) {
   const iso = new Date(row.observed_at).toISOString();
@@ -1228,17 +1186,65 @@ function broadcastStatus() {
   broadcast("status", statusPayload());
 }
 
-const mqttIngest = createMqttIngest({
-  broadcast,
-  broadcastStatus,
-  getEventLoopDelay: eventLoopMonitor ? () => eventLoopMonitor.snapshot() : null,
-  healthStore,
-  healthEnabled: !hubHealth,
-  packetStore,
-  recentPackets,
-  toStoreRow,
-});
-mqttIngest.start();
+const mqttIngest = {
+  enabled: Boolean(process.env.MQTT_URL && process.env.MQTT_USERNAME && process.env.MQTT_PASSWORD),
+  getState: () => mqttState,
+  ingestHealth: () => null,
+  start: () => {},
+  stop: () => {},
+  backfillHealth: () => {},
+};
+let mqttState = { connected: false, connectedSince: 0, lastPacketAt: 0, reconnects: 0 };
+let ingestChild = null;
+let ingestRestartMs = 3_000;
+const usingIngestProcess = process.env.MQTT_INGEST_MODE === "child";
+
+function startIngestChild() {
+  if (!usingIngestProcess) return;
+  const child = fork(join(process.cwd(), "ingest.mjs"), [], { env: process.env, stdio: ["ignore", "inherit", "inherit", "ipc"] });
+  ingestChild = child;
+  child.on("message", (message) => {
+    if (message?.type === "packet") {
+      recentPackets.add(message.packet);
+      broadcast("packet", message.packet);
+    } else if (message?.type === "status") {
+      mqttState = message.state;
+      broadcastStatus();
+    }
+  });
+  child.on("exit", (code, signal) => {
+    ingestChild = null;
+    mqttState = { ...mqttState, connected: false, connectedSince: 0 };
+    broadcastStatus();
+    console.error(`MQTT ingest process exited (${code ?? signal}), restarting in ${ingestRestartMs} ms`);
+    setTimeout(startIngestChild, ingestRestartMs).unref();
+    ingestRestartMs = Math.min(ingestRestartMs * 2, 60_000);
+  });
+  child.on("spawn", () => {
+    console.log(`MQTT ingest process started (pid ${child.pid})`);
+    ingestRestartMs = 3_000;
+  });
+}
+
+if (usingIngestProcess) {
+  startIngestChild();
+} else {
+  const inlineIngest = createMqttIngest({
+    broadcast,
+    broadcastStatus,
+    getEventLoopDelay: eventLoopMonitor ? () => eventLoopMonitor.snapshot() : null,
+    healthStore,
+    healthEnabled: !hubHealth,
+    packetStore,
+    recentPackets,
+    toStoreRow,
+  });
+  mqttIngest.getState = inlineIngest.getState;
+  mqttIngest.ingestHealth = inlineIngest.ingestHealth;
+  mqttIngest.stop = inlineIngest.stop;
+  mqttIngest.backfillHealth = inlineIngest.backfillHealth;
+  inlineIngest.start();
+}
 healthHubSync?.start();
 
 setInterval(() => {
@@ -1261,11 +1267,12 @@ const collectors = createCollectors({
   toStoreRow,
   upstream,
   upstreamTimeoutMs,
+  skipPacketWrites: usingIngestProcess,
 });
-mqttIngest.backfillHealth();
+if (!usingIngestProcess) mqttIngest.backfillHealth();
 collectors.start();
 
-setInterval(() => healthStore.prune(), 6 * 60 * 60 * 1000).unref();
+if (!usingIngestProcess) setInterval(() => healthStore.prune(), 6 * 60 * 60 * 1000).unref();
 
 visitStore.prune();
 setInterval(() => visitStore.prune(), 24 * 60 * 60 * 1000).unref();
@@ -1569,6 +1576,7 @@ monitor.start();
 
 function shutdown() {
   eventLoopMonitor?.stop();
+  ingestChild?.kill("SIGTERM");
   healthHubSync?.stop();
   for (const client of packetStreams) closePacketStream(client);
   metricsStore.close();

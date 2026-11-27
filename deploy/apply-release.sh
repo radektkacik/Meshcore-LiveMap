@@ -16,7 +16,7 @@ APP_USER=${APP_USER:-meshcore-map}
 APP_GROUP=${APP_GROUP:-meshcore-map}
 ROLLBACK_SCRIPT=${ROLLBACK_SCRIPT:-/root/rollback-meshcore.sh}
 
-for file in server.mjs http-server.mjs admin-auth.mjs monitor.mjs mqtt-ingest.mjs collectors.mjs elevation-terrain.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs cz-health.mjs cz-health-store.mjs czhealth-hub-store.mjs czhealth-hub-sync.mjs visit-stats.mjs feedback.mjs photos.mjs node-info.mjs comments.mjs repeater-pages.mjs notify.mjs html.mjs sqlite-store.mjs admin-pages.mjs legacy-pages.mjs http-utils.mjs security-events.mjs turnstile.mjs package.json package-lock.json dist/index.html \
+for file in server.mjs http-server.mjs ingest.mjs packet-row.mjs admin-auth.mjs monitor.mjs mqtt-ingest.mjs collectors.mjs elevation-terrain.mjs backend-utils.mjs node-metrics.mjs packet-store.mjs cz-health.mjs cz-health-store.mjs czhealth-hub-store.mjs czhealth-hub-sync.mjs visit-stats.mjs feedback.mjs photos.mjs node-info.mjs comments.mjs repeater-pages.mjs notify.mjs html.mjs sqlite-store.mjs admin-pages.mjs legacy-pages.mjs http-utils.mjs security-events.mjs turnstile.mjs package.json package-lock.json dist/index.html \
   rollback-vps.sh \
   "$STORAGE_CONF_NAME" \
   node_modules/@michaelhart/meshcore-decoder/package.json \
@@ -30,6 +30,8 @@ node --check http-server.mjs
 node --check admin-auth.mjs
 node --check monitor.mjs
 node --check mqtt-ingest.mjs
+node --check ingest.mjs
+node --check packet-row.mjs
 node --check collectors.mjs
 node --check elevation-terrain.mjs
 node --check backend-utils.mjs
@@ -85,7 +87,7 @@ rollback() {
   if [[ "$keep_node_modules" != true ]]; then
     rm -rf "$APP_DIR/node_modules"
   fi
-  rm -f "$APP_DIR/http-server.mjs" "$APP_DIR/admin-auth.mjs" "$APP_DIR/monitor.mjs" "$APP_DIR/mqtt-ingest.mjs" "$APP_DIR/collectors.mjs" "$APP_DIR/elevation-terrain.mjs" "$APP_DIR/backend-utils.mjs" "$APP_DIR/node-metrics.mjs" "$APP_DIR/packet-store.mjs" "$APP_DIR/cz-health.mjs" "$APP_DIR/cz-health-store.mjs" "$APP_DIR/visit-stats.mjs" "$APP_DIR/feedback.mjs" "$APP_DIR/photos.mjs" "$APP_DIR/node-info.mjs" "$APP_DIR/comments.mjs" "$APP_DIR/repeater-pages.mjs" "$APP_DIR/notify.mjs" "$APP_DIR/html.mjs" "$APP_DIR/sqlite-store.mjs" "$APP_DIR/admin-pages.mjs" "$APP_DIR/legacy-pages.mjs" "$APP_DIR/http-utils.mjs" "$APP_DIR/security-events.mjs"
+  rm -f "$APP_DIR/http-server.mjs" "$APP_DIR/ingest.mjs" "$APP_DIR/packet-row.mjs" "$APP_DIR/admin-auth.mjs" "$APP_DIR/monitor.mjs" "$APP_DIR/mqtt-ingest.mjs" "$APP_DIR/collectors.mjs" "$APP_DIR/elevation-terrain.mjs" "$APP_DIR/backend-utils.mjs" "$APP_DIR/node-metrics.mjs" "$APP_DIR/packet-store.mjs" "$APP_DIR/cz-health.mjs" "$APP_DIR/cz-health-store.mjs" "$APP_DIR/visit-stats.mjs" "$APP_DIR/feedback.mjs" "$APP_DIR/photos.mjs" "$APP_DIR/node-info.mjs" "$APP_DIR/comments.mjs" "$APP_DIR/repeater-pages.mjs" "$APP_DIR/notify.mjs" "$APP_DIR/html.mjs" "$APP_DIR/sqlite-store.mjs" "$APP_DIR/admin-pages.mjs" "$APP_DIR/legacy-pages.mjs" "$APP_DIR/http-utils.mjs" "$APP_DIR/security-events.mjs"
   tar -xzf "$BACKUP_FILE" -C "$APP_DIR"
   if [[ ! -d "$APP_DIR/node_modules" ]]; then
     echo "Závislosti nejsou v záloze ani v aplikaci; instaluji z package-lock.json" >&2
@@ -128,6 +130,12 @@ if [[ -f "$APP_DIR/admin-auth.mjs" ]]; then
 fi
 if [[ -f "$APP_DIR/monitor.mjs" ]]; then
   backup_paths+=(monitor.mjs)
+fi
+if [[ -f "$APP_DIR/ingest.mjs" ]]; then
+  backup_paths+=(ingest.mjs)
+fi
+if [[ -f "$APP_DIR/packet-row.mjs" ]]; then
+  backup_paths+=(packet-row.mjs)
 fi
 if [[ -f "$APP_DIR/mqtt-ingest.mjs" ]]; then
   backup_paths+=(mqtt-ingest.mjs)
@@ -222,6 +230,8 @@ systemctl daemon-reload
 rm -rf "$APP_DIR/dist" "$APP_DIR/node_modules"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/server.mjs" "$APP_DIR/server.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/http-server.mjs" "$APP_DIR/http-server.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/ingest.mjs" "$APP_DIR/ingest.mjs"
+install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/packet-row.mjs" "$APP_DIR/packet-row.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/admin-auth.mjs" "$APP_DIR/admin-auth.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/monitor.mjs" "$APP_DIR/monitor.mjs"
 install -o "$APP_USER" -g "$APP_GROUP" -m 644 "$STAGE/mqtt-ingest.mjs" "$APP_DIR/mqtt-ingest.mjs"

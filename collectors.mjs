@@ -11,6 +11,7 @@ export function createCollectors({
   toStoreRow,
   upstream,
   upstreamTimeoutMs,
+  skipPacketWrites = false,
 }) {
   let metricsActive = false;
   let packetsActive = false;
@@ -114,14 +115,14 @@ export function createCollectors({
         now,
       );
       for (const row of rows) {
-        if (Number(row.payload_type) !== 6) continue;
+        if (skipPacketWrites || Number(row.payload_type) !== 6) continue;
         const observedAt = Number(row.observed_at)
           || Date.parse(row.timestamp || row.first_seen || "")
           || now;
         mqttIngest.ingestHealth(row.raw_hex, observedAt, row.hash);
       }
-      const stored = packetStore.record(rows);
-      packetStore.prune(now);
+      const stored = skipPacketWrites ? 0 : packetStore.record(rows);
+      if (!skipPacketWrites) packetStore.prune(now);
       console.log(`Packet routes updated: ${stored} stored, ${packetStore.count()} total`);
     } catch (error) {
       console.error(`Packet route update failed: ${error.message}`);
