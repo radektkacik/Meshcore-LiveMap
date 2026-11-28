@@ -39,6 +39,15 @@ export function createNodeMetricsStore(dbPath, {
     );
     CREATE INDEX IF NOT EXISTS node_score_samples_time
       ON node_score_samples (sampled_at);
+    CREATE TABLE IF NOT EXISTS node_score_month (
+      public_key TEXT PRIMARY KEY,
+      usefulness_score REAL,
+      coverage_score REAL,
+      traffic_share_score REAL,
+      bridge_score REAL,
+      redundancy_score REAL,
+      sample_count INTEGER NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS node_score_rollups (
       public_key TEXT PRIMARY KEY,
       usefulness_score REAL,
@@ -136,13 +145,23 @@ export function createNodeMetricsStore(dbPath, {
     GROUP BY public_key
   `);
   const readRollups = db.prepare("SELECT * FROM node_score_rollups");
-  const readMonthRollups = db.prepare(`
-    SELECT public_key, ${METRIC_FIELDS.map((field) => `AVG(${field}) AS ${field}`).join(", ")}
-    FROM node_score_samples WHERE sampled_at >= ? AND sampled_at <= ?
+  const clearMonth = db.prepare("DELETE FROM node_score_month");
+  const rebuildMonth = db.prepare(`
+    INSERT INTO node_score_month (
+      public_key, usefulness_score, coverage_score, traffic_share_score,
+      bridge_score, redundancy_score, sample_count
+    )
+    SELECT public_key, ${METRIC_FIELDS.map((field) => `AVG(${field})`).join(", ")}, COUNT(usefulness_score)
+    FROM node_score_samples
+    WHERE sampled_at >= ? AND sampled_at <= ?
     GROUP BY public_key
   `);
-  let monthRollups = new Map();
-  let monthRollupsAt = -Infinity;
+  const readMonth = db.prepare("SELECT * FROM node_score_month");
+  const rebuildMonthTx = db.transaction((now) => {
+    clearMonth.run();
+    rebuildMonth.run(now - 30 * DAY_MS, now);
+  });
+  let lastMonthRollup = 0;
   const readSamples = db.prepare(`
     SELECT sampled_at, usefulness_score, coverage_score, traffic_share_score,
       bridge_score, redundancy_score
@@ -255,17 +274,21 @@ export function createNodeMetricsStore(dbPath, {
     purgeSamples.run(now - historyDays * DAY_MS);
     clearRollups.run();
     rebuildRollups.run(now - windowDays * DAY_MS);
-    monthRollupsAt = -Infinity;
+    if (now - lastMonthRollup >= 30 * 60_000) {
+      const startedAt = Date.now();
+      rebuildMonthTx(now);
+      lastMonthRollup = now;
+      const duration = Date.now() - startedAt;
+      if (duration > 500) console.warn(`Monthly score rollup took ${duration} ms`);
+    }
     return recorded;
   });
 
   function decorateNodes(nodes, now = Date.now()) {
+    const startedAt = Date.now();
     const rollups = new Map(readRollups.all().map((row) => [row.public_key, row]));
-    if (now < monthRollupsAt || now - monthRollupsAt >= 5 * 60_000) {
-      monthRollups = new Map(readMonthRollups.all(now - 30 * DAY_MS, now).map((row) => [row.public_key, row]));
-      monthRollupsAt = now;
-    }
-    return nodes.map((node) => {
+    const monthRollups = new Map(readMonth.all().map((row) => [row.public_key, row]));
+    const decoratedNodes = nodes.map((node) => {
       const key = String(node.public_key || "").toLowerCase();
       const rollup = rollups.get(key);
       const month = monthRollups.get(key);
@@ -279,6 +302,9 @@ export function createNodeMetricsStore(dbPath, {
       decorated.long_term_last_sample = new Date(rollup.last_sample_at).toISOString();
       return decorated;
     });
+    const duration = Date.now() - startedAt;
+    if (duration > 250) console.warn(`Node decoration took ${duration} ms`);
+    return decoratedNodes;
   }
 
   function history(publicKey, days = 7, now = Date.now()) {

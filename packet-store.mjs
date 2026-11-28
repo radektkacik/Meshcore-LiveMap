@@ -124,6 +124,7 @@ export function createPacketStore(dbPath, {
     WHERE observed_at >= ? AND observed_at <= ? AND instr(lower(resolved_path), ?) > 0
   `);
   const neighborCache = new Map();
+  let distinctCache = null;
   const oldestRow = db.prepare("SELECT MIN(observed_at) AS oldest FROM packet_routes");
   const newestRow = db.prepare("SELECT MAX(observed_at) AS newest FROM packet_routes");
   const countDistinctSince = db.prepare(`
@@ -137,11 +138,13 @@ export function createPacketStore(dbPath, {
       upsert.run(row);
       stored += 1;
     }
+    distinctCache = null;
     return stored;
   });
 
   return {
     neighborsSince(key, since, now) {
+      const startedAt = Date.now();
       const cached = neighborCache.get(key);
       if (cached && now >= cached.at && now - cached.at < 60_000 && now - since === cached.window) return cached.rows;
       const neighbors = new Map();
@@ -161,22 +164,46 @@ export function createPacketStore(dbPath, {
       neighborCache.delete(key);
       neighborCache.set(key, { at: now, window: now - since, rows });
       if (neighborCache.size > 100) neighborCache.delete(neighborCache.keys().next().value);
+      const duration = Date.now() - startedAt;
+      if (duration > 250) console.warn(`Slow DB neighborsSince ${duration} ms`);
       return rows;
     },
     close: () => db.close(),
     count: () => countRows.get().total,
-    countDistinctSince: (sinceMs) => countDistinctSince.get(Math.floor(sinceMs)).total,
+    countDistinctSince: (sinceMs) => {
+      const since = Math.floor(sinceMs);
+      const now = Date.now();
+      if (distinctCache && now - distinctCache.at < 60_000 && distinctCache.since === since) {
+        return distinctCache.total;
+      }
+      const startedAt = Date.now();
+      const total = countDistinctSince.get(since).total;
+      distinctCache = { at: now, since, total };
+      const duration = Date.now() - startedAt;
+      if (duration > 250) console.warn(`Slow DB countDistinctSince ${duration} ms`);
+      return total;
+    },
     newest: () => newestRow.get().newest,
     oldest: () => oldestRow.get().oldest,
     prune: (now = Date.now()) => {
+      const startedAt = Date.now();
       purgeOld.run(now - retentionMs);
       const total = countRows.get().total;
       if (total > maxRows) purgeOverflow.run(total - maxRows);
+      distinctCache = null;
+      const duration = Date.now() - startedAt;
+      if (duration > 250) console.warn(`Slow DB prune ${duration} ms`);
     },
-    querySince: (sinceMs, limit = 4000) => selectSince.all(Math.floor(sinceMs), Math.floor(limit)).map((row) => ({
-      ...row,
-      resolved_path: safeArray(row.resolved_path),
-    })),
+    querySince: (sinceMs, limit = 4000) => {
+      const startedAt = Date.now();
+      const rows = selectSince.all(Math.floor(sinceMs), Math.floor(limit)).map((row) => ({
+        ...row,
+        resolved_path: safeArray(row.resolved_path),
+      }));
+      const duration = Date.now() - startedAt;
+      if (duration > 250) console.warn(`Slow DB querySince ${rows.length} rows ${duration} ms`);
+      return rows;
+    },
     advertCountsSince: (sinceMs) => {
       const counts = new Map();
       const seen = new Set();

@@ -512,6 +512,38 @@ function liveReadRequestAllowed(request, url) {
   return requestSourceAllowed(request);
 }
 
+let nodesPayloadCache = { at: 0, sourceAt: 0, stale: false, body: "" };
+const resolveInflight = new Map();
+const resolveQueue = [];
+let activeResolveFetches = 0;
+const runResolveFetch = (task) => new Promise((resolve, reject) => {
+  const run = () => {
+    activeResolveFetches += 1;
+    Promise.resolve().then(task).then(resolve, reject).finally(() => {
+      activeResolveFetches -= 1;
+      const next = resolveQueue.shift();
+      if (next) next();
+    });
+  };
+  if (activeResolveFetches < 8) run();
+  else resolveQueue.push(run);
+});
+const fetchResolveShared = (cacheKey, target) => {
+  const existing = resolveInflight.get(cacheKey);
+  if (existing) return existing;
+  const pending = runResolveFetch(() => fetch(target, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(upstreamTimeoutMs),
+  })).then(async (response) => ({
+    ok: response.ok,
+    status: response.status,
+    contentType: response.headers.get("content-type"),
+    body: Buffer.from(await response.arrayBuffer()),
+  })).finally(() => resolveInflight.delete(cacheKey));
+  resolveInflight.set(cacheKey, pending);
+  return pending;
+};
+
 async function handleRequest(request, response) {
   const nodesCache = getNodesCache();
   const statsCache = getStatsCache();
@@ -1768,14 +1800,29 @@ async function handleRequest(request, response) {
     const isStats = isStatsPath;
     const cacheKey = `${url.pathname}${url.search}`;
     if (isNodes && nodesCache && nodesCacheFresh()) {
-      const stale = Date.now() - Number(nodesCache.at || 0) > nodesSoftTtlMs;
+      const sourceAt = Number(nodesCache.at || 0);
+      const stale = Date.now() - sourceAt > nodesSoftTtlMs;
       clearTimeout(timeout);
-      sendJson(
-        response,
-        200,
-        buildNodesPayload(JSON.parse(nodesCache.body)),
-        stale ? { "X-Data-Stale": "1" } : {},
-      );
+      if (nodesPayloadCache.body
+        && nodesPayloadCache.sourceAt === sourceAt
+        && nodesPayloadCache.stale === stale
+        && Date.now() - nodesPayloadCache.at < 5_000) {
+        response.writeHead(200, {
+          "Content-Type": "application/json; charset=utf-8",
+          "Cache-Control": "no-store",
+          ...(stale ? { "X-Data-Stale": "1" } : {}),
+        });
+        response.end(nodesPayloadCache.body);
+      } else {
+        const body = JSON.stringify(buildNodesPayload(JSON.parse(nodesCache.body)));
+        nodesPayloadCache = { at: Date.now(), sourceAt, stale, body };
+        response.writeHead(200, {
+          "Content-Type": "application/json; charset=utf-8",
+          "Cache-Control": "no-store",
+          ...(stale ? { "X-Data-Stale": "1" } : {}),
+        });
+        response.end(body);
+      }
       if (stale) void collectNodeMetrics();
       return;
     }
@@ -1787,6 +1834,35 @@ async function handleRequest(request, response) {
       return;
     }
     try {
+      if (isResolve) {
+        const shared = await fetchResolveShared(cacheKey, `${upstream}${url.pathname}${url.search}`);
+        if (clientDisconnected || response.destroyed) return;
+        if (shared.ok) {
+          resolveCacheSet(cacheKey, shared.body, shared.contentType);
+          response.writeHead(shared.status, {
+            "Content-Type": shared.contentType || "application/json",
+            "Cache-Control": "no-store",
+          });
+          response.end(shared.body);
+          return;
+        }
+        const cached = resolveCacheGet(cacheKey);
+        if (cached) {
+          response.writeHead(200, {
+            "Content-Type": cached.contentType || "application/json; charset=utf-8",
+            "Cache-Control": "no-store",
+            "X-Data-Stale": "1",
+          });
+          response.end(cached.body);
+          return;
+        }
+        response.writeHead(shared.status, {
+          "Content-Type": shared.contentType || "application/json",
+          "Cache-Control": "no-store",
+        });
+        response.end(shared.body);
+        return;
+      }
       const upstreamResponse = await fetch(`${upstream}${url.pathname}${url.search}`, {
         headers: { Accept: "application/json" },
         signal: controller.signal,

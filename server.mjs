@@ -396,7 +396,7 @@ function localPacketsLastHour() {
   const newest = Number(packetStore.newest()) || 0;
   if (!newest) return null;
   const anchor = Math.min(Date.now(), newest);
-  return packetStore.countDistinctSince(anchor - 60 * 60 * 1000);
+  return packetStore.countDistinctSince(Math.floor((anchor - 60 * 60 * 1000) / 60_000) * 60_000);
 }
 
 function sendStatsFallback(response) {
@@ -1165,7 +1165,7 @@ function healthPayload() {
     },
     packets: {
       bufferedRecent: recentPackets.values(now).length,
-      distinct24h: packetStore.countDistinctSince(now - 24 * 60 * 60 * 1000),
+      distinct24h: packetStore.countDistinctSince(Math.floor((now - 24 * 60 * 60 * 1000) / 60_000) * 60_000),
       stored: packetStore.count(),
     },
     photos: photoStore.stats(),
