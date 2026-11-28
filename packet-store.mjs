@@ -37,6 +37,7 @@ export function createPacketStore(dbPath, {
       PRIMARY KEY (hash, observer_id)
     );
     CREATE INDEX IF NOT EXISTS packet_routes_time ON packet_routes (observed_at);
+    CREATE INDEX IF NOT EXISTS packet_routes_time_hash ON packet_routes (observed_at, hash);
   `);
   const columns = new Set(db.prepare("PRAGMA table_info(packet_routes)").all().map((column) => column.name));
   if (!columns.has("scope_name")) {
@@ -173,7 +174,7 @@ export function createPacketStore(dbPath, {
     countDistinctSince: (sinceMs) => {
       const since = Math.floor(sinceMs);
       const now = Date.now();
-      if (distinctCache && now - distinctCache.at < 60_000 && distinctCache.since === since) {
+      if (distinctCache && now - distinctCache.at < 5 * 60_000 && distinctCache.since === since) {
         return distinctCache.total;
       }
       const startedAt = Date.now();

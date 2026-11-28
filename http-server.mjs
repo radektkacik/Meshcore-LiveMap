@@ -525,7 +525,7 @@ const runResolveFetch = (task) => new Promise((resolve, reject) => {
       if (next) next();
     });
   };
-  if (activeResolveFetches < 8) run();
+  if (activeResolveFetches < 16) run();
   else resolveQueue.push(run);
 });
 const fetchResolveShared = (cacheKey, target) => {
