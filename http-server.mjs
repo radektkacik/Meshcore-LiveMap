@@ -1870,10 +1870,30 @@ async function handleRequest(request, response) {
             response.end(JSON.stringify({ resolved: merged }));
             return;
           }
-          const sharedKey = `prefixes:${missing.join(",")}`;
-          const shared = await fetchResolveShared(sharedKey, `${upstream}/api/resolve-hops?hops=${encodeURIComponent(missing.join(","))}`);
+          const chunkSize = 20;
+          const chunks = [];
+          for (let index = 0; index < missing.length; index += chunkSize) {
+            chunks.push(missing.slice(index, index + chunkSize));
+          }
+          const results = await Promise.allSettled(chunks.map((chunk) => fetchResolveShared(
+            `prefixes:${chunk.join(",")}`,
+            `${upstream}/api/resolve-hops?hops=${encodeURIComponent(chunk.join(","))}`,
+          )));
           if (clientDisconnected || response.destroyed) return;
-          if (shared.ok) {
+          let okCount = 0;
+          let lastStatus = 502;
+          let lastContentType = "application/json";
+          let lastBody = null;
+          for (const result of results) {
+            if (result.status !== "fulfilled") continue;
+            const shared = result.value;
+            if (!shared.ok) {
+              lastStatus = shared.status;
+              lastContentType = shared.contentType || "application/json";
+              lastBody = shared.body;
+              continue;
+            }
+            okCount += 1;
             let data = null;
             try {
               data = JSON.parse(shared.body.toString("utf8"));
@@ -1881,16 +1901,19 @@ async function handleRequest(request, response) {
             const resolved = data?.resolved && typeof data.resolved === "object" ? data.resolved : {};
             const normalized = {};
             for (const [prefix, entry] of Object.entries(resolved)) normalized[prefix.toUpperCase()] = entry;
-            const fetchedAt = Date.now();
-            storeHops(normalized, fetchedAt);
+            storeHops(normalized, Date.now());
             for (const hop of requested) {
               if (!merged[hop] && normalized[hop]) merged[hop] = normalized[hop];
             }
+          }
+          if (okCount) {
             const body = Buffer.from(JSON.stringify({ resolved: merged }));
             resolveCacheSet(cacheKey, body, "application/json; charset=utf-8");
+            const complete = requested.every((hop) => merged[hop]);
             response.writeHead(200, {
               "Content-Type": "application/json; charset=utf-8",
               "Cache-Control": "no-store",
+              ...(complete ? {} : { "X-Data-Partial": "1" }),
             });
             response.end(body);
             return;
@@ -1914,11 +1937,11 @@ async function handleRequest(request, response) {
             response.end(JSON.stringify({ resolved: merged }));
             return;
           }
-          response.writeHead(shared.status, {
-            "Content-Type": shared.contentType || "application/json",
+          response.writeHead(lastStatus, {
+            "Content-Type": lastContentType,
             "Cache-Control": "no-store",
           });
-          response.end(shared.body);
+          response.end(lastBody || JSON.stringify({ error: "Resolver je nedostupný." }));
           return;
         }
       }
