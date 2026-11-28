@@ -11,6 +11,7 @@ export function createCollectors({
   toStoreRow,
   upstream,
   upstreamTimeoutMs,
+  collectMetrics = true,
 }) {
   let metricsActive = false;
   let packetsActive = false;
@@ -142,8 +143,10 @@ export function createCollectors({
   }
 
   function start() {
-    void collectNodeMetrics();
-    setInterval(collectNodeMetrics, metricsCollectionMs).unref();
+    if (collectMetrics) {
+      void collectNodeMetrics();
+      setInterval(collectNodeMetrics, metricsCollectionMs).unref();
+    }
 
     if (statsCollectMs > 0) {
       void collectStats();

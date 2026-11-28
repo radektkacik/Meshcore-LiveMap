@@ -2,6 +2,7 @@ import { createHmac, randomBytes } from "node:crypto";
 import { createReadStream, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { execFileSync, fork } from "node:child_process";
+import { Worker } from "node:worker_threads";
 import { tmpdir } from "node:os";
 import { dirname, extname, join, normalize } from "node:path";
 import { TimeBoundRingBuffer } from "./backend-utils.mjs";
@@ -49,6 +50,7 @@ const requestBase = "http://localhost";
 const upstreamTimeoutMs = Math.max(1, Number(process.env.UPSTREAM_TIMEOUT_MS || 15_000));
 const statsTimeoutMs = Math.max(1_000, Number(process.env.STATS_TIMEOUT_MS || 5_000));
 const statsCollectMs = Math.max(0, Number(process.env.STATS_COLLECT_MS ?? 5 * 60 * 1000));
+const metricsWorkerEnabled = process.env.METRICS_MODE === "worker";
 const statsHistoryDays = Math.max(1, Number(process.env.STATS_HISTORY_DAYS || 30));
 const statsHourlyRetentionDays = Math.max(7, Number(process.env.STATS_HOURLY_RETENTION_DAYS || 730));
 const statsDailyRetentionDays = Math.max(30, Number(process.env.STATS_DAILY_RETENTION_DAYS || 1825));
@@ -1257,21 +1259,70 @@ setInterval(() => {
 setInterval(broadcastStatus, 60_000).unref();
 
 const collectors = createCollectors({
-  metricsCollectionMs,
+  metricsCollectionMs: metricsWorkerEnabled ? 0 : metricsCollectionMs,
   metricsStore,
   mqttIngest,
   packetCollectionMs,
   packetStore,
-  statsCollectMs,
+  statsCollectMs: metricsWorkerEnabled ? 0 : statsCollectMs,
   statsTimeoutMs,
   storeNodesCache,
   storeStatsCache,
   toStoreRow,
   upstream,
   upstreamTimeoutMs,
+  collectMetrics: !metricsWorkerEnabled,
 });
 if (!usingIngestProcess) mqttIngest.backfillHealth();
 collectors.start();
+
+let metricsWorker = null;
+let metricsWorkerRestartMs = 3_000;
+let shuttingDown = false;
+function startMetricsWorker() {
+  if (!metricsWorkerEnabled || shuttingDown) return;
+  metricsWorker = new Worker(new URL("./metrics-worker.mjs", import.meta.url), {
+    workerData: {
+      nodesEveryMs: metricsCollectionMs,
+      scoreDbPath,
+      statsEveryMs: statsCollectMs,
+      statsTimeoutMs,
+      storeOptions: {
+        statsBucketMs: statsCollectMs || 5 * 60 * 1000,
+        statsDailyRetentionDays,
+        statsHistoryDays,
+        statsHourlyRetentionDays,
+      },
+      upstream,
+      upstreamTimeoutMs,
+    },
+  });
+  metricsWorker.on("message", (message) => {
+    if (message?.type === "nodes") storeNodesCache(message.data);
+    else if (message?.type === "stats") storeStatsCache(Buffer.from(message.body), message.contentType);
+  });
+  metricsWorker.on("error", (error) => console.error(`Metrics worker error: ${error.message}`));
+  metricsWorker.on("exit", (code) => {
+    metricsWorker = null;
+    if (shuttingDown) return;
+    console.error(`Metrics worker exited (${code}), restarting in ${metricsWorkerRestartMs} ms`);
+    setTimeout(startMetricsWorker, metricsWorkerRestartMs).unref();
+    metricsWorkerRestartMs = Math.min(metricsWorkerRestartMs * 2, 60_000);
+  });
+  metricsWorker.on("online", () => {
+    console.log("Metrics worker started");
+    metricsWorkerRestartMs = 3_000;
+  });
+}
+function requestNodeMetrics() {
+  if (metricsWorker) metricsWorker.postMessage({ type: "nodes" });
+  else void collectors.collectNodeMetrics();
+}
+function requestStatsRefresh() {
+  if (metricsWorker) metricsWorker.postMessage({ type: "stats" });
+  else void collectors.refreshStatsCache();
+}
+startMetricsWorker();
 
 setInterval(() => healthStore.prune(), 6 * 60 * 60 * 1000).unref();
 
@@ -1450,7 +1501,7 @@ const handleRequest = createHttpRequestHandler({
   checkTerrainRate: elevationTerrain.checkTerrainRate,
   cleanPhotoText,
   clientIp,
-  collectNodeMetrics: collectors.collectNodeMetrics,
+  collectNodeMetrics: requestNodeMetrics,
   commentDailyLimit,
   commentMaxRows,
   commentStore,
@@ -1498,7 +1549,7 @@ const handleRequest = createHttpRequestHandler({
   readBodyBuffer,
   recentPackets,
   redirectAdmin,
-  refreshStatsCache: collectors.refreshStatsCache,
+  refreshStatsCache: requestStatsRefresh,
   renderAdminLogin,
   renderFeedbackPage,
   renderPhotoPage,
@@ -1576,8 +1627,10 @@ const monitor = createMonitor({
 monitor.start();
 
 function shutdown() {
+  shuttingDown = true;
   eventLoopMonitor?.stop();
   ingestChild?.kill("SIGTERM");
+  metricsWorker?.terminate();
   healthHubSync?.stop();
   for (const client of packetStreams) closePacketStream(client);
   metricsStore.close();
