@@ -1,8 +1,10 @@
 import { parentPort, workerData } from "node:worker_threads";
+import Database from "better-sqlite3";
 import { createNodeMetricsStore } from "./node-metrics.mjs";
 
 const {
   nodesEveryMs = 15 * 60_000,
+  packetDbPath,
   scoreDbPath,
   statsEveryMs = 5 * 60_000,
   statsTimeoutMs = 5_000,
@@ -12,6 +14,33 @@ const {
 } = workerData;
 
 const store = createNodeMetricsStore(scoreDbPath, storeOptions);
+let packetDb = null;
+let distinctStmt = null;
+try {
+  if (packetDbPath) {
+    packetDb = new Database(packetDbPath, { readonly: true });
+    distinctStmt = packetDb.prepare("SELECT COUNT(DISTINCT hash) AS total FROM packet_routes WHERE observed_at >= ?");
+  }
+} catch (error) {
+  console.error(`Packet counts unavailable: ${error.message}`);
+}
+
+function collectDistinctCounts() {
+  if (!distinctStmt) return;
+  const startedAt = Date.now();
+  const now = Date.now();
+  const daySince = Math.floor((now - 86_400_000) / 300_000) * 300_000;
+  const hourSince = Math.floor((now - 3_600_000) / 60_000) * 60_000;
+  try {
+    const dayTotal = distinctStmt.get(daySince).total;
+    const hourTotal = distinctStmt.get(hourSince).total;
+    parentPort.postMessage({ type: "distinct", dayTotal, hourTotal, at: now });
+    const duration = Date.now() - startedAt;
+    if (duration > 500) console.warn(`Distinct packet counts took ${duration} ms`);
+  } catch (error) {
+    console.error(`Distinct packet counts failed: ${error.message}`);
+  }
+}
 let nodesActive = false;
 let statsActive = false;
 
@@ -76,6 +105,9 @@ parentPort.on("message", (message) => {
   if (message?.type === "nodes") void collectNodes();
   else if (message?.type === "stats") void collectStats();
 });
+
+collectDistinctCounts();
+setInterval(collectDistinctCounts, 60_000).unref();
 
 if (nodesEveryMs > 0) {
   void collectNodes();

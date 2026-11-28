@@ -221,6 +221,7 @@ let nodesCacheWrittenAt = 0;
 let advert24hCache = { at: 0, counts: new Map() };
 let statsCache = null;
 let statsCacheWrittenAt = 0;
+const workerDistinct = { at: 0, day: null, hour: null };
 let statsRefreshActive = false;
 const resolveCache = new Map();
 const allowedApiPaths = [
@@ -397,6 +398,7 @@ async function refreshStatsCache() {
 function localPacketsLastHour() {
   const newest = Number(packetStore.newest()) || 0;
   if (!newest) return null;
+  if (workerDistinct.hour != null && Date.now() - workerDistinct.at < 10 * 60_000) return workerDistinct.hour;
   const anchor = Math.min(Date.now(), newest);
   return packetStore.countDistinctSince(Math.floor((anchor - 60 * 60 * 1000) / 300_000) * 300_000);
 }
@@ -1167,7 +1169,9 @@ function healthPayload() {
     },
     packets: {
       bufferedRecent: recentPackets.values(now).length,
-      distinct24h: packetStore.countDistinctSince(Math.floor((now - 24 * 60 * 60 * 1000) / 300_000) * 300_000),
+      distinct24h: workerDistinct.day != null && now - workerDistinct.at < 10 * 60_000
+        ? workerDistinct.day
+        : packetStore.countDistinctSince(Math.floor((now - 24 * 60 * 60 * 1000) / 300_000) * 300_000),
       stored: packetStore.count(),
     },
     photos: photoStore.stats(),
@@ -1284,6 +1288,7 @@ function startMetricsWorker() {
   metricsWorker = new Worker(new URL("./metrics-worker.mjs", import.meta.url), {
     workerData: {
       nodesEveryMs: metricsCollectionMs,
+      packetDbPath,
       scoreDbPath,
       statsEveryMs: statsCollectMs,
       statsTimeoutMs,
@@ -1300,6 +1305,11 @@ function startMetricsWorker() {
   metricsWorker.on("message", (message) => {
     if (message?.type === "nodes") storeNodesCache(message.data);
     else if (message?.type === "stats") storeStatsCache(Buffer.from(message.body), message.contentType);
+    else if (message?.type === "distinct") {
+      workerDistinct.at = message.at;
+      workerDistinct.day = Number(message.dayTotal);
+      workerDistinct.hour = Number(message.hourTotal);
+    }
   });
   metricsWorker.on("error", (error) => console.error(`Metrics worker error: ${error.message}`));
   metricsWorker.on("exit", (code) => {
