@@ -1,6 +1,7 @@
 import { createPacketStore } from "./packet-store.mjs";
 import { createCzHealthStore } from "./cz-health-store.mjs";
 import { createCzHealthHubStore } from "./czhealth-hub-store.mjs";
+import { createCollectors } from "./collectors.mjs";
 import { createMqttIngest } from "./mqtt-ingest.mjs";
 import { startEventLoopMonitor } from "./monitor.mjs";
 import { packetToStoreRow } from "./packet-row.mjs";
@@ -51,3 +52,22 @@ process.on("SIGTERM", () => {
 
 mqttIngest.start();
 mqttIngest.backfillHealth();
+
+if (process.env.MQTT_INGEST_MODE === "child") {
+  const packetCollectors = createCollectors({
+    collectMetrics: false,
+    metricsCollectionMs: 0,
+    metricsStore: null,
+    mqttIngest,
+    packetCollectionMs: Math.max(30_000, Number(process.env.PACKET_COLLECT_MS || 5 * 60_000)),
+    packetStore,
+    statsCollectMs: 0,
+    statsTimeoutMs: 5_000,
+    storeNodesCache: () => {},
+    storeStatsCache: () => {},
+    toStoreRow: packetToStoreRow,
+    upstream: process.env.CORESCOPE_URL || "https://analyzer.meshcore.cz",
+    upstreamTimeoutMs: Math.max(1, Number(process.env.UPSTREAM_TIMEOUT_MS || 15_000)),
+  });
+  packetCollectors.start();
+}

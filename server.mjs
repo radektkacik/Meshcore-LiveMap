@@ -1266,7 +1266,7 @@ const collectors = createCollectors({
   metricsCollectionMs: metricsWorkerEnabled ? 0 : metricsCollectionMs,
   metricsStore,
   mqttIngest,
-  packetCollectionMs,
+  packetCollectionMs: usingIngestProcess ? 0 : packetCollectionMs,
   packetStore,
   statsCollectMs: metricsWorkerEnabled ? 0 : statsCollectMs,
   statsTimeoutMs,

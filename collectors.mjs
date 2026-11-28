@@ -153,8 +153,10 @@ export function createCollectors({
       setInterval(collectStats, statsCollectMs).unref();
     }
 
-    void collectPackets();
-    setInterval(collectPackets, packetCollectionMs).unref();
+    if (packetCollectionMs > 0) {
+      void collectPackets();
+      setInterval(collectPackets, packetCollectionMs).unref();
+    }
   }
 
   return {
