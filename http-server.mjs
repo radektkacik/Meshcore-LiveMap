@@ -513,6 +513,18 @@ function liveReadRequestAllowed(request, url) {
 }
 
 let nodesPayloadCache = { at: 0, sourceAt: 0, stale: false, body: "" };
+const hopCache = new Map();
+const HOP_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const HOP_CACHE_LIMIT = 20_000;
+const storeHops = (entries, at) => {
+  for (const [prefix, entry] of Object.entries(entries || {})) {
+    const key = String(prefix).toUpperCase();
+    if (!key || !entry) continue;
+    hopCache.delete(key);
+    hopCache.set(key, { at, entry });
+    while (hopCache.size > HOP_CACHE_LIMIT) hopCache.delete(hopCache.keys().next().value);
+  }
+};
 const resolveInflight = new Map();
 const resolveQueue = [];
 let activeResolveFetches = 0;
@@ -1835,10 +1847,73 @@ async function handleRequest(request, response) {
     }
     try {
       if (isResolve) {
-        const shared = await fetchResolveShared(cacheKey, `${upstream}${url.pathname}${url.search}`);
-        if (clientDisconnected || response.destroyed) return;
-        if (shared.ok) {
-          resolveCacheSet(cacheKey, shared.body, shared.contentType);
+        const now = Date.now();
+        const requested = [...new Set(String(url.searchParams.get("hops") || "")
+          .toUpperCase()
+          .split(",")
+          .map((hop) => hop.trim())
+          .filter(Boolean))].slice(0, 200);
+        if (requested.length) {
+          const merged = {};
+          const missing = [];
+          for (const hop of requested) {
+            const cached = hopCache.get(hop);
+            if (cached && now - cached.at < HOP_CACHE_TTL_MS) merged[hop] = cached.entry;
+            else missing.push(hop);
+          }
+          if (!missing.length) {
+            clearTimeout(timeout);
+            response.writeHead(200, {
+              "Content-Type": "application/json; charset=utf-8",
+              "Cache-Control": "no-store",
+            });
+            response.end(JSON.stringify({ resolved: merged }));
+            return;
+          }
+          const sharedKey = `prefixes:${missing.join(",")}`;
+          const shared = await fetchResolveShared(sharedKey, `${upstream}/api/resolve-hops?hops=${encodeURIComponent(missing.join(","))}`);
+          if (clientDisconnected || response.destroyed) return;
+          if (shared.ok) {
+            let data = null;
+            try {
+              data = JSON.parse(shared.body.toString("utf8"));
+            } catch {}
+            const resolved = data?.resolved && typeof data.resolved === "object" ? data.resolved : {};
+            const normalized = {};
+            for (const [prefix, entry] of Object.entries(resolved)) normalized[prefix.toUpperCase()] = entry;
+            const fetchedAt = Date.now();
+            storeHops(normalized, fetchedAt);
+            for (const hop of requested) {
+              if (!merged[hop] && normalized[hop]) merged[hop] = normalized[hop];
+            }
+            const body = Buffer.from(JSON.stringify({ resolved: merged }));
+            resolveCacheSet(cacheKey, body, "application/json; charset=utf-8");
+            response.writeHead(200, {
+              "Content-Type": "application/json; charset=utf-8",
+              "Cache-Control": "no-store",
+            });
+            response.end(body);
+            return;
+          }
+          const stale = resolveCacheGet(cacheKey);
+          if (stale) {
+            response.writeHead(200, {
+              "Content-Type": stale.contentType || "application/json; charset=utf-8",
+              "Cache-Control": "no-store",
+              "X-Data-Stale": "1",
+            });
+            response.end(stale.body);
+            return;
+          }
+          if (Object.keys(merged).length) {
+            response.writeHead(200, {
+              "Content-Type": "application/json; charset=utf-8",
+              "Cache-Control": "no-store",
+              "X-Data-Stale": "1",
+            });
+            response.end(JSON.stringify({ resolved: merged }));
+            return;
+          }
           response.writeHead(shared.status, {
             "Content-Type": shared.contentType || "application/json",
             "Cache-Control": "no-store",
@@ -1846,22 +1921,6 @@ async function handleRequest(request, response) {
           response.end(shared.body);
           return;
         }
-        const cached = resolveCacheGet(cacheKey);
-        if (cached) {
-          response.writeHead(200, {
-            "Content-Type": cached.contentType || "application/json; charset=utf-8",
-            "Cache-Control": "no-store",
-            "X-Data-Stale": "1",
-          });
-          response.end(cached.body);
-          return;
-        }
-        response.writeHead(shared.status, {
-          "Content-Type": shared.contentType || "application/json",
-          "Cache-Control": "no-store",
-        });
-        response.end(shared.body);
-        return;
       }
       const upstreamResponse = await fetch(`${upstream}${url.pathname}${url.search}`, {
         headers: { Accept: "application/json" },
