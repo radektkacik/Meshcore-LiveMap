@@ -3,6 +3,13 @@
 Výběr významných funkčních změn MeshCore CZ live mapy. Technický seznam všech
 nasazení a rollbacků zůstává v [`deploy/RELEASES.md`](deploy/RELEASES.md).
 
+## 2026-11-28 — Plynulejší mapa a spolehlivější příjem paketů
+- Prostředí: produkce i beta
+- Produkční build: `20261128-1057-567ee90`; beta build: `20261128-1055-c07e658`
+- Příjem MQTT a zápisy do archivu tras běží v samostatném procesu. Živé pakety i archivní dávky zapisuje stejný proces, aby se zápisy navzájem neblokovaly.
+- Sběr metrik a výpočet počtů paketů běží mimo webový proces. Odpověď s přehledem nodů se krátce ukládá do cache.
+- Rozpoznávání hopů ukládá výsledky po jednotlivých prefixech. Chybějící prefixy se dohledávají souběžně po dávkách.
+
 ## 2026-11-22 — Přehled uzlů
 - Prostředí: beta
 - Build: 20261122-0933-90eb3d4

@@ -18,6 +18,16 @@
 
 ## Přehled změn
 
+### Nasazení 2026-11-28
+
+| Změna | Produkční build | Beta build |
+| --- | --- | --- |
+| Sběr metrik a výpočet počtů paketů přesunuty do workeru; krátká cache odpovědi `/api/nodes`. | `20261128-0748-269c5c5` | `20261128-0747-427189c` |
+| `/api/resolve-hops`: cache po jednotlivých prefixech (24 h), dohledávání chybějících prefixů souběžně v dávkách po 20. | `20261128-0826-9cc316b` | `20261128-0825-ef88ef7` |
+| Archivní dávky tras a prořezávání archivu přesunuty do ingest procesu, který už zapisuje živé pakety. Po nasazení na obou instancích ověřen úspěšný zápis archivní dávky a health `ok`. | `20261128-1057-567ee90` | `20261128-1055-c07e658` |
+
+### Starší nasazení
+
 | Datum (UTC) | Release ID / záloha | Build | Změna | Soubory |
 | --- | --- | --- | --- | --- |
 | 2026-09-25 13:45 | `20260925T134529Z.tar.gz` | `20260925-1345` | Serverový proxy `GET /api/elevation` (LRU cache + fallback na open-elevation) a přepnutí klienta na něj; klientská služba výšek s frontou/backoff/cooldownem | `server.mjs`, `src/elevation.js`, `src/main.js`, `dist`, `.env.example` |
